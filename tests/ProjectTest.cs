@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Godot;
 
@@ -25,6 +26,199 @@ public partial class ProjectTest : SceneTree
         }
     }
 
+    private async Task TestTradeScene()
+    {
+        var scene = GD.Load<PackedScene>("res://scenes/trade_scene.tscn")
+            ?? throw new Exception("The trade scene must load");
+        var game = scene.Instantiate<TradeScene>();
+        game.SavePath = "";
+        Root.AddChild(game);
+        await ToSignal(this, SignalName.ProcessFrame);
+
+        var world = game.GetNode<CounterWorld>("World");
+        var wall = game.GetNode<ColorRect>("World/Wall");
+        Check(wall.Size == new Vector2(3840, 2160), "The world must contain the four rooms from the GDD plan");
+        var leftSalesRoom = game.GetNode<Sprite2D>("World/TradingRoomBackground");
+        var rightSalesRoom = game.GetNode<Sprite2D>("World/EmptyRoomBackground");
+        var roomTexture = leftSalesRoom.Texture ?? throw new Exception("The room background must load");
+        Check(roomTexture == rightSalesRoom.Texture && roomTexture.GetSize() == new Vector2(1920, 1080),
+            "Both sales rooms must use the supplied background at its original size");
+        Check(leftSalesRoom.Position == new Vector2(0, 1080) && rightSalesRoom.Position == new Vector2(1920, 1080),
+            "The sales rooms must be below the workshops");
+        var atelierButton = game.GetNode<Button>("World/Atelier/GetItemButton");
+        var musicButton = game.GetNode<Button>("World/MusicWorkshop/GetItemButton");
+        var placeButton = game.GetNode<Button>("World/PlaceItemButton");
+        Check(game.GetNode("World/Showcases").GetChildCount() == 6,
+            "The right sales room must contain six showcases from the GDD plan");
+        Check(!atelierButton.Disabled && !musicButton.Disabled, "Both workshops must provide items");
+        Check(placeButton.Disabled && !game.TradeActive && game.StoredItems.Length == 0,
+            "A new game must start without a free item to sell");
+
+        var customer = game.GetNode<ModularCustomer>("World/Customer");
+        Check(customer.GetAppearanceCount() == 6, "The customer must offer six appearances");
+        foreach (string bodyName in new[] { "Male", "Female" })
+        {
+            Check(customer.GetNode<Sprite2D>($"{bodyName}/Body").Texture != null, "Each body needs art");
+            Check(customer.GetNode<Sprite2D>($"{bodyName}/Clothes").Texture != null, "Each body needs clothes");
+            Check(customer.GetNode($"{bodyName}/Hair").GetChildCount() == 3, "Each body needs three hairstyles");
+        }
+
+        var rKey = new InputEventKey { Keycode = Key.R, Pressed = true };
+        for (int i = 0; i < 20; i++) game._Input(rKey);
+        Check(game.StoredItems.Length == 0 && !game.TradeActive, "R must never create an item or a trade");
+
+        atelierButton.EmitSignal(Button.SignalName.Pressed);
+        musicButton.EmitSignal(Button.SignalName.Pressed);
+        Check(game.StoredItems.Length == 2 && game.StoredItems.All(index => index is >= 0 and < 4),
+            "Each workshop click must store one random item");
+        int firstItem = game.StoredItems[0];
+        int secondItem = game.StoredItems[1];
+        Check(!placeButton.Disabled, "Placing must become available with a stored item");
+        placeButton.EmitSignal(Button.SignalName.Pressed);
+        Check(game.TradeActive && game.ItemIndex == firstItem && game.StoredItems.SequenceEqual(new[] { secondItem }),
+            "The first stored item must be placed for sale");
+        Check(world.ItemVisible && !placeButton.Visible, "The sale button must give way to the displayed item");
+        int[] prices = [4, 9, 18, 12];
+        Check(game.Percentage is >= -30 and <= 30, "Offer percentage is out of range");
+        Check(game.OfferedPrice == TradeScene.PriceForPercent(prices[firstItem], game.Percentage),
+            "Offer price does not match the percentage");
+        Check(game.GetNode<Label>("World/Item/TradePanel/Content/OfferLabel").Text == $"Получим: {game.OfferedPrice}$",
+            "The panel must show the amount received");
+
+        game.Percentage = -30;
+        game.ShowTrade();
+        for (int remaining = 2; remaining >= 0; remaining--)
+        {
+            int oldCustomer = game.CustomerIndex;
+            int oldPrice = game.OfferedPrice;
+            game.RerollCustomer();
+            Check(game.ItemIndex == firstItem && game.CustomerIndex != oldCustomer, "Reroll must keep the item and replace the buyer");
+            Check(game.OfferedPrice != oldPrice && game.RerollsRemaining == remaining,
+                "Reroll must change the price and consume one attempt");
+        }
+        Check(game.GetNode<Button>("World/Item/TradePanel/Content/RerollButton").Disabled,
+            "Reroll button must disable at zero");
+
+        game.DeclineTrade();
+        Check(!game.TradeActive && game.StoredItems.SequenceEqual(new[] { firstItem, secondItem }),
+            "A declined item must return to the front of the stored array");
+        Check(!world.ItemVisible && placeButton.Visible, "The sale controls must hide after declining");
+        placeButton.EmitSignal(Button.SignalName.Pressed);
+        int acceptedOffer = game.OfferedPrice;
+        game.AcceptTrade();
+        Check(game.Accepted == 1 && game.Score == acceptedOffer, "Accepting must record the sale");
+        Check(!game.TradeActive && game.StoredItems.SequenceEqual(new[] { secondItem }),
+            "A sold item must leave the array permanently");
+        game.AcceptTrade();
+        Check(game.Accepted == 1, "An inactive trade must not be accepted twice");
+        game._Input(rKey);
+        Check(!game.TradeActive && game.StoredItems.SequenceEqual(new[] { secondItem }),
+            "R must not bypass the stored-item queue");
+
+        var camera = game.GetNode<Camera2D>("Camera2D");
+        Check(camera.Position.Y > 1080, "The camera must start in the sales room");
+        float oldZoom = camera.Zoom.X;
+        game._Input(new InputEventMouseButton { ButtonIndex = MouseButton.WheelUp, Position = new Vector2(640, 360), Pressed = true });
+        Check(camera.Zoom.X > oldZoom, "Mouse wheel must zoom the camera");
+        float startingX = camera.Position.X;
+        game._UnhandledInput(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = true });
+        game._Input(new InputEventMouseMotion { Relative = new Vector2(100, 0) });
+        Check(Mathf.IsEqualApprox(camera.Position.X, startingX - 100f / camera.Zoom.X), "Dragging must pan the camera");
+        camera.Position = new Vector2(-100, -100);
+        game.ClampCamera();
+        Check(camera.Position.X >= 0 && camera.Position.Y >= 0, "The camera must stay inside the world");
+        camera.Position = new Vector2(3000, 540);
+        game.ClampCamera();
+        Check(camera.Position.X > 1920 && camera.Position.Y < 1080, "The camera must reach the upper-right workshop");
+        game.QueueFree();
+        await ToSignal(this, SignalName.ProcessFrame);
+        GD.Print("Trade scene checks passed");
+    }
+
+    private async Task TestProgress()
+    {
+        string absolutePath = ProjectSettings.GlobalizePath(SavePath);
+        if (FileAccess.FileExists(SavePath)) DirAccess.RemoveAbsolute(absolutePath);
+        var scene = GD.Load<PackedScene>("res://scenes/trade_scene.tscn")
+            ?? throw new Exception("The trade scene must load");
+        TradeScene game = await CreateGame(scene);
+        game.GetItemFromAtelier();
+        game.GetItemFromMusicWorkshop();
+        int[] itemsBeforePlacement = game.StoredItems;
+        game.PlaceNextItem();
+        Check(game.TradeActive && game.StoredItems.Length == 1, "Placing must move one item out of the array");
+        game.QueueFree();
+        await ToSignal(this, SignalName.ProcessFrame);
+        game = await CreateGame(scene);
+        Check(game.TradeActive && game.ItemIndex == itemsBeforePlacement[0] && game.StoredItems[0] == itemsBeforePlacement[1],
+            "An active trade and the remaining array must survive a reload");
+        game.DeclineTrade();
+        Check(game.StoredItems.SequenceEqual(itemsBeforePlacement), "Declining after a reload must restore the first item");
+
+        game.CurrentDay = 4;
+        game.Score = game.FirstQuota - 1;
+        game.PlaceNextItem();
+        game.EndDay();
+        Check(game.Failed && !game.TradeActive && game.StoredItems.SequenceEqual(itemsBeforePlacement),
+            "Failure at the deadline must stop trade without losing an unsold item");
+        game.GetItemFromAtelier();
+        game._Input(new InputEventKey { Keycode = Key.R, Pressed = true });
+        Check(game.StoredItems.SequenceEqual(itemsBeforePlacement), "Failure and R must not create items");
+        game.ReturnToCheckpoint();
+        Check(game.CurrentDay == 1 && game.Score == 0 && game.StoredItems.Length == 0,
+            "First failure must restore the empty day-one checkpoint");
+
+        game.GetItemFromAtelier();
+        game.GetItemFromMusicWorkshop();
+        int[] checkpointItems = game.StoredItems;
+        game.PlaceNextItem();
+        game.CurrentDay = 4;
+        game.Score = game.FirstQuota + 12;
+        game.EndDay();
+        Check(game.QuotaStage == 1 && game.CurrentDay == 5 && game.Score == 12,
+            "Paying the first quota must open day five with the remaining cash");
+        Check(game.StoredItems.SequenceEqual(checkpointItems) && !game.TradeActive,
+            "An unsold item must return before the checkpoint is stored");
+        game.QueueFree();
+        await ToSignal(this, SignalName.ProcessFrame);
+        game = await CreateGame(scene);
+        Check(game.CurrentDay == 5 && game.Score == 12 && game.StoredItems.SequenceEqual(checkpointItems),
+            "The array and progress must survive a scene reload");
+        game.PlaceNextItem();
+        game.CurrentDay = 6;
+        game.Score = 1000;
+        game.ReturnToCheckpoint();
+        Check(game.CurrentDay == 5 && game.Score == 12 && !game.TradeActive &&
+              game.StoredItems.SequenceEqual(checkpointItems), "Checkpoint must restore cash and the item array");
+
+        game.CurrentDay = 7;
+        game.Score = game.SecondQuota;
+        game.EndDay();
+        Check(game.Completed && game.QuotaStage == 2 && game.Score == 0,
+            "Paying the second quota must finish the game");
+        game.NewGame();
+        Check(game.CurrentDay == 1 && game.Score == 0 && game.StoredItems.Length == 0 && !game.TradeActive,
+            "New game must reset progress without giving a free item");
+        game.QueueFree();
+        await ToSignal(this, SignalName.ProcessFrame);
+
+        using (var oldSave = FileAccess.Open(SavePath, FileAccess.ModeFlags.Write))
+            oldSave.StoreString("{\"trade_active\":true,\"item_index\":2,\"customer_index\":1,\"percentage\":0,\"rerolls_remaining\":1}");
+        game = await CreateGame(scene);
+        Check(game.TradeActive && game.StoredItems.Length == 0, "An older active trade must be restored without duplicating its item");
+        Check(game.RerollsRemaining == 3 && game.CustomerIndex == 3,
+            "Old reroll limits and customer appearance must migrate");
+        game.RerollCustomer();
+        game.QueueFree();
+        await ToSignal(this, SignalName.ProcessFrame);
+        game = await CreateGame(scene);
+        Check(game.RerollsRemaining == 2, "A current save must preserve spent rerolls");
+        game.QueueFree();
+        await ToSignal(this, SignalName.ProcessFrame);
+        DirAccess.RemoveAbsolute(absolutePath);
+        GD.Print("Inventory, save and quota checks passed");
+    }
+
     private async Task TestMainMenu()
     {
         var scene = GD.Load<PackedScene>("res://scenes/main_menu.tscn")
@@ -33,7 +227,6 @@ public partial class ProjectTest : SceneTree
         Root.AddChild(menu);
         CurrentScene = menu;
         await ToSignal(this, SignalName.ProcessFrame);
-
         Check(menu.GameScene.ResourcePath == "res://scenes/trade_scene.tscn", "Play must open the trade scene");
         foreach (string path in new[]
         {
@@ -41,7 +234,6 @@ public partial class ProjectTest : SceneTree
             "MainMenuContainer/Menu/QuitButton", "SettingsMenuContainer/Settings/BackButton"
         })
             Check(menu.GetNode<TextureButton>(path).TextureNormal != null, $"Menu button art must load: {path}");
-
         var mainView = menu.GetNode<CenterContainer>("MainMenuContainer");
         var settingsView = menu.GetNode<CenterContainer>("SettingsMenuContainer");
         menu.OnSettingsPressed();
@@ -52,171 +244,6 @@ public partial class ProjectTest : SceneTree
         await ToSignal(this, SignalName.ProcessFrame);
         Check(CurrentScene is TradeScene, "Play must enter the game");
         GD.Print("Main menu checks passed");
-    }
-
-    private async Task TestTradeScene()
-    {
-        var scene = GD.Load<PackedScene>("res://scenes/trade_scene.tscn")
-            ?? throw new Exception("The trade scene must load");
-        var game = scene.Instantiate<TradeScene>();
-        game.SavePath = "";
-        Root.AddChild(game);
-        await ToSignal(this, SignalName.ProcessFrame);
-
-        var firstRoom = game.GetNode<Sprite2D>("World/TradingRoomBackground");
-        var secondRoom = game.GetNode<Sprite2D>("World/EmptyRoomBackground");
-        var roomTexture = firstRoom.Texture ?? throw new Exception("The room background must load");
-        Check(roomTexture == secondRoom.Texture, "Both rooms must use the supplied background");
-        Check(roomTexture.GetSize() == new Vector2(1920, 1080), "The room background must keep its original size");
-        Check(secondRoom.Position == new Vector2(1920, 0), "The empty room must be directly to the right");
-
-        var customer = game.GetNode<ModularCustomer>("World/Customer");
-        Check(customer.GetAppearanceCount() == 6, "The customer must offer six appearances");
-        foreach (string bodyName in new[] { "Male", "Female" })
-        {
-            Check(customer.GetNode<Sprite2D>($"{bodyName}/Body").Texture != null, "Each body needs its own art");
-            Check(customer.GetNode<Sprite2D>($"{bodyName}/Clothes").Texture != null, "Each body needs a clothes layer");
-            Check(customer.GetNode($"{bodyName}/Hair").GetChildCount() == 3, "Each body needs three hairstyles");
-        }
-
-        int[] prices = [4, 9, 18, 12];
-        for (int i = 0; i < 100; i++)
-        {
-            game.RollOffer();
-            int appearance = game.CustomerIndex;
-            Check(appearance is >= 0 and < 6, "Every trade must select an appearance");
-            Check(customer.GetNode<Node2D>("Male").Visible == (appearance < 3), "The chosen body must be visible");
-            Check(customer.GetNode<Node2D>("Female").Visible == (appearance >= 3), "The other body must be hidden");
-            string hairPath = appearance < 3 ? "Male/Hair" : "Female/Hair";
-            var hair = customer.GetNode(hairPath);
-            for (int style = 0; style < 3; style++)
-                Check(((Sprite2D)hair.GetChild(style)).Visible == (style == appearance % 3), "Only the selected hairstyle must be visible");
-            Check(game.Percentage is >= -30 and <= 30, "Offer percentage is out of range");
-            Check(game.OfferedPrice == TradeScene.PriceForPercent(prices[game.ItemIndex], game.Percentage),
-                "Offer price does not match the percentage");
-        }
-
-        int acceptedOffer = game.OfferedPrice;
-        Check(game.GetNode<Label>("World/Item/TradePanel/Content/OfferLabel").Text == $"Получим: {acceptedOffer}$",
-            "The panel must show the amount received");
-        game.AcceptTrade();
-        Check(game.Accepted == 1 && game.Score == acceptedOffer, "Accepting must record the sale");
-        Check(!game.TradeActive && !game.GetNode<CounterWorld>("World").ItemVisible, "The item must disappear after acceptance");
-        Check(!game.GetNode<PanelContainer>("World/Item/TradePanel").Visible, "The panel must disappear after acceptance");
-        game.AcceptTrade();
-        Check(game.Accepted == 1, "An inactive trade must not be accepted twice");
-        var key = new InputEventKey { Keycode = Key.R, Pressed = true };
-        for (int i = 0; i < 20; i++)
-        {
-            game._Input(key);
-            Check(game.TradeActive && game.GetNode<CounterWorld>("World").ItemVisible, "R must create a trade without a limit");
-        }
-        int scoreBeforeDecline = game.Score;
-        game.DeclineTrade();
-        Check(game.Declined == 1 && game.Score == scoreBeforeDecline, "Declining must not change the score");
-        game._Input(key);
-        Check(game.TradeActive, "R must create a trade after declining");
-
-        var camera = game.GetNode<Camera2D>("Camera2D");
-        float oldZoom = camera.Zoom.X;
-        game._Input(new InputEventMouseButton { ButtonIndex = MouseButton.WheelUp, Position = new Vector2(640, 360), Pressed = true });
-        Check(camera.Zoom.X > oldZoom, "Mouse wheel must zoom the camera");
-        float startingX = camera.Position.X;
-        game._UnhandledInput(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Position = new Vector2(800, 500), Pressed = true });
-        game._Input(new InputEventMouseMotion { Relative = new Vector2(100, 0) });
-        Check(Mathf.IsEqualApprox(camera.Position.X, startingX - 100f / camera.Zoom.X), "Dragging must pan the camera");
-        camera.Position = new Vector2(-100, -100);
-        game.ClampCamera();
-        Check(camera.Position.X >= 0 && camera.Position.Y >= 0, "The camera must stay inside the scene");
-        camera.Position = new Vector2(3000, 540);
-        game.ClampCamera();
-        Check(camera.Position.X > 1920, "The camera must be able to reach the empty room");
-        game.QueueFree();
-        await ToSignal(this, SignalName.ProcessFrame);
-        GD.Print("Trade scene checks passed");
-    }
-
-    private async Task TestProgress()
-    {
-        string absolutePath = ProjectSettings.GlobalizePath(SavePath);
-        if (FileAccess.FileExists(SavePath)) DirAccess.RemoveAbsolute(absolutePath);
-        var scene = GD.Load<PackedScene>("res://scenes/trade_scene.tscn");
-        TradeScene game = await CreateGame(scene);
-        for (int i = 0; i < 40; i++)
-        {
-            game.RollOffer();
-            Check(game.RerollsRemaining == 3, "Every item must start with three rerolls");
-        }
-
-        game.ItemIndex = 0;
-        game.CustomerIndex = 0;
-        game.Percentage = -30;
-        game.RerollsRemaining = 3;
-        game.TradeActive = true;
-        game.ShowTrade();
-        foreach (int remaining in new[] { 2, 1, 0 })
-        {
-            int oldCustomer = game.CustomerIndex;
-            int oldPrice = game.OfferedPrice;
-            game.RerollCustomer();
-            Check(game.ItemIndex == 0 && game.CustomerIndex != oldCustomer, "Reroll must keep the item and replace the buyer");
-            Check(game.OfferedPrice != oldPrice, "Reroll must change the actual price");
-            Check(game.RerollsRemaining == remaining, "Reroll must consume one attempt");
-        }
-        game.RerollCustomer();
-        Check(game.RerollsRemaining == 0, "Reroll limit must be enforced");
-        Check(game.GetNode<Button>("World/Item/TradePanel/Content/RerollButton").Disabled, "Reroll button must disable at zero");
-
-        game.CurrentDay = 4;
-        game.Score = game.FirstQuota - 1;
-        game.EndDay();
-        Check(game.Failed && !game.TradeActive, "Missing the quota must stop trades");
-        game.RollOffer();
-        Check(!game.TradeActive, "R must not bypass quota failure");
-        game.ReturnToCheckpoint();
-        Check(game.CurrentDay == 1 && game.Score == 0, "First failure must restart from day one");
-
-        game.CurrentDay = 4;
-        game.Score = game.FirstQuota + 12;
-        game.EndDay();
-        Check(game.QuotaStage == 1 && game.CurrentDay == 5, "Paying the first quota must open day five");
-        Check(game.Score == 12 && game.CheckpointScore == 12, "Quota must be deducted and remaining cash saved");
-        int savedItem = game.ItemIndex;
-        int savedRerolls = game.RerollsRemaining;
-        game.QueueFree();
-        await ToSignal(this, SignalName.ProcessFrame);
-        game = await CreateGame(scene);
-        Check(game.CurrentDay == 5 && game.Score == 12, "Progress must survive a scene reload");
-        Check(game.ItemIndex == savedItem && game.RerollsRemaining == savedRerolls, "The current offer must survive a reload");
-        game.CurrentDay = 6;
-        game.Score = 1000;
-        game.ReturnToCheckpoint();
-        Check(game.CurrentDay == 5 && game.Score == 12, "Checkpoint must restore day and cash");
-
-        game.CurrentDay = 7;
-        game.Score = game.SecondQuota;
-        game.EndDay();
-        Check(game.Completed && game.QuotaStage == 2, "Paying the second quota must finish the game");
-        Check(game.Score == 0 && !game.TradeActive, "Final quota must be deducted and trades stopped");
-        game.NewGame();
-        Check(game.CurrentDay == 1 && game.Score == 0 && game.TradeActive, "New game must reset progress");
-        game.QueueFree();
-        await ToSignal(this, SignalName.ProcessFrame);
-
-        using (var oldSave = FileAccess.Open(SavePath, FileAccess.ModeFlags.Write))
-            oldSave.StoreString("{\"trade_active\":true,\"item_index\":2,\"customer_index\":1,\"percentage\":0,\"rerolls_remaining\":1}");
-        game = await CreateGame(scene);
-        Check(game.RerollsRemaining == 3, "An older expensive-item save must gain the new reroll limit");
-        Check(game.CustomerIndex == 3, "An older female customer must keep the female body");
-        game.RerollCustomer();
-        game.QueueFree();
-        await ToSignal(this, SignalName.ProcessFrame);
-        game = await CreateGame(scene);
-        Check(game.RerollsRemaining == 2, "A current save must preserve spent rerolls");
-        game.QueueFree();
-        await ToSignal(this, SignalName.ProcessFrame);
-        DirAccess.RemoveAbsolute(absolutePath);
-        GD.Print("Reroll and quota checks passed");
     }
 
     private async Task<TradeScene> CreateGame(PackedScene scene)

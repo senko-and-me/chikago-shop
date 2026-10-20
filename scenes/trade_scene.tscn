@@ -53,6 +53,18 @@ bg_color = Color(0.56, 0.48, 0.38, 1)
 [sub_resource type="StyleBoxFlat" id="RerollDisabled"]
 bg_color = Color(0.58, 0.54, 0.48, 1)
 
+[sub_resource type="StyleBoxFlat" id="ShowcaseStyle"]
+content_margin_left = 18.0
+content_margin_top = 14.0
+content_margin_right = 18.0
+content_margin_bottom = 14.0
+bg_color = Color(0.77, 0.88, 0.9, 0.94)
+border_width_left = 8
+border_width_top = 8
+border_width_right = 8
+border_width_bottom = 8
+border_color = Color(0.37, 0.27, 0.22, 1)
+
 [node name="TradeScene" type="Node2D" unique_id=620028237]
 script = ExtResource("1_main")
 
@@ -61,31 +73,445 @@ script = ExtResource("2_world")
 
 [node name="Wall" type="ColorRect" parent="World" unique_id=704441603]
 offset_right = 3840.0
-offset_bottom = 1080.0
+offset_bottom = 2160.0
 mouse_filter = 2
 
 [node name="TradingRoomBackground" type="Sprite2D" parent="World" unique_id=2014665045]
+position = Vector2(0, 1080)
 texture = ExtResource("4_room_background")
 centered = false
 
 [node name="EmptyRoomBackground" type="Sprite2D" parent="World" unique_id=1726145117]
-position = Vector2(1920, 0)
+position = Vector2(1920, 1080)
+modulate = Color(0.91, 0.94, 1, 1)
 texture = ExtResource("4_room_background")
 centered = false
 
+[node name="Atelier" type="Node2D" parent="World"]
+
+[node name="Background" type="Sprite2D" parent="World/Atelier"]
+modulate = Color(1, 0.89, 0.78, 1)
+texture = ExtResource("4_room_background")
+centered = false
+
+[node name="Header" type="ColorRect" parent="World/Atelier"]
+offset_left = 480.0
+offset_top = 112.0
+offset_right = 1440.0
+offset_bottom = 280.0
+mouse_filter = 2
+color = Color(0.36, 0.21, 0.17, 0.94)
+
+[node name="NameLabel" type="Label" parent="World/Atelier"]
+offset_left = 550.0
+offset_top = 132.0
+offset_right = 1370.0
+offset_bottom = 210.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.96, 0.89, 1)
+theme_override_font_sizes/font_size = 52
+text = "АТЕЛЬЕ"
+horizontal_alignment = 1
+
+[node name="HintLabel" type="Label" parent="World/Atelier"]
+offset_left = 550.0
+offset_top = 210.0
+offset_right = 1370.0
+offset_bottom = 260.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.9, 0.79, 1)
+theme_override_font_sizes/font_size = 24
+text = "Получить один случайный предмет"
+horizontal_alignment = 1
+
+[node name="GetItemButton" type="Button" parent="World/Atelier"]
+offset_left = 735.0
+offset_top = 536.0
+offset_right = 1185.0
+offset_bottom = 632.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_disabled_color = Color(0.82, 0.76, 0.68, 1)
+theme_override_font_sizes/font_size = 30
+theme_override_styles/normal = SubResource("AcceptNormal")
+theme_override_styles/pressed = SubResource("AcceptPressed")
+theme_override_styles/hover = SubResource("AcceptHover")
+theme_override_styles/disabled = SubResource("AcceptDisabled")
+text = "Получить предмет"
+
+[node name="MusicWorkshop" type="Node2D" parent="World"]
+position = Vector2(1920, 0)
+
+[node name="Background" type="Sprite2D" parent="World/MusicWorkshop"]
+modulate = Color(0.76, 0.86, 1, 1)
+texture = ExtResource("4_room_background")
+centered = false
+
+[node name="Header" type="ColorRect" parent="World/MusicWorkshop"]
+offset_left = 480.0
+offset_top = 112.0
+offset_right = 1440.0
+offset_bottom = 280.0
+mouse_filter = 2
+color = Color(0.17, 0.28, 0.41, 0.94)
+
+[node name="NameLabel" type="Label" parent="World/MusicWorkshop"]
+offset_left = 550.0
+offset_top = 132.0
+offset_right = 1370.0
+offset_bottom = 210.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.91, 0.96, 1, 1)
+theme_override_font_sizes/font_size = 52
+text = "МУЗ. ШТУКИ"
+horizontal_alignment = 1
+
+[node name="HintLabel" type="Label" parent="World/MusicWorkshop"]
+offset_left = 550.0
+offset_top = 210.0
+offset_right = 1370.0
+offset_bottom = 260.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.77, 0.89, 1, 1)
+theme_override_font_sizes/font_size = 24
+text = "Получить один случайный предмет"
+horizontal_alignment = 1
+
+[node name="GetItemButton" type="Button" parent="World/MusicWorkshop"]
+offset_left = 735.0
+offset_top = 536.0
+offset_right = 1185.0
+offset_bottom = 632.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_disabled_color = Color(0.82, 0.76, 0.68, 1)
+theme_override_font_sizes/font_size = 30
+theme_override_styles/normal = SubResource("RerollNormal")
+theme_override_styles/pressed = SubResource("RerollPressed")
+theme_override_styles/hover = SubResource("RerollHover")
+theme_override_styles/disabled = SubResource("RerollDisabled")
+text = "Получить предмет"
+
+[node name="RoomSeparator" type="ColorRect" parent="World"]
+offset_top = 1064.0
+offset_right = 3840.0
+offset_bottom = 1096.0
+mouse_filter = 2
+color = Color(0.28, 0.22, 0.19, 1)
+
+[node name="RoomDivider" type="ColorRect" parent="World"]
+offset_left = 1904.0
+offset_right = 1936.0
+offset_bottom = 2160.0
+mouse_filter = 2
+color = Color(0.28, 0.22, 0.19, 1)
+
+[node name="Staircase" type="Node2D" parent="World"]
+position = Vector2(1920, 615)
+
+[node name="Base" type="ColorRect" parent="World/Staircase"]
+offset_left = -132.0
+offset_right = 132.0
+offset_bottom = 424.0
+mouse_filter = 2
+color = Color(0.33, 0.28, 0.25, 1)
+
+[node name="Step1" type="ColorRect" parent="World/Staircase"]
+offset_left = -112.0
+offset_top = 54.0
+offset_right = 112.0
+offset_bottom = 75.0
+mouse_filter = 2
+color = Color(0.7, 0.57, 0.44, 1)
+
+[node name="Step2" type="ColorRect" parent="World/Staircase"]
+offset_left = -112.0
+offset_top = 126.0
+offset_right = 112.0
+offset_bottom = 147.0
+mouse_filter = 2
+color = Color(0.7, 0.57, 0.44, 1)
+
+[node name="Step3" type="ColorRect" parent="World/Staircase"]
+offset_left = -112.0
+offset_top = 198.0
+offset_right = 112.0
+offset_bottom = 219.0
+mouse_filter = 2
+color = Color(0.7, 0.57, 0.44, 1)
+
+[node name="Step4" type="ColorRect" parent="World/Staircase"]
+offset_left = -112.0
+offset_top = 270.0
+offset_right = 112.0
+offset_bottom = 291.0
+mouse_filter = 2
+color = Color(0.7, 0.57, 0.44, 1)
+
+[node name="Step5" type="ColorRect" parent="World/Staircase"]
+offset_left = -112.0
+offset_top = 342.0
+offset_right = 112.0
+offset_bottom = 363.0
+mouse_filter = 2
+color = Color(0.7, 0.57, 0.44, 1)
+
+[node name="StairLabel" type="Label" parent="World"]
+offset_left = 1710.0
+offset_top = 528.0
+offset_right = 2130.0
+offset_bottom = 592.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.22, 0.17, 0.14, 1)
+theme_override_font_sizes/font_size = 30
+text = "ЛЕСТНИЦА"
+horizontal_alignment = 1
+
+[node name="LeftShowcaseLabel" type="Label" parent="World"]
+offset_left = 370.0
+offset_top = 1205.0
+offset_right = 1550.0
+offset_bottom = 1280.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.32, 0.19, 0.14, 1)
+theme_override_font_sizes/font_size = 48
+text = "ВИТРИНЫ · ТОРГОВЛЯ"
+horizontal_alignment = 1
+
+[node name="RightShowcaseLabel" type="Label" parent="World"]
+offset_left = 2290.0
+offset_top = 1205.0
+offset_right = 3470.0
+offset_bottom = 1280.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.32, 0.19, 0.14, 1)
+theme_override_font_sizes/font_size = 48
+text = "ВИТРИНЫ · ЗАЛ"
+horizontal_alignment = 1
+
+[node name="Showcases" type="Node2D" parent="World"]
+position = Vector2(1920, 1080)
+
+[node name="DisplayCase1" type="PanelContainer" parent="World/Showcases"]
+offset_left = 200.0
+offset_top = 325.0
+offset_right = 600.0
+offset_bottom = 555.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("ShowcaseStyle")
+
+[node name="Content" type="VBoxContainer" parent="World/Showcases/DisplayCase1"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 24
+alignment = 1
+
+[node name="NameLabel" type="Label" parent="World/Showcases/DisplayCase1/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.23, 0.17, 0.14, 1)
+theme_override_font_sizes/font_size = 30
+text = "ВИТРИНА 1"
+horizontal_alignment = 1
+
+[node name="EmptyLabel" type="Label" parent="World/Showcases/DisplayCase1/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.38, 0.48, 0.5, 1)
+theme_override_font_sizes/font_size = 26
+text = "ПУСТО"
+horizontal_alignment = 1
+
+[node name="DisplayCase2" type="PanelContainer" parent="World/Showcases"]
+offset_left = 740.0
+offset_top = 325.0
+offset_right = 1140.0
+offset_bottom = 555.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("ShowcaseStyle")
+
+[node name="Content" type="VBoxContainer" parent="World/Showcases/DisplayCase2"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 24
+alignment = 1
+
+[node name="NameLabel" type="Label" parent="World/Showcases/DisplayCase2/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.23, 0.17, 0.14, 1)
+theme_override_font_sizes/font_size = 30
+text = "ВИТРИНА 2"
+horizontal_alignment = 1
+
+[node name="EmptyLabel" type="Label" parent="World/Showcases/DisplayCase2/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.38, 0.48, 0.5, 1)
+theme_override_font_sizes/font_size = 26
+text = "ПУСТО"
+horizontal_alignment = 1
+
+[node name="DisplayCase3" type="PanelContainer" parent="World/Showcases"]
+offset_left = 1280.0
+offset_top = 325.0
+offset_right = 1680.0
+offset_bottom = 555.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("ShowcaseStyle")
+
+[node name="Content" type="VBoxContainer" parent="World/Showcases/DisplayCase3"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 24
+alignment = 1
+
+[node name="NameLabel" type="Label" parent="World/Showcases/DisplayCase3/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.23, 0.17, 0.14, 1)
+theme_override_font_sizes/font_size = 30
+text = "ВИТРИНА 3"
+horizontal_alignment = 1
+
+[node name="EmptyLabel" type="Label" parent="World/Showcases/DisplayCase3/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.38, 0.48, 0.5, 1)
+theme_override_font_sizes/font_size = 26
+text = "ПУСТО"
+horizontal_alignment = 1
+
+[node name="DisplayCase4" type="PanelContainer" parent="World/Showcases"]
+offset_left = 200.0
+offset_top = 650.0
+offset_right = 600.0
+offset_bottom = 880.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("ShowcaseStyle")
+
+[node name="Content" type="VBoxContainer" parent="World/Showcases/DisplayCase4"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 24
+alignment = 1
+
+[node name="NameLabel" type="Label" parent="World/Showcases/DisplayCase4/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.23, 0.17, 0.14, 1)
+theme_override_font_sizes/font_size = 30
+text = "ВИТРИНА 4"
+horizontal_alignment = 1
+
+[node name="EmptyLabel" type="Label" parent="World/Showcases/DisplayCase4/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.38, 0.48, 0.5, 1)
+theme_override_font_sizes/font_size = 26
+text = "ПУСТО"
+horizontal_alignment = 1
+
+[node name="DisplayCase5" type="PanelContainer" parent="World/Showcases"]
+offset_left = 740.0
+offset_top = 650.0
+offset_right = 1140.0
+offset_bottom = 880.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("ShowcaseStyle")
+
+[node name="Content" type="VBoxContainer" parent="World/Showcases/DisplayCase5"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 24
+alignment = 1
+
+[node name="NameLabel" type="Label" parent="World/Showcases/DisplayCase5/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.23, 0.17, 0.14, 1)
+theme_override_font_sizes/font_size = 30
+text = "ВИТРИНА 5"
+horizontal_alignment = 1
+
+[node name="EmptyLabel" type="Label" parent="World/Showcases/DisplayCase5/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.38, 0.48, 0.5, 1)
+theme_override_font_sizes/font_size = 26
+text = "ПУСТО"
+horizontal_alignment = 1
+
+[node name="DisplayCase6" type="PanelContainer" parent="World/Showcases"]
+offset_left = 1280.0
+offset_top = 650.0
+offset_right = 1680.0
+offset_bottom = 880.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("ShowcaseStyle")
+
+[node name="Content" type="VBoxContainer" parent="World/Showcases/DisplayCase6"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 24
+alignment = 1
+
+[node name="NameLabel" type="Label" parent="World/Showcases/DisplayCase6/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.23, 0.17, 0.14, 1)
+theme_override_font_sizes/font_size = 30
+text = "ВИТРИНА 6"
+horizontal_alignment = 1
+
+[node name="EmptyLabel" type="Label" parent="World/Showcases/DisplayCase6/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.38, 0.48, 0.5, 1)
+theme_override_font_sizes/font_size = 26
+text = "ПУСТО"
+horizontal_alignment = 1
+
+[node name="CashDesk" type="Node2D" parent="World"]
+position = Vector2(1920, 1844)
+
+[node name="Top" type="ColorRect" parent="World/CashDesk"]
+offset_left = -170.0
+offset_top = -48.0
+offset_right = 170.0
+offset_bottom = 0.0
+mouse_filter = 2
+color = Color(0.74, 0.54, 0.41, 1)
+
+[node name="Front" type="ColorRect" parent="World/CashDesk"]
+offset_left = -145.0
+offset_right = 145.0
+offset_bottom = 128.0
+mouse_filter = 2
+color = Color(0.43, 0.29, 0.23, 1)
+
+[node name="Label" type="Label" parent="World/CashDesk"]
+offset_left = -125.0
+offset_top = 20.0
+offset_right = 125.0
+offset_bottom = 93.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.92, 0.79, 1)
+theme_override_font_sizes/font_size = 32
+text = "КАССА"
+horizontal_alignment = 1
+
 [node name="Customer" parent="World" unique_id=1498939060 instance=ExtResource("5_customer")]
-position = Vector2(919, 982)
+position = Vector2(919, 2062)
 
 [node name="Player" type="ColorRect" parent="World" unique_id=895278051]
 offset_left = 1450.0
-offset_top = 646.0
+offset_top = 1726.0
 offset_right = 1578.0
-offset_bottom = 774.0
+offset_bottom = 1854.0
 mouse_filter = 2
 color = Color(0.239216, 0.533333, 0.592157, 1)
 
 [node name="Counter" type="Node2D" parent="World" unique_id=583239927]
-position = Vector2(994, 750)
+position = Vector2(994, 1830)
 
 [node name="Top" type="ColorRect" parent="World/Counter" unique_id=438615943]
 offset_right = 576.0
@@ -118,7 +544,7 @@ mouse_filter = 2
 color = Color(0.580392, 0.392157, 0.301961, 1)
 
 [node name="Item" type="Node2D" parent="World" unique_id=260079350]
-position = Vector2(1234, 686)
+position = Vector2(1234, 1766)
 
 [node name="Hat" type="ColorRect" parent="World/Item" unique_id=1966016124]
 offset_right = 64.0
@@ -218,8 +644,22 @@ theme_override_styles/hover = SubResource("RerollHover")
 theme_override_styles/disabled = SubResource("RerollDisabled")
 text = "Другой покупатель (3)"
 
+[node name="PlaceItemButton" type="Button" parent="World"]
+offset_left = 1084.0
+offset_top = 1726.0
+offset_right = 1384.0
+offset_bottom = 1806.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_disabled_color = Color(0.85, 0.82, 0.77, 1)
+theme_override_font_sizes/font_size = 24
+theme_override_styles/normal = SubResource("RerollNormal")
+theme_override_styles/pressed = SubResource("RerollPressed")
+theme_override_styles/hover = SubResource("RerollHover")
+theme_override_styles/disabled = SubResource("RerollDisabled")
+text = "Разместить предмет"
+
 [node name="Camera2D" type="Camera2D" parent="." unique_id=550359116]
-position = Vector2(960, 540)
+position = Vector2(960, 1620)
 zoom = Vector2(0.7, 0.7)
 
 [node name="HUD" type="CanvasLayer" parent="." unique_id=1744648689]

@@ -14,8 +14,8 @@ public partial class TradeScene : Node2D
 	private const float ZoomStep = 1.15f;
 	private const int FirstDeadline = 4;
 	private const int FinalDay = 7;
-	private static readonly (int BasePrice, string Kind)[] Items =
-		[(4, "hat"), (9, "vase"), (18, "watch"), (12, "lamp")];
+	private static readonly (int BasePrice, string Kind, string Name)[] Items =
+		[(4, "hat", "шляпа"), (9, "vase", "ваза"), (18, "watch", "часы"), (12, "lamp", "лампа")];
 	private static readonly JsonSerializerOptions JsonOptions = new()
 	{
 		PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
@@ -39,8 +39,16 @@ public partial class TradeScene : Node2D
 	private Label _deadlineLabel = null!;
 	private Label _statusLabel = null!;
 	private Button _endDayButton = null!;
+	private Button _atelierGetItemButton = null!;
+	private Button _musicGetItemButton = null!;
+	private Button _placeItemButton = null!;
 
 	private readonly RandomNumberGenerator _rng = new();
+	private readonly List<int> _storedItems = new();
+	private readonly List<int> _checkpointItems = new();
+	public int[] StoredItems => _storedItems.ToArray();
+	public static string GetItemKind(int index) => Items[index].Kind;
+	public static string GetItemName(int index) => Items[index].Name;
 	public int ItemIndex { get; set; } = -1;
 	public int CustomerIndex { get; set; } = -1;
 	public int Percentage { get; set; }
@@ -80,12 +88,18 @@ public partial class TradeScene : Node2D
 		_deadlineLabel = GetNode<Label>("HUD/Root/ProgressPanel/Content/DeadlineLabel");
 		_statusLabel = GetNode<Label>("HUD/Root/ProgressPanel/Content/StatusLabel");
 		_endDayButton = GetNode<Button>("HUD/Root/ProgressPanel/Content/EndDayButton");
+		_atelierGetItemButton = GetNode<Button>("World/Atelier/GetItemButton");
+		_musicGetItemButton = GetNode<Button>("World/MusicWorkshop/GetItemButton");
+		_placeItemButton = GetNode<Button>("World/PlaceItemButton");
 
 		_rng.Randomize();
 		_acceptButton.Pressed += AcceptTrade;
 		_declineButton.Pressed += DeclineTrade;
 		_rerollButton.Pressed += RerollCustomer;
 		_endDayButton.Pressed += EndDay;
+		_atelierGetItemButton.Pressed += GetItemFromAtelier;
+		_musicGetItemButton.Pressed += GetItemFromMusicWorkshop;
+		_placeItemButton.Pressed += PlaceNextItem;
 		GetNode<Button>("HUD/Root/ProgressPanel/Content/CheckpointButton").Pressed += ReturnToCheckpoint;
 		GetNode<Button>("HUD/Root/ProgressPanel/Content/NewGameButton").Pressed += NewGame;
 
@@ -97,7 +111,9 @@ public partial class TradeScene : Node2D
 			if (TradeActive) ShowTrade();
 			else FinishTrade();
 		}
-		else RollOffer();
+		else FinishTrade();
+		RefreshItemButtons();
+		LogStoredItems();
 
 		GetViewport().SizeChanged += ClampCamera;
 		ClampCamera();
@@ -111,10 +127,6 @@ public partial class TradeScene : Node2D
 			{
 				case Key.Escape:
 					GetTree().Quit();
-					GetViewport().SetInputAsHandled();
-					break;
-				case Key.R:
-					RollOffer();
 					GetViewport().SetInputAsHandled();
 					break;
 				case Key.F:
@@ -171,13 +183,38 @@ public partial class TradeScene : Node2D
 		_camera.Position = position;
 	}
 
-	public void RollOffer()
+	public void GetItemFromAtelier() => AcquireItem("Ателье");
+
+	public void GetItemFromMusicWorkshop() => AcquireItem("Муз. штуки");
+
+	private void AcquireItem(string workshop)
 	{
 		if (Failed || Completed) return;
-		int nextIndex = _rng.RandiRange(0, Items.Length - 1);
-		if (nextIndex == ItemIndex)
-			nextIndex = (nextIndex + _rng.RandiRange(1, Items.Length - 1)) % Items.Length;
-		ItemIndex = nextIndex;
+		int index = _rng.RandiRange(0, Items.Length - 1);
+		_storedItems.Add(index);
+		GD.Print($"{workshop}: получен предмет {Items[index].Name} (индекс {index}).");
+		LogStoredItems();
+		RefreshItemButtons();
+		SaveProgress();
+	}
+
+	private void LogStoredItems()
+	{
+		var entries = _storedItems.ConvertAll(index => $"{index}:{Items[index].Name}");
+		GD.Print($"Массив предметов: [{string.Join(", ", entries)}]");
+	}
+
+	public void PlaceNextItem()
+	{
+		if (Failed || Completed || TradeActive || _storedItems.Count == 0) return;
+		ItemIndex = _storedItems[0];
+		_storedItems.RemoveAt(0);
+		LogStoredItems();
+		StartBuyerOffer();
+	}
+
+	private void StartBuyerOffer()
+	{
 		Percentage = _rng.RandiRange(-30, 30);
 		RerollsRemaining = 3;
 		CustomerIndex = _rng.RandiRange(0, _customer.GetAppearanceCount() - 1);
@@ -196,6 +233,15 @@ public partial class TradeScene : Node2D
 		_acceptButton.Disabled = false;
 		_declineButton.Disabled = false;
 		RefreshOffer();
+		RefreshItemButtons();
+	}
+
+	private void RefreshItemButtons()
+	{
+		_atelierGetItemButton.Disabled = Failed || Completed;
+		_musicGetItemButton.Disabled = Failed || Completed;
+		_placeItemButton.Visible = !TradeActive;
+		_placeItemButton.Disabled = _storedItems.Count == 0 || Failed || Completed;
 	}
 
 	private void RefreshOffer()
@@ -251,19 +297,29 @@ public partial class TradeScene : Node2D
 	{
 		if (!TradeActive) return;
 		Declined++;
+		ReturnActiveItemToArray();
 		FinishTrade();
 		SaveProgress();
+	}
+
+	private void ReturnActiveItemToArray()
+	{
+		if (!TradeActive || ItemIndex < 0 || ItemIndex >= Items.Length) return;
+		_storedItems.Insert(0, ItemIndex);
+		LogStoredItems();
 	}
 
 	private void FinishTrade()
 	{
 		TradeActive = false;
+		ItemIndex = -1;
 		_world.ItemVisible = false;
 		_customer.Visible = false;
 		_tradePanel.Visible = false;
 		_acceptButton.Disabled = true;
 		_declineButton.Disabled = true;
 		_rerollButton.Disabled = true;
+		RefreshItemButtons();
 	}
 
 	private void RefreshScore() => _scoreLabel.Text = $"Счёт: {Score}$";
@@ -290,6 +346,7 @@ public partial class TradeScene : Node2D
 	public void EndDay()
 	{
 		if (Failed || Completed) return;
+		ReturnActiveItemToArray();
 		FinishTrade();
 		int deadline = QuotaStage == 0 ? FirstDeadline : FinalDay;
 		if (CurrentDay >= deadline)
@@ -309,6 +366,8 @@ public partial class TradeScene : Node2D
 				CheckpointScore = Score;
 				CheckpointAccepted = Accepted;
 				CheckpointDeclined = Declined;
+				_checkpointItems.Clear();
+				_checkpointItems.AddRange(_storedItems);
 				StatusText = "Первая квота выплачена.";
 			}
 			else
@@ -326,12 +385,15 @@ public partial class TradeScene : Node2D
 		}
 		RefreshScore();
 		RefreshProgress();
-		if (Failed || Completed) SaveProgress();
-		else RollOffer();
+		RefreshItemButtons();
+		SaveProgress();
 	}
 
 	public void ReturnToCheckpoint()
 	{
+		FinishTrade();
+		_storedItems.Clear();
+		_storedItems.AddRange(_checkpointItems);
 		CurrentDay = CheckpointDay;
 		Score = CheckpointScore;
 		Accepted = CheckpointAccepted;
@@ -342,11 +404,16 @@ public partial class TradeScene : Node2D
 		StatusText = "Возврат к контрольной точке.";
 		RefreshScore();
 		RefreshProgress();
-		RollOffer();
+		RefreshItemButtons();
+		LogStoredItems();
+		SaveProgress();
 	}
 
 	public void NewGame()
 	{
+		FinishTrade();
+		_storedItems.Clear();
+		_checkpointItems.Clear();
 		CurrentDay = 1;
 		Score = 0;
 		Accepted = 0;
@@ -361,7 +428,9 @@ public partial class TradeScene : Node2D
 		StatusText = "Новая игра.";
 		RefreshScore();
 		RefreshProgress();
-		RollOffer();
+		RefreshItemButtons();
+		LogStoredItems();
+		SaveProgress();
 	}
 
 	private void SaveProgress()
@@ -375,12 +444,13 @@ public partial class TradeScene : Node2D
 		}
 		var data = new ProgressData
 		{
-			SaveVersion = 3, Day = CurrentDay, Score = Score, Accepted = Accepted,
+			SaveVersion = 4, Day = CurrentDay, Score = Score, Accepted = Accepted,
 			Declined = Declined, QuotaStage = QuotaStage, CheckpointDay = CheckpointDay,
 			CheckpointScore = CheckpointScore, CheckpointAccepted = CheckpointAccepted,
 			CheckpointDeclined = CheckpointDeclined, Failed = Failed, Completed = Completed,
 			Status = StatusText, TradeActive = TradeActive, ItemIndex = ItemIndex,
-			CustomerIndex = CustomerIndex, Percentage = Percentage, RerollsRemaining = RerollsRemaining
+			CustomerIndex = CustomerIndex, Percentage = Percentage, RerollsRemaining = RerollsRemaining,
+			StoredItems = _storedItems.ToArray(), CheckpointItems = _checkpointItems.ToArray()
 		};
 		file.StoreString(JsonSerializer.Serialize(data, JsonOptions));
 	}
@@ -398,6 +468,12 @@ public partial class TradeScene : Node2D
 			return false;
 		}
 		if (data == null) return false;
+		_storedItems.Clear();
+		_checkpointItems.Clear();
+		foreach (int index in data.StoredItems ?? [])
+			if (index >= 0 && index < Items.Length) _storedItems.Add(index);
+		foreach (int index in data.CheckpointItems ?? [])
+			if (index >= 0 && index < Items.Length) _checkpointItems.Add(index);
 		CurrentDay = Mathf.Clamp(data.Day, 1, FinalDay);
 		Score = Mathf.Max(0, data.Score);
 		Accepted = Mathf.Max(0, data.Accepted);
@@ -447,5 +523,7 @@ public partial class TradeScene : Node2D
 		public int CustomerIndex { get; set; } = -1;
 		public int Percentage { get; set; }
 		public int RerollsRemaining { get; set; }
+		public int[] StoredItems { get; set; } = [];
+		public int[] CheckpointItems { get; set; } = [];
 	}
 }
