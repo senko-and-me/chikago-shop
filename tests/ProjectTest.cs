@@ -37,19 +37,19 @@ public partial class ProjectTest : SceneTree
 
         var world = game.GetNode<CounterWorld>("World");
         var wall = game.GetNode<ColorRect>("World/Wall");
-        Check(wall.Size == new Vector2(3840, 2160), "The world must contain the four rooms from the GDD plan");
-        var leftSalesRoom = game.GetNode<Sprite2D>("World/TradingRoomBackground");
-        var rightSalesRoom = game.GetNode<Sprite2D>("World/EmptyRoomBackground");
-        var roomTexture = leftSalesRoom.Texture ?? throw new Exception("The room background must load");
-        Check(roomTexture == rightSalesRoom.Texture && roomTexture.GetSize() == new Vector2(1920, 1080),
-            "Both sales rooms must use the supplied background at its original size");
-        Check(leftSalesRoom.Position == new Vector2(0, 1080) && rightSalesRoom.Position == new Vector2(1920, 1080),
-            "The sales rooms must be below the workshops");
+        Check(wall.Size == new Vector2(3840, 2160), "The world must retain both workshops and the sales room");
+        var salesRoom = game.GetNode<Sprite2D>("World/TradingRoomBackground");
+        var roomTexture = salesRoom.Texture ?? throw new Exception("The room background must load");
+        Check(roomTexture.GetSize() == new Vector2(1920, 1080) && salesRoom.Position == new Vector2(0, 1080),
+            "The single sales room must be below the atelier");
+        Check(!game.HasNode("World/EmptyRoomBackground") && !game.HasNode("World/Showcases"),
+            "The extra showroom and its showcases must be removed");
         var atelierButton = game.GetNode<Button>("World/Atelier/GetItemButton");
         var musicButton = game.GetNode<Button>("World/MusicWorkshop/GetItemButton");
         var placeButton = game.GetNode<Button>("World/PlaceItemButton");
-        Check(game.GetNode("World/Showcases").GetChildCount() == 6,
-            "The right sales room must contain six showcases from the GDD plan");
+        foreach (string kind in new[] { "Hat", "Coat", "Guitar", "Trumpet" })
+            Check(game.GetNode<Sprite2D>($"World/Item/{kind}").Texture != null,
+                $"The {kind} item must have an illustration");
         Check(!atelierButton.Disabled && !musicButton.Disabled, "Both workshops must provide items");
         Check(placeButton.Disabled && !game.TradeActive && game.StoredItems.Length == 0,
             "A new game must start without a free item to sell");
@@ -69,8 +69,9 @@ public partial class ProjectTest : SceneTree
 
         atelierButton.EmitSignal(Button.SignalName.Pressed);
         musicButton.EmitSignal(Button.SignalName.Pressed);
-        Check(game.StoredItems.Length == 2 && game.StoredItems.All(index => index is >= 0 and < 4),
-            "Each workshop click must store one random item");
+        Check(game.StoredItems.Length == 2 && game.StoredItems[0] is >= 0 and <= 1 &&
+              game.StoredItems[1] is >= 2 and <= 3,
+            "Each workshop must only produce items from its category");
         int firstItem = game.StoredItems[0];
         int secondItem = game.StoredItems[1];
         Check(!placeButton.Disabled, "Placing must become available with a stored item");
@@ -78,6 +79,9 @@ public partial class ProjectTest : SceneTree
         Check(game.TradeActive && game.ItemIndex == firstItem && game.StoredItems.SequenceEqual(new[] { secondItem }),
             "The first stored item must be placed for sale");
         Check(world.ItemVisible && !placeButton.Visible, "The sale button must give way to the displayed item");
+        foreach (string kind in new[] { "hat", "coat", "guitar", "trumpet" })
+            Check(game.GetNode<Sprite2D>($"World/Item/{char.ToUpperInvariant(kind[0])}{kind[1..]}").Visible ==
+                  (kind == TradeScene.GetItemKind(firstItem)), "Only the selected item illustration must be visible");
         int[] prices = [4, 9, 18, 12];
         Check(game.Percentage is >= -30 and <= 30, "Offer percentage is out of range");
         Check(game.OfferedPrice == TradeScene.PriceForPercent(prices[firstItem], game.Percentage),
@@ -130,6 +134,11 @@ public partial class ProjectTest : SceneTree
         camera.Position = new Vector2(3000, 540);
         game.ClampCamera();
         Check(camera.Position.X > 1920 && camera.Position.Y < 1080, "The camera must reach the upper-right workshop");
+        camera.Position = new Vector2(3000, 1620);
+        game.ClampCamera();
+        Check(camera.Position.X <= 1920 - 640f / camera.Zoom.X ||
+              camera.Position.Y <= 1080 - 360f / camera.Zoom.Y,
+            "The camera must not enter the removed lower-right room");
         game.QueueFree();
         await ToSignal(this, SignalName.ProcessFrame);
         GD.Print("Trade scene checks passed");

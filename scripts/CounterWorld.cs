@@ -36,7 +36,7 @@ public partial class CounterWorld : Node2D
     {
         foreach (var child in _item.GetChildren())
         {
-            if (child is ColorRect variant)
+            if (child is Sprite2D variant)
                 variant.Visible = variant.Name.ToString().ToLowerInvariant() == _itemKind;
         }
         _item.Visible = _itemVisible;

@@ -14,8 +14,10 @@ public partial class TradeScene : Node2D
 	private const float ZoomStep = 1.15f;
 	private const int FirstDeadline = 4;
 	private const int FinalDay = 7;
+	private const float RoomWidth = 1920f;
+	private const float RoomHeight = 1080f;
 	private static readonly (int BasePrice, string Kind, string Name)[] Items =
-		[(4, "hat", "шляпа"), (9, "vase", "ваза"), (18, "watch", "часы"), (12, "lamp", "лампа")];
+		[(4, "hat", "шляпа"), (9, "coat", "пальто"), (18, "guitar", "гитара"), (12, "trumpet", "труба")];
 	private static readonly JsonSerializerOptions JsonOptions = new()
 	{
 		PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
@@ -180,17 +182,27 @@ public partial class TradeScene : Node2D
 		position.Y = halfView.Y >= bounds.Size.Y / 2f
 			? bounds.GetCenter().Y
 			: Mathf.Clamp(position.Y, bounds.Position.Y + halfView.Y, bounds.End.Y - halfView.Y);
+		// The lower-right quadrant is outside the three-room layout.
+		float leftRoomMaxX = halfView.X >= RoomWidth / 2f ? RoomWidth / 2f : RoomWidth - halfView.X;
+		float upperRoomMaxY = halfView.Y >= RoomHeight / 2f ? RoomHeight / 2f : RoomHeight - halfView.Y;
+		if (position.X > leftRoomMaxX && position.Y > upperRoomMaxY)
+		{
+			if (position.X - leftRoomMaxX < position.Y - upperRoomMaxY)
+				position.X = leftRoomMaxX;
+			else
+				position.Y = upperRoomMaxY;
+		}
 		_camera.Position = position;
 	}
 
-	public void GetItemFromAtelier() => AcquireItem("Ателье");
+	public void GetItemFromAtelier() => AcquireItem("Ателье", 0, 1);
 
-	public void GetItemFromMusicWorkshop() => AcquireItem("Муз. штуки");
+	public void GetItemFromMusicWorkshop() => AcquireItem("Муз. штуки", 2, 3);
 
-	private void AcquireItem(string workshop)
+	private void AcquireItem(string workshop, int firstIndex, int lastIndex)
 	{
 		if (Failed || Completed) return;
-		int index = _rng.RandiRange(0, Items.Length - 1);
+		int index = _rng.RandiRange(firstIndex, lastIndex);
 		_storedItems.Add(index);
 		GD.Print($"{workshop}: получен предмет {Items[index].Name} (индекс {index}).");
 		LogStoredItems();
