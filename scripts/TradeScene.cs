@@ -9,7 +9,7 @@ public partial class TradeScene : Node2D
 	[Export(PropertyHint.Range, "1,9999,1")] public int SecondQuota { get; set; } = 90;
 	[Export] public string SavePath { get; set; } = "user://trade_progress.json";
 
-	private const float MinZoom = 0.7f;
+	private const float MinZoom = 0.4f;
 	private const float MaxZoom = 1.8f;
 	private const float ZoomStep = 1.15f;
 	private const int FirstDeadline = 4;
@@ -182,15 +182,19 @@ public partial class TradeScene : Node2D
 		position.Y = halfView.Y >= bounds.Size.Y / 2f
 			? bounds.GetCenter().Y
 			: Mathf.Clamp(position.Y, bounds.Position.Y + halfView.Y, bounds.End.Y - halfView.Y);
-		// The lower-right quadrant is outside the three-room layout.
-		float leftRoomMaxX = halfView.X >= RoomWidth / 2f ? RoomWidth / 2f : RoomWidth - halfView.X;
-		float upperRoomMaxY = halfView.Y >= RoomHeight / 2f ? RoomHeight / 2f : RoomHeight - halfView.Y;
-		if (position.X > leftRoomMaxX && position.Y > upperRoomMaxY)
+		// At a wide zoom, the view cannot fit inside a single room.
+		if (halfView.X < RoomWidth / 2f && halfView.Y < RoomHeight / 2f)
 		{
-			if (position.X - leftRoomMaxX < position.Y - upperRoomMaxY)
-				position.X = leftRoomMaxX;
-			else
-				position.Y = upperRoomMaxY;
+			// Keep the camera out of the removed lower-right room when the view fits.
+			float leftRoomMaxX = RoomWidth - halfView.X;
+			float upperRoomMaxY = RoomHeight - halfView.Y;
+			if (position.X > leftRoomMaxX && position.Y > upperRoomMaxY)
+			{
+				if (position.X - leftRoomMaxX < position.Y - upperRoomMaxY)
+					position.X = leftRoomMaxX;
+				else
+					position.Y = upperRoomMaxY;
+			}
 		}
 		_camera.Position = position;
 	}

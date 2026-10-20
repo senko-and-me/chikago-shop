@@ -136,9 +136,17 @@ public partial class ProjectTest : SceneTree
         Check(camera.Position.X > 1920 && camera.Position.Y < 1080, "The camera must reach the upper-right workshop");
         camera.Position = new Vector2(3000, 1620);
         game.ClampCamera();
-        Check(camera.Position.X <= 1920 - 640f / camera.Zoom.X ||
-              camera.Position.Y <= 1080 - 360f / camera.Zoom.Y,
-            "The camera must not enter the removed lower-right room");
+        Vector2 halfView = game.GetViewportRect().Size / (2f * camera.Zoom);
+        Check(camera.Position.X >= halfView.X - 0.01f && camera.Position.X <= 3840 - halfView.X + 0.01f &&
+              camera.Position.Y >= halfView.Y - 0.01f && camera.Position.Y <= 2160 - halfView.Y + 0.01f,
+            "The camera must remain within the complete world at a wide view");
+        camera.Zoom = Vector2.One * 1.8f;
+        camera.Position = new Vector2(3000, 1620);
+        game.ClampCamera();
+        halfView = game.GetViewportRect().Size / (2f * camera.Zoom);
+        Check(camera.Position.X <= 1920 - halfView.X + 0.01f ||
+              camera.Position.Y <= 1080 - halfView.Y + 0.01f,
+            "The camera must stay out of the removed room when the view fits");
         game.QueueFree();
         await ToSignal(this, SignalName.ProcessFrame);
         GD.Print("Trade scene checks passed");
