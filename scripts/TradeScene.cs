@@ -11,7 +11,9 @@ public partial class TradeScene : Node2D
 
 	private const float MinZoom = 0.4f;
 	private const float MaxZoom = 1.8f;
-	private const float ZoomStep = 1.15f;
+	private const float ZoomStep = 1.12f;
+	private const float ZoomSmoothness = 12f;
+	private const float CameraPadding = 240f;
 	private const int FirstDeadline = 4;
 	private const int FinalDay = 7;
 	private const float RoomWidth = 1920f;
@@ -70,6 +72,11 @@ public partial class TradeScene : Node2D
 	public string StatusText { get; private set; } = "Торгуйте и завершайте день.";
 	public bool TradeActive { get; set; }
 	private bool _dragging;
+	private float _targetZoom;
+	private Vector2 _zoomAnchor;
+	private CameraRegion _cameraRegion;
+
+	private enum CameraRegion { Overlap, UpperRight, LowerLeft }
 
 	public override void _Ready()
 	{
@@ -117,7 +124,22 @@ public partial class TradeScene : Node2D
 		RefreshItemButtons();
 		LogStoredItems();
 
+		_targetZoom = _camera.Zoom.X;
+		_zoomAnchor = GetViewportRect().Size / 2f;
 		GetViewport().SizeChanged += ClampCamera;
+		ClampCamera();
+	}
+
+	public override void _Process(double delta)
+	{
+		float oldZoom = _camera.Zoom.X;
+		if (Mathf.IsEqualApprox(oldZoom, _targetZoom)) return;
+		float blend = 1f - MathF.Exp(-ZoomSmoothness * (float)delta);
+		float newZoom = Mathf.Lerp(oldZoom, _targetZoom, blend);
+		if (Mathf.Abs(newZoom - _targetZoom) < 0.0001f) newZoom = _targetZoom;
+		Vector2 offset = _zoomAnchor - GetViewportRect().Size / 2f;
+		_camera.Position += offset * (1f / oldZoom - 1f / newZoom);
+		_camera.Zoom = Vector2.One * newZoom;
 		ClampCamera();
 	}
 
@@ -162,18 +184,15 @@ public partial class TradeScene : Node2D
 
 	private void ZoomAt(Vector2 mousePosition, float factor)
 	{
-		float oldZoom = _camera.Zoom.X;
-		float newZoom = Mathf.Clamp(oldZoom * factor, MinZoom, MaxZoom);
-		if (Mathf.IsEqualApprox(oldZoom, newZoom)) return;
-		Vector2 offset = mousePosition - GetViewportRect().Size / 2f;
-		_camera.Position += offset * (1f / oldZoom - 1f / newZoom);
-		_camera.Zoom = Vector2.One * newZoom;
-		ClampCamera();
+		float newTarget = Mathf.Clamp(_targetZoom * factor, MinZoom, MaxZoom);
+		if (Mathf.IsEqualApprox(newTarget, _targetZoom)) return;
+		_targetZoom = newTarget;
+		_zoomAnchor = mousePosition;
 	}
 
 	public void ClampCamera()
 	{
-		Rect2 bounds = _wall.GetGlobalRect();
+		Rect2 bounds = _wall.GetGlobalRect().Grow(CameraPadding);
 		Vector2 halfView = GetViewportRect().Size / (2f * _camera.Zoom);
 		Vector2 position = _camera.Position;
 		position.X = halfView.X >= bounds.Size.X / 2f
@@ -182,20 +201,26 @@ public partial class TradeScene : Node2D
 		position.Y = halfView.Y >= bounds.Size.Y / 2f
 			? bounds.GetCenter().Y
 			: Mathf.Clamp(position.Y, bounds.Position.Y + halfView.Y, bounds.End.Y - halfView.Y);
-		// At a wide zoom, the view cannot fit inside a single room.
+		// Keep the current side of the inside corner while panning diagonally.
 		if (halfView.X < RoomWidth / 2f && halfView.Y < RoomHeight / 2f)
 		{
-			// Keep the camera out of the removed lower-right room when the view fits.
-			float leftRoomMaxX = RoomWidth - halfView.X;
-			float upperRoomMaxY = RoomHeight - halfView.Y;
+			float leftRoomMaxX = RoomWidth + CameraPadding - halfView.X;
+			float upperRoomMaxY = RoomHeight + CameraPadding - halfView.Y;
 			if (position.X > leftRoomMaxX && position.Y > upperRoomMaxY)
 			{
-				if (position.X - leftRoomMaxX < position.Y - upperRoomMaxY)
+				if (_cameraRegion == CameraRegion.LowerLeft)
+					position.X = leftRoomMaxX;
+				else if (_cameraRegion == CameraRegion.UpperRight)
+					position.Y = upperRoomMaxY;
+				else if (position.X - leftRoomMaxX < position.Y - upperRoomMaxY)
 					position.X = leftRoomMaxX;
 				else
 					position.Y = upperRoomMaxY;
 			}
+			_cameraRegion = position.X > leftRoomMaxX ? CameraRegion.UpperRight :
+				position.Y > upperRoomMaxY ? CameraRegion.LowerLeft : CameraRegion.Overlap;
 		}
+		else _cameraRegion = CameraRegion.Overlap;
 		_camera.Position = position;
 	}
 

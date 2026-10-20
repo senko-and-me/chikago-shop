@@ -123,30 +123,41 @@ public partial class ProjectTest : SceneTree
         Check(camera.Position.Y > 1080, "The camera must start in the sales room");
         float oldZoom = camera.Zoom.X;
         game._Input(new InputEventMouseButton { ButtonIndex = MouseButton.WheelUp, Position = new Vector2(640, 360), Pressed = true });
-        Check(camera.Zoom.X > oldZoom, "Mouse wheel must zoom the camera");
+        Check(Mathf.IsEqualApprox(camera.Zoom.X, oldZoom), "Wheel input must not jump to the target zoom");
+        game._Process(1d / 60d);
+        Check(camera.Zoom.X > oldZoom && camera.Zoom.X < oldZoom * 1.12f,
+            "Mouse wheel zoom must advance smoothly between frames");
+        float zoomAfterStep = camera.Zoom.X;
+        game._Input(new InputEventMouseButton { ButtonIndex = MouseButton.WheelDown, Position = new Vector2(640, 360), Pressed = true });
+        game._Process(1d / 60d);
+        Check(camera.Zoom.X < zoomAfterStep && camera.Zoom.X > oldZoom,
+            "Zooming back out must also advance smoothly");
         float startingX = camera.Position.X;
         game._UnhandledInput(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = true });
         game._Input(new InputEventMouseMotion { Relative = new Vector2(100, 0) });
         Check(Mathf.IsEqualApprox(camera.Position.X, startingX - 100f / camera.Zoom.X), "Dragging must pan the camera");
+        camera.Zoom = Vector2.One * 1.8f;
         camera.Position = new Vector2(-100, -100);
         game.ClampCamera();
-        Check(camera.Position.X >= 0 && camera.Position.Y >= 0, "The camera must stay inside the world");
+        Vector2 halfView = game.GetViewportRect().Size / (2f * camera.Zoom);
+        Check(camera.Position.X - halfView.X >= -240.01f && camera.Position.X - halfView.X < -200f &&
+              camera.Position.Y - halfView.Y >= -240.01f && camera.Position.Y - halfView.Y < -200f,
+            "The camera must allow a small view beyond the outer room edges");
         camera.Position = new Vector2(3000, 540);
         game.ClampCamera();
         Check(camera.Position.X > 1920 && camera.Position.Y < 1080, "The camera must reach the upper-right workshop");
+        camera.Position = new Vector2(1810, 950);
+        game.ClampCamera();
+        float upperRoomX = camera.Position.X;
+        game._Input(new InputEventMouseMotion { Relative = new Vector2(-13, -72) });
+        Check(camera.Position.X > upperRoomX && camera.Position.Y + halfView.Y <= 1080 + 240.01f,
+            "Diagonal dragging must stay on the same side of the missing room without snapping sideways");
+        camera.Position = new Vector2(960, 1620);
+        game.ClampCamera();
         camera.Position = new Vector2(3000, 1620);
         game.ClampCamera();
-        Vector2 halfView = game.GetViewportRect().Size / (2f * camera.Zoom);
-        Check(camera.Position.X >= halfView.X - 0.01f && camera.Position.X <= 3840 - halfView.X + 0.01f &&
-              camera.Position.Y >= halfView.Y - 0.01f && camera.Position.Y <= 2160 - halfView.Y + 0.01f,
-            "The camera must remain within the complete world at a wide view");
-        camera.Zoom = Vector2.One * 1.8f;
-        camera.Position = new Vector2(3000, 1620);
-        game.ClampCamera();
-        halfView = game.GetViewportRect().Size / (2f * camera.Zoom);
-        Check(camera.Position.X <= 1920 - halfView.X + 0.01f ||
-              camera.Position.Y <= 1080 - halfView.Y + 0.01f,
-            "The camera must stay out of the removed room when the view fits");
+        Check(camera.Position.X + halfView.X <= 1920 + 240.01f && camera.Position.Y > 1080,
+            "The camera must only look slightly into the missing room from the sales room");
         game.QueueFree();
         await ToSignal(this, SignalName.ProcessFrame);
         GD.Print("Trade scene checks passed");
