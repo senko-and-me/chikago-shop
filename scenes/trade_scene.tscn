@@ -1,0 +1,321 @@
+[gd_scene format=3 uid="uid://6ciouuso5bqi"]
+
+[ext_resource type="Script" path="res://scripts/TradeScene.cs" id="1_main"]
+[ext_resource type="Script" path="res://scripts/CounterWorld.cs" id="2_world"]
+[ext_resource type="Texture2D" uid="uid://xlnilt31qu7t" path="res://art/room_bg.jpg" id="4_room_background"]
+[ext_resource type="PackedScene" path="res://scenes/customer.tscn" id="5_customer"]
+
+[sub_resource type="StyleBoxFlat" id="TradePanelStyle"]
+content_margin_left = 10.0
+content_margin_top = 10.0
+content_margin_right = 10.0
+content_margin_bottom = 10.0
+bg_color = Color(0.94902, 0.890196, 0.803922, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.662745, 0.529412, 0.407843, 1)
+
+[sub_resource type="StyleBoxFlat" id="AcceptNormal"]
+bg_color = Color(0.196078, 0.494118, 0.462745, 1)
+
+[sub_resource type="StyleBoxFlat" id="AcceptPressed"]
+bg_color = Color(0.172549, 0.435294, 0.407843, 1)
+
+[sub_resource type="StyleBoxFlat" id="AcceptHover"]
+bg_color = Color(0.317647, 0.568627, 0.541176, 1)
+
+[sub_resource type="StyleBoxFlat" id="AcceptDisabled"]
+bg_color = Color(0.109804, 0.278431, 0.258824, 1)
+
+[sub_resource type="StyleBoxFlat" id="DeclineNormal"]
+bg_color = Color(0.717647, 0.356863, 0.282353, 1)
+
+[sub_resource type="StyleBoxFlat" id="DeclinePressed"]
+bg_color = Color(0.631373, 0.313725, 0.247059, 1)
+
+[sub_resource type="StyleBoxFlat" id="DeclineHover"]
+bg_color = Color(0.760784, 0.454902, 0.392157, 1)
+
+[sub_resource type="StyleBoxFlat" id="DeclineDisabled"]
+bg_color = Color(0.403922, 0.2, 0.156863, 1)
+
+[sub_resource type="StyleBoxFlat" id="RerollNormal"]
+bg_color = Color(0.45, 0.39, 0.31, 1)
+
+[sub_resource type="StyleBoxFlat" id="RerollPressed"]
+bg_color = Color(0.38, 0.33, 0.26, 1)
+
+[sub_resource type="StyleBoxFlat" id="RerollHover"]
+bg_color = Color(0.56, 0.48, 0.38, 1)
+
+[sub_resource type="StyleBoxFlat" id="RerollDisabled"]
+bg_color = Color(0.58, 0.54, 0.48, 1)
+
+[node name="TradeScene" type="Node2D" unique_id=620028237]
+script = ExtResource("1_main")
+
+[node name="World" type="Node2D" parent="." unique_id=2108014430]
+script = ExtResource("2_world")
+
+[node name="Wall" type="ColorRect" parent="World" unique_id=704441603]
+offset_right = 3840.0
+offset_bottom = 1080.0
+mouse_filter = 2
+
+[node name="TradingRoomBackground" type="Sprite2D" parent="World" unique_id=2014665045]
+texture = ExtResource("4_room_background")
+centered = false
+
+[node name="EmptyRoomBackground" type="Sprite2D" parent="World" unique_id=1726145117]
+position = Vector2(1920, 0)
+texture = ExtResource("4_room_background")
+centered = false
+
+[node name="Customer" parent="World" unique_id=1498939060 instance=ExtResource("5_customer")]
+position = Vector2(919, 982)
+
+[node name="Player" type="ColorRect" parent="World" unique_id=895278051]
+offset_left = 1450.0
+offset_top = 646.0
+offset_right = 1578.0
+offset_bottom = 774.0
+mouse_filter = 2
+color = Color(0.239216, 0.533333, 0.592157, 1)
+
+[node name="Counter" type="Node2D" parent="World" unique_id=583239927]
+position = Vector2(994, 750)
+
+[node name="Top" type="ColorRect" parent="World/Counter" unique_id=438615943]
+offset_right = 576.0
+offset_bottom = 32.0
+mouse_filter = 2
+color = Color(0.741176, 0.537255, 0.407843, 1)
+
+[node name="Front" type="ColorRect" parent="World/Counter" unique_id=343733091]
+offset_left = 48.0
+offset_top = 32.0
+offset_right = 528.0
+offset_bottom = 128.0
+mouse_filter = 2
+color = Color(0.580392, 0.392157, 0.301961, 1)
+
+[node name="LeftLeg" type="ColorRect" parent="World/Counter" unique_id=2061472880]
+offset_left = 48.0
+offset_top = 128.0
+offset_right = 80.0
+offset_bottom = 224.0
+mouse_filter = 2
+color = Color(0.580392, 0.392157, 0.301961, 1)
+
+[node name="RightLeg" type="ColorRect" parent="World/Counter" unique_id=1631427243]
+offset_left = 496.0
+offset_top = 128.0
+offset_right = 528.0
+offset_bottom = 224.0
+mouse_filter = 2
+color = Color(0.580392, 0.392157, 0.301961, 1)
+
+[node name="Item" type="Node2D" parent="World" unique_id=260079350]
+position = Vector2(1234, 686)
+
+[node name="Hat" type="ColorRect" parent="World/Item" unique_id=1966016124]
+offset_right = 64.0
+offset_bottom = 64.0
+mouse_filter = 2
+color = Color(0.611765, 0.192157, 0.337255, 1)
+
+[node name="Vase" type="ColorRect" parent="World/Item" unique_id=1300447676]
+visible = false
+offset_right = 64.0
+offset_bottom = 64.0
+mouse_filter = 2
+color = Color(0.286275, 0.498039, 0.643137, 1)
+
+[node name="Watch" type="ColorRect" parent="World/Item" unique_id=1529809276]
+visible = false
+offset_right = 64.0
+offset_bottom = 64.0
+mouse_filter = 2
+color = Color(0.772549, 0.627451, 0.290196, 1)
+
+[node name="Lamp" type="ColorRect" parent="World/Item" unique_id=1997586069]
+visible = false
+offset_right = 64.0
+offset_bottom = 64.0
+mouse_filter = 2
+color = Color(0.768627, 0.427451, 0.313725, 1)
+
+[node name="TradePanel" type="PanelContainer" parent="World/Item" unique_id=703097951]
+custom_minimum_size = Vector2(280, 0)
+offset_left = -108.0
+offset_top = -250.0
+offset_right = 172.0
+offset_bottom = -26.0
+theme_override_styles/panel = SubResource("TradePanelStyle")
+
+[node name="Content" type="VBoxContainer" parent="World/Item/TradePanel" unique_id=2136036310]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="BasePriceLabel" type="Label" parent="World/Item/TradePanel/Content" unique_id=413215063]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.231373, 0.188235, 0.172549, 1)
+theme_override_font_sizes/font_size = 18
+text = "Обычно: 4$"
+
+[node name="PercentLabel" type="Label" parent="World/Item/TradePanel/Content" unique_id=1743115398]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.403922, 0.352941, 0.313725, 1)
+theme_override_font_sizes/font_size = 18
+text = "К цене: +0%"
+
+[node name="OfferLabel" type="Label" parent="World/Item/TradePanel/Content" unique_id=1977303820]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.196078, 0.494118, 0.462745, 1)
+theme_override_font_sizes/font_size = 22
+text = "Получим: 4$"
+
+[node name="Buttons" type="HBoxContainer" parent="World/Item/TradePanel/Content" unique_id=359729028]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="AcceptButton" type="Button" parent="World/Item/TradePanel/Content/Buttons" unique_id=152330664]
+custom_minimum_size = Vector2(64, 52)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_disabled_color = Color(0.819608, 0.760784, 0.682353, 1)
+theme_override_font_sizes/font_size = 36
+theme_override_styles/normal = SubResource("AcceptNormal")
+theme_override_styles/pressed = SubResource("AcceptPressed")
+theme_override_styles/hover = SubResource("AcceptHover")
+theme_override_styles/disabled = SubResource("AcceptDisabled")
+text = "✓"
+
+[node name="DeclineButton" type="Button" parent="World/Item/TradePanel/Content/Buttons" unique_id=1048005255]
+custom_minimum_size = Vector2(64, 52)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_disabled_color = Color(0.819608, 0.760784, 0.682353, 1)
+theme_override_font_sizes/font_size = 36
+theme_override_styles/normal = SubResource("DeclineNormal")
+theme_override_styles/pressed = SubResource("DeclinePressed")
+theme_override_styles/hover = SubResource("DeclineHover")
+theme_override_styles/disabled = SubResource("DeclineDisabled")
+text = "×"
+
+[node name="RerollButton" type="Button" parent="World/Item/TradePanel/Content" unique_id=1745381184]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_disabled_color = Color(0.85, 0.82, 0.77, 1)
+theme_override_styles/normal = SubResource("RerollNormal")
+theme_override_styles/pressed = SubResource("RerollPressed")
+theme_override_styles/hover = SubResource("RerollHover")
+theme_override_styles/disabled = SubResource("RerollDisabled")
+text = "Другой покупатель (3)"
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=550359116]
+position = Vector2(960, 540)
+zoom = Vector2(0.7, 0.7)
+
+[node name="HUD" type="CanvasLayer" parent="." unique_id=1744648689]
+
+[node name="Root" type="Control" parent="HUD" unique_id=308603564]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="ScorePanel" type="PanelContainer" parent="HUD/Root" unique_id=242502173]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -204.0
+offset_top = 24.0
+offset_right = -24.0
+offset_bottom = 88.0
+grow_horizontal = 0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("TradePanelStyle")
+
+[node name="ScoreLabel" type="Label" parent="HUD/Root/ScorePanel" unique_id=589559723]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.231373, 0.188235, 0.172549, 1)
+theme_override_font_sizes/font_size = 22
+text = "Счёт: 0$"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ProgressPanel" type="PanelContainer" parent="HUD/Root" unique_id=1016591818]
+layout_mode = 1
+offset_left = 24.0
+offset_top = 24.0
+offset_right = 354.0
+offset_bottom = 340.0
+theme_override_styles/panel = SubResource("TradePanelStyle")
+
+[node name="Content" type="VBoxContainer" parent="HUD/Root/ProgressPanel" unique_id=1283382676]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="DayLabel" type="Label" parent="HUD/Root/ProgressPanel/Content" unique_id=1902399305]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.231373, 0.188235, 0.172549, 1)
+theme_override_font_sizes/font_size = 20
+text = "День: 1 / 7"
+
+[node name="QuotaLabel" type="Label" parent="HUD/Root/ProgressPanel/Content" unique_id=1481948479]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.231373, 0.188235, 0.172549, 1)
+theme_override_font_sizes/font_size = 18
+text = "Квота 1 / 2: 45$"
+
+[node name="DeadlineLabel" type="Label" parent="HUD/Root/ProgressPanel/Content" unique_id=1700430636]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.403922, 0.352941, 0.313725, 1)
+theme_override_font_sizes/font_size = 16
+text = "Срок: конец дня 4"
+
+[node name="StatusLabel" type="Label" parent="HUD/Root/ProgressPanel/Content" unique_id=950746548]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.403922, 0.352941, 0.313725, 1)
+theme_override_font_sizes/font_size = 15
+text = "Торгуйте и завершайте день."
+autowrap_mode = 3
+
+[node name="EndDayButton" type="Button" parent="HUD/Root/ProgressPanel/Content" unique_id=876898934]
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_styles/normal = SubResource("AcceptNormal")
+theme_override_styles/pressed = SubResource("AcceptPressed")
+theme_override_styles/hover = SubResource("AcceptHover")
+theme_override_styles/disabled = SubResource("AcceptDisabled")
+text = "Завершить день"
+
+[node name="CheckpointButton" type="Button" parent="HUD/Root/ProgressPanel/Content" unique_id=1027679990]
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_styles/normal = SubResource("RerollNormal")
+theme_override_styles/pressed = SubResource("RerollPressed")
+theme_override_styles/hover = SubResource("RerollHover")
+text = "С контрольной точки"
+
+[node name="NewGameButton" type="Button" parent="HUD/Root/ProgressPanel/Content" unique_id=252217035]
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_styles/normal = SubResource("DeclineNormal")
+theme_override_styles/pressed = SubResource("DeclinePressed")
+theme_override_styles/hover = SubResource("DeclineHover")
+text = "Начать заново"
