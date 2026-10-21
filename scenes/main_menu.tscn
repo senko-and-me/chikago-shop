@@ -1,10 +1,10 @@
 [gd_scene format=3 uid="uid://4j1i60hag1el"]
 
-[ext_resource type="Script" path="res://scripts/MainMenu.cs" id="1_script"]
+[ext_resource type="Script" uid="uid://bbdbrlsqvmgia" path="res://scripts/MainMenu.cs" id="1_script"]
 [ext_resource type="Texture2D" uid="uid://byqyjwldbq35i" path="res://art/button_settings.png" id="2_settings"]
 [ext_resource type="Texture2D" uid="uid://bda7bxwxwttqa" path="res://art/button_quit.png" id="3_quit"]
 [ext_resource type="Texture2D" uid="uid://blr5mo3usryyx" path="res://art/button_back.png" id="4_back"]
-[ext_resource type="Texture2D" path="res://art/button_play.png" id="5_play"]
+[ext_resource type="Texture2D" uid="uid://e5kmc4ojg427" path="res://art/button_play.png" id="5_play"]
 
 [node name="MainMenu" type="Control" unique_id=1262597174]
 layout_mode = 3

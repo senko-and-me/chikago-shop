@@ -47,6 +47,11 @@ public partial class TradeScene : Node2D
 	private Button _musicGetItemButton = null!;
 	private Button _placeItemButton = null!;
 
+	// --- ДОБАВЛЕНО: Ссылки на UI инвентаря ---
+	private InventoryUI _inventoryUI = null!;
+	public int SelectedInventoryIndex { get; set; } = -1; // Индекс выбранного слота (-1 если ничего не выбрано)
+	// -----------------------------------------
+
 	private readonly RandomNumberGenerator _rng = new();
 	private readonly List<int> _storedItems = new();
 	private readonly List<int> _checkpointItems = new();
@@ -100,6 +105,12 @@ public partial class TradeScene : Node2D
 		_atelierGetItemButton = GetNode<Button>("World/Atelier/GetItemButton");
 		_musicGetItemButton = GetNode<Button>("World/MusicWorkshop/GetItemButton");
 		_placeItemButton = GetNode<Button>("World/PlaceItemButton");
+
+		// --- ДОБАВЛЕНО: Инициализация инвентаря ---
+		// Важно: убедись, что путь к InventoryUI правильный в твоей сцене
+		_inventoryUI = GetNode<InventoryUI>("HUD/InventoryUI");
+		_inventoryUI.Initialize(this); // Передаем ссылку на текущую сцену
+		// -----------------------------------------
 
 		_rng.Randomize();
 		_acceptButton.Pressed += AcceptTrade;
@@ -231,11 +242,25 @@ public partial class TradeScene : Node2D
 	private void AcquireItem(string workshop, int firstIndex, int lastIndex)
 	{
 		if (Failed || Completed) return;
+		
+		// --- ДОБАВЛЕНО: Проверка на переполнение инвентаря ---
+		if (_storedItems.Count >= 6)
+		{
+			GD.Print("Инвентарь полон!");
+			return;
+		}
+		// -----------------------------------------------------
+
 		int index = _rng.RandiRange(firstIndex, lastIndex);
 		_storedItems.Add(index);
 		GD.Print($"{workshop}: получен предмет {Items[index].Name} (индекс {index}).");
 		LogStoredItems();
 		RefreshItemButtons();
+		
+		// --- ДОБАВЛЕНО: Обновляем визуал инвентаря, чтобы появилась иконка ---
+		_inventoryUI.UpdateUI(_storedItems);
+		// ---------------------------------------------------------------------
+		
 		SaveProgress();
 	}
 
@@ -248,9 +273,29 @@ public partial class TradeScene : Node2D
 	public void PlaceNextItem()
 	{
 		if (Failed || Completed || TradeActive || _storedItems.Count == 0) return;
-		ItemIndex = _storedItems[0];
-		_storedItems.RemoveAt(0);
+		
+		// --- ИЗМЕНЕНО: Старая логика брала предмет из начала списка [0] ---
+		// ItemIndex = _storedItems[0];
+		// _storedItems.RemoveAt(0);
+		
+		// Новая логика: берем предмет из того слота, который выбрал игрок
+		if (SelectedInventoryIndex < 0 || SelectedInventoryIndex >= _storedItems.Count)
+		{
+			GD.Print("Сначала выберите предмет в инвентаре!");
+			return;
+		}
+
+		ItemIndex = _storedItems[SelectedInventoryIndex];
+		_storedItems.RemoveAt(SelectedInventoryIndex);
+		// -------------------------------------------------------------------
+
 		LogStoredItems();
+		
+		// --- ДОБАВЛЕНО: Сбрасываем выбор и обновляем визуал ---
+		_inventoryUI.DeselectAll();
+		_inventoryUI.UpdateUI(_storedItems);
+		// ------------------------------------------------------
+
 		StartBuyerOffer();
 	}
 
@@ -277,12 +322,16 @@ public partial class TradeScene : Node2D
 		RefreshItemButtons();
 	}
 
-	private void RefreshItemButtons()
+	public void RefreshItemButtons()
 	{
 		_atelierGetItemButton.Disabled = Failed || Completed;
 		_musicGetItemButton.Disabled = Failed || Completed;
 		_placeItemButton.Visible = !TradeActive;
-		_placeItemButton.Disabled = _storedItems.Count == 0 || Failed || Completed;
+		
+		// --- ИЗМЕНЕНО: Кнопка "Разместить" теперь активна только если выбран слот ---
+		// Старая логика: _placeItemButton.Disabled = _storedItems.Count == 0 || Failed || Completed;
+		_placeItemButton.Disabled = _storedItems.Count == 0 || Failed || Completed || SelectedInventoryIndex < 0;
+		// -------------------------------------------------------------------------------
 	}
 
 	private void RefreshOffer()
@@ -348,6 +397,10 @@ public partial class TradeScene : Node2D
 		if (!TradeActive || ItemIndex < 0 || ItemIndex >= Items.Length) return;
 		_storedItems.Insert(0, ItemIndex);
 		LogStoredItems();
+		
+		// --- ДОБАВЛЕНО: Обновляем UI, так как предмет вернулся в инвентарь ---
+		_inventoryUI.UpdateUI(_storedItems);
+		// ---------------------------------------------------------------------
 	}
 
 	private void FinishTrade()
@@ -447,6 +500,11 @@ public partial class TradeScene : Node2D
 		RefreshProgress();
 		RefreshItemButtons();
 		LogStoredItems();
+		
+		// --- ДОБАВЛЕНО: Обновляем инвентарь после отката ---
+		_inventoryUI.UpdateUI(_storedItems);
+		// --------------------------------------------------
+		
 		SaveProgress();
 	}
 
@@ -471,6 +529,11 @@ public partial class TradeScene : Node2D
 		RefreshProgress();
 		RefreshItemButtons();
 		LogStoredItems();
+		
+		// --- ДОБАВЛЕНО: Очищаем инвентарь визуально ---
+		_inventoryUI.UpdateUI(_storedItems);
+		// ----------------------------------------------
+		
 		SaveProgress();
 	}
 
@@ -541,6 +604,14 @@ public partial class TradeScene : Node2D
 		if (ItemIndex < 0 || ItemIndex >= Items.Length || CustomerIndex < 0 ||
 			CustomerIndex >= _customer.GetAppearanceCount() || Failed || Completed)
 			TradeActive = false;
+			
+		// --- ДОБАВЛЕНО: Загружаем визуал инвентаря при старте игры ---
+		if (_inventoryUI != null)
+		{
+			_inventoryUI.UpdateUI(_storedItems);
+		}
+		// -------------------------------------------------------------
+		
 		return true;
 	}
 

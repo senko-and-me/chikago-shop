@@ -4,10 +4,11 @@
 [ext_resource type="Script" uid="uid://c6334skyxf3jy" path="res://scripts/CounterWorld.cs" id="2_world"]
 [ext_resource type="Texture2D" uid="uid://xlnilt31qu7t" path="res://art/room_bg.jpg" id="4_room_background"]
 [ext_resource type="PackedScene" uid="uid://u2ve41t8yhqn" path="res://scenes/customer.tscn" id="5_customer"]
-[ext_resource type="Texture2D" path="res://art/items/hat.svg" id="6_hat"]
-[ext_resource type="Texture2D" path="res://art/items/coat.svg" id="7_coat"]
-[ext_resource type="Texture2D" path="res://art/items/guitar.svg" id="8_guitar"]
-[ext_resource type="Texture2D" path="res://art/items/trumpet.svg" id="9_trumpet"]
+[ext_resource type="Texture2D" uid="uid://cmfitkxq373cm" path="res://art/items/hat.svg" id="6_hat"]
+[ext_resource type="Texture2D" uid="uid://cliskobo7qopi" path="res://art/items/coat.svg" id="7_coat"]
+[ext_resource type="Texture2D" uid="uid://bjrlsjkjtn8cb" path="res://art/items/guitar.svg" id="8_guitar"]
+[ext_resource type="PackedScene" uid="uid://4wqv2sl2gvaw" path="res://scenes/UI/InventoryUI.tscn" id="9_cppqn"]
+[ext_resource type="Texture2D" uid="uid://bdnt1wjejacqf" path="res://art/items/trumpet.svg" id="9_trumpet"]
 
 [sub_resource type="StyleBoxFlat" id="AcceptNormal"]
 bg_color = Color(0.196078, 0.494118, 0.462745, 1)
@@ -453,3 +454,6 @@ theme_override_styles/normal = SubResource("DeclineNormal")
 theme_override_styles/pressed = SubResource("DeclinePressed")
 theme_override_styles/hover = SubResource("DeclineHover")
 text = "Начать заново"
+
+[node name="InventoryUI" parent="HUD" unique_id=1583018025 instance=ExtResource("9_cppqn")]
+metadata/_edit_use_anchors_ = true

@@ -1,0 +1,20 @@
+[gd_scene format=3 uid="uid://w376sq2qt6oh"]
+
+[ext_resource type="Script" uid="uid://bwc8vup7yupmq" path="res://scripts/UI/SlotUI.cs" id="1_gf2r3"]
+
+[node name="SlotUI" type="Button" unique_id=1135584660]
+custom_minimum_size = Vector2(50, 50)
+offset_left = -25.0
+offset_top = -25.0
+offset_right = 25.0
+offset_bottom = 25.0
+script = ExtResource("1_gf2r3")
+
+[node name="Icon" type="TextureRect" parent="." unique_id=58132533]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+expand_mode = 1

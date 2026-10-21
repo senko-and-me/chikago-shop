@@ -1,0 +1,30 @@
+[gd_scene format=3 uid="uid://4wqv2sl2gvaw"]
+
+[ext_resource type="Script" uid="uid://crqmypi4c60ta" path="res://scripts/UI/InventoryUI.cs" id="1_5entl"]
+[ext_resource type="PackedScene" uid="uid://w376sq2qt6oh" path="res://scenes/UI/SlotUI.tscn" id="2_31fix"]
+
+[node name="InventoryUI" type="Control" unique_id=1583018025 node_paths=PackedStringArray("Container")]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_5entl")
+SlotScene = ExtResource("2_31fix")
+Container = NodePath("HBoxContainer")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=388601757]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_top = -70.0
+offset_bottom = -30.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_constants/separation = 10
+alignment = 1

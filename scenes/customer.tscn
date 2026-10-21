@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://u2ve41t8yhqn"]
 
-[ext_resource type="Script" path="res://scripts/ModularCustomer.cs" id="1_script"]
+[ext_resource type="Script" uid="uid://chuf1fe5ydlnk" path="res://scripts/ModularCustomer.cs" id="1_script"]
 [ext_resource type="Texture2D" uid="uid://cxoi2slsutpuc" path="res://art/м болванка.png" id="2_male_body"]
 [ext_resource type="Texture2D" uid="uid://bhkf63wrdc7r8" path="res://art/скетч м одежда.png" id="3_male_clothes"]
 [ext_resource type="Texture2D" uid="uid://c32xg5ak3er6a" path="res://art/м прич 1.png" id="4_male_hair_1"]
