@@ -73,8 +73,7 @@ public partial class InventoryUI : Control
         // Сообщаем основной сцене, что выбран слот
         if (_tradeScene != null)
         {
-            _tradeScene.SelectedInventoryIndex = index;
-            _tradeScene.RefreshItemButtons(); // Обновляем кнопку "Разместить"
+            _tradeScene.SelectInventoryItem(index);
         }
     }
 

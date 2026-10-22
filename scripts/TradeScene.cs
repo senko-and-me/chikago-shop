@@ -8,6 +8,7 @@ public partial class TradeScene : Node2D
 	[Export(PropertyHint.Range, "1,9999,1")] public int FirstQuota { get; set; } = 45;
 	[Export(PropertyHint.Range, "1,9999,1")] public int SecondQuota { get; set; } = 90;
 	[Export] public string SavePath { get; set; } = "user://trade_progress.json";
+	[Export(PropertyHint.Range, "1,60,0.5")] public float BuyerWaitSeconds { get; set; } = 8f;
 
 	private const float MinZoom = 0.4f;
 	private const float MaxZoom = 1.8f;
@@ -16,8 +17,7 @@ public partial class TradeScene : Node2D
 	private const float CameraPadding = 240f;
 	private const int FirstDeadline = 4;
 	private const int FinalDay = 7;
-	private const float RoomWidth = 1920f;
-	private const float RoomHeight = 1080f;
+	private const int ShowcaseCapacity = 6;
 	private static readonly (int BasePrice, string Kind, string Name)[] Items =
 		[(4, "hat", "шляпа"), (9, "coat", "пальто"), (18, "guitar", "гитара"), (12, "trumpet", "труба")];
 	private static readonly JsonSerializerOptions JsonOptions = new()
@@ -46,6 +46,11 @@ public partial class TradeScene : Node2D
 	private Button _atelierGetItemButton = null!;
 	private Button _musicGetItemButton = null!;
 	private Button _placeItemButton = null!;
+	private Button _trashButton = null!;
+	private readonly Button[] _showcaseSlots = new Button[ShowcaseCapacity];
+	private readonly ColorRect[] _showcaseGlass = new ColorRect[ShowcaseCapacity];
+	private readonly TextureRect[] _showcaseIcons = new TextureRect[ShowcaseCapacity];
+	private readonly Label[] _showcaseLabels = new Label[ShowcaseCapacity];
 
 	// --- ДОБАВЛЕНО: Ссылки на UI инвентаря ---
 	private InventoryUI _inventoryUI = null!;
@@ -55,7 +60,14 @@ public partial class TradeScene : Node2D
 	private readonly RandomNumberGenerator _rng = new();
 	private readonly List<int> _storedItems = new();
 	private readonly List<int> _checkpointItems = new();
+	private readonly int[] _showcaseItems = new int[ShowcaseCapacity];
+	private readonly int[] _checkpointShowcaseItems = new int[ShowcaseCapacity];
+	private int _activeShowcaseIndex = -1;
+	private int _selectedShowcaseIndex = -1;
+	private double _buyerCountdown;
 	public int[] StoredItems => _storedItems.ToArray();
+	public int[] ShowcaseItems => (int[])_showcaseItems.Clone();
+	public double BuyerCountdown => _buyerCountdown;
 	public static string GetItemKind(int index) => Items[index].Kind;
 	public static string GetItemName(int index) => Items[index].Name;
 	public int ItemIndex { get; set; } = -1;
@@ -79,9 +91,6 @@ public partial class TradeScene : Node2D
 	private bool _dragging;
 	private float _targetZoom;
 	private Vector2 _zoomAnchor;
-	private CameraRegion _cameraRegion;
-
-	private enum CameraRegion { Overlap, UpperRight, LowerLeft }
 
 	public override void _Ready()
 	{
@@ -105,6 +114,18 @@ public partial class TradeScene : Node2D
 		_atelierGetItemButton = GetNode<Button>("World/Atelier/GetItemButton");
 		_musicGetItemButton = GetNode<Button>("World/MusicWorkshop/GetItemButton");
 		_placeItemButton = GetNode<Button>("World/PlaceItemButton");
+		_trashButton = GetNode<Button>("World/TrashBin");
+		Array.Fill(_showcaseItems, -1);
+		Array.Fill(_checkpointShowcaseItems, -1);
+		for (int i = 0; i < ShowcaseCapacity; i++)
+		{
+			int slotIndex = i;
+			_showcaseSlots[i] = GetNode<Button>($"World/Showcases/Slot{i + 1}");
+			_showcaseGlass[i] = _showcaseSlots[i].GetNode<ColorRect>("Glass");
+			_showcaseIcons[i] = _showcaseSlots[i].GetNode<TextureRect>("Icon");
+			_showcaseLabels[i] = _showcaseSlots[i].GetNode<Label>("ItemLabel");
+			_showcaseSlots[i].Pressed += () => OnShowcasePressed(slotIndex);
+		}
 
 		// --- ДОБАВЛЕНО: Инициализация инвентаря ---
 		// Важно: убедись, что путь к InventoryUI правильный в твоей сцене
@@ -120,6 +141,7 @@ public partial class TradeScene : Node2D
 		_atelierGetItemButton.Pressed += GetItemFromAtelier;
 		_musicGetItemButton.Pressed += GetItemFromMusicWorkshop;
 		_placeItemButton.Pressed += PlaceNextItem;
+		_trashButton.Pressed += TrashSelectedItem;
 		GetNode<Button>("HUD/Root/ProgressPanel/Content/CheckpointButton").Pressed += ReturnToCheckpoint;
 		GetNode<Button>("HUD/Root/ProgressPanel/Content/NewGameButton").Pressed += NewGame;
 
@@ -143,6 +165,7 @@ public partial class TradeScene : Node2D
 
 	public override void _Process(double delta)
 	{
+		TickBuyers(delta);
 		float oldZoom = _camera.Zoom.X;
 		if (Mathf.IsEqualApprox(oldZoom, _targetZoom)) return;
 		float blend = 1f - MathF.Exp(-ZoomSmoothness * (float)delta);
@@ -212,26 +235,6 @@ public partial class TradeScene : Node2D
 		position.Y = halfView.Y >= bounds.Size.Y / 2f
 			? bounds.GetCenter().Y
 			: Mathf.Clamp(position.Y, bounds.Position.Y + halfView.Y, bounds.End.Y - halfView.Y);
-		// Keep the current side of the inside corner while panning diagonally.
-		if (halfView.X < RoomWidth / 2f && halfView.Y < RoomHeight / 2f)
-		{
-			float leftRoomMaxX = RoomWidth + CameraPadding - halfView.X;
-			float upperRoomMaxY = RoomHeight + CameraPadding - halfView.Y;
-			if (position.X > leftRoomMaxX && position.Y > upperRoomMaxY)
-			{
-				if (_cameraRegion == CameraRegion.LowerLeft)
-					position.X = leftRoomMaxX;
-				else if (_cameraRegion == CameraRegion.UpperRight)
-					position.Y = upperRoomMaxY;
-				else if (position.X - leftRoomMaxX < position.Y - upperRoomMaxY)
-					position.X = leftRoomMaxX;
-				else
-					position.Y = upperRoomMaxY;
-			}
-			_cameraRegion = position.X > leftRoomMaxX ? CameraRegion.UpperRight :
-				position.Y > upperRoomMaxY ? CameraRegion.LowerLeft : CameraRegion.Overlap;
-		}
-		else _cameraRegion = CameraRegion.Overlap;
 		_camera.Position = position;
 	}
 
@@ -272,30 +275,94 @@ public partial class TradeScene : Node2D
 
 	public void PlaceNextItem()
 	{
-		if (Failed || Completed || TradeActive || _storedItems.Count == 0) return;
-		
-		// --- ИЗМЕНЕНО: Старая логика брала предмет из начала списка [0] ---
-		// ItemIndex = _storedItems[0];
-		// _storedItems.RemoveAt(0);
-		
-		// Новая логика: берем предмет из того слота, который выбрал игрок
-		if (SelectedInventoryIndex < 0 || SelectedInventoryIndex >= _storedItems.Count)
-		{
-			GD.Print("Сначала выберите предмет в инвентаре!");
-			return;
-		}
+		PlaceItemInShowcase(FindFreeShowcaseSlot());
+	}
 
-		ItemIndex = _storedItems[SelectedInventoryIndex];
+	private int FindFreeShowcaseSlot()
+	{
+		for (int i = 0; i < ShowcaseCapacity; i++)
+			if (i != _activeShowcaseIndex && _showcaseItems[i] == -1) return i;
+		return -1;
+	}
+
+	public void PlaceItemInShowcase(int slotIndex)
+	{
+		if (Failed || Completed || slotIndex < 0 || slotIndex >= ShowcaseCapacity ||
+			slotIndex == _activeShowcaseIndex ||
+			_showcaseItems[slotIndex] != -1 || SelectedInventoryIndex < 0 ||
+			SelectedInventoryIndex >= _storedItems.Count) return;
+
+		bool firstItem = Array.TrueForAll(_showcaseItems, item => item == -1);
+		_showcaseItems[slotIndex] = _storedItems[SelectedInventoryIndex];
 		_storedItems.RemoveAt(SelectedInventoryIndex);
-		// -------------------------------------------------------------------
-
-		LogStoredItems();
-		
-		// --- ДОБАВЛЕНО: Сбрасываем выбор и обновляем визуал ---
+		_selectedShowcaseIndex = -1;
 		_inventoryUI.DeselectAll();
 		_inventoryUI.UpdateUI(_storedItems);
-		// ------------------------------------------------------
+		if (firstItem) _buyerCountdown = Mathf.Max(1f, BuyerWaitSeconds);
+		RefreshItemButtons();
+		LogStoredItems();
+		SaveProgress();
+	}
 
+	public void SelectInventoryItem(int index)
+	{
+		_selectedShowcaseIndex = -1;
+		SelectedInventoryIndex = index;
+		RefreshItemButtons();
+	}
+
+	private void OnShowcasePressed(int slotIndex)
+	{
+		if (Failed || Completed || slotIndex == _activeShowcaseIndex) return;
+		if (_showcaseItems[slotIndex] < 0)
+		{
+			PlaceItemInShowcase(slotIndex);
+			return;
+		}
+		bool deselect = _selectedShowcaseIndex == slotIndex;
+		_inventoryUI.DeselectAll();
+		_selectedShowcaseIndex = deselect ? -1 : slotIndex;
+		RefreshItemButtons();
+	}
+
+	public void TrashSelectedItem()
+	{
+		if (Failed || Completed) return;
+		if (SelectedInventoryIndex >= 0 && SelectedInventoryIndex < _storedItems.Count)
+		{
+			_storedItems.RemoveAt(SelectedInventoryIndex);
+			_inventoryUI.DeselectAll();
+			_inventoryUI.UpdateUI(_storedItems);
+		}
+		else if (_selectedShowcaseIndex >= 0 && _selectedShowcaseIndex < ShowcaseCapacity &&
+			_selectedShowcaseIndex != _activeShowcaseIndex && _showcaseItems[_selectedShowcaseIndex] >= 0)
+		{
+			_showcaseItems[_selectedShowcaseIndex] = -1;
+			_selectedShowcaseIndex = -1;
+			if (!TradeActive && Array.TrueForAll(_showcaseItems, item => item == -1))
+				_buyerCountdown = 0;
+		}
+		else return;
+		RefreshItemButtons();
+		LogStoredItems();
+		SaveProgress();
+	}
+
+	private void TickBuyers(double delta)
+	{
+		if (Failed || Completed || TradeActive || Array.TrueForAll(_showcaseItems, item => item == -1)) return;
+		_buyerCountdown -= delta;
+		if (_buyerCountdown > 0) return;
+
+		var occupied = new List<int>();
+		for (int i = 0; i < ShowcaseCapacity; i++)
+			if (_showcaseItems[i] >= 0) occupied.Add(i);
+		_activeShowcaseIndex = occupied[_rng.RandiRange(0, occupied.Count - 1)];
+		_selectedShowcaseIndex = -1;
+		ItemIndex = _showcaseItems[_activeShowcaseIndex];
+		_showcaseItems[_activeShowcaseIndex] = -1;
+		_buyerCountdown = 0;
+		RefreshShowcases();
 		StartBuyerOffer();
 	}
 
@@ -326,12 +393,33 @@ public partial class TradeScene : Node2D
 	{
 		_atelierGetItemButton.Disabled = Failed || Completed;
 		_musicGetItemButton.Disabled = Failed || Completed;
-		_placeItemButton.Visible = !TradeActive;
-		
-		// --- ИЗМЕНЕНО: Кнопка "Разместить" теперь активна только если выбран слот ---
-		// Старая логика: _placeItemButton.Disabled = _storedItems.Count == 0 || Failed || Completed;
-		_placeItemButton.Disabled = _storedItems.Count == 0 || Failed || Completed || SelectedInventoryIndex < 0;
-		// -------------------------------------------------------------------------------
+		_placeItemButton.Visible = true;
+		_placeItemButton.Disabled = Failed || Completed ||
+			SelectedInventoryIndex < 0 || SelectedInventoryIndex >= _storedItems.Count ||
+			FindFreeShowcaseSlot() < 0;
+		RefreshShowcases();
+	}
+
+	private void RefreshShowcases()
+	{
+		for (int i = 0; i < ShowcaseCapacity; i++)
+		{
+			int itemIndex = _showcaseItems[i];
+			bool reserved = TradeActive && i == _activeShowcaseIndex;
+			_showcaseIcons[i].Texture = reserved || itemIndex < 0 ? null :
+				GD.Load<Texture2D>($"res://art/items/{Items[itemIndex].Kind}.svg");
+			_showcaseLabels[i].Text = reserved ? "НА СДЕЛКЕ" :
+				itemIndex < 0 ? "СВОБОДНО" : Items[itemIndex].Name.ToUpperInvariant();
+			_showcaseGlass[i].Color = reserved ? new Color(0.7f, 0.68f, 0.68f, 0.78f) :
+				_selectedShowcaseIndex == i ? new Color(1f, 0.86f, 0.45f, 0.78f) :
+				new Color(0.77f, 0.9f, 0.88f, 0.58f);
+			_showcaseSlots[i].Disabled = Failed || Completed || reserved ||
+				(itemIndex < 0 && (SelectedInventoryIndex < 0 || SelectedInventoryIndex >= _storedItems.Count));
+		}
+		_trashButton.Disabled = Failed || Completed ||
+			(SelectedInventoryIndex < 0 || SelectedInventoryIndex >= _storedItems.Count) &&
+			(_selectedShowcaseIndex < 0 || _selectedShowcaseIndex >= ShowcaseCapacity ||
+			 _selectedShowcaseIndex == _activeShowcaseIndex || _showcaseItems[_selectedShowcaseIndex] < 0);
 	}
 
 	private void RefreshOffer()
@@ -387,26 +475,33 @@ public partial class TradeScene : Node2D
 	{
 		if (!TradeActive) return;
 		Declined++;
-		ReturnActiveItemToArray();
+		ReturnActiveItemToStorage();
 		FinishTrade();
 		SaveProgress();
 	}
 
-	private void ReturnActiveItemToArray()
+	private void ReturnActiveItemToStorage()
 	{
 		if (!TradeActive || ItemIndex < 0 || ItemIndex >= Items.Length) return;
-		_storedItems.Insert(0, ItemIndex);
+		if (_activeShowcaseIndex >= 0 && _activeShowcaseIndex < ShowcaseCapacity &&
+			_showcaseItems[_activeShowcaseIndex] == -1)
+			_showcaseItems[_activeShowcaseIndex] = ItemIndex;
+		else
+			_storedItems.Insert(0, ItemIndex); // Сохранения до появления витрин.
 		LogStoredItems();
-		
-		// --- ДОБАВЛЕНО: Обновляем UI, так как предмет вернулся в инвентарь ---
 		_inventoryUI.UpdateUI(_storedItems);
-		// ---------------------------------------------------------------------
+		RefreshShowcases();
 	}
 
 	private void FinishTrade()
 	{
+		bool hadActiveTrade = TradeActive;
 		TradeActive = false;
 		ItemIndex = -1;
+		_activeShowcaseIndex = -1;
+		if (hadActiveTrade)
+			_buyerCountdown = Array.TrueForAll(_showcaseItems, item => item == -1) ? 0 :
+				Mathf.Max(1f, BuyerWaitSeconds);
 		_world.ItemVisible = false;
 		_customer.Visible = false;
 		_tradePanel.Visible = false;
@@ -440,7 +535,7 @@ public partial class TradeScene : Node2D
 	public void EndDay()
 	{
 		if (Failed || Completed) return;
-		ReturnActiveItemToArray();
+		ReturnActiveItemToStorage();
 		FinishTrade();
 		int deadline = QuotaStage == 0 ? FirstDeadline : FinalDay;
 		if (CurrentDay >= deadline)
@@ -462,6 +557,7 @@ public partial class TradeScene : Node2D
 				CheckpointDeclined = Declined;
 				_checkpointItems.Clear();
 				_checkpointItems.AddRange(_storedItems);
+				Array.Copy(_showcaseItems, _checkpointShowcaseItems, ShowcaseCapacity);
 				StatusText = "Первая квота выплачена.";
 			}
 			else
@@ -488,6 +584,11 @@ public partial class TradeScene : Node2D
 		FinishTrade();
 		_storedItems.Clear();
 		_storedItems.AddRange(_checkpointItems);
+		Array.Copy(_checkpointShowcaseItems, _showcaseItems, ShowcaseCapacity);
+		_selectedShowcaseIndex = -1;
+		_buyerCountdown = Array.TrueForAll(_showcaseItems, item => item == -1) ? 0 :
+			Mathf.Max(1f, BuyerWaitSeconds);
+		_inventoryUI.DeselectAll();
 		CurrentDay = CheckpointDay;
 		Score = CheckpointScore;
 		Accepted = CheckpointAccepted;
@@ -503,6 +604,7 @@ public partial class TradeScene : Node2D
 		
 		// --- ДОБАВЛЕНО: Обновляем инвентарь после отката ---
 		_inventoryUI.UpdateUI(_storedItems);
+		RefreshShowcases();
 		// --------------------------------------------------
 		
 		SaveProgress();
@@ -513,6 +615,11 @@ public partial class TradeScene : Node2D
 		FinishTrade();
 		_storedItems.Clear();
 		_checkpointItems.Clear();
+		Array.Fill(_showcaseItems, -1);
+		Array.Fill(_checkpointShowcaseItems, -1);
+		_selectedShowcaseIndex = -1;
+		_buyerCountdown = 0;
+		_inventoryUI.DeselectAll();
 		CurrentDay = 1;
 		Score = 0;
 		Accepted = 0;
@@ -532,6 +639,7 @@ public partial class TradeScene : Node2D
 		
 		// --- ДОБАВЛЕНО: Очищаем инвентарь визуально ---
 		_inventoryUI.UpdateUI(_storedItems);
+		RefreshShowcases();
 		// ----------------------------------------------
 		
 		SaveProgress();
@@ -548,13 +656,16 @@ public partial class TradeScene : Node2D
 		}
 		var data = new ProgressData
 		{
-			SaveVersion = 4, Day = CurrentDay, Score = Score, Accepted = Accepted,
+			SaveVersion = 5, Day = CurrentDay, Score = Score, Accepted = Accepted,
 			Declined = Declined, QuotaStage = QuotaStage, CheckpointDay = CheckpointDay,
 			CheckpointScore = CheckpointScore, CheckpointAccepted = CheckpointAccepted,
 			CheckpointDeclined = CheckpointDeclined, Failed = Failed, Completed = Completed,
 			Status = StatusText, TradeActive = TradeActive, ItemIndex = ItemIndex,
 			CustomerIndex = CustomerIndex, Percentage = Percentage, RerollsRemaining = RerollsRemaining,
-			StoredItems = _storedItems.ToArray(), CheckpointItems = _checkpointItems.ToArray()
+			StoredItems = _storedItems.ToArray(), CheckpointItems = _checkpointItems.ToArray(),
+			ShowcaseItems = (int[])_showcaseItems.Clone(),
+			CheckpointShowcaseItems = (int[])_checkpointShowcaseItems.Clone(),
+			ActiveShowcaseIndex = _activeShowcaseIndex, BuyerCountdown = _buyerCountdown
 		};
 		file.StoreString(JsonSerializer.Serialize(data, JsonOptions));
 	}
@@ -578,6 +689,17 @@ public partial class TradeScene : Node2D
 			if (index >= 0 && index < Items.Length) _storedItems.Add(index);
 		foreach (int index in data.CheckpointItems ?? [])
 			if (index >= 0 && index < Items.Length) _checkpointItems.Add(index);
+		for (int i = 0; i < Mathf.Min(ShowcaseCapacity, data.ShowcaseItems?.Length ?? 0); i++)
+			if (data.ShowcaseItems![i] >= 0 && data.ShowcaseItems[i] < Items.Length)
+				_showcaseItems[i] = data.ShowcaseItems[i];
+		for (int i = 0; i < Mathf.Min(ShowcaseCapacity, data.CheckpointShowcaseItems?.Length ?? 0); i++)
+			if (data.CheckpointShowcaseItems![i] >= 0 && data.CheckpointShowcaseItems[i] < Items.Length)
+				_checkpointShowcaseItems[i] = data.CheckpointShowcaseItems[i];
+		_buyerCountdown = Math.Clamp(data.BuyerCountdown, 0, Mathf.Max(1f, BuyerWaitSeconds));
+		if (_buyerCountdown <= 0 && Array.Exists(_showcaseItems, item => item >= 0))
+			_buyerCountdown = Mathf.Max(1f, BuyerWaitSeconds);
+		_activeShowcaseIndex = data.ActiveShowcaseIndex >= 0 && data.ActiveShowcaseIndex < ShowcaseCapacity
+			? data.ActiveShowcaseIndex : -1;
 		CurrentDay = Mathf.Clamp(data.Day, 1, FinalDay);
 		Score = Mathf.Max(0, data.Score);
 		Accepted = Mathf.Max(0, data.Accepted);
@@ -604,12 +726,14 @@ public partial class TradeScene : Node2D
 		if (ItemIndex < 0 || ItemIndex >= Items.Length || CustomerIndex < 0 ||
 			CustomerIndex >= _customer.GetAppearanceCount() || Failed || Completed)
 			TradeActive = false;
+		if (!TradeActive) _activeShowcaseIndex = -1;
 			
 		// --- ДОБАВЛЕНО: Загружаем визуал инвентаря при старте игры ---
 		if (_inventoryUI != null)
 		{
 			_inventoryUI.UpdateUI(_storedItems);
 		}
+		RefreshShowcases();
 		// -------------------------------------------------------------
 		
 		return true;
@@ -637,5 +761,9 @@ public partial class TradeScene : Node2D
 		public int RerollsRemaining { get; set; }
 		public int[] StoredItems { get; set; } = [];
 		public int[] CheckpointItems { get; set; } = [];
+		public int[] ShowcaseItems { get; set; } = [];
+		public int[] CheckpointShowcaseItems { get; set; } = [];
+		public int ActiveShowcaseIndex { get; set; } = -1;
+		public double BuyerCountdown { get; set; }
 	}
 }

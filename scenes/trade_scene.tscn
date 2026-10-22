@@ -9,6 +9,7 @@
 [ext_resource type="Texture2D" uid="uid://bjrlsjkjtn8cb" path="res://art/items/guitar.svg" id="8_guitar"]
 [ext_resource type="PackedScene" uid="uid://4wqv2sl2gvaw" path="res://scenes/UI/InventoryUI.tscn" id="9_cppqn"]
 [ext_resource type="Texture2D" uid="uid://bdnt1wjejacqf" path="res://art/items/trumpet.svg" id="9_trumpet"]
+[ext_resource type="PackedScene" path="res://scenes/UI/ShowcaseSlot.tscn" id="10_showcase"]
 
 [sub_resource type="StyleBoxFlat" id="AcceptNormal"]
 bg_color = Color(0.196078, 0.494118, 0.462745, 1)
@@ -58,6 +59,33 @@ bg_color = Color(0.760784, 0.454902, 0.392157, 1)
 [sub_resource type="StyleBoxFlat" id="DeclineDisabled"]
 bg_color = Color(0.403922, 0.2, 0.156863, 1)
 
+[sub_resource type="StyleBoxFlat" id="TrashNormal"]
+bg_color = Color(0.27, 0.29, 0.29, 1)
+border_width_left = 6
+border_width_right = 6
+border_width_bottom = 6
+border_color = Color(0.16, 0.18, 0.18, 1)
+corner_radius_bottom_left = 20
+corner_radius_bottom_right = 20
+
+[sub_resource type="StyleBoxFlat" id="TrashHover"]
+bg_color = Color(0.43, 0.29, 0.27, 1)
+border_width_left = 6
+border_width_right = 6
+border_width_bottom = 6
+border_color = Color(0.23, 0.14, 0.13, 1)
+corner_radius_bottom_left = 20
+corner_radius_bottom_right = 20
+
+[sub_resource type="StyleBoxFlat" id="TrashDisabled"]
+bg_color = Color(0.31, 0.31, 0.31, 1)
+border_width_left = 6
+border_width_right = 6
+border_width_bottom = 6
+border_color = Color(0.2, 0.2, 0.2, 1)
+corner_radius_bottom_left = 20
+corner_radius_bottom_right = 20
+
 [node name="TradeScene" type="Node2D" unique_id=620028237]
 script = ExtResource("1_main")
 
@@ -72,6 +100,12 @@ color = Color(0.11, 0.1, 0.13, 1)
 
 [node name="TradingRoomBackground" type="Sprite2D" parent="World" unique_id=2014665045]
 position = Vector2(0, 1080)
+texture = ExtResource("4_room_background")
+centered = false
+
+[node name="ShowroomBackground" type="Sprite2D" parent="World"]
+position = Vector2(1920, 1080)
+modulate = Color(0.92, 0.84, 0.75, 1)
 texture = ExtResource("4_room_background")
 centered = false
 
@@ -188,15 +222,54 @@ offset_bottom = 2160.0
 mouse_filter = 2
 color = Color(0.28, 0.22, 0.19, 1)
 
-[node name="StairLabel" type="Label" parent="World" unique_id=556506083]
-offset_left = 1710.0
-offset_top = 528.0
-offset_right = 2130.0
-offset_bottom = 592.0
-theme_override_colors/font_color = Color(0.22, 0.17, 0.14, 1)
-theme_override_font_sizes/font_size = 30
-text = "ЛЕСТНИЦА"
+[node name="ShowroomHeader" type="ColorRect" parent="World"]
+offset_left = 2210.0
+offset_top = 1205.0
+offset_right = 3550.0
+offset_bottom = 1335.0
+mouse_filter = 2
+color = Color(0.36, 0.21, 0.17, 0.94)
+
+[node name="ShowroomLabel" type="Label" parent="World"]
+offset_left = 2260.0
+offset_top = 1215.0
+offset_right = 3500.0
+offset_bottom = 1295.0
+theme_override_colors/font_color = Color(1, 0.96, 0.89, 1)
+theme_override_font_sizes/font_size = 48
+text = "ВИТРИНЫ"
 horizontal_alignment = 1
+
+[node name="ShowroomHint" type="Label" parent="World"]
+offset_left = 2260.0
+offset_top = 1280.0
+offset_right = 3500.0
+offset_bottom = 1330.0
+theme_override_colors/font_color = Color(1, 0.9, 0.79, 1)
+theme_override_font_sizes/font_size = 23
+text = "Выберите предмет в инвентаре и свободную витрину"
+horizontal_alignment = 1
+
+[node name="Showcases" type="Node2D" parent="World"]
+position = Vector2(1920, 1080)
+
+[node name="Slot1" parent="World/Showcases" instance=ExtResource("10_showcase")]
+position = Vector2(140, 360)
+
+[node name="Slot2" parent="World/Showcases" instance=ExtResource("10_showcase")]
+position = Vector2(740, 360)
+
+[node name="Slot3" parent="World/Showcases" instance=ExtResource("10_showcase")]
+position = Vector2(1340, 360)
+
+[node name="Slot4" parent="World/Showcases" instance=ExtResource("10_showcase")]
+position = Vector2(140, 650)
+
+[node name="Slot5" parent="World/Showcases" instance=ExtResource("10_showcase")]
+position = Vector2(740, 650)
+
+[node name="Slot6" parent="World/Showcases" instance=ExtResource("10_showcase")]
+position = Vector2(1340, 650)
 
 [node name="SalesRoomLabel" type="Label" parent="World" unique_id=1600931408]
 offset_left = 370.0
@@ -340,10 +413,10 @@ theme_override_styles/disabled = SubResource("RerollDisabled")
 text = "Другой покупатель (3)"
 
 [node name="PlaceItemButton" type="Button" parent="World" unique_id=1326482488]
-offset_left = 1084.0
-offset_top = 1726.0
-offset_right = 1384.0
-offset_bottom = 1806.0
+offset_left = 2600.0
+offset_top = 2015.0
+offset_right = 3160.0
+offset_bottom = 2095.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_disabled_color = Color(0.85, 0.82, 0.77, 1)
 theme_override_font_sizes/font_size = 24
@@ -351,7 +424,29 @@ theme_override_styles/normal = SubResource("RerollNormal")
 theme_override_styles/pressed = SubResource("RerollPressed")
 theme_override_styles/hover = SubResource("RerollHover")
 theme_override_styles/disabled = SubResource("RerollDisabled")
-text = "Разместить предмет"
+text = "Выставить в свободную витрину"
+
+[node name="TrashBin" type="Button" parent="World"]
+offset_left = 3350.0
+offset_top = 2010.0
+offset_right = 3650.0
+offset_bottom = 2115.0
+tooltip_text = "Выбросить выбранный предмет из инвентаря или витрины"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_disabled_color = Color(0.8, 0.8, 0.8, 1)
+theme_override_font_sizes/font_size = 28
+theme_override_styles/normal = SubResource("TrashNormal")
+theme_override_styles/hover = SubResource("TrashHover")
+theme_override_styles/pressed = SubResource("TrashHover")
+theme_override_styles/disabled = SubResource("TrashDisabled")
+text = "МУСОРКА"
+
+[node name="Lid" type="ColorRect" parent="World/TrashBin"]
+offset_left = -10.0
+offset_top = -18.0
+offset_right = 310.0
+mouse_filter = 2
+color = Color(0.17, 0.19, 0.19, 1)
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=550359116]
 position = Vector2(960, 1620)
