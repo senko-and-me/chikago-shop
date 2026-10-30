@@ -1,0 +1,1 @@
+# Domain sources are compiled by their own .NET project, not imported by Godot.

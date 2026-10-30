@@ -2,6 +2,10 @@
 # Visual Studio 2012
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChikagoShop", "ChikagoShop.csproj", "{FF37B60A-C934-4593-96DB-B6C69832B5E5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChikagoShop.Domain", "src\ChikagoShop.Domain\ChikagoShop.Domain.csproj", "{93BD75C7-F564-4696-A29B-21E9ECD19462}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChikagoShop.Domain.Tests", "tests\ChikagoShop.Domain.Tests\ChikagoShop.Domain.Tests.csproj", "{4C54DE63-A9C6-4707-93A6-812626F23B9C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 	Debug|Any CPU = Debug|Any CPU
@@ -15,5 +19,17 @@ Global
 		{FF37B60A-C934-4593-96DB-B6C69832B5E5}.ExportDebug|Any CPU.Build.0 = ExportDebug|Any CPU
 		{FF37B60A-C934-4593-96DB-B6C69832B5E5}.ExportRelease|Any CPU.ActiveCfg = ExportRelease|Any CPU
 		{FF37B60A-C934-4593-96DB-B6C69832B5E5}.ExportRelease|Any CPU.Build.0 = ExportRelease|Any CPU
+		{93BD75C7-F564-4696-A29B-21E9ECD19462}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{93BD75C7-F564-4696-A29B-21E9ECD19462}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{93BD75C7-F564-4696-A29B-21E9ECD19462}.ExportDebug|Any CPU.ActiveCfg = Debug|Any CPU
+		{93BD75C7-F564-4696-A29B-21E9ECD19462}.ExportDebug|Any CPU.Build.0 = Debug|Any CPU
+		{93BD75C7-F564-4696-A29B-21E9ECD19462}.ExportRelease|Any CPU.ActiveCfg = Release|Any CPU
+		{93BD75C7-F564-4696-A29B-21E9ECD19462}.ExportRelease|Any CPU.Build.0 = Release|Any CPU
+		{4C54DE63-A9C6-4707-93A6-812626F23B9C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4C54DE63-A9C6-4707-93A6-812626F23B9C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4C54DE63-A9C6-4707-93A6-812626F23B9C}.ExportDebug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4C54DE63-A9C6-4707-93A6-812626F23B9C}.ExportDebug|Any CPU.Build.0 = Debug|Any CPU
+		{4C54DE63-A9C6-4707-93A6-812626F23B9C}.ExportRelease|Any CPU.ActiveCfg = Release|Any CPU
+		{4C54DE63-A9C6-4707-93A6-812626F23B9C}.ExportRelease|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

@@ -1,0 +1,1 @@
+# Domain tests run through dotnet test and are not Godot scripts.

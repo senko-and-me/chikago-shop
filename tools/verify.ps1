@@ -93,8 +93,11 @@ try {
     Write-Host "Using .NET: $resolvedDotnet"
     Write-Host "Using Godot: $resolvedGodot"
 
+    $solutionPath = Join-Path $projectRoot 'ChikagoShop.sln'
     Invoke-ConsoleStep -Name 'dotnet build' -FilePath $resolvedDotnet `
-        -Arguments @('build', (Join-Path $projectRoot 'ChikagoShop.csproj'))
+        -Arguments @('build', $solutionPath)
+    Invoke-ConsoleStep -Name 'dotnet test' -FilePath $resolvedDotnet `
+        -Arguments @('test', $solutionPath, '--no-build')
     Invoke-GodotStep -Name 'Godot import' -FilePath $resolvedGodot `
         -Arguments @('--headless', '--editor', '--path', $projectRoot, '--quit')
     Invoke-GodotStep -Name 'Godot ProjectTest' -FilePath $resolvedGodot `
