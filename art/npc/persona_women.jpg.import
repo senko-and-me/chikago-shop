@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bhkf63wrdc7r8"
-path="res://.godot/imported/скетч м одежда.png-8f69f48bbd3cd42e22764e8773c986c5.ctex"
+uid="uid://blfopoey5rby3"
+path="res://.godot/imported/persona_women.jpg-ef71d33acce9a96bff15538f3fd392c2.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://art/скетч м одежда.png"
-dest_files=["res://.godot/imported/скетч м одежда.png-8f69f48bbd3cd42e22764e8773c986c5.ctex"]
+source_file="res://art/npc/persona_women.jpg"
+dest_files=["res://.godot/imported/persona_women.jpg-ef71d33acce9a96bff15538f3fd392c2.ctex"]
 
 [params]
 

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b5pchrcsrptbt"
-path="res://.godot/imported/скетч ж одежда.png-9044a85ded8fb45e94b61aa40840f22c.ctex"
+uid="uid://bidlf0y3pbkyf"
+path="res://.godot/imported/м прич 2.png-b02a0f70dc711109fdb22192a2088a61.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://art/скетч ж одежда.png"
-dest_files=["res://.godot/imported/скетч ж одежда.png-9044a85ded8fb45e94b61aa40840f22c.ctex"]
+source_file="res://art/npc/м прич 2.png"
+dest_files=["res://.godot/imported/м прич 2.png-b02a0f70dc711109fdb22192a2088a61.ctex"]
 
 [params]
 

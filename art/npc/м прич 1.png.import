@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://db32omt8oc7kx"
-path="res://.godot/imported/ж прич 3.png-200f6468ef9a6859d08c9c04ca02fcaf.ctex"
+uid="uid://c32xg5ak3er6a"
+path="res://.godot/imported/м прич 1.png-22c2f38e655a01afcb24c19a75847c6c.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://art/ж прич 3.png"
-dest_files=["res://.godot/imported/ж прич 3.png-200f6468ef9a6859d08c9c04ca02fcaf.ctex"]
+source_file="res://art/npc/м прич 1.png"
+dest_files=["res://.godot/imported/м прич 1.png-22c2f38e655a01afcb24c19a75847c6c.ctex"]
 
 [params]
 

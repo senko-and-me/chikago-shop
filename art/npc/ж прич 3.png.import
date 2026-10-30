@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://luqj8pvn70v6"
-path="res://.godot/imported/ж болванка.png-6549d012d93a03c412b4f3476dfc1e6d.ctex"
+uid="uid://db32omt8oc7kx"
+path="res://.godot/imported/ж прич 3.png-6ffdae4f2b5c4d4d1d837ae7dfe7f1d1.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://art/ж болванка.png"
-dest_files=["res://.godot/imported/ж болванка.png-6549d012d93a03c412b4f3476dfc1e6d.ctex"]
+source_file="res://art/npc/ж прич 3.png"
+dest_files=["res://.godot/imported/ж прич 3.png-6ffdae4f2b5c4d4d1d837ae7dfe7f1d1.ctex"]
 
 [params]
 
