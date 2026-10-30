@@ -93,7 +93,8 @@ script = ExtResource("1_main")
 script = ExtResource("2_world")
 
 [node name="Wall" type="ColorRect" parent="World" unique_id=704441603]
-offset_right = 3840.0
+z_index = -10
+offset_right = 5760.0
 offset_bottom = 2160.0
 mouse_filter = 2
 color = Color(0.11, 0.1, 0.13, 1)
@@ -105,7 +106,7 @@ centered = false
 
 [node name="RoomSeparator" type="ColorRect" parent="World" unique_id=523760033]
 offset_top = 1064.0
-offset_right = 5758.0
+offset_right = 5760.0
 offset_bottom = 1096.0
 mouse_filter = 2
 color = Color(0.28, 0.22, 0.19, 1)
@@ -210,7 +211,7 @@ theme_override_styles/disabled = SubResource("RerollDisabled")
 text = "Получить предмет"
 
 [node name="Showroom" type="Node2D" parent="World" unique_id=1166953855]
-position = Vector2(3842, 1096)
+position = Vector2(3840, 1080)
 
 [node name="ShowroomHeader" type="ColorRect" parent="World/Showroom" unique_id=1324160784]
 offset_left = 289.0
@@ -231,8 +232,8 @@ text = "ВИТРИНЫ"
 horizontal_alignment = 1
 
 [node name="ShowroomBackground" type="Sprite2D" parent="World/Showroom" unique_id=685989829]
+z_index = -1
 modulate = Color(0.92, 0.84, 0.75, 1)
-position = Vector2(-1, 1)
 texture = ExtResource("4_room_background")
 centered = false
 

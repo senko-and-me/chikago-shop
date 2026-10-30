@@ -37,20 +37,28 @@ public partial class ProjectTest : SceneTree
 
         var world = game.GetNode<CounterWorld>("World");
         var wall = game.GetNode<ColorRect>("World/Wall");
-        Check(wall.Size == new Vector2(3840, 2160), "The world must retain all four rooms");
+        Check(wall.Size == new Vector2(5760, 2160), "The world must contain all four current rooms");
         var salesRoom = game.GetNode<Sprite2D>("World/TradingRoomBackground");
         var roomTexture = salesRoom.Texture ?? throw new Exception("The room background must load");
         Check(roomTexture.GetSize() == new Vector2(1920, 1080) && salesRoom.Position == new Vector2(0, 1080),
             "The sales room must be below the atelier");
-        var showroom = game.GetNode<Sprite2D>("World/ShowroomBackground");
-        Check(showroom.Texture != null && showroom.Position == new Vector2(1920, 1080),
-            "The showroom must fill the lower-right room");
-        Check(game.GetNode<Node2D>("World/Showcases").GetChildCount() == 6,
+        var showroom = game.GetNode<Sprite2D>("World/Showroom/ShowroomBackground");
+        Check(showroom.Texture != null && showroom.GlobalPosition == new Vector2(3840, 1080) &&
+              wall.ZIndex < showroom.ZIndex && showroom.ZIndex < game.GetNode<Control>("World/Showroom/ShowroomHeader").ZIndex,
+            "The showroom background must fill the lower-right room behind its controls");
+        foreach (string backgroundPath in new[]
+        {
+            "World/Atelier/Background", "World/MusicWorkshop/Background",
+            "World/TradingRoomBackground", "World/Showroom/ShowroomBackground"
+        })
+            CheckSpriteInside(wall.GetGlobalRect(), game.GetNode<Sprite2D>(backgroundPath),
+                $"Room background must stay inside world bounds: {backgroundPath}");
+        Check(game.GetNode<Node2D>("World/Showroom/Showcases").GetChildCount() == 6,
             "The showroom must have six showcases");
         var atelierButton = game.GetNode<Button>("World/Atelier/GetItemButton");
         var musicButton = game.GetNode<Button>("World/MusicWorkshop/GetItemButton");
-        var placeButton = game.GetNode<Button>("World/PlaceItemButton");
-        var trashButton = game.GetNode<Button>("World/TrashBin");
+        var placeButton = game.GetNode<Button>("World/Showroom/PlaceItemButton");
+        var trashButton = game.GetNode<Button>("World/Showroom/TrashBin");
         foreach (string kind in new[] { "Hat", "Coat", "Guitar", "Trumpet" })
             Check(game.GetNode<Sprite2D>($"World/Item/{kind}").Texture != null,
                 $"The {kind} item must have an illustration");
@@ -85,7 +93,7 @@ public partial class ProjectTest : SceneTree
         Check(!game.TradeActive && game.ShowcaseItems[0] == firstItem &&
               game.StoredItems.SequenceEqual(new[] { secondItem }),
             "Placing must move the selected item into a showcase");
-        Check(game.GetNode<TextureRect>("World/Showcases/Slot1/Icon").Texture != null,
+        Check(game.GetNode<TextureRect>("World/Showroom/Showcases/Slot1/Icon").Texture != null,
             "The showcase must display the item's illustration");
         game._Process(game.BuyerWaitSeconds / 2d);
         Check(!game.TradeActive, "A buyer must wait before choosing a showcase item");
@@ -93,8 +101,8 @@ public partial class ProjectTest : SceneTree
         Check(game.TradeActive && game.ItemIndex == firstItem && game.ShowcaseItems.All(item => item == -1),
             "A buyer must choose a displayed item after the wait");
         Check(world.ItemVisible && placeButton.Visible &&
-              game.GetNode<Button>("World/Showcases/Slot1").Disabled &&
-              game.GetNode<Label>("World/Showcases/Slot1/ItemLabel").Text == "НА СДЕЛКЕ",
+              game.GetNode<Button>("World/Showroom/Showcases/Slot1").Disabled &&
+              game.GetNode<Label>("World/Showroom/Showcases/Slot1/ItemLabel").Text == "НА СДЕЛКЕ",
             "The active item's showcase must stay reserved during the trade");
         game.GetItemFromAtelier();
         SelectInventorySlot(game, 1);
@@ -105,11 +113,11 @@ public partial class ProjectTest : SceneTree
         placeButton.EmitSignal(Button.SignalName.Pressed);
         Check(game.TradeActive && game.ShowcaseItems[1] >= 0 && game.StoredItems.SequenceEqual(new[] { secondItem }),
             "The player must be able to stock another showcase during a trade");
-        game.GetNode<Button>("World/Showcases/Slot2").EmitSignal(Button.SignalName.Pressed);
+        game.GetNode<Button>("World/Showroom/Showcases/Slot2").EmitSignal(Button.SignalName.Pressed);
         Check(!trashButton.Disabled, "A displayed item must be selectable for disposal");
         trashButton.EmitSignal(Button.SignalName.Pressed);
         Check(game.TradeActive && game.ShowcaseItems[1] == -1 &&
-              game.GetNode<Button>("World/Showcases/Slot1").Disabled,
+              game.GetNode<Button>("World/Showroom/Showcases/Slot1").Disabled,
             "Trash must remove a displayed item without releasing the reserved slot");
         foreach (string kind in new[] { "hat", "coat", "guitar", "trumpet" })
             Check(game.GetNode<Sprite2D>($"World/Item/{char.ToUpperInvariant(kind[0])}{kind[1..]}").Visible ==
@@ -159,7 +167,7 @@ public partial class ProjectTest : SceneTree
             "R must not bypass the stored-item queue");
 
         SelectInventorySlot(game, 0);
-        game.GetNode<Button>("World/Showcases/Slot3").EmitSignal(Button.SignalName.Pressed);
+        game.GetNode<Button>("World/Showroom/Showcases/Slot3").EmitSignal(Button.SignalName.Pressed);
         game.GetItemFromAtelier();
         SelectInventorySlot(game, 0);
         game.PlaceItemInShowcase(4);
@@ -198,13 +206,13 @@ public partial class ProjectTest : SceneTree
         Check(camera.Position.X - halfView.X >= -240.01f && camera.Position.X - halfView.X < -200f &&
               camera.Position.Y - halfView.Y >= -240.01f && camera.Position.Y - halfView.Y < -200f,
             "The camera must allow a small view beyond the outer room edges");
-        camera.Position = new Vector2(3000, 540);
+        camera.Position = new Vector2(4800, 540);
         game.ClampCamera();
-        Check(camera.Position.X > 1920 && camera.Position.Y < 1080, "The camera must reach the upper-right workshop");
+        Check(camera.Position.X > 3840 && camera.Position.Y < 1080, "The camera must reach the upper-right workshop");
         game.ClampCamera();
-        camera.Position = new Vector2(3000, 1620);
+        camera.Position = new Vector2(4800, 1620);
         game.ClampCamera();
-        Check(camera.Position.X > 1920 && camera.Position.Y > 1080,
+        Check(camera.Position.X > 3840 && camera.Position.Y > 1080,
             "The camera must reach the lower-right showroom");
         game.QueueFree();
         await ToSignal(this, SignalName.ProcessFrame);
@@ -239,8 +247,8 @@ public partial class ProjectTest : SceneTree
         await ToSignal(this, SignalName.ProcessFrame);
         game = await CreateGame(scene);
         Check(game.TradeActive && game.ItemIndex == itemsBeforePlacement[0] && game.ShowcaseItems[3] == -1 &&
-              game.GetNode<Button>("World/Showcases/Slot4").Disabled &&
-              game.GetNode<Label>("World/Showcases/Slot4/ItemLabel").Text == "НА СДЕЛКЕ",
+              game.GetNode<Button>("World/Showroom/Showcases/Slot4").Disabled &&
+              game.GetNode<Label>("World/Showroom/Showcases/Slot4/ItemLabel").Text == "НА СДЕЛКЕ",
             "An active showcase trade must survive a reload");
         SelectInventorySlot(game, 0);
         game.PlaceItemInShowcase(5);
@@ -251,7 +259,7 @@ public partial class ProjectTest : SceneTree
         await ToSignal(this, SignalName.ProcessFrame);
         game = await CreateGame(scene);
         Check(game.TradeActive && game.ShowcaseItems[5] == itemsBeforePlacement[1] &&
-              game.GetNode<Button>("World/Showcases/Slot4").Disabled,
+              game.GetNode<Button>("World/Showroom/Showcases/Slot4").Disabled,
             "Stocking during a trade must survive another reload");
         game.DeclineTrade();
         Check(game.ShowcaseItems[3] == itemsBeforePlacement[0] &&
@@ -292,8 +300,8 @@ public partial class ProjectTest : SceneTree
         Check(game.CurrentDay == 5 && game.Score == 12 && game.ShowcaseItems[2] == checkpointItems[0] &&
               game.StoredItems.SequenceEqual(new[] { checkpointItems[1] }),
             "The showroom, inventory and progress must survive a scene reload");
-        game.GetNode<Button>("World/Showcases/Slot3").EmitSignal(Button.SignalName.Pressed);
-        game.GetNode<Button>("World/TrashBin").EmitSignal(Button.SignalName.Pressed);
+        game.GetNode<Button>("World/Showroom/Showcases/Slot3").EmitSignal(Button.SignalName.Pressed);
+        game.GetNode<Button>("World/Showroom/TrashBin").EmitSignal(Button.SignalName.Pressed);
         Check(game.ShowcaseItems[2] == -1, "Trash must remove the selected showroom item");
         game.QueueFree();
         await ToSignal(this, SignalName.ProcessFrame);
@@ -382,6 +390,15 @@ public partial class ProjectTest : SceneTree
     {
         var container = game.GetNode<HBoxContainer>("HUD/InventoryUI/HBoxContainer");
         ((Button)container.GetChild(index)).EmitSignal(Button.SignalName.Pressed);
+    }
+
+    private static void CheckSpriteInside(Rect2 worldBounds, Sprite2D sprite, string message)
+    {
+        Texture2D texture = sprite.Texture ?? throw new Exception($"{message}: texture is missing");
+        Check(!sprite.Centered, $"{message}: contract expects a top-left anchored background");
+        var spriteBounds = new Rect2(sprite.GlobalPosition, texture.GetSize() * sprite.GlobalScale);
+        Check(worldBounds.Encloses(spriteBounds),
+            $"{message}; world={worldBounds}, sprite={spriteBounds}");
     }
 
     private static void Check(bool condition, string message)

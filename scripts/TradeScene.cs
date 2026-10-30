@@ -113,14 +113,14 @@ public partial class TradeScene : Node2D
 		_endDayButton = GetNode<Button>("HUD/Root/ProgressPanel/Content/EndDayButton");
 		_atelierGetItemButton = GetNode<Button>("World/Atelier/GetItemButton");
 		_musicGetItemButton = GetNode<Button>("World/MusicWorkshop/GetItemButton");
-		_placeItemButton = GetNode<Button>("World/PlaceItemButton");
-		_trashButton = GetNode<Button>("World/TrashBin");
+		_placeItemButton = GetNode<Button>("World/Showroom/PlaceItemButton");
+		_trashButton = GetNode<Button>("World/Showroom/TrashBin");
 		Array.Fill(_showcaseItems, -1);
 		Array.Fill(_checkpointShowcaseItems, -1);
 		for (int i = 0; i < ShowcaseCapacity; i++)
 		{
 			int slotIndex = i;
-			_showcaseSlots[i] = GetNode<Button>($"World/Showcases/Slot{i + 1}");
+			_showcaseSlots[i] = GetNode<Button>($"World/Showroom/Showcases/Slot{i + 1}");
 			_showcaseGlass[i] = _showcaseSlots[i].GetNode<ColorRect>("Glass");
 			_showcaseIcons[i] = _showcaseSlots[i].GetNode<TextureRect>("Icon");
 			_showcaseLabels[i] = _showcaseSlots[i].GetNode<Label>("ItemLabel");
@@ -673,7 +673,7 @@ public partial class TradeScene : Node2D
 	private bool LoadProgress()
 	{
 		if (string.IsNullOrEmpty(SavePath) || !FileAccess.FileExists(SavePath)) return false;
-		ProgressData? data;
+		ProgressData data;
 		try
 		{
 			data = JsonSerializer.Deserialize<ProgressData>(FileAccess.GetFileAsString(SavePath), JsonOptions);
