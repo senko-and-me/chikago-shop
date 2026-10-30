@@ -16,4 +16,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\ChikagoShop.Domain\ChikagoShop.Domain.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\config\economy.v1.json" Link="config\economy.v1.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

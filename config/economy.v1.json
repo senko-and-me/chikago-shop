@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "is_provisional": true,
+  "starting_money": 0,
+  "days": {
+    "total_days": 7,
+    "tutorial_day": 1
+  },
+  "workshops": [
+    { "id": "atelier", "spin_cost": 90 },
+    { "id": "music", "spin_cost": 110 }
+  ],
+  "rarities": [
+    { "id": "common", "name": "Ширпотреб", "weight": 60, "rerolls": 3, "base_prices": { "atelier": 30, "music": 36 } },
+    { "id": "ordinary", "name": "Заурядная", "weight": 25, "rerolls": 2, "base_prices": { "atelier": 50, "music": 60 } },
+    { "id": "first_class", "name": "Первоклассная", "weight": 10, "rerolls": 2, "base_prices": { "atelier": 80, "music": 96 } },
+    { "id": "exclusive", "name": "Эксклюзивная", "weight": 4, "rerolls": 1, "base_prices": { "atelier": 120, "music": 144 } },
+    { "id": "unique", "name": "Неповторимая", "weight": 1, "rerolls": 1, "base_prices": { "atelier": 200, "music": 240 } }
+  ],
+  "offer_ranges": [
+    { "min_percent": -20, "max_percent": -1, "chance_percent": 20 },
+    { "min_percent": 0, "max_percent": 10, "chance_percent": 70 },
+    { "min_percent": 11, "max_percent": 30, "chance_percent": 10 }
+  ],
+  "quotas": [
+    { "id": "first", "deadline_day": 3, "amount": 45 },
+    { "id": "final", "deadline_day": 7, "amount": 90 }
+  ]
+}

@@ -13,6 +13,7 @@ public partial class ProjectTest : SceneTree
     {
         try
         {
+            TestEconomyConfig();
             await TestTradeScene();
             await TestProgress();
             await TestMainMenu();
@@ -24,6 +25,15 @@ public partial class ProjectTest : SceneTree
             GD.PushError(error.ToString());
             Quit(1);
         }
+    }
+
+    private static void TestEconomyConfig()
+    {
+        var config = EconomyConfigProvider.Load();
+        Check(config.SchemaVersion == 1 && config.IsProvisional,
+            "The game must load the versioned provisional economy config");
+        Check(config.Workshops.Count == 2 && config.Rarities.Count == 5 && config.OfferRanges.Count == 3,
+            "The game and domain tests must share the complete economy v1 source");
     }
 
     private async Task TestTradeScene()

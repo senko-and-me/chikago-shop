@@ -6,5 +6,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="src\**\*.cs;tests\ChikagoShop.Domain.Tests\**\*.cs" />
+    <ProjectReference Include="src\ChikagoShop.Domain\ChikagoShop.Domain.csproj" />
   </ItemGroup>
 </Project>

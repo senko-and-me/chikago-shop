@@ -10,8 +10,9 @@
 | Состояние | Задача | Пакет | Исполнитель |
 |---|---|---|---|
 | `DONE` | `S1-01` — независимые domain/test projects | `CP-S1-01` | `/root` |
-| `READY` | `S1-02` — versioned economy config | `CP-S1-02` | не назначен |
-| `NEXT` | `S1-03`, `S1-04` | после `S1-02` и собственных `CP-*` | — |
+| `DONE` | `S1-02` — versioned economy config | `CP-S1-02` | `/root` |
+| `DONE` | `S1-03` — item/inventory economy models | `CP-S1-03` | `/root` |
+| `NEXT` | `S1-04` — named RNG streams | после подготовки `CP-S1-04` | — |
 
 Текущие ворота: `G-S0 = PASSED`, `G-S1 = OPEN`. При назначении координатор вписывает сюда каноническое имя агента; роль в таблице стадии исполнителем не является.
 
@@ -215,8 +216,8 @@
 | ID | Статус | Зависит | Роль | Результат | Контекст | Приёмка |
 |---|---|---|---|---|---|---|
 | `S1-01` | `DONE` | `G-S0` | Архитектор/QA | Создать Godot-независимую .NET 8 domain library и test project, зафиксировать минимальные seams и добавить `dotnet test` в `tools/verify.ps1`. | `CP-S1-01`. | Verify выполняет 1 architecture test и всю Godot-регрессию; domain не ссылается на Godot. |
-| `S1-02` | `READY` | `S1-01` | Data/economy | Версионированный расширяемый config contract и реализованные секции ближайшего среза: дни, мастерские, редкости, офферы, provisional-квоты. | `CP-S1-02`. | Дубли ID/отрицательные значения отклоняются; процентные распределения дают 100, а положительные относительные веса могут нормализоваться; Godot adapter и domain tests читают один файл. |
-| `S1-03` | `TODO` | `S1-01`, `S1-02` | Domain | Модели `ItemDefinition`, `ItemInstance`, inventory/showcase, деньги, энергия и точный `RoundHalfUp`. | Конфиг и старые торговые сценарии. | Чистые C#-тесты покрывают состояние товара и денежные границы; никаких индексных ссылок на массив товаров. |
+| `S1-02` | `DONE` | `S1-01` | Data/economy | Версионированный расширяемый config contract и реализованные секции ближайшего среза: дни, мастерские, редкости, офферы, provisional-квоты. | `CP-S1-02`. | Один JSON проходит Godot integration и 6 config unit-тестов; вместе с architecture test выполняется 7 domain tests. |
+| `S1-03` | `DONE` | `S1-01`, `S1-02` | Domain | Модели `ItemDefinition`, `ItemInstance`, inventory/showcase, деньги, энергия и точный `RoundHalfUp`. | `CP-S1-03`. | 12 новых unit-тестов покрывают identity, переходы, terminal-state, неограниченный inventory, showcase, деньги, энергию и `RoundHalfUp`; полный verify выполняет 19 domain tests и Godot-регрессию. |
 | `S1-04` | `TODO` | `S1-02` | Domain/QA | Seeded RNG с независимыми именованными потоками `economy/gameplay` и `presentation`. | Редкости/офферы, текущий `_rng`. | Косметический вызов не меняет экономический результат; economy-state сохраняется; тесты покрывают веса и гарантии. |
 | `S1-05` | `TODO` | `S1-03`, `S1-04` | Persistence | Версионированный `GameState`/save repository для уже реализованных полей плюс контракт безопасного расширения. | Текущий `ProgressData`, `D-*` checkpoint. | Round-trip сохраняет state ближайшего среза и economy RNG; неизвестная/повреждённая версия безопасно восстанавливается или сбрасывается по принятому правилу. |
 | `S1-06` | `TODO` | `S1-02`, `S1-03`, `S1-04` | Balance/tools | Минимальный simulator/parity harness для редкости, оффера и одной продажи на общем config/domain/seed. | Domain без Godot UI. | Игра-домен и harness дают одинаковые товары/оффер/цену на corpus seeds; отчёт пригоден для раннего anti-softlock анализа. |
@@ -524,6 +525,41 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/verify.ps1
 - тесты отклоняют неизвестную schema, дубли ID, отрицательные цены/веса, неверные диапазоны и percentage sum не 100;
 - относительные веса не обязаны давать 100, но обязаны быть положительными;
 - ни одно число JSON не копируется в adapter;
+- полный `tools/verify.ps1` зелёный.
+
+### CP-S1-03 — item/inventory economy models
+
+Результат: чистый домен выражает стабильные определения и уникальные экземпляры товаров, их допустимые состояния, неограниченный inventory, фиксированное число showcase slots, деньги/энергию и точное денежное округление.
+
+Прочитать:
+
+- `D-006`, `D-008` и минимальное состояние экземпляра из быстрого контекста;
+- `config/economy.v1.json` и `src/ChikagoShop.Domain/Configuration/*.cs`;
+- существующие inventory/showcase/trade сценарии в `tests/ProjectTest.cs` только как behavioral reference.
+
+Разрешённый write-set:
+
+- `src/ChikagoShop.Domain/Items/*.cs`;
+- `src/ChikagoShop.Domain/Economy/*.cs`;
+- `tests/ChikagoShop.Domain.Tests/ItemInventoryTests.cs`;
+- `tests/ChikagoShop.Domain.Tests/MoneyEnergyTests.cs`.
+
+Не входит: Godot adapter/UI, изменение `TradeScene`, RNG, генерация предметов, торговый offer flow, save schema и миграция старых индексных товаров.
+
+Обязательные инварианты:
+
+- `ItemDefinition` использует стабильный строковый ID, workshop ID и rarity ID;
+- `ItemInstance` имеет уникальный ID, базовую цену, оставшиеся рероллы и ровно одно состояние: `Inventory`, `Showcase`, `Trading`, `Sold`, `GivenToNpc`, `Discarded`;
+- переходы terminal-state необратимы; один экземпляр не может находиться в inventory и showcase одновременно;
+- inventory логически не ограничен и содержит только реальные экземпляры (`D-008`);
+- showcase имеет заданное число слотов, отклоняет занятый слот и сохраняет identity экземпляра;
+- деньги/энергия не уходят ниже нуля, неуспешное списание не меняет state;
+- `RoundHalfUp` работает целочисленно/decimal и не использует float/banker's rounding.
+
+Приёмка:
+
+- тесты покрывают допустимые/запрещённые переходы, уникальность, overflow-free inventory, занятый showcase, атомарное списание и границы округления;
+- domain API не зависит от Godot и не использует индекс товара как identity;
 - полный `tools/verify.ps1` зелёный.
 
 Рабочий протокол и handoff-шаблон не дублируются здесь: см. `AGENTS.md`.
