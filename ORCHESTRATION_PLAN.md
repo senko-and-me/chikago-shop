@@ -129,7 +129,7 @@
 | Headless-импорт Godot 4.7.2 Mono | Проходит. |
 | `tests/ProjectTest.cs` | Проходит через `tools/verify.ps1`; торговля, save/checkpoint, квоты, камера и меню зелёные. |
 | Visual smoke `Showroom` | Проходит: фон находится между `Wall` и контролами, заголовок и 6 витрин видимы. |
-| Git | Локальный `main` содержит базовый коммит `ec0bd93`; push в `origin` ожидает действующей GitHub HTTPS-авторизации. |
+| Git | `main` и `origin/main` содержат выполненный фронт S0 до коммита `e2317de`. |
 
 Устранённый разрыв baseline:
 
