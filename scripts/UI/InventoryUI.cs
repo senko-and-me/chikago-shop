@@ -1,29 +1,19 @@
+using System;
 using Godot;
 using System.Collections.Generic;
 
 public partial class InventoryUI : Control
 {
-    [Export] public PackedScene SlotScene { get; set; } // Сюда перетащи SlotUI.tscn
-    [Export] public HBoxContainer Container { get; set; } // Сюда перетащи HBoxContainer
+    [Export] public PackedScene SlotScene { get; set; } = null!;
+    [Export] public ScrollContainer Scroller { get; set; } = null!;
+    [Export] public HBoxContainer Container { get; set; } = null!;
 
-    private List<SlotUI> _slots = new();
+    private readonly List<SlotUI> _slots = [];
     public int SelectedIndex { get; private set; } = -1;
 
-    // Ссылка на основную сцену
-    private TradeScene _tradeScene;
+    private TradeScene _tradeScene = null!;
 
-    public override void _Ready()
-    {
-        // Создаем 6 слотов
-        for (int i = 0; i < 6; i++)
-        {
-            var slot = SlotScene.Instantiate<SlotUI>();
-            slot.SetIndex(i);
-            slot.SlotSelected += OnSlotClicked;
-            Container.AddChild(slot);
-            _slots.Add(slot);
-        }
-    }
+    public override void _Ready() => Scroller.GuiInput += OnScrollerGuiInput;
 
     public void Initialize(TradeScene tradeScene)
     {
@@ -33,31 +23,39 @@ public partial class InventoryUI : Control
     // Вызывается из TradeScene, когда массив предметов меняется
     public void UpdateUI(List<int> storedItems)
     {
+        ResizeSlots(storedItems.Count);
+
         for (int i = 0; i < _slots.Count; i++)
         {
-            if (i < storedItems.Count)
-            {
-                int itemIndex = storedItems[i];
-                
-                // Берем строковое имя предмета ("hat", "coat" и т.д.)
-                string kind = TradeScene.GetItemKind(itemIndex); 
-                
-                // Загружаем SVG из папки art. 
-                // ВАЖНО: убедись, что имена файлов совпадают (hat.svg, coat.svg и т.д.)
-                Texture2D icon = GD.Load<Texture2D>($"res://art/items/{kind}.svg");
-                
-                _slots[i].SetItemTexture(icon);
-            }
-            else
-            {
-                _slots[i].SetItemTexture(null); // Пустой слот
-            }
+            int itemIndex = storedItems[i];
+            _slots[i].SetItemTexture(GD.Load<Texture2D>(TradeScene.GetItemArtPath(itemIndex)));
         }
         
         // Сбрасываем выделение, если выбранный слот опустел
         if (SelectedIndex >= storedItems.Count)
         {
             DeselectAll();
+        }
+    }
+
+    private void ResizeSlots(int itemCount)
+    {
+        while (_slots.Count < itemCount)
+        {
+            int index = _slots.Count;
+            var slot = SlotScene.Instantiate<SlotUI>();
+            slot.SetIndex(index);
+            slot.SlotSelected += OnSlotClicked;
+            Container.AddChild(slot);
+            _slots.Add(slot);
+        }
+
+        while (_slots.Count > itemCount)
+        {
+            int last = _slots.Count - 1;
+            SlotUI slot = _slots[last];
+            _slots.RemoveAt(last);
+            slot.QueueFree();
         }
     }
 
@@ -75,6 +73,22 @@ public partial class InventoryUI : Control
         {
             _tradeScene.SelectInventoryItem(index);
         }
+    }
+
+    private void OnScrollerGuiInput(InputEvent @event)
+    {
+        if (@event is not InputEventMouseButton { Pressed: true } wheel) return;
+
+        int direction = wheel.ButtonIndex switch
+        {
+            MouseButton.WheelUp => -1,
+            MouseButton.WheelDown => 1,
+            _ => 0
+        };
+        if (direction == 0) return;
+
+        Scroller.ScrollHorizontal = Math.Max(0, Scroller.ScrollHorizontal + direction * 70);
+        Scroller.AcceptEvent();
     }
 
     public void DeselectAll()

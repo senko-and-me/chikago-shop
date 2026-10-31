@@ -18,8 +18,13 @@ public partial class TradeScene : Node2D
 	private const int FirstDeadline = 4;
 	private const int FinalDay = 7;
 	private const int ShowcaseCapacity = 6;
-	private static readonly (int BasePrice, string Kind, string Name)[] Items =
-		[(4, "hat", "шляпа"), (9, "coat", "пальто"), (18, "guitar", "гитара"), (12, "trumpet", "труба")];
+	private static readonly (int BasePrice, string Kind, string Name, string ArtPath)[] Items =
+	[
+		(4, "hat", "шляпка-клош", "res://art/items/hat_cloche.png"),
+		(9, "gloves", "перчатки", "res://art/items/gloves.png"),
+		(18, "guitar", "гитара", "res://art/items/guitar.svg"),
+		(12, "trumpet", "труба", "res://art/items/trumpet.svg")
+	];
 	private static readonly JsonSerializerOptions JsonOptions = new()
 	{
 		PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
@@ -45,8 +50,10 @@ public partial class TradeScene : Node2D
 	private Button _endDayButton = null!;
 	private Button _atelierGetItemButton = null!;
 	private Button _musicGetItemButton = null!;
-	private Button _placeItemButton = null!;
-	private Button _trashButton = null!;
+	private readonly Control[] _rarityPanels = new Control[2];
+	private readonly Control[] _rarityHotspots = new Control[2];
+	private readonly Button[] _placeItemButtons = new Button[2];
+	private readonly Button[] _trashButtons = new Button[2];
 	private readonly Button[] _showcaseSlots = new Button[ShowcaseCapacity];
 	private readonly ColorRect[] _showcaseGlass = new ColorRect[ShowcaseCapacity];
 	private readonly TextureRect[] _showcaseIcons = new TextureRect[ShowcaseCapacity];
@@ -70,6 +77,7 @@ public partial class TradeScene : Node2D
 	public double BuyerCountdown => _buyerCountdown;
 	public static string GetItemKind(int index) => Items[index].Kind;
 	public static string GetItemName(int index) => Items[index].Name;
+	public static string GetItemArtPath(int index) => Items[index].ArtPath;
 	public int ItemIndex { get; set; } = -1;
 	public int CustomerIndex { get; set; } = -1;
 	public int Percentage { get; set; }
@@ -96,15 +104,18 @@ public partial class TradeScene : Node2D
 	{
 		_world = GetNode<CounterWorld>("World");
 		_wall = GetNode<ColorRect>("World/Wall");
-		_customer = GetNode<ModularCustomer>("World/Customer");
 		_camera = GetNode<Camera2D>("Camera2D");
-		_tradePanel = GetNode<PanelContainer>("World/Item/TradePanel");
-		_baseLabel = GetNode<Label>("World/Item/TradePanel/Content/BasePriceLabel");
-		_percentLabel = GetNode<Label>("World/Item/TradePanel/Content/PercentLabel");
-		_offerLabel = GetNode<Label>("World/Item/TradePanel/Content/OfferLabel");
-		_acceptButton = GetNode<Button>("World/Item/TradePanel/Content/Buttons/AcceptButton");
-		_declineButton = GetNode<Button>("World/Item/TradePanel/Content/Buttons/DeclineButton");
-		_rerollButton = GetNode<Button>("World/Item/TradePanel/Content/RerollButton");
+		_targetZoom = Mathf.Clamp(_camera.Zoom.X, MinZoom, MaxZoom);
+		_camera.Zoom = Vector2.One * _targetZoom;
+		_zoomAnchor = GetViewportRect().Size / 2f;
+		_customer = GetNode<ModularCustomer>("World/TradingRoom/Customer");
+		_tradePanel = GetNode<PanelContainer>("World/TradingRoom/Item/TradePanel");
+		_baseLabel = GetNode<Label>("World/TradingRoom/Item/TradePanel/Content/BasePriceLabel");
+		_percentLabel = GetNode<Label>("World/TradingRoom/Item/TradePanel/Content/PercentLabel");
+		_offerLabel = GetNode<Label>("World/TradingRoom/Item/TradePanel/Content/OfferLabel");
+		_acceptButton = GetNode<Button>("World/TradingRoom/Item/TradePanel/Content/Buttons/AcceptButton");
+		_declineButton = GetNode<Button>("World/TradingRoom/Item/TradePanel/Content/Buttons/DeclineButton");
+		_rerollButton = GetNode<Button>("World/TradingRoom/Item/TradePanel/Content/RerollButton");
 		_scoreLabel = GetNode<Label>("HUD/Root/ScorePanel/ScoreLabel");
 		_dayLabel = GetNode<Label>("HUD/Root/ProgressPanel/Content/DayLabel");
 		_quotaLabel = GetNode<Label>("HUD/Root/ProgressPanel/Content/QuotaLabel");
@@ -113,14 +124,29 @@ public partial class TradeScene : Node2D
 		_endDayButton = GetNode<Button>("HUD/Root/ProgressPanel/Content/EndDayButton");
 		_atelierGetItemButton = GetNode<Button>("World/Atelier/GetItemButton");
 		_musicGetItemButton = GetNode<Button>("World/MusicWorkshop/GetItemButton");
-		_placeItemButton = GetNode<Button>("World/Showroom/PlaceItemButton");
-		_trashButton = GetNode<Button>("World/Showroom/TrashBin");
+		_rarityPanels[0] = GetNode<Control>("World/Atelier/RarityPanel");
+		_rarityPanels[1] = GetNode<Control>("World/MusicWorkshop/RarityPanel");
+		_rarityHotspots[0] = GetNode<Control>("World/Atelier/GetItemButton/RarityHotspot");
+		_rarityHotspots[1] = GetNode<Control>("World/MusicWorkshop/GetItemButton/RarityHotspot");
+		_placeItemButtons[0] = GetNode<Button>("World/ShowroomLeft/PlaceItemButton");
+		_placeItemButtons[1] = GetNode<Button>("World/Showroom/PlaceItemButton");
+		_trashButtons[0] = GetNode<Button>("World/ShowroomLeft/TrashBin");
+		_trashButtons[1] = GetNode<Button>("World/Showroom/TrashBin");
 		Array.Fill(_showcaseItems, -1);
 		Array.Fill(_checkpointShowcaseItems, -1);
+		string[] showcasePaths =
+		[
+			"World/ShowroomLeft/Showcases/Slot1",
+			"World/ShowroomLeft/Showcases/Slot2",
+			"World/ShowroomLeft/Showcases/Slot3",
+			"World/Showroom/Showcases/Slot4",
+			"World/Showroom/Showcases/Slot5",
+			"World/Showroom/Showcases/Slot6"
+		];
 		for (int i = 0; i < ShowcaseCapacity; i++)
 		{
 			int slotIndex = i;
-			_showcaseSlots[i] = GetNode<Button>($"World/Showroom/Showcases/Slot{i + 1}");
+			_showcaseSlots[i] = GetNode<Button>(showcasePaths[i]);
 			_showcaseGlass[i] = _showcaseSlots[i].GetNode<ColorRect>("Glass");
 			_showcaseIcons[i] = _showcaseSlots[i].GetNode<TextureRect>("Icon");
 			_showcaseLabels[i] = _showcaseSlots[i].GetNode<Label>("ItemLabel");
@@ -140,8 +166,13 @@ public partial class TradeScene : Node2D
 		_endDayButton.Pressed += EndDay;
 		_atelierGetItemButton.Pressed += GetItemFromAtelier;
 		_musicGetItemButton.Pressed += GetItemFromMusicWorkshop;
-		_placeItemButton.Pressed += PlaceNextItem;
-		_trashButton.Pressed += TrashSelectedItem;
+		_rarityHotspots[0].MouseEntered += () => _rarityPanels[0].Show();
+		_rarityHotspots[0].MouseExited += () => _rarityPanels[0].Hide();
+		_rarityHotspots[1].MouseEntered += () => _rarityPanels[1].Show();
+		_rarityHotspots[1].MouseExited += () => _rarityPanels[1].Hide();
+		_placeItemButtons[0].Pressed += () => PlaceItemInShowcase(FindFreeShowcaseSlot(0, 3));
+		_placeItemButtons[1].Pressed += () => PlaceItemInShowcase(FindFreeShowcaseSlot(3, 6));
+		foreach (Button trashButton in _trashButtons) trashButton.Pressed += TrashSelectedItem;
 		GetNode<Button>("HUD/Root/ProgressPanel/Content/CheckpointButton").Pressed += ReturnToCheckpoint;
 		GetNode<Button>("HUD/Root/ProgressPanel/Content/NewGameButton").Pressed += NewGame;
 
@@ -157,8 +188,6 @@ public partial class TradeScene : Node2D
 		RefreshItemButtons();
 		LogStoredItems();
 
-		_targetZoom = _camera.Zoom.X;
-		_zoomAnchor = GetViewportRect().Size / 2f;
 		GetViewport().SizeChanged += ClampCamera;
 		ClampCamera();
 	}
@@ -166,6 +195,8 @@ public partial class TradeScene : Node2D
 	public override void _Process(double delta)
 	{
 		TickBuyers(delta);
+		if (!float.IsFinite(_targetZoom) || _targetZoom < MinZoom || _targetZoom > MaxZoom)
+			_targetZoom = Mathf.Clamp(_camera.Zoom.X, MinZoom, MaxZoom);
 		float oldZoom = _camera.Zoom.X;
 		if (Mathf.IsEqualApprox(oldZoom, _targetZoom)) return;
 		float blend = 1f - MathF.Exp(-ZoomSmoothness * (float)delta);
@@ -245,14 +276,6 @@ public partial class TradeScene : Node2D
 	private void AcquireItem(string workshop, int firstIndex, int lastIndex)
 	{
 		if (Failed || Completed) return;
-		
-		// --- ДОБАВЛЕНО: Проверка на переполнение инвентаря ---
-		if (_storedItems.Count >= 6)
-		{
-			GD.Print("Инвентарь полон!");
-			return;
-		}
-		// -----------------------------------------------------
 
 		int index = _rng.RandiRange(firstIndex, lastIndex);
 		_storedItems.Add(index);
@@ -280,7 +303,12 @@ public partial class TradeScene : Node2D
 
 	private int FindFreeShowcaseSlot()
 	{
-		for (int i = 0; i < ShowcaseCapacity; i++)
+		return FindFreeShowcaseSlot(0, ShowcaseCapacity);
+	}
+
+	private int FindFreeShowcaseSlot(int startIndex, int endExclusive)
+	{
+		for (int i = startIndex; i < endExclusive; i++)
 			if (i != _activeShowcaseIndex && _showcaseItems[i] == -1) return i;
 		return -1;
 	}
@@ -393,10 +421,14 @@ public partial class TradeScene : Node2D
 	{
 		_atelierGetItemButton.Disabled = Failed || Completed;
 		_musicGetItemButton.Disabled = Failed || Completed;
-		_placeItemButton.Visible = true;
-		_placeItemButton.Disabled = Failed || Completed ||
-			SelectedInventoryIndex < 0 || SelectedInventoryIndex >= _storedItems.Count ||
-			FindFreeShowcaseSlot() < 0;
+		for (int roomIndex = 0; roomIndex < _placeItemButtons.Length; roomIndex++)
+		{
+			Button placeButton = _placeItemButtons[roomIndex];
+			placeButton.Visible = true;
+			placeButton.Disabled = Failed || Completed ||
+				SelectedInventoryIndex < 0 || SelectedInventoryIndex >= _storedItems.Count ||
+				FindFreeShowcaseSlot(roomIndex * 3, roomIndex * 3 + 3) < 0;
+		}
 		RefreshShowcases();
 	}
 
@@ -407,7 +439,7 @@ public partial class TradeScene : Node2D
 			int itemIndex = _showcaseItems[i];
 			bool reserved = TradeActive && i == _activeShowcaseIndex;
 			_showcaseIcons[i].Texture = reserved || itemIndex < 0 ? null :
-				GD.Load<Texture2D>($"res://art/items/{Items[itemIndex].Kind}.svg");
+				GD.Load<Texture2D>(Items[itemIndex].ArtPath);
 			_showcaseLabels[i].Text = reserved ? "НА СДЕЛКЕ" :
 				itemIndex < 0 ? "СВОБОДНО" : Items[itemIndex].Name.ToUpperInvariant();
 			_showcaseGlass[i].Color = reserved ? new Color(0.7f, 0.68f, 0.68f, 0.78f) :
@@ -416,10 +448,11 @@ public partial class TradeScene : Node2D
 			_showcaseSlots[i].Disabled = Failed || Completed || reserved ||
 				(itemIndex < 0 && (SelectedInventoryIndex < 0 || SelectedInventoryIndex >= _storedItems.Count));
 		}
-		_trashButton.Disabled = Failed || Completed ||
+		bool trashDisabled = Failed || Completed ||
 			(SelectedInventoryIndex < 0 || SelectedInventoryIndex >= _storedItems.Count) &&
 			(_selectedShowcaseIndex < 0 || _selectedShowcaseIndex >= ShowcaseCapacity ||
 			 _selectedShowcaseIndex == _activeShowcaseIndex || _showcaseItems[_selectedShowcaseIndex] < 0);
+		foreach (Button trashButton in _trashButtons) trashButton.Disabled = trashDisabled;
 	}
 
 	private void RefreshOffer()

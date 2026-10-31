@@ -28,7 +28,7 @@ public partial class CounterWorld : Node2D
 
     public override void _Ready()
     {
-        _item = GetNode<Node2D>("Item");
+        _item = GetNode<Node2D>("TradingRoom/Item");
         RefreshItem();
     }
 

@@ -1,24 +1,13 @@
 [gd_scene format=3]
 
+[ext_resource type="Texture2D" path="res://art/props/display_table.png" id="1_table"]
+[ext_resource type="FontFile" path="res://art/fonts/game.ttf" id="3_font"]
+
 [sub_resource type="StyleBoxFlat" id="Stand"]
-bg_color = Color(0.62, 0.43, 0.28, 0.96)
-border_width_left = 10
-border_width_top = 10
-border_width_right = 10
-border_width_bottom = 16
-border_color = Color(0.31, 0.19, 0.12, 1)
-corner_radius_top_left = 10
-corner_radius_top_right = 10
+bg_color = Color(0, 0, 0, 0)
 
 [sub_resource type="StyleBoxFlat" id="StandHover"]
-bg_color = Color(0.72, 0.53, 0.33, 1)
-border_width_left = 10
-border_width_top = 10
-border_width_right = 10
-border_width_bottom = 16
-border_color = Color(0.91, 0.75, 0.44, 1)
-corner_radius_top_left = 10
-corner_radius_top_right = 10
+bg_color = Color(0.91, 0.75, 0.44, 0.16)
 
 [node name="ShowcaseSlot" type="Button"]
 custom_minimum_size = Vector2(440, 230)
@@ -29,13 +18,25 @@ theme_override_styles/hover = SubResource("StandHover")
 theme_override_styles/pressed = SubResource("StandHover")
 theme_override_styles/disabled = SubResource("Stand")
 
+[node name="DisplayTable" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 6.0
+offset_right = 434.0
+offset_bottom = 224.0
+mouse_filter = 2
+texture = ExtResource("1_table")
+expand_mode = 1
+stretch_mode = 5
+
 [node name="Glass" type="ColorRect" parent="."]
-offset_left = 12.0
-offset_top = 12.0
-offset_right = 428.0
+layout_mode = 0
+visible = false
+offset_left = 94.0
+offset_top = 8.0
+offset_right = 346.0
 offset_bottom = 174.0
 mouse_filter = 2
-color = Color(0.77, 0.9, 0.88, 0.58)
+color = Color(0.77, 0.9, 0.88, 0.36)
 
 [node name="Icon" type="TextureRect" parent="."]
 offset_left = 145.0
@@ -48,11 +49,14 @@ stretch_mode = 5
 
 [node name="ItemLabel" type="Label" parent="."]
 offset_left = 20.0
-offset_top = 178.0
+offset_top = -42.0
 offset_right = 420.0
-offset_bottom = 216.0
+offset_bottom = -6.0
 mouse_filter = 2
-theme_override_colors/font_color = Color(1, 0.95, 0.85, 1)
-theme_override_font_sizes/font_size = 24
+theme_override_colors/font_color = Color(0.22, 0.14, 0.11, 1)
+theme_override_colors/font_outline_color = Color(0.96, 0.9, 0.82, 0.9)
+theme_override_constants/outline_size = 3
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 22
 text = "СВОБОДНО"
 horizontal_alignment = 1
