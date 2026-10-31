@@ -15,8 +15,9 @@ public static class EconomyConfigValidator
         RequireUniqueIds(config.Rarities.Select(value => value.Id), "rarity");
         RequireUniqueIds(config.Quotas.Select(value => value.Id), "quota");
 
-        if (config.Workshops.Count == 0 || config.Workshops.Any(value => value.SpinCost < 0))
-            throw new EconomyConfigException("Workshops require non-negative spin costs.");
+        if (config.Workshops.Count == 0 || config.Workshops.Any(value =>
+                value.SpinCost < 0 || value.UnlockCost < 0))
+            throw new EconomyConfigException("Workshops require non-negative spin and unlock costs.");
         if (config.Rarities.Count == 0 || config.Rarities.Any(value => value.Rerolls <= 0))
             throw new EconomyConfigException("Rarities require positive rerolls.");
         ValidateRelativeWeights(config.Rarities.Select(value => value.Weight));

@@ -1,20 +1,20 @@
 [gd_scene format=3 uid="uid://u2ve41t8yhqn"]
 
 [ext_resource type="Script" uid="uid://chuf1fe5ydlnk" path="res://scripts/ModularCustomer.cs" id="1_script"]
-[ext_resource type="Texture2D" path="res://art/characters/male_body.png" id="2_male_body"]
-[ext_resource type="Texture2D" path="res://art/characters/male_clothes_1.png" id="3_male_clothes_1"]
-[ext_resource type="Texture2D" path="res://art/characters/male_clothes_2.png" id="4_male_clothes_2"]
-[ext_resource type="Texture2D" path="res://art/characters/male_clothes_3.png" id="5_male_clothes_3"]
-[ext_resource type="Texture2D" path="res://art/characters/male_hair_1.png" id="6_male_hair_1"]
-[ext_resource type="Texture2D" path="res://art/characters/male_hair_2.png" id="7_male_hair_2"]
-[ext_resource type="Texture2D" path="res://art/characters/male_hair_3.png" id="8_male_hair_3"]
-[ext_resource type="Texture2D" path="res://art/characters/female_body.png" id="9_female_body"]
-[ext_resource type="Texture2D" path="res://art/characters/female_clothes_1.png" id="10_female_clothes_1"]
-[ext_resource type="Texture2D" path="res://art/characters/female_clothes_2.png" id="11_female_clothes_2"]
-[ext_resource type="Texture2D" path="res://art/characters/female_clothes_3.png" id="12_female_clothes_3"]
-[ext_resource type="Texture2D" path="res://art/characters/female_hair_1.png" id="13_female_hair_1"]
-[ext_resource type="Texture2D" path="res://art/characters/female_hair_2.png" id="14_female_hair_2"]
-[ext_resource type="Texture2D" path="res://art/characters/female_hair_3.png" id="15_female_hair_3"]
+[ext_resource type="Texture2D" uid="uid://c3d61t67k4vrw" path="res://art/characters/male_body.png" id="2_male_body"]
+[ext_resource type="Texture2D" uid="uid://cg3bulgqk03t3" path="res://art/characters/male_clothes_1.png" id="3_male_clothes_1"]
+[ext_resource type="Texture2D" uid="uid://g7nb13rf3sgg" path="res://art/characters/male_clothes_2.png" id="4_male_clothes_2"]
+[ext_resource type="Texture2D" uid="uid://dw3hupjvlgv1o" path="res://art/characters/male_clothes_3.png" id="5_male_clothes_3"]
+[ext_resource type="Texture2D" uid="uid://dem004yvse324" path="res://art/characters/male_hair_1.png" id="6_male_hair_1"]
+[ext_resource type="Texture2D" uid="uid://yptwxbbtp8fk" path="res://art/characters/male_hair_2.png" id="7_male_hair_2"]
+[ext_resource type="Texture2D" uid="uid://bqsqkxsiu6yh2" path="res://art/characters/male_hair_3.png" id="8_male_hair_3"]
+[ext_resource type="Texture2D" uid="uid://dvlfw23ce1mal" path="res://art/characters/female_body.png" id="9_female_body"]
+[ext_resource type="Texture2D" uid="uid://cabupcaomufua" path="res://art/characters/female_clothes_1.png" id="10_female_clothes_1"]
+[ext_resource type="Texture2D" uid="uid://duqoxqamvrhhr" path="res://art/characters/female_clothes_2.png" id="11_female_clothes_2"]
+[ext_resource type="Texture2D" uid="uid://bhhcoxo51wa6f" path="res://art/characters/female_clothes_3.png" id="12_female_clothes_3"]
+[ext_resource type="Texture2D" uid="uid://pqsw7chu21iu" path="res://art/characters/female_hair_1.png" id="13_female_hair_1"]
+[ext_resource type="Texture2D" uid="uid://cvbwf1vgr3lx3" path="res://art/characters/female_hair_2.png" id="14_female_hair_2"]
+[ext_resource type="Texture2D" uid="uid://du0mwpm6ovumf" path="res://art/characters/female_hair_3.png" id="15_female_hair_3"]
 
 [node name="Customer" type="Node2D" unique_id=687761312]
 script = ExtResource("1_script")
@@ -29,18 +29,18 @@ centered = false
 
 [node name="Clothes" type="Node2D" parent="Male" unique_id=313015037]
 
-[node name="Style1" type="Sprite2D" parent="Male/Clothes"]
+[node name="Style1" type="Sprite2D" parent="Male/Clothes" unique_id=949279036]
 position = Vector2(-59, -392)
 texture = ExtResource("3_male_clothes_1")
 centered = false
 
-[node name="Style2" type="Sprite2D" parent="Male/Clothes"]
+[node name="Style2" type="Sprite2D" parent="Male/Clothes" unique_id=1622661042]
 visible = false
 position = Vector2(-60, -390)
 texture = ExtResource("4_male_clothes_2")
 centered = false
 
-[node name="Style3" type="Sprite2D" parent="Male/Clothes"]
+[node name="Style3" type="Sprite2D" parent="Male/Clothes" unique_id=1182028751]
 visible = false
 position = Vector2(-61, -392)
 texture = ExtResource("5_male_clothes_3")
@@ -49,23 +49,24 @@ centered = false
 [node name="Hair" type="Node2D" parent="Male" unique_id=698345736]
 
 [node name="Style1" type="Sprite2D" parent="Male/Hair" unique_id=1191499544]
-position = Vector2(-66, -548)
+position = Vector2(-55, -543)
 texture = ExtResource("6_male_hair_1")
 centered = false
 
 [node name="Style2" type="Sprite2D" parent="Male/Hair" unique_id=1674621107]
 visible = false
-position = Vector2(-71, -548)
+position = Vector2(-57, -552)
 texture = ExtResource("7_male_hair_2")
 centered = false
 
 [node name="Style3" type="Sprite2D" parent="Male/Hair" unique_id=863767256]
 visible = false
-position = Vector2(-66, -545)
+position = Vector2(-51, -549)
 texture = ExtResource("8_male_hair_3")
 centered = false
 
 [node name="Female" type="Node2D" parent="." unique_id=1694638953]
+visible = false
 
 [node name="Body" type="Sprite2D" parent="Female" unique_id=208230433]
 position = Vector2(-140, -509)
@@ -74,18 +75,18 @@ centered = false
 
 [node name="Clothes" type="Node2D" parent="Female" unique_id=1678555718]
 
-[node name="Style1" type="Sprite2D" parent="Female/Clothes"]
+[node name="Style1" type="Sprite2D" parent="Female/Clothes" unique_id=1675443693]
 position = Vector2(-48, -376)
 texture = ExtResource("10_female_clothes_1")
 centered = false
 
-[node name="Style2" type="Sprite2D" parent="Female/Clothes"]
+[node name="Style2" type="Sprite2D" parent="Female/Clothes" unique_id=2145900895]
 visible = false
 position = Vector2(-64, -374)
 texture = ExtResource("11_female_clothes_2")
 centered = false
 
-[node name="Style3" type="Sprite2D" parent="Female/Clothes"]
+[node name="Style3" type="Sprite2D" parent="Female/Clothes" unique_id=1775845127]
 visible = false
 position = Vector2(-53, -375)
 texture = ExtResource("12_female_clothes_3")
@@ -94,18 +95,18 @@ centered = false
 [node name="Hair" type="Node2D" parent="Female" unique_id=1528190740]
 
 [node name="Style1" type="Sprite2D" parent="Female/Hair" unique_id=1495823117]
-position = Vector2(-81, -509)
+position = Vector2(-81, -527)
 texture = ExtResource("13_female_hair_1")
 centered = false
 
 [node name="Style2" type="Sprite2D" parent="Female/Hair" unique_id=495185400]
 visible = false
-position = Vector2(-69, -500)
+position = Vector2(-77, -521)
 texture = ExtResource("14_female_hair_2")
 centered = false
 
 [node name="Style3" type="Sprite2D" parent="Female/Hair" unique_id=1156875490]
 visible = false
-position = Vector2(-70, -498)
+position = Vector2(-76, -525)
 texture = ExtResource("15_female_hair_3")
 centered = false

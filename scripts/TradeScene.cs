@@ -5,12 +5,13 @@ using Godot;
 
 public partial class TradeScene : Node2D
 {
-	[Export(PropertyHint.Range, "1,9999,1")] public int FirstQuota { get; set; } = 45;
-	[Export(PropertyHint.Range, "1,9999,1")] public int SecondQuota { get; set; } = 90;
+	[Export(PropertyHint.Range, "1,9999,1")] public int StartingMoney { get; set; } = 220;
+	[Export(PropertyHint.Range, "1,9999,1")] public int FirstQuota { get; set; } = 200;
+	[Export(PropertyHint.Range, "1,9999,1")] public int SecondQuota { get; set; } = 400;
 	[Export] public string SavePath { get; set; } = "user://trade_progress.json";
 	[Export(PropertyHint.Range, "1,60,0.5")] public float BuyerWaitSeconds { get; set; } = 8f;
 
-	private const float MinZoom = 0.4f;
+	private const float MinZoom = 0.3f;
 	private const float MaxZoom = 1.8f;
 	private const float ZoomStep = 1.12f;
 	private const float ZoomSmoothness = 12f;
@@ -18,12 +19,25 @@ public partial class TradeScene : Node2D
 	private const int FirstDeadline = 4;
 	private const int FinalDay = 7;
 	private const int ShowcaseCapacity = 6;
-	private static readonly (int BasePrice, string Kind, string Name, string ArtPath)[] Items =
+	private const int EnergyPerDay = 2;
+	private const int AtelierSpinCost = 90;
+	private const int MusicSpinCost = 140;
+	private const int MusicUnlockCost = 100;
+	private const int ItemsPerSpin = 3;
+	private static readonly Dictionary<string, int> RerollsByRarity = new(StringComparer.Ordinal)
+	{
+		["common"] = 3,
+		["ordinary"] = 2,
+		["first_class"] = 2,
+		["exclusive"] = 1,
+		["unique"] = 1
+	};
+	private static readonly (int BasePrice, string RarityId, string Rarity, string Kind, string Name, string ArtPath)[] Items =
 	[
-		(4, "hat", "шляпка-клош", "res://art/items/hat_cloche.png"),
-		(9, "gloves", "перчатки", "res://art/items/gloves.png"),
-		(18, "guitar", "гитара", "res://art/items/guitar.svg"),
-		(12, "trumpet", "труба", "res://art/items/trumpet.svg")
+		(30, "common", "Ширпотреб", "hat", "шляпка-клош", "res://art/items/hat_cloche.png"),
+		(50, "ordinary", "Заурядная", "gloves", "перчатки", "res://art/items/gloves.png"),
+		(45, "common", "Ширпотреб", "guitar", "гитара", "res://art/items/guitar.svg"),
+		(75, "ordinary", "Заурядная", "trumpet", "труба", "res://art/items/trumpet.svg")
 	];
 	private static readonly JsonSerializerOptions JsonOptions = new()
 	{
@@ -41,17 +55,20 @@ public partial class TradeScene : Node2D
 	private Label _offerLabel = null!;
 	private Button _acceptButton = null!;
 	private Button _declineButton = null!;
-	private Button _rerollButton = null!;
 	private Label _scoreLabel = null!;
 	private Label _dayLabel = null!;
+	private Label _energyLabel = null!;
 	private Label _quotaLabel = null!;
 	private Label _deadlineLabel = null!;
 	private Label _statusLabel = null!;
 	private Button _endDayButton = null!;
 	private Button _atelierGetItemButton = null!;
 	private Button _musicGetItemButton = null!;
+	private Control _musicLockedOverlay = null!;
+	private Button _musicUnlockButton = null!;
 	private readonly Control[] _rarityPanels = new Control[2];
 	private readonly Control[] _rarityHotspots = new Control[2];
+	private readonly Control[] _priceHints = new Control[2];
 	private readonly Button[] _placeItemButtons = new Button[2];
 	private readonly Button[] _trashButtons = new Button[2];
 	private readonly Button[] _showcaseSlots = new Button[ShowcaseCapacity];
@@ -78,6 +95,9 @@ public partial class TradeScene : Node2D
 	public static string GetItemKind(int index) => Items[index].Kind;
 	public static string GetItemName(int index) => Items[index].Name;
 	public static string GetItemArtPath(int index) => Items[index].ArtPath;
+	public static string GetItemRarity(int index) => Items[index].Rarity;
+	public static int GetItemRerollLimit(int index) => GetRerollsForRarity(Items[index].RarityId);
+	public static int GetRerollsForRarity(string rarityId) => RerollsByRarity[rarityId];
 	public int ItemIndex { get; set; } = -1;
 	public int CustomerIndex { get; set; } = -1;
 	public int Percentage { get; set; }
@@ -87,11 +107,15 @@ public partial class TradeScene : Node2D
 	public int Accepted { get; private set; }
 	public int Declined { get; private set; }
 	public int CurrentDay { get; set; } = 1;
+	public int EnergyRemaining { get; set; } = EnergyPerDay;
 	public int QuotaStage { get; private set; }
 	public int CheckpointDay { get; private set; } = 1;
 	public int CheckpointScore { get; private set; }
 	public int CheckpointAccepted { get; private set; }
 	public int CheckpointDeclined { get; private set; }
+	public int CheckpointEnergy { get; private set; } = EnergyPerDay;
+	public bool MusicWorkshopUnlocked { get; private set; }
+	public bool CheckpointMusicWorkshopUnlocked { get; private set; }
 	public bool Failed { get; private set; }
 	public bool Completed { get; private set; }
 	public string StatusText { get; private set; } = "Торгуйте и завершайте день.";
@@ -115,19 +139,22 @@ public partial class TradeScene : Node2D
 		_offerLabel = GetNode<Label>("World/TradingRoom/Item/TradePanel/Content/OfferLabel");
 		_acceptButton = GetNode<Button>("World/TradingRoom/Item/TradePanel/Content/Buttons/AcceptButton");
 		_declineButton = GetNode<Button>("World/TradingRoom/Item/TradePanel/Content/Buttons/DeclineButton");
-		_rerollButton = GetNode<Button>("World/TradingRoom/Item/TradePanel/Content/RerollButton");
 		_scoreLabel = GetNode<Label>("HUD/Root/ScorePanel/ScoreLabel");
 		_dayLabel = GetNode<Label>("HUD/Root/ProgressPanel/Content/DayLabel");
+		_energyLabel = GetNode<Label>("HUD/Root/EnergyPanel/EnergyLabel");
 		_quotaLabel = GetNode<Label>("HUD/Root/ProgressPanel/Content/QuotaLabel");
 		_deadlineLabel = GetNode<Label>("HUD/Root/ProgressPanel/Content/DeadlineLabel");
 		_statusLabel = GetNode<Label>("HUD/Root/ProgressPanel/Content/StatusLabel");
 		_endDayButton = GetNode<Button>("HUD/Root/ProgressPanel/Content/EndDayButton");
 		_atelierGetItemButton = GetNode<Button>("World/Atelier/GetItemButton");
 		_musicGetItemButton = GetNode<Button>("World/MusicWorkshop/GetItemButton");
+		EnsureMusicWorkshopUi();
 		_rarityPanels[0] = GetNode<Control>("World/Atelier/RarityPanel");
 		_rarityPanels[1] = GetNode<Control>("World/MusicWorkshop/RarityPanel");
 		_rarityHotspots[0] = GetNode<Control>("World/Atelier/GetItemButton/RarityHotspot");
 		_rarityHotspots[1] = GetNode<Control>("World/MusicWorkshop/GetItemButton/RarityHotspot");
+		_priceHints[0] = GetNode<Control>("World/Atelier/GetItemButton/PriceHint");
+		_priceHints[1] = GetNode<Control>("World/MusicWorkshop/GetItemButton/PriceHint");
 		_placeItemButtons[0] = GetNode<Button>("World/ShowroomLeft/PlaceItemButton");
 		_placeItemButtons[1] = GetNode<Button>("World/Showroom/PlaceItemButton");
 		_trashButtons[0] = GetNode<Button>("World/ShowroomLeft/TrashBin");
@@ -161,11 +188,15 @@ public partial class TradeScene : Node2D
 
 		_rng.Randomize();
 		_acceptButton.Pressed += AcceptTrade;
-		_declineButton.Pressed += DeclineTrade;
-		_rerollButton.Pressed += RerollCustomer;
+		_declineButton.Pressed += RerollCustomer;
 		_endDayButton.Pressed += EndDay;
 		_atelierGetItemButton.Pressed += GetItemFromAtelier;
 		_musicGetItemButton.Pressed += GetItemFromMusicWorkshop;
+		_musicUnlockButton.Pressed += TryUnlockMusicWorkshop;
+		_atelierGetItemButton.MouseEntered += () => _priceHints[0].Show();
+		_atelierGetItemButton.MouseExited += () => _priceHints[0].Hide();
+		_musicGetItemButton.MouseEntered += () => _priceHints[1].Show();
+		_musicGetItemButton.MouseExited += () => _priceHints[1].Hide();
 		_rarityHotspots[0].MouseEntered += () => _rarityPanels[0].Show();
 		_rarityHotspots[0].MouseExited += () => _rarityPanels[0].Hide();
 		_rarityHotspots[1].MouseEntered += () => _rarityPanels[1].Show();
@@ -176,6 +207,10 @@ public partial class TradeScene : Node2D
 		GetNode<Button>("HUD/Root/ProgressPanel/Content/CheckpointButton").Pressed += ReturnToCheckpoint;
 		GetNode<Button>("HUD/Root/ProgressPanel/Content/NewGameButton").Pressed += NewGame;
 
+		Score = StartingMoney;
+		CheckpointScore = StartingMoney;
+		EnergyRemaining = EnergyPerDay;
+		CheckpointEnergy = EnergyPerDay;
 		bool restored = LoadProgress();
 		RefreshScore();
 		RefreshProgress();
@@ -190,6 +225,57 @@ public partial class TradeScene : Node2D
 
 		GetViewport().SizeChanged += ClampCamera;
 		ClampCamera();
+	}
+
+	private void EnsureMusicWorkshopUi()
+	{
+		Node2D workshop = GetNode<Node2D>("World/MusicWorkshop");
+		workshop.GetNode<Label>("HintLabel").Text = "Гитара или труба  •  140$ за 3";
+		workshop.GetNode<Label>("GetItemButton/PriceHint/Label").Text = "3 предмета  •  140$";
+
+		if (!workshop.HasNode("LockedOverlay"))
+		{
+			ColorRect overlay = new()
+			{
+				Name = "LockedOverlay",
+				Position = Vector2.Zero,
+				Size = new Vector2(1920f, 1080f),
+				Color = new Color(0.015f, 0.015f, 0.015f, 0.97f),
+				MouseFilter = Control.MouseFilterEnum.Stop,
+				ZIndex = 100
+			};
+			workshop.AddChild(overlay);
+
+			Label title = new()
+			{
+				Name = "LockTitle",
+				Position = new Vector2(510f, 330f),
+				Size = new Vector2(900f, 110f),
+				Text = "КОМНАТА ЗАКРЫТА",
+				HorizontalAlignment = HorizontalAlignment.Center,
+				VerticalAlignment = VerticalAlignment.Center,
+				MouseFilter = Control.MouseFilterEnum.Ignore
+			};
+			title.AddThemeColorOverride("font_color", Colors.White);
+			title.AddThemeFontSizeOverride("font_size", 52);
+			overlay.AddChild(title);
+
+			Button unlockButton = new()
+			{
+				Name = "UnlockButton",
+				Position = new Vector2(660f, 470f),
+				Size = new Vector2(600f, 170f),
+				Text = "ОТКРЫТЬ ЗА 100$",
+				TooltipText = "Открыть музыкальную комнату за 100$",
+				MouseDefaultCursorShape = Control.CursorShape.PointingHand
+			};
+			unlockButton.AddThemeColorOverride("font_color", Colors.White);
+			unlockButton.AddThemeFontSizeOverride("font_size", 38);
+			overlay.AddChild(unlockButton);
+		}
+
+		_musicLockedOverlay = workshop.GetNode<Control>("LockedOverlay");
+		_musicUnlockButton = workshop.GetNode<Button>("LockedOverlay/UnlockButton");
 	}
 
 	public override void _Process(double delta)
@@ -269,18 +355,41 @@ public partial class TradeScene : Node2D
 		_camera.Position = position;
 	}
 
-	public void GetItemFromAtelier() => AcquireItem("Ателье", 0, 1);
+	public void GetItemFromAtelier() => AcquireItem("Ателье", 0, 1, AtelierSpinCost);
 
-	public void GetItemFromMusicWorkshop() => AcquireItem("Муз. штуки", 2, 3);
-
-	private void AcquireItem(string workshop, int firstIndex, int lastIndex)
+	public void GetItemFromMusicWorkshop()
 	{
-		if (Failed || Completed) return;
+		if (!MusicWorkshopUnlocked) return;
+		AcquireItem("Муз. штуки", 2, 3, MusicSpinCost);
+	}
 
-		int index = _rng.RandiRange(firstIndex, lastIndex);
-		_storedItems.Add(index);
-		GD.Print($"{workshop}: получен предмет {Items[index].Name} (индекс {index}).");
+	public void TryUnlockMusicWorkshop()
+	{
+		if (MusicWorkshopUnlocked || Failed || Completed || Score < MusicUnlockCost) return;
+		Score -= MusicUnlockCost;
+		MusicWorkshopUnlocked = true;
+		StatusText = "Музыкальная мастерская открыта.";
+		RefreshScore();
+		RefreshProgress();
+		RefreshItemButtons();
+		SaveProgress();
+	}
+
+	private void AcquireItem(string workshop, int firstIndex, int lastIndex, int cost)
+	{
+		if (Failed || Completed || EnergyRemaining <= 0 || Score < cost) return;
+
+		Score -= cost;
+		EnergyRemaining--;
+		for (int itemNumber = 0; itemNumber < ItemsPerSpin; itemNumber++)
+		{
+			int index = _rng.RandiRange(firstIndex, lastIndex);
+			_storedItems.Add(index);
+			GD.Print($"{workshop}: получен предмет {Items[index].Name} (индекс {index}).");
+		}
 		LogStoredItems();
+		RefreshScore();
+		RefreshProgress();
 		RefreshItemButtons();
 		
 		// --- ДОБАВЛЕНО: Обновляем визуал инвентаря, чтобы появилась иконка ---
@@ -397,7 +506,7 @@ public partial class TradeScene : Node2D
 	private void StartBuyerOffer()
 	{
 		Percentage = _rng.RandiRange(-30, 30);
-		RerollsRemaining = 3;
+		RerollsRemaining = GetItemRerollLimit(ItemIndex);
 		CustomerIndex = _rng.RandiRange(0, _customer.GetAppearanceCount() - 1);
 		TradeActive = true;
 		ShowTrade();
@@ -419,8 +528,11 @@ public partial class TradeScene : Node2D
 
 	public void RefreshItemButtons()
 	{
-		_atelierGetItemButton.Disabled = Failed || Completed;
-		_musicGetItemButton.Disabled = Failed || Completed;
+		_atelierGetItemButton.Disabled = Failed || Completed || EnergyRemaining <= 0 || Score < AtelierSpinCost;
+		_musicGetItemButton.Disabled = !MusicWorkshopUnlocked || Failed || Completed ||
+			EnergyRemaining <= 0 || Score < MusicSpinCost;
+		_musicLockedOverlay.Visible = !MusicWorkshopUnlocked;
+		_musicUnlockButton.Disabled = Failed || Completed || Score < MusicUnlockCost;
 		for (int roomIndex = 0; roomIndex < _placeItemButtons.Length; roomIndex++)
 		{
 			Button placeButton = _placeItemButtons[roomIndex];
@@ -462,8 +574,8 @@ public partial class TradeScene : Node2D
 		_baseLabel.Text = $"Обычно: {basePrice}$";
 		_percentLabel.Text = $"К цене: {(Percentage >= 0 ? "+" : "")}{Percentage}%";
 		_offerLabel.Text = $"Получим: {OfferedPrice}$";
-		_rerollButton.Text = $"Другой покупатель ({RerollsRemaining})";
-		_rerollButton.Disabled = RerollsRemaining <= 0;
+		_declineButton.Text = $"× ({RerollsRemaining})";
+		_declineButton.Disabled = RerollsRemaining <= 0;
 	}
 
 	public static int PriceForPercent(int basePrice, int value) =>
@@ -472,6 +584,15 @@ public partial class TradeScene : Node2D
 	public void RerollCustomer()
 	{
 		if (!TradeActive || RerollsRemaining <= 0) return;
+		RerollsRemaining--;
+		if (RerollsRemaining == 0)
+		{
+			Declined++;
+			FinishTrade();
+			RefreshProgress();
+			SaveProgress();
+			return;
+		}
 		int basePrice = Items[ItemIndex].BasePrice;
 		var higher = new List<int>();
 		var lower = new List<int>();
@@ -485,7 +606,6 @@ public partial class TradeScene : Node2D
 		if (pool.Count == 0) pool = lower.Count > 0 ? lower : higher;
 		if (pool.Count == 0) return;
 		Percentage = pool[_rng.RandiRange(0, pool.Count - 1)];
-		RerollsRemaining--;
 		int appearanceCount = _customer.GetAppearanceCount();
 		CustomerIndex = (CustomerIndex + _rng.RandiRange(1, appearanceCount - 1)) % appearanceCount;
 		_customer.SetAppearance(CustomerIndex);
@@ -504,14 +624,7 @@ public partial class TradeScene : Node2D
 		SaveProgress();
 	}
 
-	public void DeclineTrade()
-	{
-		if (!TradeActive) return;
-		Declined++;
-		ReturnActiveItemToStorage();
-		FinishTrade();
-		SaveProgress();
-	}
+	public void DeclineTrade() => RerollCustomer();
 
 	private void ReturnActiveItemToStorage()
 	{
@@ -540,7 +653,6 @@ public partial class TradeScene : Node2D
 		_tradePanel.Visible = false;
 		_acceptButton.Disabled = true;
 		_declineButton.Disabled = true;
-		_rerollButton.Disabled = true;
 		RefreshItemButtons();
 	}
 
@@ -549,6 +661,7 @@ public partial class TradeScene : Node2D
 	private void RefreshProgress()
 	{
 		_dayLabel.Text = $"День: {CurrentDay} / {FinalDay}";
+		_energyLabel.Text = $"Энергия: {EnergyRemaining} / {EnergyPerDay}";
 		if (Completed)
 		{
 			_quotaLabel.Text = "Все квоты выплачены";
@@ -588,6 +701,9 @@ public partial class TradeScene : Node2D
 				CheckpointScore = Score;
 				CheckpointAccepted = Accepted;
 				CheckpointDeclined = Declined;
+				EnergyRemaining = EnergyPerDay;
+				CheckpointEnergy = EnergyRemaining;
+				CheckpointMusicWorkshopUnlocked = MusicWorkshopUnlocked;
 				_checkpointItems.Clear();
 				_checkpointItems.AddRange(_storedItems);
 				Array.Copy(_showcaseItems, _checkpointShowcaseItems, ShowcaseCapacity);
@@ -604,6 +720,7 @@ public partial class TradeScene : Node2D
 		else
 		{
 			CurrentDay++;
+			EnergyRemaining = EnergyPerDay;
 			StatusText = "Начался новый день.";
 		}
 		RefreshScore();
@@ -624,6 +741,8 @@ public partial class TradeScene : Node2D
 		_inventoryUI.DeselectAll();
 		CurrentDay = CheckpointDay;
 		Score = CheckpointScore;
+		EnergyRemaining = CheckpointEnergy;
+		MusicWorkshopUnlocked = CheckpointMusicWorkshopUnlocked;
 		Accepted = CheckpointAccepted;
 		Declined = CheckpointDeclined;
 		QuotaStage = CheckpointDay == 1 ? 0 : 1;
@@ -654,12 +773,16 @@ public partial class TradeScene : Node2D
 		_buyerCountdown = 0;
 		_inventoryUI.DeselectAll();
 		CurrentDay = 1;
-		Score = 0;
+		Score = StartingMoney;
+		EnergyRemaining = EnergyPerDay;
 		Accepted = 0;
 		Declined = 0;
 		QuotaStage = 0;
 		CheckpointDay = 1;
-		CheckpointScore = 0;
+		CheckpointScore = StartingMoney;
+		CheckpointEnergy = EnergyPerDay;
+		MusicWorkshopUnlocked = false;
+		CheckpointMusicWorkshopUnlocked = false;
 		CheckpointAccepted = 0;
 		CheckpointDeclined = 0;
 		Failed = false;
@@ -689,9 +812,13 @@ public partial class TradeScene : Node2D
 		}
 		var data = new ProgressData
 		{
-			SaveVersion = 5, Day = CurrentDay, Score = Score, Accepted = Accepted,
+			SaveVersion = 7, Day = CurrentDay, Score = Score, EnergyRemaining = EnergyRemaining,
+			Accepted = Accepted,
 			Declined = Declined, QuotaStage = QuotaStage, CheckpointDay = CheckpointDay,
-			CheckpointScore = CheckpointScore, CheckpointAccepted = CheckpointAccepted,
+			CheckpointScore = CheckpointScore, CheckpointEnergy = CheckpointEnergy,
+			MusicWorkshopUnlocked = MusicWorkshopUnlocked,
+			CheckpointMusicWorkshopUnlocked = CheckpointMusicWorkshopUnlocked,
+			CheckpointAccepted = CheckpointAccepted,
 			CheckpointDeclined = CheckpointDeclined, Failed = Failed, Completed = Completed,
 			Status = StatusText, TradeActive = TradeActive, ItemIndex = ItemIndex,
 			CustomerIndex = CustomerIndex, Percentage = Percentage, RerollsRemaining = RerollsRemaining,
@@ -735,11 +862,15 @@ public partial class TradeScene : Node2D
 			? data.ActiveShowcaseIndex : -1;
 		CurrentDay = Mathf.Clamp(data.Day, 1, FinalDay);
 		Score = Mathf.Max(0, data.Score);
+		EnergyRemaining = data.SaveVersion < 6 ? EnergyPerDay : Mathf.Clamp(data.EnergyRemaining, 0, EnergyPerDay);
 		Accepted = Mathf.Max(0, data.Accepted);
 		Declined = Mathf.Max(0, data.Declined);
 		QuotaStage = Mathf.Clamp(data.QuotaStage, 0, 2);
 		CheckpointDay = data.CheckpointDay > 1 ? FirstDeadline + 1 : 1;
 		CheckpointScore = Mathf.Max(0, data.CheckpointScore);
+		CheckpointEnergy = data.SaveVersion < 6 ? EnergyPerDay : Mathf.Clamp(data.CheckpointEnergy, 0, EnergyPerDay);
+		MusicWorkshopUnlocked = data.SaveVersion >= 7 && data.MusicWorkshopUnlocked;
+		CheckpointMusicWorkshopUnlocked = data.SaveVersion >= 7 && data.CheckpointMusicWorkshopUnlocked;
 		CheckpointAccepted = Mathf.Max(0, data.CheckpointAccepted);
 		CheckpointDeclined = Mathf.Max(0, data.CheckpointDeclined);
 		Failed = data.Failed;
@@ -752,8 +883,7 @@ public partial class TradeScene : Node2D
 		RerollsRemaining = Mathf.Clamp(data.RerollsRemaining, 0, 3);
 		if (data.SaveVersion < 2 && ItemIndex >= 0 && ItemIndex < Items.Length)
 		{
-			int oldLimit = Items[ItemIndex].BasePrice <= 9 ? 3 : 1;
-			RerollsRemaining = Mathf.Clamp(RerollsRemaining + 3 - oldLimit, 0, 3);
+			RerollsRemaining = GetItemRerollLimit(ItemIndex);
 		}
 		TradeActive = data.TradeActive;
 		if (ItemIndex < 0 || ItemIndex >= Items.Length || CustomerIndex < 0 ||
@@ -777,11 +907,15 @@ public partial class TradeScene : Node2D
 		public int SaveVersion { get; set; } = 1;
 		public int Day { get; set; } = 1;
 		public int Score { get; set; }
+		public int EnergyRemaining { get; set; } = EnergyPerDay;
 		public int Accepted { get; set; }
 		public int Declined { get; set; }
 		public int QuotaStage { get; set; }
 		public int CheckpointDay { get; set; } = 1;
 		public int CheckpointScore { get; set; }
+		public int CheckpointEnergy { get; set; } = EnergyPerDay;
+		public bool MusicWorkshopUnlocked { get; set; }
+		public bool CheckpointMusicWorkshopUnlocked { get; set; }
 		public int CheckpointAccepted { get; set; }
 		public int CheckpointDeclined { get; set; }
 		public bool Failed { get; set; }

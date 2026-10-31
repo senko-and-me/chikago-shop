@@ -8,7 +8,7 @@
 [ext_resource type="Texture2D" uid="uid://7bwj2nywuk1p" path="res://art/ui/menu_background.png" id="6_background"]
 [ext_resource type="Texture2D" uid="uid://dfkvkw5r50k4v" path="res://art/ui/logo.png" id="7_logo"]
 [ext_resource type="FontFile" uid="uid://q8nuqkeci347" path="res://art/fonts/game.ttf" id="8_font"]
-[ext_resource type="Texture2D" path="res://art/ui/settings_panel.png" id="9_settings_panel"]
+[ext_resource type="Texture2D" uid="uid://ti6uump1r481" path="res://art/ui/settings_panel.png" id="9_settings_panel"]
 
 [node name="MainMenu" type="Control" unique_id=1262597174]
 layout_mode = 3
@@ -31,24 +31,33 @@ texture = ExtResource("6_background")
 expand_mode = 1
 stretch_mode = 6
 
+[node name="Title" type="TextureRect" parent="." unique_id=811053088]
+custom_minimum_size = Vector2(520, 230)
+layout_mode = 0
+offset_left = 391.0
+offset_top = -108.0
+offset_right = 911.0
+offset_bottom = 412.0
+texture = ExtResource("7_logo")
+expand_mode = 4
+stretch_mode = 5
+
 [node name="MainMenuContainer" type="CenterContainer" parent="." unique_id=254446668]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_left = 1.0
+offset_top = 107.0
+offset_right = 1.0
+offset_bottom = 107.0
 grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Menu" type="VBoxContainer" parent="MainMenuContainer" unique_id=1889898393]
+custom_maximum_size = Vector2(900, -1)
 layout_mode = 2
-theme_override_constants/separation = 16
-
-[node name="Title" type="TextureRect" parent="MainMenuContainer/Menu" unique_id=811053088]
-custom_minimum_size = Vector2(520, 230)
-layout_mode = 2
-texture = ExtResource("7_logo")
-expand_mode = 1
-stretch_mode = 5
+theme_override_constants/separation = 12
 
 [node name="TitleSpacer" type="Control" parent="MainMenuContainer/Menu" unique_id=1496850998]
 custom_minimum_size = Vector2(0, 18)
@@ -56,7 +65,8 @@ layout_mode = 2
 mouse_filter = 2
 
 [node name="PlayButton" type="TextureButton" parent="MainMenuContainer/Menu" unique_id=2002098508]
-custom_minimum_size = Vector2(360, 100)
+custom_minimum_size = Vector2(300, 100)
+custom_maximum_size = Vector2(400, -1)
 layout_mode = 2
 mouse_default_cursor_shape = 2
 texture_normal = ExtResource("5_play")
@@ -65,6 +75,7 @@ stretch_mode = 0
 
 [node name="SettingsButton" type="TextureButton" parent="MainMenuContainer/Menu" unique_id=1888679770]
 custom_minimum_size = Vector2(360, 100)
+custom_maximum_size = Vector2(400, -1)
 layout_mode = 2
 mouse_default_cursor_shape = 2
 texture_normal = ExtResource("2_settings")
@@ -73,6 +84,7 @@ stretch_mode = 0
 
 [node name="QuitButton" type="TextureButton" parent="MainMenuContainer/Menu" unique_id=1216755732]
 custom_minimum_size = Vector2(360, 100)
+custom_maximum_size = Vector2(400, -1)
 layout_mode = 2
 mouse_default_cursor_shape = 2
 texture_normal = ExtResource("3_quit")
@@ -88,7 +100,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="SettingsFrame" type="TextureRect" parent="SettingsMenuContainer"]
+[node name="SettingsFrame" type="TextureRect" parent="SettingsMenuContainer" unique_id=814458641]
 custom_minimum_size = Vector2(920, 500)
 layout_mode = 2
 mouse_filter = 2
@@ -98,16 +110,16 @@ stretch_mode = 5
 
 [node name="Settings" type="VBoxContainer" parent="SettingsMenuContainer" unique_id=1438355285]
 custom_minimum_size = Vector2(500, 390)
+custom_maximum_size = Vector2(-1, 300)
 layout_mode = 2
 theme_override_constants/separation = 25
 
 [node name="SettingsTitle" type="Label" parent="SettingsMenuContainer/Settings" unique_id=997985758]
-custom_minimum_size = Vector2(0, 110)
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("8_font")
 theme_override_font_sizes/font_size = 40
-text = ""
+text = "НАСТРОЙКИ"
 horizontal_alignment = 1
 
 [node name="FullscreenButton" type="CheckButton" parent="SettingsMenuContainer/Settings" unique_id=1182591822]
@@ -121,6 +133,7 @@ text = "Полный экран"
 
 [node name="BackButton" type="TextureButton" parent="SettingsMenuContainer/Settings" unique_id=1768434549]
 custom_minimum_size = Vector2(360, 100)
+custom_maximum_size = Vector2(400, -1)
 layout_mode = 2
 mouse_default_cursor_shape = 2
 texture_normal = ExtResource("4_back")

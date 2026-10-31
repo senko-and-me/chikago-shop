@@ -1,21 +1,21 @@
 {
   "schema_version": 1,
   "is_provisional": true,
-  "starting_money": 0,
+  "starting_money": 220,
   "days": {
     "total_days": 7,
     "tutorial_day": 1
   },
   "workshops": [
-    { "id": "atelier", "spin_cost": 90 },
-    { "id": "music", "spin_cost": 110 }
+    { "id": "atelier", "spin_cost": 90, "unlock_cost": 0 },
+    { "id": "music", "spin_cost": 140, "unlock_cost": 100 }
   ],
   "rarities": [
-    { "id": "common", "name": "Ширпотреб", "weight": 60, "rerolls": 3, "base_prices": { "atelier": 30, "music": 36 } },
-    { "id": "ordinary", "name": "Заурядная", "weight": 25, "rerolls": 2, "base_prices": { "atelier": 50, "music": 60 } },
-    { "id": "first_class", "name": "Первоклассная", "weight": 10, "rerolls": 2, "base_prices": { "atelier": 80, "music": 96 } },
-    { "id": "exclusive", "name": "Эксклюзивная", "weight": 4, "rerolls": 1, "base_prices": { "atelier": 120, "music": 144 } },
-    { "id": "unique", "name": "Неповторимая", "weight": 1, "rerolls": 1, "base_prices": { "atelier": 200, "music": 240 } }
+    { "id": "common", "name": "Ширпотреб", "weight": 60, "rerolls": 3, "base_prices": { "atelier": 30, "music": 45 } },
+    { "id": "ordinary", "name": "Заурядная", "weight": 25, "rerolls": 2, "base_prices": { "atelier": 50, "music": 75 } },
+    { "id": "first_class", "name": "Первоклассная", "weight": 10, "rerolls": 2, "base_prices": { "atelier": 80, "music": 120 } },
+    { "id": "exclusive", "name": "Эксклюзивная", "weight": 4, "rerolls": 1, "base_prices": { "atelier": 120, "music": 180 } },
+    { "id": "unique", "name": "Неповторимая", "weight": 1, "rerolls": 1, "base_prices": { "atelier": 200, "music": 300 } }
   ],
   "offer_ranges": [
     { "min_percent": -20, "max_percent": -1, "chance_percent": 20 },
@@ -23,7 +23,7 @@
     { "min_percent": 11, "max_percent": 30, "chance_percent": 10 }
   ],
   "quotas": [
-    { "id": "first", "deadline_day": 3, "amount": 45 },
-    { "id": "final", "deadline_day": 7, "amount": 90 }
+    { "id": "first", "deadline_day": 3, "amount": 200 },
+    { "id": "final", "deadline_day": 7, "amount": 400 }
   ]
 }

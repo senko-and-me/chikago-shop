@@ -12,11 +12,11 @@ public partial class RarityPanel : PanelContainer
     {
         if (GetParent().Name == "MusicWorkshop")
         {
-            Price0 = 36;
-            Price1 = 60;
-            Price2 = 96;
-            Price3 = 144;
-            Price4 = 240;
+            Price0 = 45;
+            Price1 = 75;
+            Price2 = 120;
+            Price3 = 180;
+            Price4 = 300;
         }
 
         int[] prices = [Price0, Price1, Price2, Price3, Price4];

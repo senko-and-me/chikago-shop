@@ -22,6 +22,7 @@ public sealed class WorkshopConfig
 {
     public string Id { get; init; } = string.Empty;
     public int SpinCost { get; init; }
+    public int UnlockCost { get; init; }
 }
 
 public sealed class RarityConfig
