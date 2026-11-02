@@ -9,13 +9,11 @@ public partial class TradeScene : Node2D
 	[Export(PropertyHint.Range, "1,9999,1")] public int FirstQuota { get; set; } = 200;
 	[Export(PropertyHint.Range, "1,9999,1")] public int SecondQuota { get; set; } = 400;
 	[Export] public string SavePath { get; set; } = "user://trade_progress.json";
-	[Export(PropertyHint.Range, "1,60,0.5")] public float BuyerWaitSeconds { get; set; } = 8f;
+	private float NextBuyerDelay() => _buyerArrivalRng.RandfRange(0.5f, 2f);
 
-	private const float MinZoom = 0.3f;
 	private const float MaxZoom = 1.8f;
 	private const float ZoomStep = 1.12f;
 	private const float ZoomSmoothness = 12f;
-	private const float CameraPadding = 240f;
 	private const int FirstDeadline = 4;
 	private const int FinalDay = 7;
 	private const int ShowcaseCapacity = 6;
@@ -46,7 +44,10 @@ public partial class TradeScene : Node2D
 	};
 
 	private CounterWorld _world = null!;
-	private ColorRect _wall = null!;
+	private Sprite2D _roomLayout = null!;
+	private Rect2 CameraBounds => _roomLayout.GlobalTransform * _roomLayout.GetRect();
+	private float MinZoom => GetViewportRect().Size.X / CameraBounds.Size.X;
+	private float ZoomLimit => Mathf.Max(MaxZoom, MinZoom);
 	private ModularCustomer _customer = null!;
 	private Camera2D _camera = null!;
 	private PanelContainer _tradePanel = null!;
@@ -69,8 +70,6 @@ public partial class TradeScene : Node2D
 	private readonly Control[] _rarityPanels = new Control[2];
 	private readonly Control[] _rarityHotspots = new Control[2];
 	private readonly Control[] _priceHints = new Control[2];
-	private readonly Button[] _placeItemButtons = new Button[2];
-	private readonly Button[] _trashButtons = new Button[2];
 	private readonly Button[] _showcaseSlots = new Button[ShowcaseCapacity];
 	private readonly ColorRect[] _showcaseGlass = new ColorRect[ShowcaseCapacity];
 	private readonly TextureRect[] _showcaseIcons = new TextureRect[ShowcaseCapacity];
@@ -82,12 +81,12 @@ public partial class TradeScene : Node2D
 	// -----------------------------------------
 
 	private readonly RandomNumberGenerator _rng = new();
+	private readonly RandomNumberGenerator _buyerArrivalRng = new();
 	private readonly List<int> _storedItems = new();
 	private readonly List<int> _checkpointItems = new();
 	private readonly int[] _showcaseItems = new int[ShowcaseCapacity];
 	private readonly int[] _checkpointShowcaseItems = new int[ShowcaseCapacity];
 	private int _activeShowcaseIndex = -1;
-	private int _selectedShowcaseIndex = -1;
 	private double _buyerCountdown;
 	public int[] StoredItems => _storedItems.ToArray();
 	public int[] ShowcaseItems => (int[])_showcaseItems.Clone();
@@ -127,9 +126,9 @@ public partial class TradeScene : Node2D
 	public override void _Ready()
 	{
 		_world = GetNode<CounterWorld>("World");
-		_wall = GetNode<ColorRect>("World/Wall");
+		_roomLayout = GetNode<Sprite2D>("World/RoomLayout");
 		_camera = GetNode<Camera2D>("Camera2D");
-		_targetZoom = Mathf.Clamp(_camera.Zoom.X, MinZoom, MaxZoom);
+		_targetZoom = Mathf.Clamp(_camera.Zoom.X, MinZoom, ZoomLimit);
 		_camera.Zoom = Vector2.One * _targetZoom;
 		_zoomAnchor = GetViewportRect().Size / 2f;
 		_customer = GetNode<ModularCustomer>("World/TradingRoom/Customer");
@@ -155,12 +154,9 @@ public partial class TradeScene : Node2D
 		_rarityHotspots[1] = GetNode<Control>("World/MusicWorkshop/GetItemButton/RarityHotspot");
 		_priceHints[0] = GetNode<Control>("World/Atelier/GetItemButton/PriceHint");
 		_priceHints[1] = GetNode<Control>("World/MusicWorkshop/GetItemButton/PriceHint");
-		_placeItemButtons[0] = GetNode<Button>("World/ShowroomLeft/PlaceItemButton");
-		_placeItemButtons[1] = GetNode<Button>("World/Showroom/PlaceItemButton");
-		_trashButtons[0] = GetNode<Button>("World/ShowroomLeft/TrashBin");
-		_trashButtons[1] = GetNode<Button>("World/Showroom/TrashBin");
 		Array.Fill(_showcaseItems, -1);
 		Array.Fill(_checkpointShowcaseItems, -1);
+		NormalizeLeftShowcaseNames();
 		string[] showcasePaths =
 		[
 			"World/ShowroomLeft/Showcases/Slot1",
@@ -187,6 +183,7 @@ public partial class TradeScene : Node2D
 		// -----------------------------------------
 
 		_rng.Randomize();
+		_buyerArrivalRng.Randomize();
 		_acceptButton.Pressed += AcceptTrade;
 		_declineButton.Pressed += RerollCustomer;
 		_endDayButton.Pressed += EndDay;
@@ -201,9 +198,6 @@ public partial class TradeScene : Node2D
 		_rarityHotspots[0].MouseExited += () => _rarityPanels[0].Hide();
 		_rarityHotspots[1].MouseEntered += () => _rarityPanels[1].Show();
 		_rarityHotspots[1].MouseExited += () => _rarityPanels[1].Hide();
-		_placeItemButtons[0].Pressed += () => PlaceItemInShowcase(FindFreeShowcaseSlot(0, 3));
-		_placeItemButtons[1].Pressed += () => PlaceItemInShowcase(FindFreeShowcaseSlot(3, 6));
-		foreach (Button trashButton in _trashButtons) trashButton.Pressed += TrashSelectedItem;
 		GetNode<Button>("HUD/Root/ProgressPanel/Content/CheckpointButton").Pressed += ReturnToCheckpoint;
 		GetNode<Button>("HUD/Root/ProgressPanel/Content/NewGameButton").Pressed += NewGame;
 
@@ -225,6 +219,18 @@ public partial class TradeScene : Node2D
 
 		GetViewport().SizeChanged += ClampCamera;
 		ClampCamera();
+	}
+
+	private void NormalizeLeftShowcaseNames()
+	{
+		Node showcases = GetNode("World/ShowroomLeft/Showcases");
+		string[] editorNames = ["ShowcaseSlot", "ShowcaseSlot2", "ShowcaseSlot3"];
+		for (int index = 0; index < editorNames.Length; index++)
+		{
+			string runtimeName = $"Slot{index + 1}";
+			if (!showcases.HasNode(runtimeName) && showcases.HasNode(editorNames[index]))
+				showcases.GetNode(editorNames[index]).Name = runtimeName;
+		}
 	}
 
 	private void EnsureMusicWorkshopUi()
@@ -281,8 +287,9 @@ public partial class TradeScene : Node2D
 	public override void _Process(double delta)
 	{
 		TickBuyers(delta);
-		if (!float.IsFinite(_targetZoom) || _targetZoom < MinZoom || _targetZoom > MaxZoom)
-			_targetZoom = Mathf.Clamp(_camera.Zoom.X, MinZoom, MaxZoom);
+		ClampCamera();
+		_targetZoom = Mathf.Clamp(float.IsFinite(_targetZoom) ? _targetZoom : _camera.Zoom.X,
+			MinZoom, ZoomLimit);
 		float oldZoom = _camera.Zoom.X;
 		if (Mathf.IsEqualApprox(oldZoom, _targetZoom)) return;
 		float blend = 1f - MathF.Exp(-ZoomSmoothness * (float)delta);
@@ -335,7 +342,7 @@ public partial class TradeScene : Node2D
 
 	private void ZoomAt(Vector2 mousePosition, float factor)
 	{
-		float newTarget = Mathf.Clamp(_targetZoom * factor, MinZoom, MaxZoom);
+		float newTarget = Mathf.Clamp(_targetZoom * factor, MinZoom, ZoomLimit);
 		if (Mathf.IsEqualApprox(newTarget, _targetZoom)) return;
 		_targetZoom = newTarget;
 		_zoomAnchor = mousePosition;
@@ -343,7 +350,9 @@ public partial class TradeScene : Node2D
 
 	public void ClampCamera()
 	{
-		Rect2 bounds = _wall.GetGlobalRect().Grow(CameraPadding);
+		Rect2 bounds = CameraBounds;
+		float zoom = Mathf.Clamp(_camera.Zoom.X, MinZoom, ZoomLimit);
+		_camera.Zoom = Vector2.One * zoom;
 		Vector2 halfView = GetViewportRect().Size / (2f * _camera.Zoom);
 		Vector2 position = _camera.Position;
 		position.X = halfView.X >= bounds.Size.X / 2f
@@ -405,23 +414,6 @@ public partial class TradeScene : Node2D
 		GD.Print($"Массив предметов: [{string.Join(", ", entries)}]");
 	}
 
-	public void PlaceNextItem()
-	{
-		PlaceItemInShowcase(FindFreeShowcaseSlot());
-	}
-
-	private int FindFreeShowcaseSlot()
-	{
-		return FindFreeShowcaseSlot(0, ShowcaseCapacity);
-	}
-
-	private int FindFreeShowcaseSlot(int startIndex, int endExclusive)
-	{
-		for (int i = startIndex; i < endExclusive; i++)
-			if (i != _activeShowcaseIndex && _showcaseItems[i] == -1) return i;
-		return -1;
-	}
-
 	public void PlaceItemInShowcase(int slotIndex)
 	{
 		if (Failed || Completed || slotIndex < 0 || slotIndex >= ShowcaseCapacity ||
@@ -432,10 +424,9 @@ public partial class TradeScene : Node2D
 		bool firstItem = Array.TrueForAll(_showcaseItems, item => item == -1);
 		_showcaseItems[slotIndex] = _storedItems[SelectedInventoryIndex];
 		_storedItems.RemoveAt(SelectedInventoryIndex);
-		_selectedShowcaseIndex = -1;
 		_inventoryUI.DeselectAll();
 		_inventoryUI.UpdateUI(_storedItems);
-		if (firstItem) _buyerCountdown = Mathf.Max(1f, BuyerWaitSeconds);
+		if (firstItem && !TradeActive) _buyerCountdown = NextBuyerDelay();
 		RefreshItemButtons();
 		LogStoredItems();
 		SaveProgress();
@@ -443,46 +434,13 @@ public partial class TradeScene : Node2D
 
 	public void SelectInventoryItem(int index)
 	{
-		_selectedShowcaseIndex = -1;
 		SelectedInventoryIndex = index;
 		RefreshItemButtons();
 	}
 
 	private void OnShowcasePressed(int slotIndex)
 	{
-		if (Failed || Completed || slotIndex == _activeShowcaseIndex) return;
-		if (_showcaseItems[slotIndex] < 0)
-		{
-			PlaceItemInShowcase(slotIndex);
-			return;
-		}
-		bool deselect = _selectedShowcaseIndex == slotIndex;
-		_inventoryUI.DeselectAll();
-		_selectedShowcaseIndex = deselect ? -1 : slotIndex;
-		RefreshItemButtons();
-	}
-
-	public void TrashSelectedItem()
-	{
-		if (Failed || Completed) return;
-		if (SelectedInventoryIndex >= 0 && SelectedInventoryIndex < _storedItems.Count)
-		{
-			_storedItems.RemoveAt(SelectedInventoryIndex);
-			_inventoryUI.DeselectAll();
-			_inventoryUI.UpdateUI(_storedItems);
-		}
-		else if (_selectedShowcaseIndex >= 0 && _selectedShowcaseIndex < ShowcaseCapacity &&
-			_selectedShowcaseIndex != _activeShowcaseIndex && _showcaseItems[_selectedShowcaseIndex] >= 0)
-		{
-			_showcaseItems[_selectedShowcaseIndex] = -1;
-			_selectedShowcaseIndex = -1;
-			if (!TradeActive && Array.TrueForAll(_showcaseItems, item => item == -1))
-				_buyerCountdown = 0;
-		}
-		else return;
-		RefreshItemButtons();
-		LogStoredItems();
-		SaveProgress();
+		PlaceItemInShowcase(slotIndex);
 	}
 
 	private void TickBuyers(double delta)
@@ -495,7 +453,6 @@ public partial class TradeScene : Node2D
 		for (int i = 0; i < ShowcaseCapacity; i++)
 			if (_showcaseItems[i] >= 0) occupied.Add(i);
 		_activeShowcaseIndex = occupied[_rng.RandiRange(0, occupied.Count - 1)];
-		_selectedShowcaseIndex = -1;
 		ItemIndex = _showcaseItems[_activeShowcaseIndex];
 		_showcaseItems[_activeShowcaseIndex] = -1;
 		_buyerCountdown = 0;
@@ -533,14 +490,6 @@ public partial class TradeScene : Node2D
 			EnergyRemaining <= 0 || Score < MusicSpinCost;
 		_musicLockedOverlay.Visible = !MusicWorkshopUnlocked;
 		_musicUnlockButton.Disabled = Failed || Completed || Score < MusicUnlockCost;
-		for (int roomIndex = 0; roomIndex < _placeItemButtons.Length; roomIndex++)
-		{
-			Button placeButton = _placeItemButtons[roomIndex];
-			placeButton.Visible = true;
-			placeButton.Disabled = Failed || Completed ||
-				SelectedInventoryIndex < 0 || SelectedInventoryIndex >= _storedItems.Count ||
-				FindFreeShowcaseSlot(roomIndex * 3, roomIndex * 3 + 3) < 0;
-		}
 		RefreshShowcases();
 	}
 
@@ -555,16 +504,10 @@ public partial class TradeScene : Node2D
 			_showcaseLabels[i].Text = reserved ? "НА СДЕЛКЕ" :
 				itemIndex < 0 ? "СВОБОДНО" : Items[itemIndex].Name.ToUpperInvariant();
 			_showcaseGlass[i].Color = reserved ? new Color(0.7f, 0.68f, 0.68f, 0.78f) :
-				_selectedShowcaseIndex == i ? new Color(1f, 0.86f, 0.45f, 0.78f) :
 				new Color(0.77f, 0.9f, 0.88f, 0.58f);
 			_showcaseSlots[i].Disabled = Failed || Completed || reserved ||
 				(itemIndex < 0 && (SelectedInventoryIndex < 0 || SelectedInventoryIndex >= _storedItems.Count));
 		}
-		bool trashDisabled = Failed || Completed ||
-			(SelectedInventoryIndex < 0 || SelectedInventoryIndex >= _storedItems.Count) &&
-			(_selectedShowcaseIndex < 0 || _selectedShowcaseIndex >= ShowcaseCapacity ||
-			 _selectedShowcaseIndex == _activeShowcaseIndex || _showcaseItems[_selectedShowcaseIndex] < 0);
-		foreach (Button trashButton in _trashButtons) trashButton.Disabled = trashDisabled;
 	}
 
 	private void RefreshOffer()
@@ -585,14 +528,6 @@ public partial class TradeScene : Node2D
 	{
 		if (!TradeActive || RerollsRemaining <= 0) return;
 		RerollsRemaining--;
-		if (RerollsRemaining == 0)
-		{
-			Declined++;
-			FinishTrade();
-			RefreshProgress();
-			SaveProgress();
-			return;
-		}
 		int basePrice = Items[ItemIndex].BasePrice;
 		var higher = new List<int>();
 		var lower = new List<int>();
@@ -646,8 +581,7 @@ public partial class TradeScene : Node2D
 		ItemIndex = -1;
 		_activeShowcaseIndex = -1;
 		if (hadActiveTrade)
-			_buyerCountdown = Array.TrueForAll(_showcaseItems, item => item == -1) ? 0 :
-				Mathf.Max(1f, BuyerWaitSeconds);
+			_buyerCountdown = Array.Exists(_showcaseItems, item => item >= 0) ? NextBuyerDelay() : 0;
 		_world.ItemVisible = false;
 		_customer.Visible = false;
 		_tradePanel.Visible = false;
@@ -735,9 +669,7 @@ public partial class TradeScene : Node2D
 		_storedItems.Clear();
 		_storedItems.AddRange(_checkpointItems);
 		Array.Copy(_checkpointShowcaseItems, _showcaseItems, ShowcaseCapacity);
-		_selectedShowcaseIndex = -1;
-		_buyerCountdown = Array.TrueForAll(_showcaseItems, item => item == -1) ? 0 :
-			Mathf.Max(1f, BuyerWaitSeconds);
+		_buyerCountdown = Array.Exists(_showcaseItems, item => item >= 0) ? NextBuyerDelay() : 0;
 		_inventoryUI.DeselectAll();
 		CurrentDay = CheckpointDay;
 		Score = CheckpointScore;
@@ -769,7 +701,6 @@ public partial class TradeScene : Node2D
 		_checkpointItems.Clear();
 		Array.Fill(_showcaseItems, -1);
 		Array.Fill(_checkpointShowcaseItems, -1);
-		_selectedShowcaseIndex = -1;
 		_buyerCountdown = 0;
 		_inventoryUI.DeselectAll();
 		CurrentDay = 1;
@@ -855,9 +786,10 @@ public partial class TradeScene : Node2D
 		for (int i = 0; i < Mathf.Min(ShowcaseCapacity, data.CheckpointShowcaseItems?.Length ?? 0); i++)
 			if (data.CheckpointShowcaseItems![i] >= 0 && data.CheckpointShowcaseItems[i] < Items.Length)
 				_checkpointShowcaseItems[i] = data.CheckpointShowcaseItems[i];
-		_buyerCountdown = Math.Clamp(data.BuyerCountdown, 0, Mathf.Max(1f, BuyerWaitSeconds));
-		if (_buyerCountdown <= 0 && Array.Exists(_showcaseItems, item => item >= 0))
-			_buyerCountdown = Mathf.Max(1f, BuyerWaitSeconds);
+		_buyerCountdown = Array.Exists(_showcaseItems, item => item >= 0)
+			? double.IsFinite(data.BuyerCountdown) && data.BuyerCountdown > 0 && data.BuyerCountdown <= 2
+				? data.BuyerCountdown : NextBuyerDelay()
+			: 0;
 		_activeShowcaseIndex = data.ActiveShowcaseIndex >= 0 && data.ActiveShowcaseIndex < ShowcaseCapacity
 			? data.ActiveShowcaseIndex : -1;
 		CurrentDay = Mathf.Clamp(data.Day, 1, FinalDay);

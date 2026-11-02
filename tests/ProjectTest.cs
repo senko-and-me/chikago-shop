@@ -14,6 +14,7 @@ public partial class ProjectTest : SceneTree
         try
         {
             TestEconomyConfig();
+            await TestMouseControls();
             await TestTradeScene();
             await TestProgress();
             await TestMainMenu();
@@ -39,6 +40,96 @@ public partial class ProjectTest : SceneTree
 		      config.Quotas[0].Amount == 200 &&
               config.Quotas[1].Amount == 400,
             "The runtime must load the provisional paid-spin and raised-quota balance");
+    }
+
+    private async Task TestMouseControls()
+    {
+        var scene = GD.Load<PackedScene>("res://scenes/trade_scene.tscn");
+        var game = scene.Instantiate<TradeScene>();
+        game.SavePath = "";
+        Root.AddChild(game);
+        await ToSignal(this, SignalName.ProcessFrame);
+        var world = game.GetNode<CounterWorld>("World");
+        Check(!world.ItemVisible && !game.TradeActive && game.ItemIndex == -1 &&
+              !game.GetNode<CanvasItem>("World/TradingRoom/Item").Visible &&
+              !game.GetNode<Control>("World/TradingRoom/Item/TradePanel").Visible,
+            "A fresh scene must not show a phantom item or trade");
+
+        await ClickControl(game, "World/Atelier/GetItemButton");
+        Check(game.StoredItems.Length == 3 && game.Score == 130 && game.EnergyRemaining == 1,
+            "A mouse click must create three paid atelier items");
+        await ClickControl(game, "HUD/InventoryUI/ScrollContainer/HBoxContainer/" +
+            game.GetNode<HBoxContainer>("HUD/InventoryUI/ScrollContainer/HBoxContainer").GetChild(0).Name);
+        Check(game.SelectedInventoryIndex == 0, "Inventory must accept mouse selection");
+        Check(Root.GuiGetHoveredControl()?.GetTooltip() == TradeScene.GetItemRarity(game.StoredItems[0]),
+            "Hovering the inventory image must expose the item's rarity tooltip");
+        await ClickControl(game, "World/ShowroomLeft/Showcases/Slot1");
+        await ToSignal(this, SignalName.ProcessFrame);
+        Check(!game.TradeActive, "Mouse placement must wait for a buyer");
+        game._Process(game.BuyerCountdown + 0.001);
+        Check(game.TradeActive && game.StoredItems.Length == 2 && world.ItemVisible,
+            "Placing an existing item with the mouse must start a real trade");
+        int rerolls = game.RerollsRemaining;
+        await ClickControl(game, "World/TradingRoom/Item/TradePanel/Content/Buttons/DeclineButton");
+        Check(game.RerollsRemaining == rerolls - 1, "The reroll button must accept mouse input");
+        int score = game.Score;
+        int offer = game.OfferedPrice;
+        await ClickControl(game, "World/TradingRoom/Item/TradePanel/Content/Buttons/AcceptButton");
+        Check(!game.TradeActive && game.Score == score + offer && !world.ItemVisible,
+            "The accept button must sell once and hide the trade");
+        await ClickControl(game, "World/Atelier/GetItemButton");
+        var inventory = game.GetNode<HBoxContainer>("HUD/InventoryUI/ScrollContainer/HBoxContainer");
+        await ClickControl(game, "HUD/InventoryUI/ScrollContainer/HBoxContainer/" + inventory.GetChild(0).Name);
+        await ClickControl(game, "World/Showroom/Showcases/Slot4");
+        await ToSignal(this, SignalName.ProcessFrame);
+        game._Process(game.BuyerCountdown + 0.001);
+        Check(game.TradeActive && game.StoredItems.Length == 4,
+            "The second showroom must also place a selected item with the mouse");
+        await ClickControl(game, "World/TradingRoom/Item/TradePanel/Content/Buttons/AcceptButton");
+        Check(game.StoredItems.Length == 4, "Unsold goods must remain in inventory without disposal controls");
+        await ClickControl(game, "HUD/Root/ProgressPanel/Content/EndDayButton");
+        Check(game.CurrentDay == 2, "End day must accept mouse input");
+        await ClickControl(game, "HUD/Root/ProgressPanel/Content/CheckpointButton");
+        Check(game.CurrentDay == 1 && game.Score == 220, "Checkpoint handler must be connected");
+        await ClickControl(game, "World/MusicWorkshop/LockedOverlay/UnlockButton");
+        Check(game.MusicWorkshopUnlocked, "Unlock must accept mouse input");
+        game.Score = 140;
+        game.RefreshItemButtons();
+        await ClickControl(game, "World/MusicWorkshop/GetItemButton");
+        Check(game.Score == 0 && game.StoredItems.Length == 3 && game.EnergyRemaining == 1,
+            "The unlocked music workshop must accept mouse input and charge its spin price");
+        await ClickControl(game, "HUD/Root/ProgressPanel/Content/NewGameButton");
+        Check(!game.MusicWorkshopUnlocked && game.Score == 220 && game.StoredItems.Length == 0,
+            "New game handler must reset the state");
+        game.QueueFree();
+        await ToSignal(this, SignalName.ProcessFrame);
+        GD.Print("Mouse controls and phantom trade regression checks passed");
+    }
+
+    private async Task ClickControl(TradeScene game, string path)
+    {
+        var control = game.GetNode<Control>(path);
+        if (path.StartsWith("World/", StringComparison.Ordinal))
+        {
+            game.GetNode<Camera2D>("Camera2D").Position = control.GetGlobalRect().GetCenter();
+            game.ClampCamera();
+        }
+        await ToSignal(this, SignalName.ProcessFrame);
+        await ToSignal(this, SignalName.ProcessFrame);
+        Check(control.IsVisibleInTree(), $"Mouse target must be visible: {path}");
+        Vector2 point = control.GetGlobalTransformWithCanvas() * (control.Size / 2);
+        Root.PushInput(new InputEventMouseMotion { Position = point, GlobalPosition = point }, true);
+        await ToSignal(this, SignalName.ProcessFrame);
+        Root.PushInput(new InputEventMouseButton
+        {
+            Position = point, GlobalPosition = point, ButtonIndex = MouseButton.Left,
+            Pressed = true, ButtonMask = MouseButtonMask.Left
+        }, true);
+        Root.PushInput(new InputEventMouseButton
+        {
+            Position = point, GlobalPosition = point, ButtonIndex = MouseButton.Left, Pressed = false
+        }, true);
+        await ToSignal(this, SignalName.ProcessFrame);
     }
 
     private async Task TestTradeScene()
@@ -89,8 +180,8 @@ public partial class ProjectTest : SceneTree
         foreach (Button slot in leftShowcases.GetChildren().Concat(rightShowcases.GetChildren()).OfType<Button>())
         {
             Check(slot.Size == new Vector2(440, 230) &&
-                  slot.Position.X >= 240 && slot.Position.X + slot.Size.X <= 1680 &&
-                  slot.Position.Y >= 720 && slot.Position.Y + slot.Size.Y <= 970,
+                  slot.Position.X >= 180 && slot.Position.X + slot.Size.X <= 1700 &&
+                  slot.Position.Y >= 640 && slot.Position.Y + slot.Size.Y <= 920,
                 "Full-size showcase furniture must form a centered row low in the floor zone");
             Check(slot.GetNode<Label>("ItemLabel").Position.Y < 0,
                 "Showcase state text must sit above the furniture");
@@ -136,24 +227,17 @@ public partial class ProjectTest : SceneTree
         var rarityHotspot = atelierButton.GetNode<Control>("RarityHotspot");
         Check(rarityHotspot.Size.X <= 72 && rarityHotspot.Size.Y <= 68 && rarityHotspot.TooltipText.Length == 0,
             "The rarity hover target must cover only the drawn question-mark circle without a system tooltip");
-        foreach (string labelName in new[]
-                 {
-                     "Chance0", "Rerolls0", "Chance1", "Rerolls1", "Price2", "Chance2", "Rerolls2",
-                     "Price3", "Chance3", "Rerolls3", "Price4", "Chance4", "Rerolls4"
-                 })
-            Check(atelierRarityPanel.GetNode<Label>($"Values/{labelName}").GetThemeColor("font_color").V < 0.2f,
-                $"Rarity value must remain readable on white: {labelName}");
+        foreach (var panel in new[] { atelierRarityPanel, musicRarityPanel })
+            foreach (Label value in panel.GetNode<GridContainer>("Values").GetChildren().OfType<Label>())
+                Check(value.GetThemeColor("font_color") == Colors.Black,
+                    $"Every rarity value must be black: {panel.GetParent().Name}/{value.Name}");
         rarityHotspot.EmitSignal(Control.SignalName.MouseEntered);
         Check(atelierRarityPanel.Visible, "Hovering the question-mark circle must reveal rarity information");
         rarityHotspot.EmitSignal(Control.SignalName.MouseExited);
         Check(!atelierRarityPanel.Visible, "Leaving the question-mark circle must hide rarity information");
-        var placeButton = game.GetNode<Button>("World/ShowroomLeft/PlaceItemButton");
-        var rightPlaceButton = game.GetNode<Button>("World/Showroom/PlaceItemButton");
-        var trashButton = game.GetNode<Button>("World/Showroom/TrashBin");
-        var leftTrashButton = game.GetNode<Button>("World/ShowroomLeft/TrashBin");
-        Check(trashButton.Size.X <= 160 && leftTrashButton.Size.X <= 160 &&
-              trashButton.Text == "мусор" && leftTrashButton.Text == "мусор",
-            "Both showrooms must use a compact waste bin tucked against the wall");
+        foreach (string room in new[] { "ShowroomLeft", "Showroom" })
+            Check(!game.HasNode($"World/{room}/PlaceItemButton") && !game.HasNode($"World/{room}/TrashBin"),
+                "The game must initialize without automatic placement or disposal controls");
         foreach (string kind in new[] { "Hat", "Gloves", "Guitar", "Trumpet" })
             Check(game.GetNode<Sprite2D>($"World/TradingRoom/Item/{kind}").Texture != null,
                 $"The {kind} item must have an illustration");
@@ -187,7 +271,9 @@ public partial class ProjectTest : SceneTree
 		      scorePanel.GetThemeStylebox("panel") is StyleBoxTexture &&
 		      energyPanel.Position.Y > scorePanel.Position.Y + scorePanel.Size.Y,
             "Energy must use its own matching HUD panel below the score");
-        Check(placeButton.Disabled && rightPlaceButton.Disabled && !game.TradeActive && game.StoredItems.Length == 0,
+        Check(game.GetNode<Button>("World/ShowroomLeft/Showcases/Slot1").Disabled &&
+              game.GetNode<Button>("World/Showroom/Showcases/Slot4").Disabled &&
+              !game.TradeActive && game.StoredItems.Length == 0,
             "A new game must start without a free item to sell");
         Check(game.GetNode<HBoxContainer>("HUD/InventoryUI/ScrollContainer/HBoxContainer").GetChildCount() == 0,
             "An empty inventory must not render placeholder slots");
@@ -254,59 +340,60 @@ public partial class ProjectTest : SceneTree
         game.GetItemFromAtelier();
         Check(game.StoredItems.Length == 6 && game.Score == 670,
             "A third spin in one day must not spend money or create items");
-        SelectInventorySlot(game, 1);
-        game.TrashSelectedItem();
-        SelectInventorySlot(game, 1);
-        game.TrashSelectedItem();
-        SelectInventorySlot(game, 2);
-        game.TrashSelectedItem();
-        SelectInventorySlot(game, 2);
-        game.TrashSelectedItem();
         game.EnergyRemaining = 20;
         game.Score = 10000;
         game.RefreshItemButtons();
         await ToSignal(this, SignalName.ProcessFrame);
-        Check(game.GetNode<HBoxContainer>("HUD/InventoryUI/ScrollContainer/HBoxContainer").GetChildCount() == 2,
+        Check(game.GetNode<HBoxContainer>("HUD/InventoryUI/ScrollContainer/HBoxContainer").GetChildCount() == 6,
             "Inventory UI must render exactly one slot per retained real item");
+        CheckInventoryTooltips(game);
         int firstItem = game.StoredItems[0];
-        int secondItem = game.StoredItems[1];
-        Check(placeButton.Disabled, "Placing requires an inventory selection");
+        int[] remainingStored = game.StoredItems.Skip(1).ToArray();
+        var firstSlot = game.GetNode<Button>("World/ShowroomLeft/Showcases/Slot1");
+        Check(firstSlot.Disabled, "Placing requires an inventory selection");
+        game.PlaceItemInShowcase(0);
+        Check(game.StoredItems.Length == 6 && game.ShowcaseItems.All(item => item == -1),
+            "Manual placement without an inventory selection must leave goods untouched");
         SelectInventorySlot(game, 0);
-        Check(!placeButton.Disabled, "Placing must become available after selecting an item");
-        placeButton.EmitSignal(Button.SignalName.Pressed);
+        Check(!firstSlot.Disabled, "Placing must become available after selecting an item");
+        firstSlot.EmitSignal(Button.SignalName.Pressed);
         Check(!game.TradeActive && game.ShowcaseItems[0] == firstItem &&
-              game.StoredItems.SequenceEqual(new[] { secondItem }),
+              game.StoredItems.SequenceEqual(remainingStored),
             "Placing must move the selected item into a showcase");
+        CheckInventoryTooltips(game);
         Check(game.GetNode<TextureRect>("World/ShowroomLeft/Showcases/Slot1/Icon").Texture != null,
             "The showcase must display the item's illustration");
-        game._Process(game.BuyerWaitSeconds / 2d);
-        Check(!game.TradeActive, "A buyer must wait before choosing a showcase item");
-        game._Process(game.BuyerWaitSeconds / 2d + 0.1);
+        double firstDelay = game.BuyerCountdown;
+        Check(firstDelay is >= 0.5 and <= 2, "First buyer delay must be between 0.5 and 2 seconds");
+        game._Process(0.49);
+        Check(!game.TradeActive, "A buyer must not arrive before the minimum delay");
+        game._Process(firstDelay - 0.491);
+        Check(!game.TradeActive, "A buyer must wait until the sampled delay expires");
+        game._Process(0.002);
         Check(game.TradeActive && game.ItemIndex == firstItem && game.ShowcaseItems.All(item => item == -1),
-            "A buyer must choose a displayed item after the wait");
-        Check(world.ItemVisible && placeButton.Visible &&
+            "A buyer must choose a displayed item when the delay expires");
+        Check(world.ItemVisible &&
               game.GetNode<Button>("World/ShowroomLeft/Showcases/Slot1").Disabled &&
               game.GetNode<Label>("World/ShowroomLeft/Showcases/Slot1/ItemLabel").Text == "НА СДЕЛКЕ",
             "The active item's showcase must stay reserved during the trade");
         game.GetItemFromAtelier();
         SelectInventorySlot(game, 1);
         game.PlaceItemInShowcase(0);
-        Check(game.StoredItems.Length == 4 && game.ShowcaseItems[0] == -1,
+        Check(game.StoredItems.Length == 8 && game.ShowcaseItems[0] == -1,
             "The reserved showcase must reject a new item");
-        Check(!placeButton.Disabled, "Another showcase must remain available during a trade");
-        placeButton.EmitSignal(Button.SignalName.Pressed);
-        SelectInventorySlot(game, 1);
-        game.TrashSelectedItem();
-        SelectInventorySlot(game, 1);
-        game.TrashSelectedItem();
-        Check(game.TradeActive && game.ShowcaseItems[1] >= 0 && game.StoredItems.SequenceEqual(new[] { secondItem }),
+        var secondSlot = game.GetNode<Button>("World/ShowroomLeft/Showcases/Slot2");
+        Check(!secondSlot.Disabled, "Another showcase must remain available during a trade");
+        secondSlot.EmitSignal(Button.SignalName.Pressed);
+        remainingStored = game.StoredItems;
+        Check(game.TradeActive && game.ShowcaseItems[1] >= 0 && remainingStored.Length == 7,
             "The player must be able to stock another showcase during a trade");
-        game.GetNode<Button>("World/ShowroomLeft/Showcases/Slot2").EmitSignal(Button.SignalName.Pressed);
-        Check(!trashButton.Disabled, "A displayed item must be selectable for disposal");
-        trashButton.EmitSignal(Button.SignalName.Pressed);
-        Check(game.TradeActive && game.ShowcaseItems[1] == -1 &&
+        int displayedItem = game.ShowcaseItems[1];
+        SelectInventorySlot(game, 0);
+        secondSlot.EmitSignal(Button.SignalName.Pressed);
+        Check(game.TradeActive && game.ShowcaseItems[1] == displayedItem &&
+              game.StoredItems.SequenceEqual(remainingStored) &&
               game.GetNode<Button>("World/ShowroomLeft/Showcases/Slot1").Disabled,
-            "Trash must remove a displayed item without releasing the reserved slot");
+            "Clicking an occupied showcase must neither replace nor discard goods");
         foreach (string kind in new[] { "hat", "gloves", "guitar", "trumpet" })
             Check(game.GetNode<Sprite2D>($"World/TradingRoom/Item/{char.ToUpperInvariant(kind[0])}{kind[1..]}").Visible ==
                   (kind == TradeScene.GetItemKind(firstItem)), "Only the selected item illustration must be visible");
@@ -336,32 +423,34 @@ public partial class ProjectTest : SceneTree
                 "Reroll must change the price and consume one attempt");
         }
 		redRerollButton.EmitSignal(Button.SignalName.Pressed);
-		Check(!game.TradeActive && game.RerollsRemaining == 0 && game.Declined == 1 &&
-		      game.StoredItems.SequenceEqual(new[] { secondItem }) && game.ShowcaseItems[0] == -1,
-		    "Spending the last rarity reroll must discard the item instead of returning it");
-		Check(!world.ItemVisible && placeButton.Visible, "The sale controls must hide after the final reroll");
-		SelectInventorySlot(game, 0);
-		game.PlaceItemInShowcase(0);
-        game._Process(game.BuyerWaitSeconds + 0.1);
+		Check(game.TradeActive && game.RerollsRemaining == 0 && game.Declined == 0 &&
+		      game.ItemIndex == firstItem && game.StoredItems.SequenceEqual(remainingStored) &&
+		      game.ShowcaseItems[0] == -1 && redRerollButton.Disabled,
+		    "Spending the last rarity reroll must keep the item in the active sale and disable rerolling");
+		Check(game.GetNode<PanelContainer>("World/TradingRoom/Item/TradePanel").Visible &&
+		      !game.GetNode<Button>("World/TradingRoom/Item/TradePanel/Content/Buttons/AcceptButton").Disabled,
+		    "An item with no rerolls must keep only the active sale controls available");
         int acceptedOffer = game.OfferedPrice;
         int scoreBeforeSale = game.Score;
         game.AcceptTrade();
         Check(game.Accepted == 1 && game.Score == scoreBeforeSale + acceptedOffer, "Accepting must record the sale");
-        Check(!game.TradeActive && game.StoredItems.Length == 0 &&
-              game.ShowcaseItems.All(item => item == -1), "A sold item must leave the showcase permanently");
-        game.GetItemFromAtelier();
-        SelectInventorySlot(game, 1);
-        Check(!trashButton.Disabled, "An inventory item must be selectable for disposal");
-        trashButton.EmitSignal(Button.SignalName.Pressed);
-        Check(game.StoredItems.Length == 2 && trashButton.Disabled,
-            "Trash must remove only the selected inventory item");
-        SelectInventorySlot(game, 1);
-        game.TrashSelectedItem();
+        Check(game.BuyerCountdown is >= 0.5 and <= 2,
+            "A completed sale must schedule a new random delay for the next displayed item");
+        Check(!game.TradeActive && game.StoredItems.SequenceEqual(remainingStored) &&
+              game.ShowcaseItems[0] == -1 && game.ShowcaseItems[1] == displayedItem,
+            "Selling must preserve unrelated inventory and showcase goods");
         game.AcceptTrade();
         Check(game.Accepted == 1, "An inactive trade must not be accepted twice");
         game._Input(rKey);
-        Check(!game.TradeActive && game.StoredItems.Length == 1,
+        Check(!game.TradeActive && game.StoredItems.SequenceEqual(remainingStored),
             "R must not bypass the stored-item queue");
+
+        game._Process(0.49);
+        Check(!game.TradeActive, "Consecutive buyers must be separated by at least half a second");
+        game._Process(game.BuyerCountdown + 0.001);
+        game.AcceptTrade();
+        Check(game.ShowcaseItems.All(item => item == -1), "The remaining displayed item must leave only through sale");
+        Check(game.BuyerCountdown == 0, "Empty showcases must not schedule a buyer");
 
         SelectInventorySlot(game, 0);
         game.GetNode<Button>("World/ShowroomLeft/Showcases/Slot3").EmitSignal(Button.SignalName.Pressed);
@@ -369,22 +458,31 @@ public partial class ProjectTest : SceneTree
         SelectInventorySlot(game, 0);
         game.PlaceItemInShowcase(4);
         int[] displayed = game.ShowcaseItems;
-        game._Process(game.BuyerWaitSeconds + 0.1);
+        double pendingDelay = game.BuyerCountdown;
+        Check(pendingDelay is >= 0.5 and <= 2, "Restocking an empty showroom must schedule a delay");
+        game._Process(game.BuyerCountdown + 0.001);
         int[] remainingShowcases = game.ShowcaseItems;
         Check(game.TradeActive && displayed[2] >= 0 && displayed[4] >= 0 &&
               remainingShowcases.Count(item => item >= 0) == 1 &&
               ((remainingShowcases[2] == -1 && game.ItemIndex == displayed[2]) ||
                (remainingShowcases[4] == -1 && game.ItemIndex == displayed[4])),
             "A buyer must choose one of the occupied showcases");
-		while (game.TradeActive) game.RerollCustomer();
-		Check(game.ShowcaseItems.Count(item => item >= 0) == 1,
-		    "The final red-button reroll must discard only the item selected by the buyer");
+		int activeItemWithoutRerolls = game.ItemIndex;
+		for (int reroll = game.RerollsRemaining; reroll > 0; reroll--) game.RerollCustomer();
+		Check(game.TradeActive && game.RerollsRemaining == 0 && game.ItemIndex == activeItemWithoutRerolls &&
+		      game.ShowcaseItems.Count(item => item >= 0) == 1 && redRerollButton.Disabled,
+		    "Exhausting rerolls must reserve the selected item for sale and leave other showcases untouched");
+		game.AcceptTrade();
+		Check(!game.TradeActive && game.ShowcaseItems.Count(item => item >= 0) == 1,
+		    "The no-reroll item must leave the trade only through a completed sale");
 
         var camera = game.GetNode<Camera2D>("Camera2D");
+        Rect2 cameraBounds = roomLayout.GlobalTransform * roomLayout.GetRect();
+        float widthZoom = game.GetViewportRect().Size.X / cameraBounds.Size.X;
         Check(camera.Position.Y > 1625, "The camera must start in the lower-left showroom");
         float oldZoom = camera.Zoom.X;
         for (int frame = 0; frame < 120; frame++) game._Process(1d / 60d);
-        Check(Mathf.IsEqualApprox(camera.Zoom.X, oldZoom) && camera.Zoom.X is >= 0.3f and <= 1.8f,
+        Check(Mathf.IsEqualApprox(camera.Zoom.X, oldZoom) && camera.Zoom.X >= widthZoom && camera.Zoom.X <= 1.8f,
             "Camera zoom must remain stable without wheel input");
         game._Input(new InputEventMouseButton { ButtonIndex = MouseButton.WheelUp, Position = new Vector2(640, 360), Pressed = true });
         Check(Mathf.IsEqualApprox(camera.Zoom.X, oldZoom), "Wheel input must not jump to the target zoom");
@@ -396,11 +494,15 @@ public partial class ProjectTest : SceneTree
         game._Process(1d / 60d);
         Check(camera.Zoom.X < zoomAfterStep && camera.Zoom.X > oldZoom,
             "Zooming back out must also advance smoothly");
-        for (int step = 0; step < 20; step++)
+        for (int step = 0; step < 100; step++)
             game._Input(new InputEventMouseButton { ButtonIndex = MouseButton.WheelDown, Position = new Vector2(640, 360), Pressed = true });
         for (int frame = 0; frame < 180; frame++) game._Process(1d / 60d);
-        Check(Mathf.IsEqualApprox(camera.Zoom.X, 0.3f, 0.001f),
-            "Camera must allow zooming out to 0.3x");
+        Check(Mathf.IsEqualApprox(camera.Zoom.X, widthZoom, 0.001f) && widthZoom < 0.3f &&
+              Mathf.IsEqualApprox(camera.Position.X, cameraBounds.GetCenter().X),
+            "Zoom-out must stop exactly at the layout width, beyond the old fixed 0.3 limit");
+        camera.Zoom = Vector2.One * 1.8f;
+        camera.Position = cameraBounds.GetCenter();
+        game.ClampCamera();
         float startingX = camera.Position.X;
         game._UnhandledInput(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = true });
         game._Input(new InputEventMouseMotion { Relative = new Vector2(100, 0) });
@@ -409,9 +511,12 @@ public partial class ProjectTest : SceneTree
         camera.Position = new Vector2(-100, -100);
         game.ClampCamera();
         Vector2 halfView = game.GetViewportRect().Size / (2f * camera.Zoom);
-        Check(camera.Position.X - halfView.X >= -240.01f && camera.Position.X - halfView.X < -200f &&
-              camera.Position.Y - halfView.Y >= -240.01f && camera.Position.Y - halfView.Y < -200f,
-            "The camera must allow a small view beyond the outer room edges");
+        Check((camera.Position - halfView).IsEqualApprox(cameraBounds.Position),
+            "The top-left camera boundary must match RoomLayout without padding");
+        camera.Position = new Vector2(100000, 100000);
+        game.ClampCamera();
+        Check((camera.Position + halfView).IsEqualApprox(cameraBounds.End),
+            "The bottom-right camera boundary must match RoomLayout without padding");
         camera.Position = new Vector2(4582, 1103);
         game.ClampCamera();
         Check(camera.Position.X > 3622 && camera.Position.Y < 1625, "The camera must reach the upper-right workshop");
@@ -420,6 +525,26 @@ public partial class ProjectTest : SceneTree
         game.ClampCamera();
         Check(camera.Position.X > 3622 && camera.Position.Y > 1625,
             "The camera must reach the lower-right showroom");
+
+        Vector2 layoutPosition = roomLayout.Position;
+        Vector2 layoutScale = roomLayout.Scale;
+        roomLayout.Position += new Vector2(200, 150);
+        roomLayout.Scale *= new Vector2(0.5f, 0.2f);
+        cameraBounds = roomLayout.GlobalTransform * roomLayout.GetRect();
+        camera.Zoom = Vector2.One * 0.001f;
+        game.ClampCamera();
+        Check(Mathf.IsEqualApprox(camera.Zoom.X, game.GetViewportRect().Size.X / cameraBounds.Size.X) &&
+              camera.Position.IsEqualApprox(cameraBounds.GetCenter()),
+            "Bounds must follow the layout transform; zoom-out depends only on width even for a short layout");
+        Vector2I windowSize = Root.Size;
+        Root.Size = new Vector2I(960, 900);
+        camera.Zoom = Vector2.One * 0.001f;
+        game.ClampCamera();
+        Check(Mathf.IsEqualApprox(camera.Zoom.X, game.GetViewportRect().Size.X / cameraBounds.Size.X),
+            "Resizing the viewport must recalculate the width-based zoom boundary");
+        Root.Size = windowSize;
+        roomLayout.Position = layoutPosition;
+        roomLayout.Scale = layoutScale;
         game.QueueFree();
         await ToSignal(this, SignalName.ProcessFrame);
         GD.Print("Trade scene checks passed");
@@ -437,27 +562,25 @@ public partial class ProjectTest : SceneTree
 		game.TryUnlockMusicWorkshop();
         game.GetItemFromAtelier();
         game.GetItemFromMusicWorkshop();
-        while (game.StoredItems.Length > 2)
-        {
-            SelectInventorySlot(game, 2);
-            game.TrashSelectedItem();
-        }
         int[] itemsBeforePlacement = game.StoredItems;
         SelectInventorySlot(game, 0);
         game.PlaceItemInShowcase(3);
-        Check(!game.TradeActive && game.StoredItems.Length == 1 &&
+        Check(!game.TradeActive && game.StoredItems.SequenceEqual(itemsBeforePlacement.Skip(1)) &&
               game.ShowcaseItems[3] == itemsBeforePlacement[0],
             "Placing must move the selected item into a showcase without starting a trade");
+        double savedDelay = game.BuyerCountdown;
         game.QueueFree();
         await ToSignal(this, SignalName.ProcessFrame);
         game = await CreateGame(scene);
-        Check(!game.TradeActive && game.ShowcaseItems[3] == itemsBeforePlacement[0] &&
+        Check(!game.TradeActive && Math.Abs(game.BuyerCountdown - savedDelay) < 0.00001 &&
+              game.ShowcaseItems[3] == itemsBeforePlacement[0],
+            "Reload must restore the pending buyer delay without starting an immediate trade");
+        CheckInventoryTooltips(game);
+        game._Process(game.BuyerCountdown + 0.001);
+        Check(game.TradeActive && game.ItemIndex == itemsBeforePlacement[0] && game.ShowcaseItems[3] == -1 &&
               game.StoredItems[0] == itemsBeforePlacement[1] && game.EnergyRemaining == 0 &&
 		      game.Score == 170 && game.MusicWorkshopUnlocked,
-            "Showcase contents, inventory, unlocked room, cash and spent energy must survive a reload");
-        game._Process(game.BuyerWaitSeconds + 0.1);
-        Check(game.TradeActive && game.ItemIndex == itemsBeforePlacement[0],
-            "A buyer must start a trade after waiting");
+            "The delayed trade, inventory, unlocked room, cash and spent energy must survive a reload");
         game.QueueFree();
         await ToSignal(this, SignalName.ProcessFrame);
         game = await CreateGame(scene);
@@ -479,18 +602,19 @@ public partial class ProjectTest : SceneTree
         game.DeclineTrade();
         Check(game.TradeActive && game.ItemIndex == itemsBeforePlacement[0] &&
               game.ShowcaseItems[3] == -1 && game.ShowcaseItems[5] == itemsBeforePlacement[1] &&
-              game.StoredItems.Length == 0,
+              game.StoredItems.SequenceEqual(itemsBeforePlacement.Skip(2)),
             "The red button must reroll a restored trade without returning or moving goods");
 
         game.CurrentDay = 4;
         game.Score = game.FirstQuota - 1;
         game.EndDay();
         Check(game.Failed && !game.TradeActive && game.ShowcaseItems[3] == itemsBeforePlacement[0] &&
-              game.ShowcaseItems[5] == itemsBeforePlacement[1] && game.StoredItems.Length == 0,
+              game.ShowcaseItems[5] == itemsBeforePlacement[1] &&
+              game.StoredItems.SequenceEqual(itemsBeforePlacement.Skip(2)),
             "Failure at the deadline must preserve both unsold showcase items");
         game.GetItemFromAtelier();
         game._Input(new InputEventKey { Keycode = Key.R, Pressed = true });
-        Check(game.StoredItems.Length == 0,
+        Check(game.StoredItems.SequenceEqual(itemsBeforePlacement.Skip(2)),
             "Failure and R must not create items");
         game.ReturnToCheckpoint();
         Check(game.CurrentDay == 1 && game.Score == 220 && game.EnergyRemaining == 2 &&
@@ -503,11 +627,6 @@ public partial class ProjectTest : SceneTree
 		game.TryUnlockMusicWorkshop();
         game.GetItemFromAtelier();
         game.GetItemFromMusicWorkshop();
-        while (game.StoredItems.Length > 2)
-        {
-            SelectInventorySlot(game, 2);
-            game.TrashSelectedItem();
-        }
         int[] checkpointItems = game.StoredItems;
         SelectInventorySlot(game, 0);
         game.PlaceItemInShowcase(2);
@@ -517,25 +636,28 @@ public partial class ProjectTest : SceneTree
         Check(game.QuotaStage == 1 && game.CurrentDay == 5 && game.Score == 12 &&
 		      game.EnergyRemaining == 2 && game.MusicWorkshopUnlocked,
             "Paying the first quota must open day five with the remaining cash");
-        Check(game.StoredItems.SequenceEqual(new[] { checkpointItems[1] }) &&
+        Check(game.StoredItems.SequenceEqual(checkpointItems.Skip(1)) &&
               game.ShowcaseItems[2] == checkpointItems[0] && !game.TradeActive,
             "The checkpoint must retain unsold showroom items");
         game.QueueFree();
         await ToSignal(this, SignalName.ProcessFrame);
         game = await CreateGame(scene);
+        Check(!game.TradeActive && game.BuyerCountdown is > 0 and <= 2,
+            "Reloaded checkpoint goods must wait for a buyer");
+        game._Process(game.BuyerCountdown + 0.001);
         Check(game.CurrentDay == 5 && game.Score == 12 && game.EnergyRemaining == 2 &&
 		      game.MusicWorkshopUnlocked &&
-              game.ShowcaseItems[2] == checkpointItems[0] &&
-              game.StoredItems.SequenceEqual(new[] { checkpointItems[1] }),
-            "The showroom, inventory, cash and restored energy must survive a scene reload");
-        game.GetNode<Button>("World/ShowroomLeft/Showcases/Slot3").EmitSignal(Button.SignalName.Pressed);
-        game.GetNode<Button>("World/Showroom/TrashBin").EmitSignal(Button.SignalName.Pressed);
-        Check(game.ShowcaseItems[2] == -1, "Trash must remove the selected showroom item");
+              game.TradeActive && game.ItemIndex == checkpointItems[0] && game.ShowcaseItems[2] == -1 &&
+              game.StoredItems.SequenceEqual(checkpointItems.Skip(1)),
+            "The delayed showroom trade, inventory, cash and restored energy must survive a scene reload");
+        game.AcceptTrade();
+        Check(!game.TradeActive && game.ShowcaseItems[2] == -1,
+            "The selected showroom item must leave through a completed sale");
         game.QueueFree();
         await ToSignal(this, SignalName.ProcessFrame);
         game = await CreateGame(scene);
-        Check(game.ShowcaseItems[2] == -1 && game.StoredItems.SequenceEqual(new[] { checkpointItems[1] }),
-            "A discarded showroom item must stay discarded after reload");
+        Check(game.ShowcaseItems[2] == -1 && game.StoredItems.SequenceEqual(checkpointItems.Skip(1)),
+            "A sold showroom item must stay sold after reload");
         game.ReturnToCheckpoint();
         Check(game.ShowcaseItems[2] == checkpointItems[0],
             "Returning to the checkpoint must restore its showroom contents");
@@ -546,7 +668,7 @@ public partial class ProjectTest : SceneTree
         game.ReturnToCheckpoint();
         Check(game.CurrentDay == 5 && game.Score == 12 && game.EnergyRemaining == 2 &&
 		      game.MusicWorkshopUnlocked && !game.TradeActive &&
-              game.StoredItems.SequenceEqual(new[] { checkpointItems[1] }) &&
+              game.StoredItems.SequenceEqual(checkpointItems.Skip(1)) &&
               game.ShowcaseItems[2] == checkpointItems[0] && game.ShowcaseItems[4] == -1,
             "Checkpoint must restore cash, inventory and showroom items");
 
@@ -563,6 +685,25 @@ public partial class ProjectTest : SceneTree
             "New game must reset progress without giving a free item");
         game.QueueFree();
         await ToSignal(this, SignalName.ProcessFrame);
+
+        foreach (double savedCountdown in new[] { 0d, 0.125d })
+        {
+            using (var waitingSave = FileAccess.Open(SavePath, FileAccess.ModeFlags.Write))
+                waitingSave.StoreString(savedCountdown == 0
+                    ? "{\"save_version\":7,\"showcase_items\":[0],\"buyer_countdown\":0}"
+                    : "{\"save_version\":7,\"showcase_items\":[0],\"buyer_countdown\":0.125}");
+            game = await CreateGame(scene);
+            Check(!game.TradeActive && (savedCountdown == 0
+                    ? game.BuyerCountdown is >= 0.5 and <= 2
+                    : game.BuyerCountdown == savedCountdown),
+                "Legacy zero timers must gain a delay; a positive remainder below 0.5 must survive reload");
+            game._Process(game.BuyerCountdown - 0.001);
+            Check(!game.TradeActive, "Reload must not bypass the remaining delay");
+            game._Process(0.002);
+            Check(game.TradeActive && game.ItemIndex == 0, "Reloaded waiting goods must reach a buyer after the delay");
+            game.QueueFree();
+            await ToSignal(this, SignalName.ProcessFrame);
+        }
 
         using (var oldSave = FileAccess.Open(SavePath, FileAccess.ModeFlags.Write))
             oldSave.StoreString("{\"trade_active\":true,\"item_index\":2,\"customer_index\":1,\"percentage\":0,\"rerolls_remaining\":1}");
@@ -617,8 +758,23 @@ public partial class ProjectTest : SceneTree
         var game = scene.Instantiate<TradeScene>();
         game.SavePath = SavePath;
         Root.AddChild(game);
+        game.SetProcess(false);
         await ToSignal(this, SignalName.ProcessFrame);
         return game;
+    }
+
+    private static void CheckInventoryTooltips(TradeScene game)
+    {
+        var container = game.GetNode<HBoxContainer>("HUD/InventoryUI/ScrollContainer/HBoxContainer");
+        int[] items = game.StoredItems;
+        for (int i = 0; i < items.Length; i++)
+        {
+            var slot = (SlotUI)container.GetChild(i);
+            Check(slot.GetTooltip(slot.Size / 2) == TradeScene.GetItemRarity(items[i]),
+                "Inventory tooltips must follow each current item's rarity after creation, movement and reload");
+            Check(slot.GetNode<TextureRect>("Icon").MouseFilter == Control.MouseFilterEnum.Ignore,
+                "Inventory artwork must allow its slot to receive hover and click input");
+        }
     }
 
     private static void SelectInventorySlot(TradeScene game, int index)

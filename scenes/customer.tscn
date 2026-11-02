@@ -49,7 +49,8 @@ centered = false
 [node name="Hair" type="Node2D" parent="Male" unique_id=698345736]
 
 [node name="Style1" type="Sprite2D" parent="Male/Hair" unique_id=1191499544]
-position = Vector2(-55, -543)
+visible = false
+position = Vector2(-55, -548)
 texture = ExtResource("6_male_hair_1")
 centered = false
 
@@ -61,12 +62,11 @@ centered = false
 
 [node name="Style3" type="Sprite2D" parent="Male/Hair" unique_id=863767256]
 visible = false
-position = Vector2(-51, -549)
+position = Vector2(-51, -545)
 texture = ExtResource("8_male_hair_3")
 centered = false
 
 [node name="Female" type="Node2D" parent="." unique_id=1694638953]
-visible = false
 
 [node name="Body" type="Sprite2D" parent="Female" unique_id=208230433]
 position = Vector2(-140, -509)
@@ -101,12 +101,12 @@ centered = false
 
 [node name="Style2" type="Sprite2D" parent="Female/Hair" unique_id=495185400]
 visible = false
-position = Vector2(-77, -521)
+position = Vector2(-77, -517)
 texture = ExtResource("14_female_hair_2")
 centered = false
 
 [node name="Style3" type="Sprite2D" parent="Female/Hair" unique_id=1156875490]
 visible = false
-position = Vector2(-76, -525)
+position = Vector2(-76, -522)
 texture = ExtResource("15_female_hair_3")
 centered = false

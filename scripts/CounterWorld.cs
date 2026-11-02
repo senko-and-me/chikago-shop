@@ -4,7 +4,7 @@ public partial class CounterWorld : Node2D
 {
     private Node2D _item = null!;
     private string _itemKind = "hat";
-    private bool _itemVisible = true;
+    private bool _itemVisible = false;
 
     public string ItemKind
     {
