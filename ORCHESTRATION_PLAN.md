@@ -9,7 +9,7 @@
 
 ### HF-10 — раннее проявление заголовков и публикация UI
 
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; зависимости HF-08/HF-09 = DONE; `CP-HF-10`, READY проверен 2026-11-05.
+Статус: `DONE`; координатор/исполнитель `/root`; зависимости HF-08/HF-09 = DONE; `CP-HF-10`, READY проверен 2026-11-05.
 Read-set: этот план, ранее прочитанный `AGENTS.md`, `scripts/UI/ZoomResponsiveUi.cs`, `tests/ProjectTest.cs`, `README.md`, ранее прочитанные `tools/verify.ps1`, `.vscode/settings.json`; diff/status накопленных HF-08/HF-09.
 Write-set: `scripts/UI/ZoomResponsiveUi.cs`, `tests/ProjectTest.cs`, `README.md`, `ORCHESTRATION_PLAN.md`. Единственный владелец плана `/root`; пересекающиеся задачи не исполняются. Commit/push накопленных HF-08/HF-09/HF-10 в origin/main явно разрешён пользователем.
 Out of scope: экономика, save schema, прочие пороги UI, source/.
@@ -25,6 +25,8 @@ Read-set exception: нет.
 Risks/blocker: ручной visual playtest не выполнялся.
 Next: выполнить разрешённый commit/push в origin/main.
 ```
+
+Координатор подтвердил HF-10 2026-11-05: verify/diff-check PASS, commit `b22ac38` со всеми HF-08/HF-09/HF-10 успешно отправлен в origin/main без force (exit 0). REVIEW → DONE. Основной фронт и ворота не изменены.
 
 ### HF-09 — сворачиваемая компактная панель прогресса
 
