@@ -95,6 +95,7 @@ public partial class TradeScene : Node2D
 	public static string GetItemName(int index) => Items[index].Name;
 	public static string GetItemArtPath(int index) => Items[index].ArtPath;
 	public static string GetItemRarity(int index) => Items[index].Rarity;
+	public static int GetItemBasePrice(int index) => Items[index].BasePrice;
 	public static int GetItemRerollLimit(int index) => GetRerollsForRarity(Items[index].RarityId);
 	public static int GetRerollsForRarity(string rarityId) => RerollsByRarity[rarityId];
 	public int ItemIndex { get; set; } = -1;
@@ -122,6 +123,7 @@ public partial class TradeScene : Node2D
 	private bool _dragging;
 	private float _targetZoom;
 	private Vector2 _zoomAnchor;
+	public void CancelCameraDrag() => _dragging = false;
 
 	public override void _Ready()
 	{
@@ -286,6 +288,7 @@ public partial class TradeScene : Node2D
 
 	public override void _Process(double delta)
 	{
+		if (GetTree().Paused) return;
 		TickBuyers(delta);
 		ClampCamera();
 		_targetZoom = Mathf.Clamp(float.IsFinite(_targetZoom) ? _targetZoom : _camera.Zoom.X,
@@ -303,14 +306,11 @@ public partial class TradeScene : Node2D
 
 	public override void _Input(InputEvent @event)
 	{
+		if (GetTree().Paused) return;
 		if (@event is InputEventKey { Pressed: true, Echo: false } key)
 		{
 			switch (key.Keycode)
 			{
-				case Key.Escape:
-					GetTree().Quit();
-					GetViewport().SetInputAsHandled();
-					break;
 				case Key.F:
 					RerollCustomer();
 					GetViewport().SetInputAsHandled();
@@ -336,6 +336,7 @@ public partial class TradeScene : Node2D
 
 	public override void _UnhandledInput(InputEvent @event)
 	{
+		if (GetTree().Paused) return;
 		if (@event is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true })
 			_dragging = true;
 	}

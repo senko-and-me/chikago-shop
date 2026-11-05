@@ -7,6 +7,53 @@
 
 ## Текущий фронт
 
+### HF-07 — увеличить окно продажи
+
+Статус: `DONE`; исполнитель/координатор `/root`; зависимости отсутствуют; `CP-HF-07`, READY проверен 2026-11-05.
+Read-set: этот план, `AGENTS.md`, `scenes/trade_scene.tscn`, `scripts/UI/ZoomResponsiveUi.cs`, `tests/ProjectTest.cs`, ранее прочитанные `tools/verify.ps1` и `.vscode/settings.json`.
+Write-set: `scenes/trade_scene.tscn`, `ORCHESTRATION_PLAN.md`. Единственный владелец сцены — `/root`; пересекающиеся VF/HF-задачи не исполняются.
+Out of scope: торговая логика, pause/inventory, изменение zoom-компенсации, арт, source/.
+Приёмка: окно продажи примерно в 1.5 раза крупнее, увеличены шрифты цен, отступы и кнопки; центр окна сохранён. Полный `tools/verify.ps1` подтверждает прежние GUI-клики продажи/реролла и zoom-регрессию; `git diff --check`.
+Read-set exception: точечная диагностика этих UI-файлов координатором перед оформлением CP для выбора размеров.
+
+```text
+Task: HF-07
+Recommended status: REVIEW
+Changed: scenes/trade_scene.tscn; ORCHESTRATION_PLAN.md
+Checks: powershell -NoProfile -ExecutionPolicy Bypass -File tools/verify.ps1 -> PASS (0 ошибок/предупреждений, 19 domain tests, import и Godot integration); git diff --check -> PASS.
+Acceptance: базовая панель увеличена с 280×180 до 420×280 при том же центре; шрифты цен 27/33 вместо 18/22, кнопки высотой 78 вместо 52, увеличены интервалы/отступы. Ограничение высоты удалено для свободной компоновки содержимого. GUI-продажа/реролл и zoom-регрессия проходят.
+Read-set exception: диагностика координатора до оформления CP; source/ не читался.
+Risks/blocker: ручной visual playtest не выполнялся.
+Next: перезапустить игровой сеанс.
+```
+
+Координатор подтвердил HF-07 по verify (exit 0) 2026-11-05; REVIEW → DONE. Основной фронт и ворота не изменены; владение сценой освобождено.
+
+### HF-06 — пауза, подсказки товаров и читаемость при зуме
+
+Статус: `DONE`; исполнитель `/root` (координатор и исполнитель); зависимости отсутствуют; пакет `CP-HF-06`, READY проверен 2026-11-05. Другие VF/HF-задачи с пересекающимися файлами на время работы не исполнялись.
+
+#### CP-HF-06
+
+Read-set: `scripts/TradeScene.cs`, `scripts/MainMenu.cs`, `scripts/UI/InventoryUI.cs`, `scripts/UI/SlotUI.cs`, `scenes/trade_scene.tscn`, `scenes/main_menu.tscn`, `themes/game_theme.tres`, `tests/ProjectTest.cs`, `tools/verify.ps1`, `.vscode/settings.json`, `project.godot`, `README.md`, `AGENTS.md`, этот план. Новые файлы write-set также разрешены для чтения.
+Write-set: `scripts/TradeScene.cs`, `scripts/UI/InventoryUI.cs`, `scripts/UI/PauseMenu.cs`, `scripts/UI/PauseMenu.cs.uid`, `scripts/UI/ZoomResponsiveUi.cs`, `scripts/UI/ZoomResponsiveUi.cs.uid`, `scenes/trade_scene.tscn`, `tests/ProjectTest.cs`, `README.md`, `ORCHESTRATION_PLAN.md`. Единственный владелец сцены и плана — `/root`.
+Out of scope: экономика, save schema, новая доменная логика, арт, source/, полный S5-05 и сохранение настроек между запусками.
+Приёмка: Esc/кнопка открывают модальную паузу; время и игровой ввод остановлены; доступны настройки полного экрана, checkpoint и новая игра, продолжение через Esc/кнопку. Подсказки предметов содержат название, редкость и базовую стоимость и обновляются после перемещения/reload. Мелкие world UI умеренно увеличиваются при zoom < 1 и возвращаются к исходному масштабу при zoom >= 1; HUD не зависит от камеры. Заголовки комнат с подложками/описаниями скрыты при zoom <= 0.4, плавно проявляются до zoom 0.6. Проверки: новые Godot integration tests, полный `tools/verify.ps1`, `git diff --check`.
+Read-set exception: координатор открыл реализацию и сделал точечный поиск UI-файлов до оформления CP для определения read/write-set; source/ не читался.
+
+```text
+Task: HF-06
+Recommended status: REVIEW
+Changed: scripts/UI/PauseMenu.cs[.uid]; scripts/UI/ZoomResponsiveUi.cs[.uid]; scripts/TradeScene.cs; scripts/UI/InventoryUI.cs; scenes/trade_scene.tscn; tests/ProjectTest.cs; README.md; ORCHESTRATION_PLAN.md
+Checks: powershell -NoProfile -ExecutionPolicy Bypass -File tools/verify.ps1 -> PASS (0 ошибок/предупреждений, 19 domain tests, import, Godot integration); git diff --check -> PASS.
+Acceptance: Esc и видимая кнопка открывают паузу; проверены блокировка таймера/камеры/дня/реролла, настройки и возврат через Esc, продолжение, checkpoint/new game через реальные GUI-клики, снятие паузы при удалении сцены. Подсказки содержат имя/редкость/цену при наведении на иконку, после сдвига товаров и reload. Проверены все 13 элементов заголовков при zoom 0.4/0.5/0.6, ограничение компенсации 1.65 и возврат к масштабу 1 при приближении; HUD неизменен. Полная прежняя регрессия проходит.
+Read-set exception: первичная диагностика координатора до CP; дополнительно прочитаны scenes/UI/ShowcaseSlot.tscn для проверки геометрии подписей и scripts/CounterWorld.cs для исключения перехвата ввода. Для диагностики синтетического события колеса прочитан официальный исходник Godot viewport.cpp; source/ не читался.
+Risks/blocker: ручной visual playtest не выполнялся; fullscreen использует существующий DisplayServer API и не сохраняется между запусками (вне scope).
+Next: перезапустить игровой сеанс и проверить внешний вид меню.
+```
+
+Координатор подтвердил HF-06 по финальному verify (exit 0) 2026-11-05; REVIEW → DONE. Основной фронт и ворота не изменены; владение сценой освобождено.
+
 ### HF-05 — чёрные числа редкостей и подсказка инвентаря
 
 Статус: `DONE`; исполнитель `/root`; зависимости отсутствуют; пакет `CP-HF-05`.

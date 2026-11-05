@@ -14,6 +14,7 @@ public partial class ProjectTest : SceneTree
         try
         {
             TestEconomyConfig();
+            await TestPauseAndZoomUi();
             await TestMouseControls();
             await TestTradeScene();
             await TestProgress();
@@ -42,6 +43,96 @@ public partial class ProjectTest : SceneTree
             "The runtime must load the provisional paid-spin and raised-quota balance");
     }
 
+    private static string ExpectedItemTooltip(int index) =>
+        $"{TradeScene.GetItemName(index)}\nРедкость: {TradeScene.GetItemRarity(index)}\nСтоимость: {TradeScene.GetItemBasePrice(index)}$";
+
+    private async Task TestPauseAndZoomUi()
+    {
+        var game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
+        game.SavePath = "";
+        Root.AddChild(game);
+        await ToSignal(this, SignalName.ProcessFrame);
+        var ui = game.GetNode<ZoomResponsiveUi>("ZoomResponsiveUi");
+        var panel = game.GetNode<Control>("World/TradingRoom/Item/TradePanel");
+        var hud = game.GetNode<Control>("HUD/Root/ProgressPanel");
+        var headers = new[] { "Atelier/Header", "Atelier/NameLabel", "Atelier/HintLabel",
+            "MusicWorkshop/Header", "MusicWorkshop/NameLabel", "MusicWorkshop/HintLabel",
+            "Showroom/ShowroomHeader", "Showroom/ShowroomLabel", "Showroom/ShowroomHint",
+            "ShowroomLeft/ShowroomHeader", "ShowroomLeft/ShowroomLabel", "ShowroomLeft/ShowroomHint",
+            "TradingRoom/SalesRoomLabel" }.Select(path => game.GetNode<CanvasItem>("World/" + path)).ToArray();
+        ui.UpdateForZoom(0.4f);
+        Check(headers.All(header => !header.Visible && Mathf.IsZeroApprox(header.Modulate.A)),
+            "All room titles, descriptions and backplates must disappear at zoom 0.4");
+        Check(panel.Scale.X > 1 && panel.Scale.X <= 1.65f && hud.Scale == Vector2.One,
+            "Small world UI must grow moderately on zoom-out while HUD stays fixed");
+        ui.UpdateForZoom(0.5f);
+        Check(headers.All(header => header.Visible && header.Modulate.A > 0 && header.Modulate.A < 1),
+            "Room headings must fade in gradually above 0.4");
+        ui.UpdateForZoom(0.6f);
+        Check(headers.All(header => header.Visible && Mathf.IsEqualApprox(header.Modulate.A, 1)),
+            "Room headings must reach full opacity at 0.6");
+        ui.UpdateForZoom(0.1f);
+        Check(Mathf.IsEqualApprox(panel.Scale.X, 1.65f), "Zoom compensation must be capped");
+        foreach (float zoom in new[] { 1f, 1.8f })
+        {
+            ui.UpdateForZoom(zoom);
+            Check(panel.Scale == Vector2.One, "Zooming in must restore the original UI scale without cumulative growth");
+        }
+        Check(TradeScene.GetItemBasePrice(0) == 30 && TradeScene.GetItemBasePrice(1) == 50 &&
+              TradeScene.GetItemBasePrice(2) == 45 && TradeScene.GetItemBasePrice(3) == 75,
+            "Inventory prices must match the current trade catalog");
+
+        game.GetItemFromAtelier();
+        game.SelectInventoryItem(0);
+        game.PlaceItemInShowcase(0);
+        double countdown = game.BuyerCountdown;
+        Root.PushInput(new InputEventKey { Keycode = Key.Escape, Pressed = true }, true);
+        Check(Paused && game.GetNode<Control>("PauseMenu/Root/Overlay").Visible,
+            "Escape must open a modal pause instead of quitting");
+        var camera = game.GetNode<Camera2D>("Camera2D");
+        Vector2 zoomBefore = camera.Zoom;
+        int score = game.Score;
+        int day = game.CurrentDay;
+        // This HUD position lies outside the centered menu; the modal shade must intercept it.
+        await ClickControl(game, "HUD/Root/ProgressPanel/Content/EndDayButton");
+        Vector2 position = camera.Position;
+        Root.PushInput(new InputEventMouseButton { ButtonIndex = MouseButton.WheelUp, Pressed = true }, true);
+        Root.PushInput(new InputEventMouseButton { ButtonIndex = MouseButton.WheelUp, Pressed = false }, true);
+        Root.PushInput(new InputEventKey { Keycode = Key.F, Pressed = true }, true);
+        Root.PushInput(new InputEventMouseMotion { Relative = new Vector2(100, 100) }, true);
+        game._Process(5);
+        await ToSignal(this, SignalName.ProcessFrame);
+        Check(Paused && !game.TradeActive && game.BuyerCountdown == countdown && game.Score == score && game.CurrentDay == day &&
+              camera.Zoom == zoomBefore && camera.Position == position,
+            "Pause must freeze buyer time, purchases, camera and game hotkeys");
+        const string content = "PauseMenu/Root/Overlay/Center/Panel/Content/";
+        await ClickControl(game, content + "Menu/SettingsButton");
+        Check(Paused && game.GetNode<Control>(content + "Settings").Visible,
+            "Settings must open inside pause without resuming gameplay");
+        Check(game.GetNode<CheckButton>(content + "Settings/FullscreenButton").IsVisibleInTree(),
+            "Pause settings must expose the fullscreen control");
+        Root.PushInput(new InputEventKey { Keycode = Key.Escape, Pressed = true }, true);
+        Check(Paused && game.GetNode<Control>(content + "Menu").Visible,
+            "Escape in settings must return to the pause menu");
+        Root.PushInput(new InputEventKey { Keycode = Key.Escape, Pressed = true }, true);
+        Check(!Paused && !game.GetNode<Control>("PauseMenu/Root/Overlay").Visible,
+            "Escape in pause must resume gameplay");
+        game._Process(countdown + 0.001);
+        Check(game.TradeActive, "Buyer time must continue after resuming");
+        int rerolls = game.RerollsRemaining;
+        await ClickControl(game, "PauseMenu/Root/PauseButton");
+        Check(Paused, "The visible pause button must open the menu with mouse input");
+        Root.PushInput(new InputEventKey { Keycode = Key.F, Pressed = true }, true);
+        Check(game.RerollsRemaining == rerolls, "Pause must block reroll hotkeys during an active trade");
+        await ClickControl(game, content + "Menu/ResumeButton");
+        Check(!Paused, "Continue must resume the game");
+        await ClickControl(game, "PauseMenu/Root/PauseButton");
+        game.QueueFree();
+        await ToSignal(this, SignalName.ProcessFrame);
+        Check(!Paused, "Removing a paused game must release its pause");
+        GD.Print("Pause, zoom readability and room heading checks passed");
+    }
+
     private async Task TestMouseControls()
     {
         var scene = GD.Load<PackedScene>("res://scenes/trade_scene.tscn");
@@ -61,8 +152,8 @@ public partial class ProjectTest : SceneTree
         await ClickControl(game, "HUD/InventoryUI/ScrollContainer/HBoxContainer/" +
             game.GetNode<HBoxContainer>("HUD/InventoryUI/ScrollContainer/HBoxContainer").GetChild(0).Name);
         Check(game.SelectedInventoryIndex == 0, "Inventory must accept mouse selection");
-        Check(Root.GuiGetHoveredControl()?.GetTooltip() == TradeScene.GetItemRarity(game.StoredItems[0]),
-            "Hovering the inventory image must expose the item's rarity tooltip");
+        Check(Root.GuiGetHoveredControl()?.GetTooltip() == ExpectedItemTooltip(game.StoredItems[0]),
+            "Hovering the inventory image must expose its name, rarity and price");
         await ClickControl(game, "World/ShowroomLeft/Showcases/Slot1");
         await ToSignal(this, SignalName.ProcessFrame);
         Check(!game.TradeActive, "Mouse placement must wait for a buyer");
@@ -89,7 +180,8 @@ public partial class ProjectTest : SceneTree
         Check(game.StoredItems.Length == 4, "Unsold goods must remain in inventory without disposal controls");
         await ClickControl(game, "HUD/Root/ProgressPanel/Content/EndDayButton");
         Check(game.CurrentDay == 2, "End day must accept mouse input");
-        await ClickControl(game, "HUD/Root/ProgressPanel/Content/CheckpointButton");
+        await ClickControl(game, "PauseMenu/Root/PauseButton");
+        await ClickControl(game, "PauseMenu/Root/Overlay/Center/Panel/Content/Menu/CheckpointButton");
         Check(game.CurrentDay == 1 && game.Score == 220, "Checkpoint handler must be connected");
         await ClickControl(game, "World/MusicWorkshop/LockedOverlay/UnlockButton");
         Check(game.MusicWorkshopUnlocked, "Unlock must accept mouse input");
@@ -98,7 +190,8 @@ public partial class ProjectTest : SceneTree
         await ClickControl(game, "World/MusicWorkshop/GetItemButton");
         Check(game.Score == 0 && game.StoredItems.Length == 3 && game.EnergyRemaining == 1,
             "The unlocked music workshop must accept mouse input and charge its spin price");
-        await ClickControl(game, "HUD/Root/ProgressPanel/Content/NewGameButton");
+        await ClickControl(game, "PauseMenu/Root/PauseButton");
+        await ClickControl(game, "PauseMenu/Root/Overlay/Center/Panel/Content/Menu/NewGameButton");
         Check(!game.MusicWorkshopUnlocked && game.Score == 220 && game.StoredItems.Length == 0,
             "New game handler must reset the state");
         game.QueueFree();
@@ -770,8 +863,8 @@ public partial class ProjectTest : SceneTree
         for (int i = 0; i < items.Length; i++)
         {
             var slot = (SlotUI)container.GetChild(i);
-            Check(slot.GetTooltip(slot.Size / 2) == TradeScene.GetItemRarity(items[i]),
-                "Inventory tooltips must follow each current item's rarity after creation, movement and reload");
+            Check(slot.GetTooltip(slot.Size / 2) == ExpectedItemTooltip(items[i]),
+                "Inventory tooltips must follow each current item's name, rarity and price after creation, movement and reload");
             Check(slot.GetNode<TextureRect>("Icon").MouseFilter == Control.MouseFilterEnum.Ignore,
                 "Inventory artwork must allow its slot to receive hover and click input");
         }

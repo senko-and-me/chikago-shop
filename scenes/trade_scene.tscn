@@ -1,6 +1,8 @@
 [gd_scene format=3 uid="uid://6ciouuso5bqi"]
 
 [ext_resource type="Script" uid="uid://bj66ajuqbshg0" path="res://scripts/TradeScene.cs" id="1_main"]
+[ext_resource type="Script" path="res://scripts/UI/PauseMenu.cs" id="20_pause"]
+[ext_resource type="Script" path="res://scripts/UI/ZoomResponsiveUi.cs" id="21_zoom_ui"]
 [ext_resource type="Script" uid="uid://c6334skyxf3jy" path="res://scripts/CounterWorld.cs" id="2_world"]
 [ext_resource type="Texture2D" uid="uid://b4uvatfdjuqe3" path="res://art/rooms/music_room.jpg" id="4_pi35y"]
 [ext_resource type="PackedScene" uid="uid://u2ve41t8yhqn" path="res://scenes/customer.tscn" id="5_customer"]
@@ -44,10 +46,10 @@ content_margin_bottom = 12.0
 texture = ExtResource("17_panel_small")
 
 [sub_resource type="StyleBoxFlat" id="TradePanelStyle"]
-content_margin_left = 10.0
-content_margin_top = 10.0
-content_margin_right = 10.0
-content_margin_bottom = 10.0
+content_margin_left = 15.0
+content_margin_top = 15.0
+content_margin_right = 15.0
+content_margin_bottom = 15.0
 bg_color = Color(0.94902, 0.890196, 0.803922, 1)
 border_width_left = 2
 border_width_top = 2
@@ -454,47 +456,46 @@ centered = false
 
 [node name="TradePanel" type="PanelContainer" parent="World/TradingRoom/Item" unique_id=703097951]
 visible = false
-custom_minimum_size = Vector2(280, 180)
-custom_maximum_size = Vector2(-1, 180)
-offset_left = 257.0
-offset_top = -337.0
-offset_right = 537.0
-offset_bottom = -157.0
+custom_minimum_size = Vector2(420, 280)
+offset_left = 187.0
+offset_top = -387.0
+offset_right = 607.0
+offset_bottom = -107.0
 theme_override_styles/panel = SubResource("TradePanelStyle")
 
 [node name="Content" type="VBoxContainer" parent="World/TradingRoom/Item/TradePanel" unique_id=2136036310]
 layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 9
 
 [node name="BasePriceLabel" type="Label" parent="World/TradingRoom/Item/TradePanel/Content" unique_id=413215063]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.231373, 0.188235, 0.172549, 1)
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 27
 text = "Обычно: 4$"
 
 [node name="PercentLabel" type="Label" parent="World/TradingRoom/Item/TradePanel/Content" unique_id=1743115398]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.403922, 0.352941, 0.313725, 1)
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 27
 text = "К цене: +0%"
 
 [node name="OfferLabel" type="Label" parent="World/TradingRoom/Item/TradePanel/Content" unique_id=1977303820]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.196078, 0.494118, 0.462745, 1)
-theme_override_font_sizes/font_size = 22
+theme_override_font_sizes/font_size = 33
 text = "Получим: 4$"
 
 [node name="Buttons" type="HBoxContainer" parent="World/TradingRoom/Item/TradePanel/Content" unique_id=359729028]
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 15
 
 [node name="AcceptButton" type="Button" parent="World/TradingRoom/Item/TradePanel/Content/Buttons" unique_id=152330664]
-custom_minimum_size = Vector2(64, 52)
+custom_minimum_size = Vector2(96, 78)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_disabled_color = Color(0.819608, 0.760784, 0.682353, 1)
-theme_override_font_sizes/font_size = 36
+theme_override_font_sizes/font_size = 48
 theme_override_styles/normal = SubResource("AcceptNormal")
 theme_override_styles/pressed = SubResource("AcceptPressed")
 theme_override_styles/hover = SubResource("AcceptHover")
@@ -502,12 +503,12 @@ theme_override_styles/disabled = SubResource("AcceptDisabled")
 text = "✓"
 
 [node name="DeclineButton" type="Button" parent="World/TradingRoom/Item/TradePanel/Content/Buttons" unique_id=1048005255]
-custom_minimum_size = Vector2(64, 52)
+custom_minimum_size = Vector2(96, 78)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_disabled_color = Color(0.819608, 0.760784, 0.682353, 1)
-theme_override_font_sizes/font_size = 36
+theme_override_font_sizes/font_size = 48
 theme_override_styles/normal = SubResource("DeclineNormal")
 theme_override_styles/pressed = SubResource("DeclinePressed")
 theme_override_styles/hover = SubResource("DeclineHover")
@@ -633,6 +634,7 @@ theme_override_styles/disabled = SubResource("AcceptDisabled")
 text = "Завершить день"
 
 [node name="CheckpointButton" type="Button" parent="HUD/Root/ProgressPanel/Content" unique_id=1027679990]
+visible = false
 custom_minimum_size = Vector2(0, 38)
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
@@ -642,6 +644,7 @@ theme_override_styles/hover = SubResource("RerollHover")
 text = "С контрольной точки"
 
 [node name="NewGameButton" type="Button" parent="HUD/Root/ProgressPanel/Content" unique_id=252217035]
+visible = false
 custom_minimum_size = Vector2(0, 38)
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
@@ -654,3 +657,9 @@ text = "Начать заново"
 offset_top = -3.0
 offset_bottom = -3.0
 metadata/_edit_use_anchors_ = true
+
+[node name="PauseMenu" type="CanvasLayer" parent="."]
+script = ExtResource("20_pause")
+
+[node name="ZoomResponsiveUi" type="Node" parent="."]
+script = ExtResource("21_zoom_ui")

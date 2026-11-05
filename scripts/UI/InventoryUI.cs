@@ -29,7 +29,9 @@ public partial class InventoryUI : Control
         {
             int itemIndex = storedItems[i];
             _slots[i].SetItemTexture(GD.Load<Texture2D>(TradeScene.GetItemArtPath(itemIndex)));
-            _slots[i].TooltipText = TradeScene.GetItemRarity(itemIndex);
+            _slots[i].TooltipText = $"{TradeScene.GetItemName(itemIndex)}\n" +
+                $"Редкость: {TradeScene.GetItemRarity(itemIndex)}\n" +
+                $"Стоимость: {TradeScene.GetItemBasePrice(itemIndex)}$";
         }
         
         // Сбрасываем выделение, если выбранный слот опустел
