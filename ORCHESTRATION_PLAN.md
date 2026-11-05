@@ -7,6 +7,69 @@
 
 ## Текущий фронт
 
+### HF-10 — раннее проявление заголовков и публикация UI
+
+Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; зависимости HF-08/HF-09 = DONE; `CP-HF-10`, READY проверен 2026-11-05.
+Read-set: этот план, ранее прочитанный `AGENTS.md`, `scripts/UI/ZoomResponsiveUi.cs`, `tests/ProjectTest.cs`, `README.md`, ранее прочитанные `tools/verify.ps1`, `.vscode/settings.json`; diff/status накопленных HF-08/HF-09.
+Write-set: `scripts/UI/ZoomResponsiveUi.cs`, `tests/ProjectTest.cs`, `README.md`, `ORCHESTRATION_PLAN.md`. Единственный владелец плана `/root`; пересекающиеся задачи не исполняются. Commit/push накопленных HF-08/HF-09/HF-10 в origin/main явно разрешён пользователем.
+Out of scope: экономика, save schema, прочие пороги UI, source/.
+Приёмка: заголовки вместе с подложками/описаниями плавно проявляются при zoom 0.3–0.5 вместо 0.4–0.6; тесты границ/промежуточной прозрачности и полный `tools/verify.ps1` зелёные; `git diff --check`; commit отправлен в origin/main без force.
+
+```text
+Task: HF-10
+Recommended status: REVIEW
+Changed: scripts/UI/ZoomResponsiveUi.cs; tests/ProjectTest.cs; README.md; ORCHESTRATION_PLAN.md; накопленные изменения HF-08/HF-09 включены в публикацию.
+Checks: powershell -NoProfile -ExecutionPolicy Bypass -File tools/verify.ps1 -> PASS (0 ошибок/предупреждений, 19 domain tests, import, все Godot integration); git diff --check -> PASS.
+Acceptance: проверены скрытие при 0.3, промежуточная прозрачность при 0.4, полная видимость при 0.5 всех 13 элементов заголовков. Перед публикацией origin/main и HEAD совпадают.
+Read-set exception: нет.
+Risks/blocker: ручной visual playtest не выполнялся.
+Next: выполнить разрешённый commit/push в origin/main.
+```
+
+### HF-09 — сворачиваемая компактная панель прогресса
+
+Статус: `DONE`; координатор/исполнитель `/root`; зависимости отсутствуют; `CP-HF-09`, READY проверен 2026-11-05.
+Read-set: этот план, ранее прочитанный `AGENTS.md`, `scenes/trade_scene.tscn`, `scripts/TradeScene.cs`, `scripts/UI/RarityPanel.cs`, `tests/ProjectTest.cs`, `README.md`, ранее прочитанные `tools/verify.ps1`, `.vscode/settings.json`; новые файлы write-set.
+Write-set: `scripts/UI/ProgressPanel.cs`, `scripts/UI/ProgressPanel.cs.uid`, `scenes/trade_scene.tscn`, `scripts/UI/RarityPanel.cs`, `tests/ProjectTest.cs`, `README.md`, `ORCHESTRATION_PLAN.md`. Единственный владелец сцены и плана `/root`; пересекающиеся задачи не исполняются. Существующие изменения HF-08 сохраняются.
+Out of scope: экономика, save schema, меню паузы, source/, сохранение состояния сворачивания между запусками.
+Приёмка: `<` скрывает панель слева сверху, `>` возвращает её; кнопка остаётся доступной, игровой state не меняется. Высота раскрытой панели соответствует оставшемуся содержимому, включая длинный статус; нет прежнего пустого места от удалённых кнопок. Проверки: GUI toggle/repeat, размеры/вложенность контента при длинном статусе, resize, полный `tools/verify.ps1`, `git diff --check`.
+Read-set exception: перечисленные UI-файлы открыты координатором для диагностики перед оформлением CP; source/ не читался.
+
+```text
+Task: HF-09
+Recommended status: REVIEW
+Changed: scripts/UI/ProgressPanel.cs[.uid]; scenes/trade_scene.tscn; scripts/UI/RarityPanel.cs; tests/ProjectTest.cs; README.md; ORCHESTRATION_PLAN.md
+Checks: powershell -NoProfile -ExecutionPolicy Bypass -File tools/verify.ps1 -> PASS (0 ошибок/предупреждений, 19 domain tests, import, Godot integration); git diff --check -> PASS.
+Acceptance: < скрывает ProgressPanel, > остаётся у левого края и восстанавливает панель; проверены три повторных цикла через реальные GUI-клики без изменения дня/счёта. Высота равна minimum содержимого, после EndDay остаётся только padding рамки; длинный статус расширяет высоту, короткий возвращает прежнюю. Обновление дня скрытой панели и работа стрелок после resize на 960×540 проверены. Tooltip учитывает стрелку при выборе позиции. Изменения HF-08 сохранены; полная прежняя регрессия проходит.
+Read-set exception: диагностика координатора до CP, перечисленная выше; source/ не читался.
+Risks/blocker: ручной visual playtest не выполнялся; состояние сворачивания между запусками не сохраняется (вне scope).
+Next: проверить внешний вид раскрытой/свёрнутой панели в игровом сеансе.
+```
+
+Координатор подтвердил HF-09 по финальному verify (exit 0) 2026-11-05; REVIEW → DONE. Основной фронт и ворота не изменены; владение сценой освобождено.
+
+### HF-08 — компактная таблица редкостей рядом с кнопкой
+
+Статус: `DONE`; координатор/исполнитель `/root`; зависимости отсутствуют; пакет `CP-HF-08`, READY проверен 2026-11-05.
+Read-set: этот план, ранее прочитанный `AGENTS.md`, `scripts/UI/RarityPanel.cs`, `scenes/UI/RarityPanel.tscn`, `scripts/UI/ZoomResponsiveUi.cs`, `scripts/TradeScene.cs`, `scenes/trade_scene.tscn`, `scenes/UI/InventoryUI.tscn`, `tests/ProjectTest.cs`, `tools/verify.ps1`, `.vscode/settings.json`, `themes/game_theme.tres`, `README.md`.
+Write-set: `scripts/UI/RarityPanel.cs`, `scenes/UI/RarityPanel.tscn`, `scripts/UI/ZoomResponsiveUi.cs`, `tests/ProjectTest.cs`, `README.md`, `ORCHESTRATION_PLAN.md`. Владелец сцены и плана — `/root`; пересекающиеся задачи приостановлены на время HF-08.
+Out of scope: торговая логика/экономика, save schema, pause, изменение исходного арта, source/.
+Приёмка: таблица компактнее, все подписи/цифры выводятся читаемым текстом движка; умеренный ограниченный масштаб при зуме; позиция следует кнопке при перемещении/зуме/resize, удерживается в viewport и выбирается с учётом кнопки/HUD; отдельный слой поверх фонов и прочего world UI, под паузой; наведение и цены обеих мастерских сохранены. Проверки: integration regression для размеров/содержимого/позиции/слоёв/hover обеих таблиц; полный `tools/verify.ps1`; `git diff --check`.
+Read-set exception: координатор выполнил точечную диагностику перечисленных файлов до оформления CP; source/ не читался.
+
+```text
+Task: HF-08
+Recommended status: REVIEW
+Changed: scripts/UI/RarityPanel.cs; scenes/UI/RarityPanel.tscn; scripts/UI/ZoomResponsiveUi.cs; tests/ProjectTest.cs; README.md; ORCHESTRATION_PLAN.md
+Checks: powershell -NoProfile -ExecutionPolicy Bypass -File tools/verify.ps1 -> PASS (0 ошибок/предупреждений, 19 domain tests, import без ошибок, Godot integration); git diff --check -> PASS.
+Acceptance: вместо растровых заголовков/редкостей используются 24 читаемые текстовые ячейки, рамка из существующей panel_large.png, размер 420×228. Отдельный CanvasLayer 20 исключает перекрытие фонами, inventory и ценовой подсказкой; pause остаётся сверху. Screen-space масштаб ограничен 0.95–1.05, позиция выбирается среди шести вариантов рядом с кнопкой, учитывает viewport/HUD и обновляется при движении камеры/zoom/resize. Проверены 36 комбинаций двух мастерских, viewport 1280×720/960×540, zoom 0.25/0.7/1.8 и положения у обоих краёв/в центре; все ячейки внутри панели, таблица в viewport, baseline не перекрывает кнопку/HUD. Реальное GUI-наведение/выход проверены в обеих мастерских при двух разрешениях. Цены, проценты, рероллы и прежняя регрессия сохранены.
+Read-set exception: диагностика координатора перед CP, перечисленная выше; source/ не читался.
+Risks/blocker: ручной visual playtest не выполнялся. При нехватке свободного места алгоритм минимизирует перекрытия, сохраняя таблицу целиком внутри viewport.
+Next: проверить внешний вид подсказки в игровом сеансе.
+```
+
+Координатор подтвердил HF-08 по финальному verify (exit 0) 2026-11-05; REVIEW → DONE. Основной фронт и ворота не изменены; владение сценой освобождено.
+
 ### HF-07 — увеличить окно продажи
 
 Статус: `DONE`; исполнитель/координатор `/root`; зависимости отсутствуют; `CP-HF-07`, READY проверен 2026-11-05.

@@ -23,7 +23,6 @@ public partial class ZoomResponsiveUi : Node
         }
         foreach (string room in new[] { "Atelier", "MusicWorkshop" })
         {
-            Register(game.GetNode<Control>($"World/{room}/RarityPanel"));
             Register(game.GetNode<Control>($"World/{room}/GetItemButton/PriceHint"));
         }
         Register(game.GetNode<Control>("World/TradingRoom/Item/TradePanel"));
@@ -46,10 +45,10 @@ public partial class ZoomResponsiveUi : Node
             entry.Control.PivotOffset = entry.Control.Size / 2f;
             entry.Control.Scale = entry.Scale * scale;
         }
-        float alpha = Mathf.SmoothStep(0.4f, 0.6f, zoom);
+        float alpha = Mathf.SmoothStep(0.3f, 0.5f, zoom);
         foreach (var entry in _headers)
         {
-            entry.Item.Visible = zoom > 0.4f;
+            entry.Item.Visible = zoom > 0.3f;
             Color color = entry.Color;
             color.A *= alpha;
             entry.Item.Modulate = color;

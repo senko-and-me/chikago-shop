@@ -15,6 +15,8 @@ public partial class ProjectTest : SceneTree
         {
             TestEconomyConfig();
             await TestPauseAndZoomUi();
+            await TestCollapsibleProgress();
+            await TestRarityPopupGeometry();
             await TestMouseControls();
             await TestTradeScene();
             await TestProgress();
@@ -60,17 +62,17 @@ public partial class ProjectTest : SceneTree
             "Showroom/ShowroomHeader", "Showroom/ShowroomLabel", "Showroom/ShowroomHint",
             "ShowroomLeft/ShowroomHeader", "ShowroomLeft/ShowroomLabel", "ShowroomLeft/ShowroomHint",
             "TradingRoom/SalesRoomLabel" }.Select(path => game.GetNode<CanvasItem>("World/" + path)).ToArray();
-        ui.UpdateForZoom(0.4f);
+        ui.UpdateForZoom(0.3f);
         Check(headers.All(header => !header.Visible && Mathf.IsZeroApprox(header.Modulate.A)),
-            "All room titles, descriptions and backplates must disappear at zoom 0.4");
+            "All room titles, descriptions and backplates must disappear at zoom 0.3");
         Check(panel.Scale.X > 1 && panel.Scale.X <= 1.65f && hud.Scale == Vector2.One,
             "Small world UI must grow moderately on zoom-out while HUD stays fixed");
-        ui.UpdateForZoom(0.5f);
+        ui.UpdateForZoom(0.4f);
         Check(headers.All(header => header.Visible && header.Modulate.A > 0 && header.Modulate.A < 1),
-            "Room headings must fade in gradually above 0.4");
-        ui.UpdateForZoom(0.6f);
+            "Room headings must fade in gradually above 0.3");
+        ui.UpdateForZoom(0.5f);
         Check(headers.All(header => header.Visible && Mathf.IsEqualApprox(header.Modulate.A, 1)),
-            "Room headings must reach full opacity at 0.6");
+            "Room headings must reach full opacity at 0.5");
         ui.UpdateForZoom(0.1f);
         Check(Mathf.IsEqualApprox(panel.Scale.X, 1.65f), "Zoom compensation must be capped");
         foreach (float zoom in new[] { 1f, 1.8f })
@@ -131,6 +133,158 @@ public partial class ProjectTest : SceneTree
         await ToSignal(this, SignalName.ProcessFrame);
         Check(!Paused, "Removing a paused game must release its pause");
         GD.Print("Pause, zoom readability and room heading checks passed");
+    }
+
+    private async Task TestCollapsibleProgress()
+    {
+        var game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
+        game.SavePath = "";
+        Root.AddChild(game);
+        await ToSignal(this, SignalName.ProcessFrame);
+        await ToSignal(this, SignalName.ProcessFrame);
+        var panel = game.GetNode<PanelContainer>("HUD/Root/ProgressPanel");
+        var content = panel.GetNode<Control>("Content");
+        var toggle = game.GetNode<Button>("HUD/Root/ProgressToggleButton");
+        var endDay = content.GetNode<Button>("EndDayButton");
+        float compactHeight = panel.Size.Y;
+        Check(panel.Visible && toggle.Text == "<" && compactHeight < 260 &&
+              Mathf.IsEqualApprox(panel.Size.Y, panel.GetCombinedMinimumSize().Y),
+            "Progress must open compactly at its content height without blank space left by old buttons");
+        Check(Mathf.Abs(panel.GetGlobalRect().End.Y - endDay.GetGlobalRect().End.Y -
+                  panel.GetThemeStylebox("panel").GetContentMargin(Side.Bottom)) < 1,
+            "The frame must end at the normal padding immediately after End Day");
+        int day = game.CurrentDay;
+        int score = game.Score;
+        for (int i = 0; i < 3; i++)
+        {
+            await ClickControl(game, "HUD/Root/ProgressToggleButton");
+            Check(!panel.IsVisibleInTree() && !endDay.IsVisibleInTree() && toggle.Text == ">" &&
+                  toggle.IsVisibleInTree() && Mathf.IsEqualApprox(toggle.Position.X, panel.Position.X),
+                "Collapse must hide the entire panel and leave an accessible right arrow at the left edge");
+            Check(game.CurrentDay == day && game.Score == score,
+                "Collapsing the panel must preserve gameplay state");
+            await ClickControl(game, "HUD/Root/ProgressToggleButton");
+            Check(panel.IsVisibleInTree() && toggle.Text == "<" &&
+                  toggle.GetGlobalRect().Position.X > panel.GetGlobalRect().End.X,
+                "Expand must restore the panel with its arrow outside the frame");
+        }
+        var status = content.GetNode<Label>("StatusLabel");
+        string shortStatus = status.Text;
+        status.Text = "Не хватает 100$ на квоту. Вернитесь к контрольной точке через меню паузы, чтобы продолжить игру с сохранённого состояния.";
+        for (int i = 0; i < 4; i++) await ToSignal(this, SignalName.ProcessFrame);
+        Check(panel.Size.Y > compactHeight && panel.GetGlobalRect().Encloses(endDay.GetGlobalRect()) &&
+              panel.GetGlobalRect().Encloses(status.GetGlobalRect()),
+            "The compact panel must grow when a longer status wraps instead of clipping text or buttons");
+        status.Text = shortStatus;
+        for (int i = 0; i < 4; i++) await ToSignal(this, SignalName.ProcessFrame);
+        Check(Mathf.IsEqualApprox(panel.Size.Y, compactHeight),
+            "The panel must shrink again when the longer status clears");
+        await ClickControl(game, "HUD/Root/ProgressToggleButton");
+        Vector2I originalSize = Root.Size;
+        Root.Size = new Vector2I(960, 540);
+        await ToSignal(this, SignalName.ProcessFrame);
+        Check(game.GetViewportRect().Encloses(toggle.GetGlobalRect()),
+            "The collapsed arrow must stay reachable after viewport resize");
+        game.EndDay();
+        await ClickControl(game, "HUD/Root/ProgressToggleButton");
+        Check(game.CurrentDay == day + 1 && content.GetNode<Label>("DayLabel").Text.Contains($"{day + 1}"),
+            "Hidden progress must still update and show fresh data after expansion");
+        Check(game.GetViewportRect().Encloses(panel.GetGlobalRect()) &&
+              game.GetViewportRect().Encloses(toggle.GetGlobalRect()),
+            "The expanded panel and collapse arrow must fit after resize");
+        Root.Size = originalSize;
+        game.QueueFree();
+        await ToSignal(this, SignalName.ProcessFrame);
+        GD.Print("Collapsible progress panel sizing and mouse checks passed");
+    }
+
+    private async Task TestRarityPopupGeometry()
+    {
+        Vector2I originalSize = Root.Size;
+        var game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
+        game.SavePath = "";
+        Root.AddChild(game);
+        game.SetProcess(false);
+        var camera = game.GetNode<Camera2D>("Camera2D");
+        game.TryUnlockMusicWorkshop();
+        try
+        {
+            foreach (Vector2I viewportSize in new[] { new Vector2I(1280, 720), new Vector2I(960, 540) })
+            {
+                Root.Size = viewportSize;
+                await ToSignal(this, SignalName.ProcessFrame);
+                foreach (string room in new[] { "Atelier", "MusicWorkshop" })
+                {
+                    var popup = game.GetNode<RarityPanel>($"World/{room}/RarityPanel");
+                    var button = game.GetNode<Control>($"World/{room}/GetItemButton");
+                    var hotspot = button.GetNode<Control>("RarityHotspot");
+                    var layer = popup.GetNode<CanvasLayer>("PopupLayer");
+                    Check(layer.Layer > game.GetNode<CanvasLayer>("HUD").Layer &&
+                          layer.Layer < game.GetNode<CanvasLayer>("PauseMenu").Layer,
+                        "Rarity tables must render above every room background and HUD, below pause");
+                    foreach (float zoom in new[] { 0.25f, 0.7f, 1.8f })
+                    foreach (Vector2 relativePoint in new[] { new Vector2(0.15f, 0.65f),
+                                 new Vector2(0.85f, 0.65f), new Vector2(0.5f, 0.4f) })
+                    {
+                        camera.Zoom = Vector2.One * zoom;
+                        Vector2 viewport = game.GetViewportRect().Size;
+                        camera.Position = button.GetGlobalRect().GetCenter() -
+                            (viewport * relativePoint - viewport / 2) / zoom;
+                        camera.ForceUpdateScroll();
+                        hotspot.EmitSignal(Control.SignalName.MouseEntered);
+                        await ToSignal(this, SignalName.ProcessFrame);
+                        await ToSignal(this, SignalName.ProcessFrame);
+                        popup.UpdatePlacement();
+                        Rect2 rect = popup.Popup.GetGlobalRect();
+                        Check(layer.Visible && game.GetViewportRect().Grow(-11).Encloses(rect),
+                            $"The entire {room} table must fit on screen at zoom {zoom}, near {relativePoint}");
+                        Check(rect.Size.X <= 460 && rect.Size.Y <= 260 &&
+                              popup.Values.GetNode<Label>("Price0").GetThemeFontSize("font_size") * popup.Popup.Scale.X >= 15,
+                            "Rarity tables must stay compact with readable screen-space text at every zoom");
+                        foreach (Label cell in popup.Values.GetChildren().OfType<Label>())
+                            Check(rect.Grow(1).Encloses(cell.GetGlobalRect()) &&
+                                  cell.Size.X >= cell.GetMinimumSize().X,
+                                "Every heading, rarity and value must fit inside the compact table without clipping");
+                        Rect2 anchor = button.GetGlobalTransformWithCanvas() * new Rect2(Vector2.Zero, button.Size);
+                        // The centered baseline leaves enough space to avoid both the button and every HUD panel.
+                        if (zoom == 0.7f && relativePoint == new Vector2(0.5f, 0.4f))
+                        {
+                            Check(!rect.Intersects(anchor), "The table must sit beside the button without covering it");
+                            foreach (string path in new[] { "HUD/Root/ProgressPanel", "HUD/Root/ScorePanel", "HUD/Root/EnergyPanel" })
+                                Check(!rect.Intersects(game.GetNode<Control>(path).GetGlobalRect()),
+                                    "The table must prefer available space away from HUD panels");
+                        }
+                        Check(rect.GetCenter().DistanceTo(anchor.GetCenter()) < rect.Size.Length() + anchor.Size.Length(),
+                            "The table must stay near the create button rather than move to a fixed screen corner");
+                        Check(popup.Values.GetNode<Label>("Price0").Text == (room == "Atelier" ? "30$" : "45$") &&
+                              popup.Values.GetNode<Label>("Rarity4").Text == "Неповторимая",
+                            "Both tables must preserve workshop-specific prices and all rarity names");
+                        hotspot.EmitSignal(Control.SignalName.MouseExited);
+                        Check(!layer.Visible, "Leaving the hotspot must hide the entire overlay layer");
+                    }
+                    camera.Zoom = Vector2.One * 0.7f;
+                    camera.Position = button.GetGlobalRect().GetCenter() -
+                        new Vector2(0, game.GetViewportRect().Size.Y * 0.1f) / 0.7f;
+                    camera.ForceUpdateScroll();
+                    Vector2 point = hotspot.GetGlobalTransformWithCanvas() * (hotspot.Size / 2);
+                    Root.PushInput(new InputEventMouseMotion { Position = point, GlobalPosition = point }, true);
+                    await ToSignal(this, SignalName.ProcessFrame);
+                    await ToSignal(this, SignalName.ProcessFrame);
+                    Check(Root.GuiGetHoveredControl() == hotspot && layer.Visible,
+                        "Real pointer hover must show the table without the overlay stealing input");
+                    Root.PushInput(new InputEventMouseMotion { Position = new Vector2(3, 3), GlobalPosition = new Vector2(3, 3) }, true);
+                    await ToSignal(this, SignalName.ProcessFrame);
+                    Check(!layer.Visible, "Real pointer exit must hide the table");
+                }
+            }
+        }
+        finally
+        {
+            game.QueueFree();
+            Root.Size = originalSize;
+        }
+        await ToSignal(this, SignalName.ProcessFrame);
+        GD.Print("Compact rarity popup placement, readability and layer checks passed");
     }
 
     private async Task TestMouseControls()
@@ -293,11 +447,8 @@ public partial class ProjectTest : SceneTree
             "Both workshops must use the art team's create-item button");
         var atelierRarityPanel = game.GetNode<RarityPanel>("World/Atelier/RarityPanel");
         var musicRarityPanel = game.GetNode<RarityPanel>("World/MusicWorkshop/RarityPanel");
-        Check(!atelierRarityPanel.Visible && atelierRarityPanel.GetNode<GridContainer>("Values").GetChildCount() == 15,
-            "The rarity artwork must provide all five price, chance and reroll rows");
-        Check(atelierRarityPanel.GetNode<Label>("Values/Price0").CustomMinimumSize.Y == 63 &&
-              atelierRarityPanel.GetNode<Label>("Values/Price4").CustomMinimumSize.Y == 63,
-            "Rarity values must follow the row spacing drawn into the panel artwork");
+        Check(!atelierRarityPanel.Visible && atelierRarityPanel.Values.GetChildCount() == 24,
+            "The compact rarity table must provide four headings and five complete rows");
         Check(atelierRarityPanel.Price0 == 30 && atelierRarityPanel.Price1 == 50 &&
               atelierRarityPanel.Price2 == 80 && atelierRarityPanel.Price3 == 120 &&
               atelierRarityPanel.Price4 == 200 && musicRarityPanel.Price0 == 45 &&
@@ -321,7 +472,7 @@ public partial class ProjectTest : SceneTree
         Check(rarityHotspot.Size.X <= 72 && rarityHotspot.Size.Y <= 68 && rarityHotspot.TooltipText.Length == 0,
             "The rarity hover target must cover only the drawn question-mark circle without a system tooltip");
         foreach (var panel in new[] { atelierRarityPanel, musicRarityPanel })
-            foreach (Label value in panel.GetNode<GridContainer>("Values").GetChildren().OfType<Label>())
+            foreach (Label value in panel.Values.GetChildren().OfType<Label>())
                 Check(value.GetThemeColor("font_color") == Colors.Black,
                     $"Every rarity value must be black: {panel.GetParent().Name}/{value.Name}");
         rarityHotspot.EmitSignal(Control.SignalName.MouseEntered);

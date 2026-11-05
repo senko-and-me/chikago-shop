@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://bj66ajuqbshg0" path="res://scripts/TradeScene.cs" id="1_main"]
 [ext_resource type="Script" path="res://scripts/UI/PauseMenu.cs" id="20_pause"]
 [ext_resource type="Script" path="res://scripts/UI/ZoomResponsiveUi.cs" id="21_zoom_ui"]
+[ext_resource type="Script" path="res://scripts/UI/ProgressPanel.cs" id="22_progress"]
 [ext_resource type="Script" uid="uid://c6334skyxf3jy" path="res://scripts/CounterWorld.cs" id="2_world"]
 [ext_resource type="Texture2D" uid="uid://b4uvatfdjuqe3" path="res://art/rooms/music_room.jpg" id="4_pi35y"]
 [ext_resource type="PackedScene" uid="uid://u2ve41t8yhqn" path="res://scenes/customer.tscn" id="5_customer"]
@@ -585,13 +586,27 @@ text = "Энергия: 2 / 2"
 horizontal_alignment = 1
 vertical_alignment = 1
 
+[node name="ProgressToggleButton" type="Button" parent="HUD/Root"]
+custom_minimum_size = Vector2(40, 44)
+layout_mode = 0
+offset_left = 360.0
+offset_top = 25.0
+offset_right = 400.0
+offset_bottom = 69.0
+mouse_default_cursor_shape = 2
+theme_override_font_sizes/font_size = 28
+text = "<"
+tooltip_text = "Свернуть панель"
+
 [node name="ProgressPanel" type="PanelContainer" parent="HUD/Root" unique_id=1016591818]
+custom_minimum_size = Vector2(330, 0)
 layout_mode = 1
 offset_left = 24.0
 offset_top = 25.0
 offset_right = 354.0
-offset_bottom = 341.0
+offset_bottom = 245.0
 theme_override_styles/panel = SubResource("HudLargePanelStyle")
+script = ExtResource("22_progress")
 
 [node name="Content" type="VBoxContainer" parent="HUD/Root/ProgressPanel" unique_id=1283382676]
 layout_mode = 2
@@ -616,7 +631,7 @@ theme_override_font_sizes/font_size = 16
 text = "Срок: конец дня 4"
 
 [node name="StatusLabel" type="Label" parent="HUD/Root/ProgressPanel/Content" unique_id=950746548]
-custom_minimum_size = Vector2(0, 48)
+custom_minimum_size = Vector2(0, 32)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.403922, 0.352941, 0.313725, 1)
 theme_override_font_sizes/font_size = 15

@@ -1,147 +1,32 @@
 [gd_scene load_steps=3 format=3]
 
-[ext_resource type="Texture2D" path="res://art/ui/rarity_panel.png" id="1_panel"]
+[ext_resource type="Texture2D" path="res://art/ui/panel_large.png" id="1_panel"]
 [ext_resource type="Script" path="res://scripts/UI/RarityPanel.cs" id="2_script"]
 
 [sub_resource type="StyleBoxTexture" id="PanelStyle"]
-content_margin_left = 238.0
-content_margin_top = 88.0
-content_margin_right = 28.0
-content_margin_bottom = 0.0
+content_margin_left = 14.0
+content_margin_top = 14.0
+content_margin_right = 14.0
+content_margin_bottom = 14.0
 texture = ExtResource("1_panel")
 
-[node name="RarityPanel" type="PanelContainer"]
+[node name="RarityPanel" type="Control"]
 visible = false
-custom_minimum_size = Vector2(740, 404)
-offset_right = 740.0
-offset_bottom = 404.0
 mouse_filter = 2
-theme_override_styles/panel = SubResource("PanelStyle")
 script = ExtResource("2_script")
 
-[node name="Values" type="GridContainer" parent="."]
+[node name="PopupLayer" type="CanvasLayer" parent="."]
+layer = 20
+visible = false
+
+[node name="Panel" type="PanelContainer" parent="PopupLayer"]
+custom_minimum_size = Vector2(420, 228)
+mouse_filter = 2
+theme_override_styles/panel = SubResource("PanelStyle")
+
+[node name="Values" type="GridContainer" parent="PopupLayer/Panel"]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/h_separation = 8
-theme_override_constants/v_separation = 0
-columns = 3
-
-[node name="Price0" type="Label" parent="Values"]
-custom_minimum_size = Vector2(145, 63)
-layout_mode = 2
-theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_font_sizes/font_size = 23
-text = "30$"
-horizontal_alignment = 1
-
-[node name="Chance0" type="Label" parent="Values"]
-custom_minimum_size = Vector2(145, 63)
-layout_mode = 2
-theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_font_sizes/font_size = 23
-text = "60%"
-horizontal_alignment = 1
-
-[node name="Rerolls0" type="Label" parent="Values"]
-custom_minimum_size = Vector2(145, 63)
-layout_mode = 2
-theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_font_sizes/font_size = 23
-text = "3"
-horizontal_alignment = 1
-
-[node name="Price1" type="Label" parent="Values"]
-custom_minimum_size = Vector2(145, 63)
-layout_mode = 2
-theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_font_sizes/font_size = 23
-text = "50$"
-horizontal_alignment = 1
-
-[node name="Chance1" type="Label" parent="Values"]
-custom_minimum_size = Vector2(145, 63)
-layout_mode = 2
-theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_font_sizes/font_size = 23
-text = "25%"
-horizontal_alignment = 1
-
-[node name="Rerolls1" type="Label" parent="Values"]
-custom_minimum_size = Vector2(145, 63)
-layout_mode = 2
-theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_font_sizes/font_size = 23
-text = "2"
-horizontal_alignment = 1
-
-[node name="Price2" type="Label" parent="Values"]
-custom_minimum_size = Vector2(145, 63)
-layout_mode = 2
-theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_font_sizes/font_size = 23
-text = "80$"
-horizontal_alignment = 1
-
-[node name="Chance2" type="Label" parent="Values"]
-custom_minimum_size = Vector2(145, 63)
-layout_mode = 2
-theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_font_sizes/font_size = 23
-text = "10%"
-horizontal_alignment = 1
-
-[node name="Rerolls2" type="Label" parent="Values"]
-custom_minimum_size = Vector2(145, 63)
-layout_mode = 2
-theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_font_sizes/font_size = 23
-text = "2"
-horizontal_alignment = 1
-
-[node name="Price3" type="Label" parent="Values"]
-custom_minimum_size = Vector2(145, 63)
-layout_mode = 2
-theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_font_sizes/font_size = 23
-text = "120$"
-horizontal_alignment = 1
-
-[node name="Chance3" type="Label" parent="Values"]
-custom_minimum_size = Vector2(145, 63)
-layout_mode = 2
-theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_font_sizes/font_size = 23
-text = "4%"
-horizontal_alignment = 1
-
-[node name="Rerolls3" type="Label" parent="Values"]
-custom_minimum_size = Vector2(145, 63)
-layout_mode = 2
-theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_font_sizes/font_size = 23
-text = "1"
-horizontal_alignment = 1
-
-[node name="Price4" type="Label" parent="Values"]
-custom_minimum_size = Vector2(145, 63)
-layout_mode = 2
-theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_font_sizes/font_size = 23
-text = "200$"
-horizontal_alignment = 1
-
-[node name="Chance4" type="Label" parent="Values"]
-custom_minimum_size = Vector2(145, 63)
-layout_mode = 2
-theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_font_sizes/font_size = 23
-text = "1%"
-horizontal_alignment = 1
-
-[node name="Rerolls4" type="Label" parent="Values"]
-custom_minimum_size = Vector2(145, 63)
-layout_mode = 2
-theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_font_sizes/font_size = 23
-text = "1"
-horizontal_alignment = 1
+theme_override_constants/v_separation = 4
+columns = 4
