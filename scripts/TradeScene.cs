@@ -80,6 +80,10 @@ public partial class TradeScene : Node2D
 	private readonly int[] _checkpointShowcaseItems = new int[ShowcaseCapacity];
 	private int _activeShowcaseIndex = -1;
 	private double _buyerCountdown;
+	private DayCycleController _dayCycle = null!;
+	private int _energyRemaining = EnergyPerDay;
+	public bool DayClosed => _dayCycle.Session.IsClosed;
+	public double DayRemainingSeconds => _dayCycle.Session.RemainingSeconds;
 	public int[] StoredItems => _storedItems.ToArray();
 	public int[] ShowcaseItems => (int[])_showcaseItems.Clone();
 	public double BuyerCountdown => _buyerCountdown;
@@ -99,7 +103,11 @@ public partial class TradeScene : Node2D
 	public int Accepted { get; private set; }
 	public int Declined { get; private set; }
 	public int CurrentDay { get; set; } = 1;
-	public int EnergyRemaining { get; set; } = EnergyPerDay;
+	public int EnergyRemaining
+	{
+		get => _dayCycle?.Session.AvailableEnergy(_energyRemaining) ?? _energyRemaining;
+		set => _energyRemaining = value;
+	}
 	public int QuotaStage { get; private set; }
 	public int CheckpointDay { get; private set; } = 1;
 	public int CheckpointScore { get; private set; }
@@ -200,6 +208,7 @@ public partial class TradeScene : Node2D
 		CheckpointScore = StartingMoney;
 		EnergyRemaining = EnergyPerDay;
 		CheckpointEnergy = EnergyPerDay;
+		_dayCycle = new DayCycleController(this);
 		bool restored = LoadProgress();
 		RefreshScore();
 		RefreshProgress();
@@ -290,6 +299,7 @@ public partial class TradeScene : Node2D
 	public override void _Process(double delta)
 	{
 		if (GetTree().Paused) return;
+		_dayCycle.Tick(delta);
 		TickBuyers(delta);
 	}
 
@@ -369,7 +379,7 @@ public partial class TradeScene : Node2D
 		_storedItems.RemoveAt(SelectedInventoryIndex);
 		_inventoryUI.DeselectAll();
 		_inventoryUI.UpdateUI(_storedItems);
-		if (firstItem && !TradeActive) _buyerCountdown = NextBuyerDelay();
+		if (firstItem && !TradeActive && _dayCycle.CanReceiveBuyers) _buyerCountdown = NextBuyerDelay();
 		RefreshItemButtons();
 		LogStoredItems();
 		SaveProgress();
@@ -388,7 +398,7 @@ public partial class TradeScene : Node2D
 
 	private void TickBuyers(double delta)
 	{
-		if (Failed || Completed || TradeActive || Array.TrueForAll(_showcaseItems, item => item == -1)) return;
+		if (!_dayCycle.CanReceiveBuyers || TradeActive || Array.TrueForAll(_showcaseItems, item => item == -1)) return;
 		_buyerCountdown -= delta;
 		if (_buyerCountdown > 0) return;
 
@@ -509,7 +519,7 @@ public partial class TradeScene : Node2D
 		ItemIndex = -1;
 		_activeShowcaseIndex = -1;
 		if (hadActiveTrade)
-			_buyerCountdown = Array.Exists(_showcaseItems, item => item >= 0) ? NextBuyerDelay() : 0;
+			_buyerCountdown = _dayCycle.CanReceiveBuyers && Array.Exists(_showcaseItems, item => item >= 0) ? NextBuyerDelay() : 0;
 		_world.ItemVisible = false;
 		_customer.Visible = false;
 		_tradePanel.Visible = false;
@@ -537,12 +547,24 @@ public partial class TradeScene : Node2D
 			_quotaLabel.Text = GameLocalization.Format("Квота {0} / 2: {1}$", QuotaStage + 1, target);
 			_deadlineLabel.Text = GameLocalization.Format("Срок: конец дня {0}", deadline);
 		}
-		_statusLabel.Text = GameLocalization.Status(StatusText);
-		_endDayButton.Disabled = Failed || Completed || TradeActive;
-		_endDayButton.TooltipText = TradeActive ? "Сначала завершите сделку" : "";
+		_statusLabel.Text = _dayCycle.DisplayStatus(StatusText);
+		_dayCycle.UpdateEndButton(_endDayButton);
 	}
 
-	public void EndDay()
+	public void EndDay() => _dayCycle.EndDay();
+
+	public void PersistProgress() => SaveProgress();
+
+	public void SynchronizeDayState()
+	{
+		_buyerCountdown = 0;
+		RefreshProgress();
+		RefreshItemButtons();
+		SaveProgress();
+	}
+
+	// Calendar/quota transition used only after the day controller permits advancing.
+	public void AdvanceToNextDay()
 	{
 		if (Failed || Completed || TradeActive) return;
 		FinishTrade();
@@ -586,6 +608,7 @@ public partial class TradeScene : Node2D
 			EnergyRemaining = EnergyPerDay;
 			StatusText = "Начался новый день.";
 		}
+		_buyerCountdown = Array.Exists(_showcaseItems, item => item >= 0) ? NextBuyerDelay() : 0;
 		RefreshScore();
 		RefreshProgress();
 		RefreshItemButtons();
@@ -594,6 +617,7 @@ public partial class TradeScene : Node2D
 
 	public void ReturnToCheckpoint()
 	{
+		_dayCycle.Reset();
 		FinishTrade();
 		_storedItems.Clear();
 		_storedItems.AddRange(_checkpointItems);
@@ -625,6 +649,7 @@ public partial class TradeScene : Node2D
 
 	public void NewGame()
 	{
+		_dayCycle.Reset();
 		FinishTrade();
 		_storedItems.Clear();
 		_checkpointItems.Clear();
@@ -672,7 +697,8 @@ public partial class TradeScene : Node2D
 		}
 		var data = new ProgressData
 		{
-			SaveVersion = 7, Day = CurrentDay, Score = Score, EnergyRemaining = EnergyRemaining,
+			SaveVersion = 8, Day = CurrentDay, Score = Score, EnergyRemaining = EnergyRemaining,
+			DayRemainingSeconds = DayRemainingSeconds, DayClosed = DayClosed,
 			Accepted = Accepted,
 			Declined = Declined, QuotaStage = QuotaStage, CheckpointDay = CheckpointDay,
 			CheckpointScore = CheckpointScore, CheckpointEnergy = CheckpointEnergy,
@@ -703,6 +729,7 @@ public partial class TradeScene : Node2D
 			return false;
 		}
 		if (data == null) return false;
+		_dayCycle.Restore(data.SaveVersion >= 8 ? data.DayRemainingSeconds : null, data.SaveVersion >= 8 && data.DayClosed);
 		_storedItems.Clear();
 		_checkpointItems.Clear();
 		foreach (int index in data.StoredItems ?? [])
@@ -751,6 +778,7 @@ public partial class TradeScene : Node2D
 			CustomerIndex >= _customer.GetAppearanceCount() || Failed || Completed)
 			TradeActive = false;
 		if (!TradeActive) _activeShowcaseIndex = -1;
+		if (DayClosed) _buyerCountdown = 0;
 			
 		// --- ДОБАВЛЕНО: Загружаем визуал инвентаря при старте игры ---
 		if (_inventoryUI != null)
@@ -766,6 +794,8 @@ public partial class TradeScene : Node2D
 	private sealed class ProgressData
 	{
 		public int SaveVersion { get; set; } = 1;
+		public double? DayRemainingSeconds { get; set; }
+		public bool DayClosed { get; set; }
 		public int Day { get; set; } = 1;
 		public int Score { get; set; }
 		public int EnergyRemaining { get; set; } = EnergyPerDay;

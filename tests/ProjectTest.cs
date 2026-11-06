@@ -27,6 +27,7 @@ public partial class ProjectTest : SceneTree
             await TestTradeScene();
             await TestShowcaseReuse();
             await TestProgress();
+            await TestDayCycle();
             await TestLocalization();
             await TestMainMenu();
             GD.Print("All C# project checks passed");
@@ -370,7 +371,7 @@ public partial class ProjectTest : SceneTree
         await ToSignal(this, SignalName.ProcessFrame);
         Check(game.GetViewportRect().Encloses(toggle.GetGlobalRect()),
             "The collapsed arrow must stay reachable after viewport resize");
-        game.EndDay();
+        AdvanceDayForTest(game);
         await ClickControl(game, "HUD/Root/ProgressToggleButton");
         Check(game.CurrentDay == day + 1 && content.GetNode<Label>("DayLabel").Text.Contains($"{day + 1}"),
             "Hidden progress must still update and show fresh data after expansion");
@@ -569,7 +570,10 @@ public partial class ProjectTest : SceneTree
         await ClickControl(game, "World/TradingRoom/Item/TradePanel/Content/Buttons/AcceptButton");
         Check(game.StoredItems.Length == 4, "Unsold goods must remain in inventory without disposal controls");
         await ClickControl(game, "HUD/Root/ProgressPanel/Content/EndDayButton");
-        Check(game.CurrentDay == 2, "End day must accept mouse input");
+        Check(game.DayClosed && game.CurrentDay == 1 && game.EnergyRemaining == 0,
+            "End day must close the shop and discard unused energy with mouse input");
+        await ClickControl(game, "HUD/Root/ProgressPanel/Content/EndDayButton");
+        Check(game.CurrentDay == 2 && !game.DayClosed, "The next day must start with a separate mouse click");
         await ClickControl(game, "PauseMenu/Root/PauseButton");
         await ClickControl(game, "PauseMenu/Root/Overlay/Center/Panel/Content/Menu/CheckpointButton");
         Check(game.CurrentDay == 1 && game.Score == 220, "Checkpoint handler must be connected");
@@ -631,7 +635,7 @@ public partial class ProjectTest : SceneTree
         game.Score = 10000;
         game.GetItemFromAtelier();
         game.GetItemFromAtelier();
-        game.EndDay();
+        AdvanceDayForTest(game);
         game.GetItemFromAtelier();
         await ToSignal(this, SignalName.ProcessFrame);
         var inventory = game.GetNode<InventoryUI>("HUD/InventoryUI");
@@ -761,7 +765,7 @@ public partial class ProjectTest : SceneTree
         game.NewGame();
         game.GetItemFromAtelier();
         game.Score = 0;
-        for (int i = 0; i < 4 && !game.Failed; i++) game.EndDay();
+        for (int i = 0; i < 4 && !game.Failed; i++) AdvanceDayForTest(game);
         before = game.StoredItems;
         Check(game.Failed && before.Length == 3, "Terminal transfer checks need a failed game with remaining items");
         var remainingSlot = (SlotUI)inventory.Container.GetChild(0);
@@ -936,7 +940,7 @@ public partial class ProjectTest : SceneTree
         {
             atelierButton.EmitSignal(Button.SignalName.Pressed);
             atelierButton.EmitSignal(Button.SignalName.Pressed);
-            game.EndDay();
+            AdvanceDayForTest(game);
         }
         var inventoryScroll = game.GetNode<ScrollContainer>("HUD/InventoryUI/ScrollContainer");
         await ToSignal(this, SignalName.ProcessFrame);
@@ -1219,12 +1223,6 @@ public partial class ProjectTest : SceneTree
         int[] inventory = game.StoredItems;
         Check(game.TradeActive && game.ItemIndex == activeItem && game.ShowcaseItems[0] == replacement && inventory.Length == 1,
             "A normal click must refill the freed showcase without changing the active trade");
-        int day = game.CurrentDay;
-        game.EndDay();
-        Check(game.CurrentDay == day && game.TradeActive && game.ItemIndex == activeItem &&
-              game.ShowcaseItems[0] == replacement && game.StoredItems.SequenceEqual(inventory) &&
-              game.GetNode<Button>("HUD/Root/ProgressPanel/Content/EndDayButton").Disabled,
-            "Ending the day during a trade must be blocked without returning or losing either item");
         game.QueueFree();
         await ToSignal(this, SignalName.ProcessFrame);
         game = await CreateGame(scene);
@@ -1308,7 +1306,7 @@ public partial class ProjectTest : SceneTree
         game.CurrentDay = 4;
         game.AcceptTrade();
         game.Score = game.FirstQuota - 1;
-        game.EndDay();
+        AdvanceDayForTest(game);
         Check(game.Failed && !game.TradeActive && game.ShowcaseItems[3] == -1 &&
               game.ShowcaseItems[5] == itemsBeforePlacement[1] &&
               game.StoredItems.SequenceEqual(itemsBeforePlacement.Skip(2)),
@@ -1333,7 +1331,7 @@ public partial class ProjectTest : SceneTree
         game.PlaceItemInShowcase(2);
         game.CurrentDay = 4;
         game.Score = game.FirstQuota + 12;
-        game.EndDay();
+        AdvanceDayForTest(game);
         Check(game.QuotaStage == 1 && game.CurrentDay == 5 && game.Score == 12 &&
 		      game.EnergyRemaining == 2 && game.MusicWorkshopUnlocked,
             "Paying the first quota must open day five with the remaining cash");
@@ -1375,7 +1373,7 @@ public partial class ProjectTest : SceneTree
 
         game.CurrentDay = 7;
         game.Score = game.SecondQuota;
-        game.EndDay();
+        AdvanceDayForTest(game);
         Check(game.Completed && game.QuotaStage == 2 && game.Score == 0,
             "Paying the second quota must finish the game");
         game.NewGame();
@@ -1421,6 +1419,149 @@ public partial class ProjectTest : SceneTree
         await ToSignal(this, SignalName.ProcessFrame);
         DirAccess.RemoveAbsolute(absolutePath);
         GD.Print("Inventory, save and quota checks passed");
+    }
+
+    private async Task TestDayCycle()
+    {
+        var scene = GD.Load<PackedScene>("res://scenes/trade_scene.tscn");
+        Vector2I originalSize = Root.Size;
+        TradeScene game = null;
+        try
+        {
+            if (FileAccess.FileExists(SavePath)) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(SavePath));
+            game = await CreateGame(scene);
+            Check(!game.DayClosed && game.DayRemainingSeconds == 60 &&
+                  game.GetNode<Label>("HUD/Root/DayTimer").Text == "01:00",
+                "A new day must start with a full minute in mm:ss format");
+            foreach (Vector2I size in new[] { new Vector2I(1280, 720), new Vector2I(960, 540) })
+            foreach (float zoom in new[] { 0.25f, 1.8f })
+            {
+                Root.Size = size;
+                game.GetNode<Camera2D>("Camera2D").Zoom = Vector2.One * zoom;
+                await ToSignal(this, SignalName.ProcessFrame);
+                var timer = game.GetNode<Label>("HUD/Root/DayTimer");
+                Rect2 bounds = timer.GetGlobalRect();
+                Check(Mathf.IsEqualApprox(bounds.GetCenter().X, Root.GetVisibleRect().Size.X / 2) &&
+                      Root.GetVisibleRect().Encloses(bounds) && timer.MouseFilter == Control.MouseFilterEnum.Ignore,
+                    "The timer must stay centered at the top, in bounds, and ignore mouse input regardless of zoom");
+            }
+            game._Process(0.25);
+            Check(game.DayRemainingSeconds == 59.75 && game.GetNode<Label>("HUD/Root/DayTimer").Text == "01:00",
+                "The timer must count partial seconds without showing zero early");
+            game._Process(0.75);
+            Check(game.GetNode<Label>("HUD/Root/DayTimer").Text == "00:59", "The timer must roll from minutes to seconds");
+
+            foreach (bool manual in new[] { true, false })
+            {
+                game.NewGame();
+                game.Score = 1000;
+                game.GetItemFromAtelier();
+                SelectInventorySlot(game, 0);
+                game.PlaceItemInShowcase(0);
+                SelectInventorySlot(game, 0);
+                game.PlaceItemInShowcase(1);
+                game._Process(game.BuyerCountdown + 0.001);
+                Check(game.TradeActive && game.EnergyRemaining == 1, "Closing test must have an active trade and unused energy");
+                int item = game.ItemIndex;
+                int[] inventory = game.StoredItems;
+                int[] showcases = game.ShowcaseItems;
+                double remaining = game.DayRemainingSeconds;
+                game.GetNode<PauseMenu>("PauseMenu").Open();
+                game._Process(120);
+                Check(!game.DayClosed && game.DayRemainingSeconds == remaining && game.TradeActive,
+                    "Pause must freeze the day even with an active trade");
+                game.GetNode<PauseMenu>("PauseMenu").Close();
+                game.CurrentDay = 4;
+                game.Score = game.FirstQuota - 1;
+                if (manual) await ClickControl(game, "HUD/Root/ProgressPanel/Content/EndDayButton");
+                else game._Process(game.DayRemainingSeconds);
+                Check(game.DayClosed && game.DayRemainingSeconds == 0 && game.EnergyRemaining == 0 &&
+                      game.CurrentDay == 4 && !game.Failed && game.TradeActive && game.ItemIndex == item &&
+                      game.StoredItems.SequenceEqual(inventory) && game.ShowcaseItems.SequenceEqual(showcases) &&
+                      game.GetNode<Label>("HUD/Root/DayTimer").Text == "00:00" && game.BuyerCountdown == 0,
+                    "Manual close and timeout must discard energy, retain goods and keep the last trade before quota settlement");
+                Check(game.GetNode<Button>("World/Atelier/GetItemButton").Disabled &&
+                      game.GetNode<Button>("HUD/Root/ProgressPanel/Content/EndDayButton").Disabled &&
+                      !game.GetNode<Button>("World/TradingRoom/Item/TradePanel/Content/Buttons/AcceptButton").Disabled &&
+                      !game.GetNode<Button>("World/TradingRoom/Item/TradePanel/Content/Buttons/DeclineButton").Disabled,
+                    "Closed-day controls must block production/advance and retain both trade actions");
+                int cash = game.Score;
+                game.GetItemFromAtelier();
+                game.EndDay();
+                game._Process(120);
+                Check(game.DayClosed && game.TradeActive && game.ItemIndex == item && game.Score == cash &&
+                      game.StoredItems.SequenceEqual(inventory) && game.CurrentDay == 4,
+                    "Repeated closing and ticking must not advance the day, spend money or replace the active buyer");
+                int rerolls = game.RerollsRemaining;
+                int customer = game.CustomerIndex;
+                await ClickControl(game, "World/TradingRoom/Item/TradePanel/Content/Buttons/DeclineButton");
+                Check(game.TradeActive && game.RerollsRemaining == rerolls - 1 && game.CustomerIndex != customer,
+                    "A real reroll click must still replace the price and buyer after closing");
+                game.QueueFree();
+                await ToSignal(this, SignalName.ProcessFrame);
+                game = await CreateGame(scene);
+                Check(game.DayClosed && game.DayRemainingSeconds == 0 && game.EnergyRemaining == 0 &&
+                      game.TradeActive && game.ItemIndex == item && game.RerollsRemaining == rerolls - 1 &&
+                      game.ShowcaseItems.SequenceEqual(showcases),
+                    "Reload must retain closed day, zero energy and the last trade with its consumed reroll");
+                game._Input(new InputEventKey { Keycode = Key.F, Pressed = true });
+                Check(game.RerollsRemaining == Math.Max(0, rerolls - 2), "The reroll hotkey must remain available after closing and reload");
+                for (int count = game.RerollsRemaining; count > 0; count--) game.RerollCustomer();
+                int offer = game.OfferedPrice;
+                await ClickControl(game, "World/TradingRoom/Item/TradePanel/Content/Buttons/AcceptButton");
+                game.AcceptTrade();
+                Check(!game.TradeActive && game.DayClosed && game.Score == cash + offer && game.EnergyRemaining == 0 &&
+                      game.ShowcaseItems.SequenceEqual(showcases) && game.BuyerCountdown == 0,
+                    "The final sale must credit money once and keep the shop closed with displayed goods intact");
+                game._Process(120);
+                Check(!game.TradeActive && game.BuyerCountdown == 0, "No further buyers may arrive after the last sale");
+                await ClickControl(game, "HUD/Root/ProgressPanel/Content/EndDayButton");
+                Check(!game.DayClosed && game.CurrentDay == 5 && game.QuotaStage == 1 &&
+                      game.Score == cash + offer - game.FirstQuota && game.EnergyRemaining == 2 && game.DayRemainingSeconds == 60 &&
+                      game.BuyerCountdown is >= 0.5 and <= 2,
+                    "The next day must settle the quota using the last sale, restore energy/time and schedule a fresh buyer delay");
+                game._Process(game.BuyerCountdown + 0.001);
+                Check(game.TradeActive, "Buyers must return when the next day starts");
+                game.ReturnToCheckpoint();
+                Check(!game.TradeActive && !game.DayClosed && game.DayRemainingSeconds == 60 && game.EnergyRemaining == 2,
+                    "Checkpoint restore must start a fresh open day");
+            }
+
+            game.NewGame();
+            game.GetItemFromAtelier();
+            SelectInventorySlot(game, 0);
+            game.PlaceItemInShowcase(0);
+            int displayedItem = game.ShowcaseItems[0];
+            game._Process(60);
+            Check(game.DayClosed && !game.TradeActive && game.EnergyRemaining == 0 && game.ShowcaseItems[0] == displayedItem,
+                "Expiry must cancel a pending buyer in the same frame instead of creating a new last trade");
+            game._Process(120);
+            Check(!game.TradeActive, "An expired day with no active deal must stay closed");
+            game.NewGame();
+            game._Process(10.25);
+            game.GetNode<PauseMenu>("PauseMenu").Open();
+            game.QueueFree();
+            await ToSignal(this, SignalName.ProcessFrame);
+            game = await CreateGame(scene);
+            Check(!Paused && !game.DayClosed && game.DayRemainingSeconds == 49.75 && game.EnergyRemaining == 2,
+                "Pause/menu save must restore the exact remaining fraction without charging offline time");
+            game.QueueFree();
+            await ToSignal(this, SignalName.ProcessFrame);
+            using (var legacy = FileAccess.Open(SavePath, FileAccess.ModeFlags.Write))
+                legacy.StoreString("{\"save_version\":7,\"energy_remaining\":1}");
+            game = await CreateGame(scene);
+            Check(!game.DayClosed && game.DayRemainingSeconds == 60 && game.EnergyRemaining == 1,
+                "Pre-timer saves must gain a full minute while preserving their spent energy");
+        }
+        finally
+        {
+            Paused = false;
+            if (game != null && GodotObject.IsInstanceValid(game)) game.QueueFree();
+            if (FileAccess.FileExists(SavePath)) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(SavePath));
+            Root.Size = originalSize;
+        }
+        await ToSignal(this, SignalName.ProcessFrame);
+        GD.Print("Minute timer, manual/timeout closure, last sale, quota, pause and save migration checks passed");
     }
 
     private async Task TestLocalization()
@@ -1650,6 +1791,12 @@ public partial class ProjectTest : SceneTree
                     "Fullscreen text must stay dark and legible in all interaction and toggle states");
             }
         }
+    }
+
+    private static void AdvanceDayForTest(TradeScene game)
+    {
+        if (!game.DayClosed) game.EndDay();
+        game.EndDay();
     }
 
     private async Task<TradeScene> CreateGame(PackedScene scene)

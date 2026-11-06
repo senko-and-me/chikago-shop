@@ -7,6 +7,43 @@
 
 ## Текущий фронт
 
+### HF-29 — раздельная публикация локализации и таймера
+
+Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; HF-27/HF-28 = DONE; `CP-HF-29`, READY проверен 2026-11-06. Пользователь явно разрешил push раздельных изменений.
+
+#### CP-HF-29
+
+Read-set: текущий фронт плана, git status/diff/log/remotes/show, файлы и verify evidence HF-27/HF-28, tools/verify.ps1.
+Write-set: ORCHESTRATION_PLAN.md, Git index/commit и origin/main для файлов HF-27/HF-28; временные точные снимки README.md, scripts/TradeScene.cs, tests/ProjectTest.cs, localization/en.tres в папке ОС TEMP для разделения index; отдельный git worktree в TEMP для проверки промежуточного коммита. Рабочие версии сохраняются. Владелец index/плана `/root`; пересечений нет.
+Out of scope: новые продуктовые изменения, source/, пользовательские export_presets.cfg/scenes/trade_scene.tscn/MyFont_Completed.ttf[.import], force push.
+Приёмка: отдельный самостоятельный commit локализации без таймера, отдельный commit таймера поверх него; проверка промежуточной локализации и итоговый verify PASS; staged diff-check PASS; push origin/main без force; посторонние изменения сохранены.
+
+
+### HF-28 — минутный день и завершение последней сделки
+
+Статус: `DONE`; координатор/исполнитель `/root`; HF-27 = DONE; `CP-HF-28`, READY проверен 2026-11-06. Длительность дня — 60 секунд по ответу пользователя.
+
+#### CP-HF-28
+
+Read-set: текущий фронт плана, AGENTS.md из запроса, `scripts/TradeScene.cs`, `scripts/UI/PauseMenu.cs`, `scripts/UI/ProgressPanel.cs`, `scripts/UI/InventoryUI.cs`, `scripts/Localization/GameLocalization.cs`, `localization/en.tres`, `tests/ProjectTest.cs`, `tests/ChikagoShop.Domain.Tests/MoneyEnergyTests.cs`, `src/ChikagoShop.Domain/ChikagoShop.Domain.csproj`, `ChikagoShop.csproj`, `config/economy.v1.json`, `tools/verify.ps1`, `.vscode/settings.json`, `README.md`; новые файлы write-set; git status/diff. Диагностика координатора до пакета перечислена здесь.
+Write-set: `src/ChikagoShop.Domain/Days/DaySession.cs`, `tests/ChikagoShop.Domain.Tests/DaySessionTests.cs`, `scripts/Days/DayCycleController.cs[.uid]`, `scripts/TradeScene.cs` (адаптация нового контроллера, сохранение clock state и существующий переход дня), `scripts/UI/PauseMenu.cs` (сохранение остатка при паузе), `tests/ProjectTest.cs`, `localization/en.tres`, `README.md`, `ORCHESTRATION_PLAN.md`. Единственный владелец save schema и плана `/root`; активных пересечений нет. Текущие изменения HF-27 сохраняются.
+Out of scope: source/, новая доменная логика внутри TradeScene, остальные доменные извлечения, баланс/стоимость/квоты/RNG, изображения, .tscn и пользовательские export/font, публикация.
+Приёмка: обратный отсчёт 01:00 → 00:00 по центру сверху; pause останавливает время. Ручное завершение и timeout закрывают текущий день, обнуляют энергию и отменяют новые приходы покупателей; активная сделка остаётся доступна для реролла/продажи. После последней продажи новые покупатели не приходят; явная кнопка следующего дня запускает свежую минуту и восстанавливает энергию. Квота проверяется после завершения последней сделки при переходе дня. Закрытие идемпотентно, timeout обрабатывается раньше прихода покупателя в том же кадре. Остаток времени/закрытие сохраняются, старые saves получают полную минуту, checkpoint/new game сбрасывают clock. Переводы RU/EN; headless regressions для ручного/авто закрытия, last-sale/quota, pause, reload/migration, UI centering/format. Проверки: полный tools/verify.ps1, git diff --check.
+
+
+```text
+Task: HF-28
+Recommended status: REVIEW
+Changed: src/ChikagoShop.Domain/Days/DaySession.cs; tests/ChikagoShop.Domain.Tests/DaySessionTests.cs; scripts/Days/DayCycleController.cs[.uid]; scripts/TradeScene.cs; scripts/UI/PauseMenu.cs; tests/ProjectTest.cs; localization/en.tres; README.md; ORCHESTRATION_PLAN.md
+Checks: powershell -NoProfile -ExecutionPolicy Bypass -File tools/verify.ps1 -> PASS (33 domain tests, build, Godot import/integration); git diff --check -> PASS.
+Acceptance: день длится 60 секунд по ответу пользователя; поверх HUD — только текстовый Label 01:00 → 00:00 по центру сверху, не зависит от zoom и не перехватывает мышь. Новые clock/closing rules находятся в DaySession, Godot orchestration/UI — в DayCycleController; TradeScene делегирует правила и сохраняет состояние. Ручное завершение и timeout закрывают магазин, делают энергию 0, отменяют buyer countdown, оставляют действующую сделку и её рероллы/продажу. После продажи магазин остаётся закрыт до явного «Начать следующий день»; квота учитывает последнюю продажу, новый день восстанавливает минуту/энергию и случайную задержку покупателя. v8 сохраняет остаток и closed state; pause сохраняет точную долю секунды; autosave при смене секунды; старые saves получают минуту без восстановления потраченной энергии; checkpoint/new game сбрасывают clock. Новые строки переведены RU/EN. Domain tests проверяют границы времени, идемпотентность, invalid delta и restore. Integration проверяет оба способа закрытия, реальные GUI reroll/sale/next-day, F и исчерпание рероллов после closing, quota после последней продажи, отсутствие следующих покупателей, timeout против pending buyer в одном кадре, pause/reload/legacy, центр таймера при 1280×720 и 960×540 с zoom 0.25/1.8. Прежняя регрессия и HF-27 проходят.
+Read-set exception: диагностика координатора перед CP, перечисленная в read-set; source/ не читался. Verify log записан во временную папку ОС.
+Risks/blocker: ручной visual playtest не выполнялся; NU1900 из-за недоступного vulnerability feed NuGet, ошибок компиляции нет. Локализация HF-27 и пользовательские export/scene/font изменения сохранены; публикация не выполнялась.
+Next: проверить минутный торговый день в игровом сеансе.
+```
+
+Координатор подтвердил HF-28 2026-11-06 по финальному verify (exit 0), domain/integration regression и diff-check: REVIEW → DONE; основной фронт и ворота без изменений.
+
 ### HF-27 — русский и английский интерфейс
 
 Статус: `DONE`; координатор/исполнитель `/root`; HF-26 = DONE; `CP-HF-27`, READY проверен 2026-11-06.

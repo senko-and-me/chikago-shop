@@ -114,6 +114,7 @@ public partial class PauseMenu : CanvasLayer
 
 	public void Open()
 	{
+		GetParent<TradeScene>().PersistProgress();
 		_ownsPause = true;
 		GetTree().Paused = true;
 		_openButton.Hide();
