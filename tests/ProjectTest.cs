@@ -24,6 +24,7 @@ public partial class ProjectTest : SceneTree
             await TestCollapsibleProgress();
             await TestRarityPopupGeometry();
             await TestEmbroidery();
+            await TestLockedRoomDrag();
             await TestMouseControls();
             await TestInventoryTransfers();
             await TestTradeScene();
@@ -820,6 +821,50 @@ public partial class ProjectTest : SceneTree
         }
         await ToSignal(this, SignalName.ProcessFrame);
         GD.Print("Compact rarity popup placement, readability and layer checks passed");
+    }
+
+    private async Task TestLockedRoomDrag()
+    {
+        var game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
+        game.SavePath = "";
+        Root.AddChild(game);
+        game.SetProcess(false);
+        var camera = game.GetNode<WorldCamera>("Camera2D");
+        camera.SetProcess(false);
+        await ToSignal(this, SignalName.ProcessFrame);
+        try
+        {
+            var overlay = game.GetNode<Control>("World/MusicWorkshop/LockedOverlay");
+            foreach (var local in new[] { new Vector2(400, 780), new Vector2(960, 385) })
+            {
+                camera.Zoom = Vector2.One * 0.7f;
+                camera.GlobalPosition = overlay.GetGlobalTransform() * local;
+                camera.ClampToBounds();
+                camera.ForceUpdateScroll();
+                await ToSignal(this, SignalName.ProcessFrame);
+                Vector2 point = overlay.GetGlobalTransformWithCanvas() * local;
+                Root.PushInput(new InputEventMouseMotion { Position = point, GlobalPosition = point }, true);
+                Vector2 before = camera.Position;
+                Root.PushInput(new InputEventMouseButton { Position = point, GlobalPosition = point,
+                    ButtonIndex = MouseButton.Left, Pressed = true, ButtonMask = MouseButtonMask.Left }, true);
+                Root.PushInput(new InputEventMouseMotion { Position = point + new Vector2(60, 0),
+                    GlobalPosition = point + new Vector2(60, 0), Relative = new Vector2(60, 0),
+                    ButtonMask = MouseButtonMask.Left }, true);
+                Check(camera.Position.X < before.X,
+                    "Dragging the locked room surface or title must pan the camera");
+                Root.PushInput(new InputEventMouseButton { Position = point + new Vector2(60, 0),
+                    ButtonIndex = MouseButton.Left, Pressed = false }, true);
+                before = camera.Position;
+                Root.PushInput(new InputEventMouseMotion { Position = point, Relative = new Vector2(-60, 0) }, true);
+                Check(camera.Position == before && !game.MusicWorkshopUnlocked && game.Score == 220 &&
+                      game.StoredItems.Length == 0, "Releasing drag must stop panning without buying or crafting");
+            }
+            await ClickControl(game, "World/MusicWorkshop/LockedOverlay/UnlockButton");
+            Check(game.MusicWorkshopUnlocked && game.Score == 120,
+                "The unlock button must still work after dragging the closed room");
+        }
+        finally { game.QueueFree(); }
+        await ToSignal(this, SignalName.ProcessFrame);
     }
 
     private async Task TestMouseControls()

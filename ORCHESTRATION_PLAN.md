@@ -7,6 +7,23 @@
 
 ## Текущий фронт
 
+### HF-52 — перетаскивание камеры поверх закрытой комнаты
+
+Статус: `DONE`; координатор/исполнитель `/root`; зависимости отсутствуют; READY 2026-11-06. CP-HF-52: read-set — текущий фронт, scripts/TradeScene.cs (EnsureMusicWorkshopUi), scripts/Camera/WorldCamera.cs, tests/ProjectTest.cs (camera/mouse controls), tools/verify.ps1; write-set — scripts/TradeScene.cs (только MouseFilter overlay), tests/ProjectTest.cs, ORCHESTRATION_PLAN.md. Владелец `/root`, пересечений нет. Out of scope: source/, новая доменная логика/рефакторинг TradeScene, экономика/покупка комнаты, ассеты, посторонние изменения, публикация. Приёмка: ЛКМ-drag с чёрной поверхности закрытой комнаты двигает камеру; overlay блокирует нижележащие кнопки, покупка отдельной кнопкой/GUI/пауза сохранены. Проверки: реальный Root.PushInput drag с overlay, существующие camera/lock/mouse regression, полный verify и diff-check.
+
+
+```text
+Task: HF-52
+Recommended status: REVIEW
+Changed: scripts/TradeScene.cs (MouseFilter locked overlay), tests/ProjectTest.cs, ORCHESTRATION_PLAN.md.
+Checks: tools/verify.ps1 с Godot .NET и DOTNET_ROLL_FORWARD=Major -> PASS (exit 0, build, 53 domain tests, import/integration); git diff --check -> PASS. Evidence: OS TEMP/chikago-hf52-verify.log.
+Acceptance: overlay переведён Stop → Pass: пустая закрытая поверхность передаёт необработанный ЛКМ камере, нижележащие GUI-кнопки не становятся кликабельными. Новый тест реальными Root.PushInput проверяет drag на чёрном фоне и заголовке закрытия, остановку после отпускания, отсутствие списания/крафта и рабочую покупку комнаты после drag. Прежние тесты блокировки камеры на GUI/паузе и полной мышиной торговли проходят.
+Read-set exception: координатор точечно нашёл путь WorldCamera после диагностики, source/ не читался.
+Risks/blocker: нет; пользовательские изменения сохранены, публикация не выполнялась.
+Next: проверить перетаскивание закрытой комнаты в игровом сеансе.
+```
+
+Координатор подтвердил HF-52 2026-11-06 по verify и diff-check: REVIEW → DONE.
 ### HF-51 — компактная табличка сделки в центре комнаты
 
 Статус: `DONE`; координатор/исполнитель `/root`; HF-50 DONE; READY 2026-11-06. CP-HF-51: read-set — текущий фронт, scenes/trade_scene.tscn (TradingRoom/TradePanel styles), scripts/UI/ZoomResponsiveUi.cs, tests/ProjectTest.cs (зум/покупатели), art/rooms/cashier.jpg, tools/verify.ps1; write-set — сцена, ZoomResponsiveUi.cs, tests/ProjectTest.cs, ORCHESTRATION_PLAN.md. Владелец сцены `/root`, пересечений нет. Out of scope: source/, TradeScene/домен, ассеты/положение NPC и предмета, пользовательские изменения, публикация. Приёмка: надпись удалена; уменьшенная панель по центру свободной части комнаты, без пересечения с кассой/товарами/внешностями, ограниченное экранное увеличение при zoom-in. Проверки: геометрия и GUI trade/localization regression, полный verify, diff-check.
@@ -276,7 +293,6 @@ Next: проверить вступление в игровом окне и со
 ```
 
 Координатор подтвердил HF-37 2026-11-06 по финальному verify (exit 0), integration acceptance и diff-check: REVIEW → DONE. Статус задачи: `DONE`; основные ворота без изменений.
-
 
 ### HF-36 — публикация вышивки, двухминутного дня и редких предметов
 
