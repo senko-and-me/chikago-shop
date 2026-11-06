@@ -7,6 +7,43 @@
 
 ## Текущий фронт
 
+### HF-26 — публикация свободной витрины и выхода в меню
+
+Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; HF-25 = DONE; `CP-HF-26`, READY проверен 2026-11-06. Commit/push явно разрешён пользователем.
+
+#### CP-HF-26
+
+Read-set: текущий фронт плана, git status/diff/log/remotes/show, verify evidence HF-25.
+Write-set: `ORCHESTRATION_PLAN.md`, Git index/commit и origin/main для публикации `scripts/TradeScene.cs`, `scripts/UI/PauseMenu.cs`, `tests/ProjectTest.cs`, `ORCHESTRATION_PLAN.md`. Владелец плана и index `/root`; пересечений нет.
+Out of scope: новые продуктовые изменения, пользовательские export_presets.cfg/scenes/trade_scene.tscn/MyFont_Completed.ttf[.import], source/, force push.
+Приёмка: финальный verify HF-25 PASS; staged diff-check PASS; проверенный commit опубликован в origin/main без force; прочие локальные изменения сохранены.
+
+
+### HF-25 — свободная витрина во время сделки и выход в меню
+
+Статус: `DONE`; координатор/исполнитель `/root`; HF-23/HF-24 = DONE; `CP-HF-25`, READY проверен 2026-11-06; исполнитель назначен после проверки пакета.
+
+#### CP-HF-25
+
+Read-set: план, AGENTS.md из запроса, `scripts/TradeScene.cs`, `scripts/UI/PauseMenu.cs`, `scripts/UI/InventoryUI.cs`, `scripts/UI/SlotUI.cs`, `scripts/MainMenu.cs`, `tests/ProjectTest.cs`, `scenes/trade_scene.tscn`, `scenes/main_menu.tscn`, `tools/verify.ps1`, `.vscode/settings.json`; git status/diff. Диагностика этих файлов до пакета выполнена координатором; source/ не читается.
+Write-set: `scripts/TradeScene.cs` (удаление резервирования витрины и согласованность завершения дня), `scripts/UI/PauseMenu.cs`, `tests/ProjectTest.cs`, `ORCHESTRATION_PLAN.md`. Владелец плана `/root`; активных пересечений нет.
+Out of scope: новая доменная логика в TradeScene, извлечение домена, save schema, экономика/RNG, сцены/арт, source/, публикация и пользовательские изменения export/scene/font.
+Приёмка: начало сделки немедленно освобождает слот для обычного размещения, drag/drop и Shift; повторное заполнение и продажа не теряют и не дублируют товары, в том числе после reload. Состояния «НА СДЕЛКЕ» у витрины нет. В паузе доступна кнопка «В главное меню»: реальный переход, снятие паузы, повторный вход с сохранённым прогрессом. Завершение дня согласуется с ответом пользователя на обнаруженный возврат активного товара. Проверки: regression tests в `tests/ProjectTest.cs`, полный `powershell -NoProfile -ExecutionPolicy Bypass -File tools/verify.ps1`, git diff --check.
+
+
+```text
+Task: HF-25
+Recommended status: REVIEW
+Changed: scripts/TradeScene.cs; scripts/UI/PauseMenu.cs; tests/ProjectTest.cs; ORCHESTRATION_PLAN.md
+Checks: powershell -NoProfile -ExecutionPolicy Bypass -File tools/verify.ps1 -> PASS (19 domain tests, build, Godot import/integration); git diff --check -> PASS.
+Acceptance: резервирование и текст «НА СДЕЛКЕ» удалены; слот сразу свободен и принимает обычное размещение, drag/drop и Shift-перенос. Regression проверяет заполнение всех шести слотов во время сделки, refill исходного слота, reload с двумя отдельными товарами (в сделке и в исходном слоте), однократное начисление продажи и сохранность нового товара. Удалён возврат активного товара при EndDay; завершение дня блокируется до продажи, кнопка содержит пояснение. Отправлен optional-вопрос об этом дополнительном сценарии, ответа к реализации не поступило; применён предложенный вариант в соответствии с отсутствием возврата из запроса. Кнопка «В главное меню» проверена реальным GUI click: смена сцены, удаление игровой сцены, снятие паузы, работоспособность настроек и повторный вход с сохранённым прогрессом.
+Read-set exception: точечная диагностика координатора перед CP, перечисленная в read-set; source/ не читался. Временный hf25-verify.log использовался только для вывода проверки и удалён.
+Risks/blocker: ручной visual playtest не выполнялся; NU1900 из-за недоступного vulnerability feed NuGet, ошибок компиляции нет. Пользовательские export/scene/font файлы сохранены.
+Next: проверить обновлённое меню и торговый цикл в игровом сеансе.
+```
+
+Координатор подтвердил HF-25 2026-11-06 по финальному verify (exit 0), regression и diff-check: REVIEW → DONE; основной фронт и ворота без изменений.
+
 ### HF-24 — публикация рефакторинга UI и камеры
 
 Статус: `DONE`; координатор/исполнитель `/root`; HF-22/HF-23 = DONE; `CP-HF-24`, READY проверен 2026-11-06. Commit/push явно разрешён пользователем.

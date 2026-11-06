@@ -23,6 +23,7 @@ public partial class ProjectTest : SceneTree
             await TestMouseControls();
             await TestInventoryTransfers();
             await TestTradeScene();
+            await TestShowcaseReuse();
             await TestProgress();
             await TestMainMenu();
             GD.Print("All C# project checks passed");
@@ -581,7 +582,7 @@ public partial class ProjectTest : SceneTree
         GD.Print("Mouse controls and phantom trade regression checks passed");
     }
 
-    private async Task ClickControl(TradeScene game, string path)
+    private async Task ClickControl(Node game, string path)
     {
         var control = game.GetNode<Control>(path);
         if (path.StartsWith("World/", StringComparison.Ordinal))
@@ -720,8 +721,8 @@ public partial class ProjectTest : SceneTree
         game._Process(game.BuyerCountdown + 0.01);
         Check(game.TradeActive, "The displayed item must become reserved for a trade");
         await DragTo(first);
-        Check(game.StoredItems.Length == count - 1 && game.ShowcaseItems[0] == -1 && first.Disabled,
-            "Dropping on a reserved showcase must not replace the item being sold");
+        Check(game.StoredItems.Length == count - 2 && game.ShowcaseItems[0] >= 0 && game.ItemIndex == item,
+            "Dropping on the freed showcase must stock it without replacing the item being sold");
 
         async Task ShiftClick()
         {
@@ -736,10 +737,10 @@ public partial class ProjectTest : SceneTree
         }
         int next = game.StoredItems[0];
         await ShiftClick();
-        Check(game.StoredItems.Length == count - 2 && game.ShowcaseItems[1] == next && first.Disabled,
-            "Shift-click must move to the first available showcase and skip the reserved slot");
+        Check(game.StoredItems.Length == count - 3 && game.ShowcaseItems[1] == next,
+            "Shift-click must move to the first available showcase during a trade");
         for (int i = 0; i < 4; i++) await ShiftClick();
-        Check(game.ShowcaseItems.Count(value => value >= 0) == 5 && game.StoredItems.Length == count - 6,
+        Check(game.ShowcaseItems.Count(value => value >= 0) == 6 && game.StoredItems.Length == count - 7,
             "Repeated Shift-clicks must fill both showrooms without duplicate transfers");
         int[] before = game.StoredItems;
         await ShiftClick();
@@ -1019,13 +1020,11 @@ public partial class ProjectTest : SceneTree
             "A buyer must choose a displayed item when the delay expires");
         Check(world.ItemVisible &&
               game.GetNode<Button>("World/ShowroomLeft/Showcases/Slot1").Disabled &&
-              game.GetNode<Label>("World/ShowroomLeft/Showcases/Slot1/ItemLabel").Text == "НА СДЕЛКЕ",
-            "The active item's showcase must stay reserved during the trade");
+              game.GetNode<Label>("World/ShowroomLeft/Showcases/Slot1/ItemLabel").Text == "СВОБОДНО",
+            "The active item's showcase must be empty and require a selection for restocking");
         game.GetItemFromAtelier();
         SelectInventorySlot(game, 1);
-        game.PlaceItemInShowcase(0);
-        Check(game.StoredItems.Length == 8 && game.ShowcaseItems[0] == -1,
-            "The reserved showcase must reject a new item");
+        Check(!firstSlot.Disabled, "The freed showcase must accept another selected item during the trade");
         var secondSlot = game.GetNode<Button>("World/ShowroomLeft/Showcases/Slot2");
         Check(!secondSlot.Disabled, "Another showcase must remain available during a trade");
         secondSlot.EmitSignal(Button.SignalName.Pressed);
@@ -1037,7 +1036,7 @@ public partial class ProjectTest : SceneTree
         secondSlot.EmitSignal(Button.SignalName.Pressed);
         Check(game.TradeActive && game.ShowcaseItems[1] == displayedItem &&
               game.StoredItems.SequenceEqual(remainingStored) &&
-              game.GetNode<Button>("World/ShowroomLeft/Showcases/Slot1").Disabled,
+              !game.GetNode<Button>("World/ShowroomLeft/Showcases/Slot1").Disabled,
             "Clicking an occupied showcase must neither replace nor discard goods");
         foreach (string kind in new[] { "hat", "gloves", "guitar", "trumpet" })
             Check(game.GetNode<Sprite2D>($"World/TradingRoom/Item/{char.ToUpperInvariant(kind[0])}{kind[1..]}").Visible ==
@@ -1196,6 +1195,54 @@ public partial class ProjectTest : SceneTree
         GD.Print("Trade scene checks passed");
     }
 
+    private async Task TestShowcaseReuse()
+    {
+        string absolutePath = ProjectSettings.GlobalizePath(SavePath);
+        if (FileAccess.FileExists(SavePath)) DirAccess.RemoveAbsolute(absolutePath);
+        var scene = GD.Load<PackedScene>("res://scenes/trade_scene.tscn");
+        var game = await CreateGame(scene);
+        game.GetItemFromAtelier();
+        SelectInventorySlot(game, 0);
+        game.PlaceItemInShowcase(0);
+        game._Process(game.BuyerCountdown + 0.01);
+        int activeItem = game.ItemIndex;
+        int replacement = game.StoredItems[0];
+        SelectInventorySlot(game, 0);
+        game.GetNode<Button>("World/ShowroomLeft/Showcases/Slot1").EmitSignal(Button.SignalName.Pressed);
+        int[] inventory = game.StoredItems;
+        Check(game.TradeActive && game.ItemIndex == activeItem && game.ShowcaseItems[0] == replacement && inventory.Length == 1,
+            "A normal click must refill the freed showcase without changing the active trade");
+        int day = game.CurrentDay;
+        game.EndDay();
+        Check(game.CurrentDay == day && game.TradeActive && game.ItemIndex == activeItem &&
+              game.ShowcaseItems[0] == replacement && game.StoredItems.SequenceEqual(inventory) &&
+              game.GetNode<Button>("HUD/Root/ProgressPanel/Content/EndDayButton").Disabled,
+            "Ending the day during a trade must be blocked without returning or losing either item");
+        game.QueueFree();
+        await ToSignal(this, SignalName.ProcessFrame);
+        game = await CreateGame(scene);
+        Check(game.TradeActive && game.ItemIndex == activeItem && game.ShowcaseItems[0] == replacement &&
+              game.StoredItems.SequenceEqual(inventory),
+            "Reload must preserve both the active sale and its refilled original showcase");
+        int score = game.Score;
+        int offer = game.OfferedPrice;
+        game.AcceptTrade();
+        game.AcceptTrade();
+        Check(game.Score == score + offer && game.ShowcaseItems[0] == replacement &&
+              game.StoredItems.SequenceEqual(inventory) &&
+              !game.GetNode<Button>("HUD/Root/ProgressPanel/Content/EndDayButton").Disabled,
+            "Selling exactly once must preserve the replacement item and inventory");
+        game._Process(game.BuyerCountdown + 0.01);
+        Check(game.TradeActive && game.ItemIndex == replacement && game.ShowcaseItems[0] == -1,
+            "The replacement item must be offered to the next buyer");
+        var slot = (SlotUI)game.GetNode<InventoryUI>("HUD/InventoryUI").Container.GetChild(0);
+        slot.QuickTransfer(0);
+        Check(game.StoredItems.Length == 0 && game.ShowcaseItems[0] == inventory[0] && game.ItemIndex == replacement,
+            "Quick transfer must reuse the original slot while its next item is being sold");
+        game.QueueFree();
+        await ToSignal(this, SignalName.ProcessFrame);
+    }
+
     private async Task TestProgress()
     {
         string absolutePath = ProjectSettings.GlobalizePath(SavePath);
@@ -1232,7 +1279,7 @@ public partial class ProjectTest : SceneTree
         game = await CreateGame(scene);
         Check(game.TradeActive && game.ItemIndex == itemsBeforePlacement[0] && game.ShowcaseItems[3] == -1 &&
               game.GetNode<Button>("World/Showroom/Showcases/Slot4").Disabled &&
-              game.GetNode<Label>("World/Showroom/Showcases/Slot4/ItemLabel").Text == "НА СДЕЛКЕ",
+              game.GetNode<Label>("World/Showroom/Showcases/Slot4/ItemLabel").Text == "СВОБОДНО",
             "An active showcase trade must survive a reload");
         SelectInventorySlot(game, 0);
         game.PlaceItemInShowcase(5);
@@ -1252,12 +1299,13 @@ public partial class ProjectTest : SceneTree
             "The red button must reroll a restored trade without returning or moving goods");
 
         game.CurrentDay = 4;
+        game.AcceptTrade();
         game.Score = game.FirstQuota - 1;
         game.EndDay();
-        Check(game.Failed && !game.TradeActive && game.ShowcaseItems[3] == itemsBeforePlacement[0] &&
+        Check(game.Failed && !game.TradeActive && game.ShowcaseItems[3] == -1 &&
               game.ShowcaseItems[5] == itemsBeforePlacement[1] &&
               game.StoredItems.SequenceEqual(itemsBeforePlacement.Skip(2)),
-            "Failure at the deadline must preserve both unsold showcase items");
+            "Failure at the deadline must preserve unsold goods and keep the sold item removed");
         game.GetItemFromAtelier();
         game._Input(new InputEventKey { Keycode = Key.R, Pressed = true });
         Check(game.StoredItems.SequenceEqual(itemsBeforePlacement.Skip(2)),
@@ -1402,6 +1450,30 @@ public partial class ProjectTest : SceneTree
         menu.OnPlayPressed();
         await ToSignal(this, SignalName.ProcessFrame);
         Check(CurrentScene is TradeScene, "Play must enter the game");
+        var game = (TradeScene)CurrentScene;
+        int score = game.Score;
+        int[] stored = game.StoredItems;
+        int[] showcases = game.ShowcaseItems;
+        bool active = game.TradeActive;
+        int activeItem = game.ItemIndex;
+        game.SetProcess(false);
+        await ClickControl(game, "PauseMenu/Root/PauseButton");
+        Check(Paused, "Returning to the menu must begin from pause");
+        await ClickControl(game, "PauseMenu/Root/Overlay/Center/Panel/Content/Menu/MainMenuButton");
+        Check(CurrentScene is MainMenu && !Paused && !GodotObject.IsInstanceValid(game),
+            "The main menu button must change scenes, free the game and release pause");
+        menu = (MainMenu)CurrentScene;
+        await ClickControl(menu, "MainMenuContainer/Menu/SettingsButton");
+        Check(menu.GetNode<Control>("SettingsMenuContainer").Visible,
+            "The returned main menu must respond to input");
+        menu.OnBackPressed();
+        menu.OnPlayPressed();
+        await ToSignal(this, SignalName.ProcessFrame);
+        game = (TradeScene)CurrentScene;
+        game.SetProcess(false);
+        Check(!Paused && game.Score == score && game.StoredItems.SequenceEqual(stored) &&
+              game.ShowcaseItems.SequenceEqual(showcases) && game.TradeActive == active && game.ItemIndex == activeItem,
+            "Reentering from the menu must retain saved goods and the active trade");
         GD.Print("Main menu checks passed");
     }
 

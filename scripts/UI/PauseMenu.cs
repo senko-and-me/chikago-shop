@@ -62,6 +62,18 @@ public partial class PauseMenu : CanvasLayer
 			GetParent<TradeScene>().NewGame();
 			Close();
 		});
+		AddButton(_menu, "MainMenuButton", "В главное меню", () =>
+		{
+			var tree = GetTree();
+			_ownsPause = false;
+			tree.Paused = false;
+			var error = tree.ChangeSceneToFile("res://scenes/main_menu.tscn");
+			if (error != Error.Ok)
+			{
+				Open();
+				GD.PushError($"Не удалось открыть главное меню: {error}");
+			}
+		});
 
 		_settings = new VBoxContainer { Name = "Settings", Visible = false };
 		_settings.AddThemeConstantOverride("separation", 14);

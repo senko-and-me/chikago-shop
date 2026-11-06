@@ -349,7 +349,6 @@ public partial class TradeScene : Node2D
 	public void PlaceItemInShowcase(int slotIndex)
 	{
 		if (Failed || Completed || slotIndex < 0 || slotIndex >= ShowcaseCapacity ||
-			slotIndex == _activeShowcaseIndex ||
 			_showcaseItems[slotIndex] != -1 || SelectedInventoryIndex < 0 ||
 			SelectedInventoryIndex >= _storedItems.Count) return;
 
@@ -413,6 +412,7 @@ public partial class TradeScene : Node2D
 		_declineButton.Disabled = false;
 		RefreshOffer();
 		RefreshItemButtons();
+		RefreshProgress();
 	}
 
 	public void RefreshItemButtons()
@@ -430,14 +430,11 @@ public partial class TradeScene : Node2D
 		for (int i = 0; i < ShowcaseCapacity; i++)
 		{
 			int itemIndex = _showcaseItems[i];
-			bool reserved = TradeActive && i == _activeShowcaseIndex;
-			_showcaseIcons[i].Texture = reserved || itemIndex < 0 ? null :
+			_showcaseIcons[i].Texture = itemIndex < 0 ? null :
 				GD.Load<Texture2D>(Items[itemIndex].ArtPath);
-			_showcaseLabels[i].Text = reserved ? "НА СДЕЛКЕ" :
-				itemIndex < 0 ? "СВОБОДНО" : Items[itemIndex].Name.ToUpperInvariant();
-			_showcaseGlass[i].Color = reserved ? new Color(0.7f, 0.68f, 0.68f, 0.78f) :
-				new Color(0.77f, 0.9f, 0.88f, 0.58f);
-			_showcaseSlots[i].Disabled = Failed || Completed || reserved ||
+			_showcaseLabels[i].Text = itemIndex < 0 ? "СВОБОДНО" : Items[itemIndex].Name.ToUpperInvariant();
+			_showcaseGlass[i].Color = new Color(0.77f, 0.9f, 0.88f, 0.58f);
+			_showcaseSlots[i].Disabled = Failed || Completed ||
 				(itemIndex < 0 && (SelectedInventoryIndex < 0 || SelectedInventoryIndex >= _storedItems.Count));
 		}
 	}
@@ -493,19 +490,6 @@ public partial class TradeScene : Node2D
 
 	public void DeclineTrade() => RerollCustomer();
 
-	private void ReturnActiveItemToStorage()
-	{
-		if (!TradeActive || ItemIndex < 0 || ItemIndex >= Items.Length) return;
-		if (_activeShowcaseIndex >= 0 && _activeShowcaseIndex < ShowcaseCapacity &&
-			_showcaseItems[_activeShowcaseIndex] == -1)
-			_showcaseItems[_activeShowcaseIndex] = ItemIndex;
-		else
-			_storedItems.Insert(0, ItemIndex); // Сохранения до появления витрин.
-		LogStoredItems();
-		_inventoryUI.UpdateUI(_storedItems);
-		RefreshShowcases();
-	}
-
 	private void FinishTrade()
 	{
 		bool hadActiveTrade = TradeActive;
@@ -520,6 +504,7 @@ public partial class TradeScene : Node2D
 		_acceptButton.Disabled = true;
 		_declineButton.Disabled = true;
 		RefreshItemButtons();
+		RefreshProgress();
 	}
 
 	private void RefreshScore() => _scoreLabel.Text = $"Счёт: {Score}$";
@@ -541,13 +526,13 @@ public partial class TradeScene : Node2D
 			_deadlineLabel.Text = $"Срок: конец дня {deadline}";
 		}
 		_statusLabel.Text = StatusText;
-		_endDayButton.Disabled = Failed || Completed;
+		_endDayButton.Disabled = Failed || Completed || TradeActive;
+		_endDayButton.TooltipText = TradeActive ? "Сначала завершите сделку" : "";
 	}
 
 	public void EndDay()
 	{
-		if (Failed || Completed) return;
-		ReturnActiveItemToStorage();
+		if (Failed || Completed || TradeActive) return;
 		FinishTrade();
 		int deadline = QuotaStage == 0 ? FirstDeadline : FinalDay;
 		if (CurrentDay >= deadline)
