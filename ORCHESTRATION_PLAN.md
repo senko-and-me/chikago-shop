@@ -9,10 +9,22 @@
 
 ### HF-59 — публикация карточек улучшений и исправлений диалога
 
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; HF-54…HF-58 DONE; READY 2026-11-07. Пользователь явно поручил push на GitHub.
+Статус: `DONE`; координатор/исполнитель `/root`; HF-54…HF-58 DONE; READY 2026-11-07. Пользователь явно поручил push на GitHub.
 CP-HF-59: read-set — текущий фронт, git status/diff/log/branches/remotes, tools/verify.ps1, OS TEMP/chikago-hf58-verify.log и chikago-hf58-preview.log. Write-set — ORCHESTRATION_PLAN.md, Git index/commit, main и origin/main; публикация всех текущих16 файлов: ORCHESTRATION_PLAN.md, README.md, localization/en.tres, scripts/Crafting/WorkshopItemCatalog.cs, scripts/Days/DayCycleController.cs, scripts/Dialogue/DialoguePlayer.cs, scripts/TradeScene.cs, scripts/UI/InventoryUI.cs, scripts/UI/PauseMenu.cs, scripts/UI/RarityPanel.cs, src/ChikagoShop.Domain/Days/DaySession.cs, tests/ProjectTest.cs, scripts/UI/DayTransitionCard.cs[.uid], src/ChikagoShop.Domain/Days/DayUpgradeSession.cs, tests/ChikagoShop.Domain.Tests/DayUpgradeSessionTests.cs. Единственный владелец index/плана `/root`; пересечений нет.
 Out of scope: source/, ignored/generated files, новая продуктовая логика, force push, удаление веток.
 Приёмка: полный verify и GPU evidence HF-58 PASS, staged diff-check PASS, commit включает все изменения HF-54…58; push origin main без force; чистое дерево и main...origin/main=0/0.
+```text
+Task: HF-59
+Recommended status: REVIEW
+Changed: все16 файлов HF-54…HF-58 опубликованы commit c1c9e9e в origin/main.
+Checks: финальный tools/verify.ps1 HF-58 -> PASS (exit 0, build, 70 domain tests, Godot import/integration); GPU ProjectTest -> PASS; staged diff-check -> PASS; git fetch origin -> PASS; git push origin main -> PASS (7ae3f04..c1c9e9e, без force); main...origin/main=0/0; рабочее дерево чистое.
+Acceptance: исправления диалоговой прокрутки, выбор улучшений, постоянные редкие шансы и цены категорий, UI/локализация/сохранения/тесты отправлены на GitHub. Продуктовых изменений во время публикации не было.
+Read-set exception: нет; source/ не читался.
+Risks/blocker: нет.
+Next: продолжить по запросу пользователя.
+```
+
+Координатор подтвердил HF-59 2026-11-07 по verify evidence, фактическому push и чистому дереву: REVIEW → DONE. Эта запись публикуется отдельным документационным commit.
 ### HF-58 — карты стоимости одежды и инструментов
 
 Статус: `DONE`; координатор/исполнитель `/root`; HF-57 DONE; READY 2026-11-07.
