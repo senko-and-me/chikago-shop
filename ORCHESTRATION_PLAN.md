@@ -9,7 +9,7 @@
 
 ### HF-14 — публикация исправлений UI
 
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; зависимости HF-11/HF-12/HF-13 = DONE; `CP-HF-14`, READY проверен 2026-11-06. Commit/push явно разрешён пользователем.
+Статус: `DONE`; координатор/исполнитель `/root`; зависимости HF-11/HF-12/HF-13 = DONE; `CP-HF-14`, READY проверен 2026-11-06. Commit/push явно разрешён пользователем.
 
 #### CP-HF-14
 
@@ -17,6 +17,19 @@ Read-set: этот план, git status/diff/log/remotes; ранее прове�
 Write-set: `ORCHESTRATION_PLAN.md`, Git index/commit и origin/main для публикации только `ORCHESTRATION_PLAN.md`, `scenes/UI/RarityPanel.tscn`, `scenes/UI/ShowcaseSlot.tscn`, `scripts/UI/InventoryUI.cs`, `scripts/UI/SlotUI.cs`, `scripts/UI/ZoomResponsiveUi.cs`, `tests/ProjectTest.cs`. Владелец плана `/root`; пересечений с активными задачами нет.
 Out of scope: включение пользовательских изменений export/pause/trade_scene, force push, source/.
 Приёмка: проверки HF-13 PASS, diff-check PASS, commit отправлен в origin/main без force; пользовательские изменения остаются в рабочем дереве.
+
+```text
+Task: HF-14
+Recommended status: REVIEW
+Changed: опубликованы семь файлов HF-11–HF-13, перечисленных в write-set.
+Checks: git fetch origin -> PASS; HEAD...origin/main перед commit = 0/0; git diff --cached --check -> PASS; git push origin main -> PASS (exit 0).
+Acceptance: commit c10e21e отправлен в origin/main без force; отдельные пользовательские изменения сохранены вне коммита. Полный verify HF-13 ранее PASS, product-код после него не менялся.
+Read-set exception: нет.
+Risks/blocker: нет.
+Next: продолжить основной фронт по запросу пользователя.
+```
+
+Координатор подтвердил HF-14 2026-11-06 по успешному push: REVIEW → DONE. Эта запись публикуется отдельным документационным коммитом.
 
 ### HF-13 — мгновенные подсказки и отступы UI
 
