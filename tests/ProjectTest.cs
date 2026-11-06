@@ -536,12 +536,13 @@ public partial class ProjectTest : SceneTree
         var headers = new[] { "Atelier/Header", "Atelier/NameLabel", "Atelier/HintLabel",
             "MusicWorkshop/Header", "MusicWorkshop/NameLabel", "MusicWorkshop/HintLabel",
             "Showroom/ShowroomHeader", "Showroom/ShowroomLabel", "Showroom/ShowroomHint",
-            "ShowroomLeft/ShowroomHeader", "ShowroomLeft/ShowroomLabel", "ShowroomLeft/ShowroomHint",
-            "TradingRoom/SalesRoomLabel" }.Select(path => game.GetNode<CanvasItem>("World/" + path)).ToArray();
+            "ShowroomLeft/ShowroomHeader", "ShowroomLeft/ShowroomLabel", "ShowroomLeft/ShowroomHint"
+            }.Select(path => game.GetNode<CanvasItem>("World/" + path)).ToArray();
+        Check(!game.HasNode("World/TradingRoom/SalesRoomLabel"), "The trading room heading must be removed");
         ui.UpdateForZoom(0.23f);
         Check(headers.All(header => !header.Visible && Mathf.IsZeroApprox(header.Modulate.A)),
             "All room titles, descriptions and backplates must disappear at zoom 0.23");
-        Check(panel.Scale.X > 1 && panel.Scale.X <= 1.65f && hud.Scale == Vector2.One,
+        Check(panel.Scale.X > 1 && panel.Scale.X <= 1.2f && hud.Scale == Vector2.One,
             "Small world UI must grow moderately on zoom-out while HUD stays fixed");
         ui.UpdateForZoom(0.29f);
         Check(headers.All(header => header.Visible && header.Modulate.A > 0 && header.Modulate.A < 1),
@@ -550,11 +551,12 @@ public partial class ProjectTest : SceneTree
         Check(headers.All(header => header.Visible && Mathf.IsEqualApprox(header.Modulate.A, 1)),
             "Room headings must reach full opacity at 0.35");
         ui.UpdateForZoom(0.1f);
-        Check(Mathf.IsEqualApprox(panel.Scale.X, 1.65f), "Zoom compensation must be capped");
+        Check(Mathf.IsEqualApprox(panel.Scale.X, 1.2f), "Trade panel zoom compensation must be capped");
         foreach (float zoom in new[] { 1f, 1.8f })
         {
             ui.UpdateForZoom(zoom);
-            Check(panel.Scale == Vector2.One, "Zooming in must restore the original UI scale without cumulative growth");
+            Check(panel.Scale.X <= 1 && panel.Scale.X * zoom <= 1.08f,
+                "Zooming in must keep the trade panel's screen size bounded without cumulative growth");
         }
         foreach (float zoom in new[] { 0.23f, 0.3f, 0.5f, 1f, 1.8f })
         {
@@ -1282,6 +1284,25 @@ public partial class ProjectTest : SceneTree
             int visibleBodies = customer.GetChildren().Count(node => node is Node2D { Visible: true });
             Check(visibleBodies == 1, "Every appearance must select exactly one body");
             Node2D visibleBody = customer.GetChildren().OfType<Node2D>().Single(node => node.Visible);
+            var tradePanel = game.GetNode<Control>("World/TradingRoom/Item/TradePanel");
+            foreach (float zoom in new[] { 0.25f, 0.7f, 1f, 1.8f })
+            {
+                game.GetNode<ZoomResponsiveUi>("ZoomResponsiveUi").UpdateForZoom(zoom);
+                var room = game.GetNode<Node2D>("World/TradingRoom");
+                Rect2 registerBounds = room.GlobalTransform * new Rect2(450, 490, 170, 170);
+                Check(!tradePanel.GetGlobalRect().Intersects(registerBounds) &&
+                      tradePanel.Size.X <= 320 && tradePanel.Size.Y <= 210,
+                    "The compact central trade panel must leave the cash register visible");
+                foreach (var itemSprite in game.GetNode("World/TradingRoom/Item").GetChildren().OfType<Sprite2D>())
+                    Check(!tradePanel.GetGlobalRect().Intersects(itemSprite.GlobalTransform * itemSprite.GetRect()),
+                        "The central trade panel must leave every sale item visible");
+                foreach (var sprite in visibleBody.FindChildren("*", "Sprite2D", true, false).Cast<Sprite2D>().Where(s => s.Visible))
+                {
+                    Rect2 bounds = sprite.GlobalTransform * sprite.GetRect();
+                    Check(!tradePanel.GetGlobalRect().Intersects(bounds),
+                        "The trade panel must not cover any body, outfit or hairstyle at supported zoom levels");
+                }
+            }
             Check(visibleBody.GetNode<Node2D>("Clothes").GetChildren().Count(node =>
                       node is CanvasItem { Visible: true }) == 1 &&
                   visibleBody.GetNode<Node2D>("Hair").GetChildren().Count(node =>

@@ -7,6 +7,41 @@
 
 ## Текущий фронт
 
+### HF-51 — компактная табличка сделки в центре комнаты
+
+Статус: `DONE`; координатор/исполнитель `/root`; HF-50 DONE; READY 2026-11-06. CP-HF-51: read-set — текущий фронт, scenes/trade_scene.tscn (TradingRoom/TradePanel styles), scripts/UI/ZoomResponsiveUi.cs, tests/ProjectTest.cs (зум/покупатели), art/rooms/cashier.jpg, tools/verify.ps1; write-set — сцена, ZoomResponsiveUi.cs, tests/ProjectTest.cs, ORCHESTRATION_PLAN.md. Владелец сцены `/root`, пересечений нет. Out of scope: source/, TradeScene/домен, ассеты/положение NPC и предмета, пользовательские изменения, публикация. Приёмка: надпись удалена; уменьшенная панель по центру свободной части комнаты, без пересечения с кассой/товарами/внешностями, ограниченное экранное увеличение при zoom-in. Проверки: геометрия и GUI trade/localization regression, полный verify, diff-check.
+
+
+```text
+Task: HF-51
+Recommended status: REVIEW
+Changed: scenes/trade_scene.tscn, scripts/UI/ZoomResponsiveUi.cs, tests/ProjectTest.cs, ORCHESTRATION_PLAN.md.
+Checks: tools/verify.ps1 с Godot .NET и DOTNET_ROLL_FORWARD=Major -> PASS (exit 0, build, 53 domain tests, import/integration); git diff --check -> PASS. Evidence: OS TEMP/chikago-hf51-verify.log.
+Acceptance: SalesRoomLabel удалён; табличка 320×200 вместо 420×280, центр по X комнаты, над зоной товара и кассы. Шрифт 22/26 вместо 27/33, кнопки высотой 44 вместо 78, знаки 30 вместо 48. Для TradePanel масштаб ограничен 0.6–1.2 с компенсацией zoom-in: при 1.8 экранный множитель 1.08 вместо 1.8. Регрессия проверяет отсутствие пересечения с зоной кассы (по исходному фону), всеми спрайтами товара и всеми 18 покупателями при zoom 0.25/0.7/1/1.8; компактность, удаление заголовка, GUI-клики и RU/EN проходят.
+Read-set exception: координатор прочитал art/rooms/cashier.jpg для определения зоны кассы; source/ не читался.
+Risks/blocker: ручной visual smoke не выполнялся; пользовательские изменения сохранены, публикация не выполнялась.
+Next: оценить компактную табличку над кассой при приближении.
+```
+
+Координатор подтвердил HF-51 2026-11-06 по verify и diff-check: REVIEW → DONE.
+### HF-50 — окно сделки не перекрывает покупателя
+
+Статус: `DONE`; координатор/исполнитель `/root`; зависимости отсутствуют; READY 2026-11-06. CP-HF-50: read-set — текущий фронт, scenes/trade_scene.tscn (TradingRoom), scenes/customer.tscn, scripts/UI/ZoomResponsiveUi.cs, tests/ProjectTest.cs (покупатель/зум), tools/verify.ps1, git status/diff; write-set — scenes/trade_scene.tscn (только offsets TradePanel), tests/ProjectTest.cs, ORCHESTRATION_PLAN.md. Владелец сцены `/root`, пересечений нет. Out of scope: source/, TradeScene.cs/домен/экономика, ассеты и положение NPC, другие пользовательские изменения, публикация. Приёмка: панель слева от покупателя без пересечения со всеми 18 внешностями при диапазоне компенсации зума; прежние GUI-продажа/реролл проходят. Проверки: геометрическая regression, полный verify, diff-check.
+
+
+```text
+Task: HF-50
+Recommended status: REVIEW
+Changed: scenes/trade_scene.tscn (TradePanel offsets), tests/ProjectTest.cs, ORCHESTRATION_PLAN.md.
+Checks: tools/verify.ps1 с Godot .NET и DOTNET_ROLL_FORWARD=Major -> PASS (exit 0, build, 53 domain tests, import/integration); git diff --check -> PASS. Evidence: OS TEMP/chikago-hf50-verify.log.
+Acceptance: панель сделки сдвинута влево на 597 world units без изменения размера/высоты и положения NPC. Геометрический тест проверяет отсутствие пересечения с bounds тела/одежды/волос всех 18 внешностей при zoom 0.25/0.7/1/1.8 (включая максимум UI-компенсации 1.65). Прежние реальные GUI-клики продажи/реролла, торговля и полная регрессия проходят.
+Read-set exception: координатор точечно прочитал сцену покупателя и zoom UI перед CP для диагностики геометрии. source/ не читался.
+Risks/blocker: ручной visual smoke не выполнялся; пользовательские изменения сохранены, публикация не выполнялась.
+Next: посмотреть покупателя рядом с окном сделки в игровом окне.
+```
+
+Координатор подтвердил HF-50 2026-11-06 по verify и diff-check: REVIEW → DONE.
+
 ### HF-36 — публикация вышивки, двухминутного дня и редких предметов
 
 Статус: `DONE`; координатор/исполнитель `/root`; HF-31…HF-35 DONE; READY проверен 2026-11-06. Пользователь явно запросил push.
