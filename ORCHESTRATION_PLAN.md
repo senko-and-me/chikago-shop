@@ -9,7 +9,7 @@
 
 ### HF-36 — публикация вышивки, двухминутного дня и редких предметов
 
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; HF-31…HF-35 DONE; READY проверен 2026-11-06. Пользователь явно запросил push.
+Статус: `DONE`; координатор/исполнитель `/root`; HF-31…HF-35 DONE; READY проверен 2026-11-06. Пользователь явно запросил push.
 
 #### CP-HF-36
 
@@ -17,6 +17,19 @@ Read-set: текущий фронт плана, git status/diff/log/remotes, ф�
 Write-set: ORCHESTRATION_PLAN.md; Git index/commit и origin/main только для файлов HF-31…HF-35: README.md, localization/en.tres, scripts/CounterWorld.cs, scripts/Days/DayCycleController.cs, scripts/TradeScene.cs, scripts/UI/PauseMenu.cs, scripts/UI/EmbroideryGame.cs[.uid], scripts/Crafting/WorkshopItemCatalog.cs[.uid], src/ChikagoShop.Domain/Days/DaySession.cs, src/ChikagoShop.Domain/Crafting/EmbroiderySession.cs, WeightedItemTable.cs в той же папке; tests/ProjectTest.cs, tests/ChikagoShop.Domain.Tests/DaySessionTests.cs, EmbroiderySessionTests.cs и WeightedItemTableTests.cs в той же папке; шесть art/items/placeholder_{clothing,music}_{first,exclusive,unique}.svg[.import]. Отдельный worktree в OS TEMP для проверки итогового commit. Владелец плана/index `/root`, пересечений нет.
 Out of scope: source/, пользовательские export_presets.cfg/project.godot/scenes/trade_scene.tscn/MyFont_Completed.ttf[.import], исходный atelier_embroidery_v4.html, новые продуктовые изменения, force push.
 Приёмка: выбранные файлы составляют самостоятельный commit; полный tools/verify.ps1 в отдельном worktree PASS, staged diff-check PASS; push origin/main без force, пользовательские файлы сохранены локально.
+
+```text
+Task: HF-36
+Recommended status: REVIEW
+Changed: commit 064ab30 содержит 30 файлов HF-31…HF-35 и текущую запись плана. Пользовательские project.godot/export_presets.cfg/scenes/trade_scene.tscn/MyFont_Completed.ttf[.import] и исходный HTML не включены.
+Checks: git fetch origin -> PASS, перед commit HEAD...origin/main=0/0; staged diff-check -> PASS; tools/verify.ps1 в отдельном worktree 064ab30 -> PASS (exit 0, 41 domain tests, build, Godot import/integration); git push origin main -> PASS (8d6a047..064ab30, exit 0); после push HEAD...origin/main=0/0.
+Acceptance: вышивка со шкалой/карточками, двухминутный день с непрерывным отсчётом при крафте и шесть высокоредких квадратов опубликованы в origin/main. Полная проверка выполнена на точном опубликованном наборе без пользовательских локальных правок.
+Read-set exception: первый import чистого worktree сообщил об отсутствующем font cache .godot; сам import создал cache, последующий полный verify exit 0 без этих ошибок. Первая обёртка PowerShell вернула exit 1 из-за native stderr, хотя внутренние шаги завершились; успешный финальный лог OS TEMP/chikago-hf36-verify-final.log. source/ не читался.
+Risks/blocker: нет; пользовательские изменения сохранены локально.
+Next: продолжить по запросу пользователя.
+```
+
+Координатор подтвердил HF-36 2026-11-06 по точному commit, финальному verify (exit 0) и успешному push: REVIEW → DONE. Evidence публикуется отдельным документационным коммитом.
 
 ### HF-35 — цветные заглушки высоких редкостей в обеих мастерских
 
