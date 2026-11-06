@@ -9,7 +9,7 @@
 
 ### HF-29 — раздельная публикация локализации и таймера
 
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; HF-27/HF-28 = DONE; `CP-HF-29`, READY проверен 2026-11-06. Пользователь явно разрешил push раздельных изменений.
+Статус: `DONE`; координатор/исполнитель `/root`; HF-27/HF-28 = DONE; `CP-HF-29`, READY проверен 2026-11-06. Пользователь явно разрешил push раздельных изменений.
 
 #### CP-HF-29
 
@@ -18,6 +18,19 @@ Write-set: ORCHESTRATION_PLAN.md, Git index/commit и origin/main для фай�
 Out of scope: новые продуктовые изменения, source/, пользовательские export_presets.cfg/scenes/trade_scene.tscn/MyFont_Completed.ttf[.import], force push.
 Приёмка: отдельный самостоятельный commit локализации без таймера, отдельный commit таймера поверх него; проверка промежуточной локализации и итоговый verify PASS; staged diff-check PASS; push origin/main без force; посторонние изменения сохранены.
 
+
+```text
+Task: HF-29
+Recommended status: REVIEW
+Changed: два отдельных feature commits для файлов HF-27/HF-28; пользовательские изменения вне этих задач не публиковались.
+Checks: git fetch origin -> PASS; HEAD...origin/main перед commit = 0/0; localization-only tools/verify.ps1 в отдельном worktree -> PASS (19 domain tests + import/integration); итоговый tools/verify.ps1 -> PASS (33 domain tests + import/integration); оба staged diff-check -> PASS; git push origin main -> PASS (exit 0).
+Acceptance: 192cea6 содержит только локализацию с её каталогом/проверками/docs; 14403f7 содержит минутный таймер, закрытие дня, save v8 и соответствующие проверки/docs. Оба опубликованы в origin/main без force. Промежуточный commit локализации самостоятельно собирается и проходит Godot regression без timer-классов. Пользовательские export_presets.cfg/scenes/trade_scene.tscn и исходный MyFont_Completed.ttf[.import] сохранены локально.
+Read-set exception: диагностировался первый clean import временного worktree: отсутствовал font cache .godot до импорта; импорт создал cache, повторный полный verify завершился exit 0. Итоговые проверки выполнены последовательно, чтобы не делить test user:// files между процессами. source/ не читался.
+Risks/blocker: нет.
+Next: продолжить работу по запросу пользователя.
+```
+
+Координатор подтвердил HF-29 2026-11-06 по раздельным commit diffs, обеим проверкам и успешному push: REVIEW → DONE; evidence публикуется документационным коммитом.
 
 ### HF-28 — минутный день и завершение последней сделки
 
