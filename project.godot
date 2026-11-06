@@ -14,6 +14,14 @@ config/name="ChikagoShop"
 run/main_scene="res://scenes/main_menu.tscn"
 config/features=PackedStringArray("4.7", "C#", "Mobile")
 
+[autoload]
+
+GameLocalization="*res://scripts/Localization/GameLocalization.cs"
+
+[internationalization]
+
+locale/fallback="ru"
+
 [display]
 
 window/size/viewport_width=1280

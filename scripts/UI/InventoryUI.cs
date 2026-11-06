@@ -92,9 +92,8 @@ public partial class InventoryUI : Control
 		{
 			int itemIndex = storedItems[i];
 			_slots[i].SetItemTexture(GD.Load<Texture2D>(TradeScene.GetItemArtPath(itemIndex)));
-			_slots[i].ItemInfo = $"{TradeScene.GetItemName(itemIndex)}\n" +
-				$"Редкость: {TradeScene.GetItemRarity(itemIndex)}\n" +
-				$"Стоимость: {TradeScene.GetItemBasePrice(itemIndex)}$";
+			_slots[i].ItemInfo = GameLocalization.Format("{0}\nРедкость: {1}\nСтоимость: {2}$",
+				TradeScene.GetItemName(itemIndex), TradeScene.GetItemRarity(itemIndex), TradeScene.GetItemBasePrice(itemIndex));
 		}
 		_itemPopup.Refresh();
 

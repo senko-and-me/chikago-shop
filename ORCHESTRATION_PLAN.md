@@ -7,6 +7,31 @@
 
 ## Текущий фронт
 
+### HF-27 — русский и английский интерфейс
+
+Статус: `DONE`; координатор/исполнитель `/root`; HF-26 = DONE; `CP-HF-27`, READY проверен 2026-11-06.
+
+#### CP-HF-27
+
+Read-set: текущий фронт плана, AGENTS.md из запроса; точечная инвентаризация scripts/scenes/tests/config/themes/tools/.vscode без source/; `project.godot`, `ChikagoShop.csproj`, `README.md`, `scripts/MainMenu.cs`, `scripts/TradeScene.cs`, `scripts/UI/InventoryUI.cs`, `scripts/UI/ItemInfoPopup.cs`, `scripts/UI/PauseMenu.cs`, `scripts/UI/RarityPanel.cs`, `scripts/UI/ProgressPanel.cs`, `scenes/main_menu.tscn`, `scenes/trade_scene.tscn`, `scenes/UI/ShowcaseSlot.tscn`, `tests/ProjectTest.cs`, `tests/ChikagoShop.Domain.Tests/ArchitectureTests.cs`, `tools/verify.ps1`, `.vscode/settings.json`; список art/ui и изображения button_play.png/button_settings.png/create_button.png/settings_panel.png/logo.png; локальная GodotSharp.xml для API перевода; новые файлы write-set; git status/diff. Диагностика координатора перед пакетом перечислена здесь.
+Write-set: `ORCHESTRATION_PLAN.md`, `project.godot`, `scripts/Localization/GameLocalization.cs[.uid]`, `localization/en.tres`, `scripts/MainMenu.cs`, `scripts/TradeScene.cs` (только представление текстов), `scripts/UI/InventoryUI.cs`, `tests/ProjectTest.cs`, `README.md`. Владелец плана `/root`; активных пересечений нет.
+Out of scope: source/, экономика/RNG/правила торговли, save schema, переписывание сохранений при смене языка, изменение пользовательских export/scene/font, публикация, перевод логотипа и любых кнопок-картинок (прямое уточнение пользователя).
+Приёмка: кнопки «Русский» / «English» в настройках главного меню, мгновенное переключение и выделение текущего языка; русский по умолчанию, выбор сохраняется между запусками отдельно от игры. Переведены статические и динамические тексты игры, меню паузы, item tooltip/редкости/статусы; сохранения совместимы, gameplay не меняется. Кнопки-картинки сохраняются без изменений: их перевод отложен пользователем. Regression проверяет оба языка, persistence/fallback, переводы HUD/товаров/офферов/старых статусов, GUI переключение и переходы меню/игра, геометрию 1280×720 и 960×540. Проверки: полный tools/verify.ps1 и git diff --check.
+
+
+```text
+Task: HF-27
+Recommended status: REVIEW
+Changed: project.godot; scripts/Localization/GameLocalization.cs[.uid]; localization/en.tres; scripts/MainMenu.cs; scripts/TradeScene.cs; scripts/UI/InventoryUI.cs; tests/ProjectTest.cs; README.md; ORCHESTRATION_PLAN.md
+Checks: powershell -NoProfile -ExecutionPolicy Bypass -File tools/verify.ps1 -> PASS (19 domain tests, build, Godot import и вся integration-регрессия); git diff --check -> PASS.
+Acceptance: добавлены toggle-кнопки Русский/English в настройках главного меню, мгновенный перевод и отражение выбора. Autoload регистрирует Godot Translation resource; русский — default/fallback, язык хранится отдельно в user://settings.cfg, другие секции настроек сохраняются. Переведены статические scene/UI строки, pause, rarity, HUD/offer, имена и подсказки предметов, сообщения прогресса. Старые русские статусы, включая сумму недостающей квоты, переводятся только в presentation: save schema и данные не меняются. При смене locale обновляются динамические подписи и текущая подсказка. Реальные GUI-click tests подтверждают оба языка и размещение controls при 1280×720/960×540, persistence/reload/recreated menu; проверяются placeholder parity всего каталога, перевод item/offer/статуса после reload, отсутствие изменения игрового состояния и записи save при переключении. Тесты восстанавливают исходный settings.cfg byte-for-byte. По уточнению пользователя все кнопки-картинки и логотип оставлены без изменений.
+Read-set exception: диагностика координатора перед CP, перечисленная в read-set; source/ не читался. Verify log записан во временную папку ОС.
+Risks/blocker: ручной visual playtest не выполнялся; NU1900 из-за недоступного vulnerability feed NuGet, ошибок компиляции нет. Перевод картинок отложен пользователем. Пользовательские export/scene/font изменения сохранены.
+Next: проверить переключение языка в главном меню игрового сеанса.
+```
+
+Координатор подтвердил HF-27 2026-11-06 по финальному verify (exit 0), localization regression и diff-check: REVIEW → DONE; основной фронт и ворота без изменений.
+
 ### HF-26 — публикация свободной витрины и выхода в меню
 
 Статус: `DONE`; координатор/исполнитель `/root`; HF-25 = DONE; `CP-HF-26`, READY проверен 2026-11-06. Commit/push явно разрешён пользователем.

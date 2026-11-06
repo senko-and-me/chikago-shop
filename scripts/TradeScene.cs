@@ -84,9 +84,9 @@ public partial class TradeScene : Node2D
 	public int[] ShowcaseItems => (int[])_showcaseItems.Clone();
 	public double BuyerCountdown => _buyerCountdown;
 	public static string GetItemKind(int index) => Items[index].Kind;
-	public static string GetItemName(int index) => Items[index].Name;
+	public static string GetItemName(int index) => GameLocalization.Text(Items[index].Name);
 	public static string GetItemArtPath(int index) => Items[index].ArtPath;
-	public static string GetItemRarity(int index) => Items[index].Rarity;
+	public static string GetItemRarity(int index) => GameLocalization.Text(Items[index].Rarity);
 	public static int GetItemBasePrice(int index) => Items[index].BasePrice;
 	public static int GetItemRerollLimit(int index) => GetRerollsForRarity(Items[index].RarityId);
 	public static int GetRerollsForRarity(string rarityId) => RerollsByRarity[rarityId];
@@ -111,6 +111,7 @@ public partial class TradeScene : Node2D
 	public bool Failed { get; private set; }
 	public bool Completed { get; private set; }
 	public string StatusText { get; private set; } = "Торгуйте и завершайте день.";
+	private bool _localizationReady;
 	public bool TradeActive { get; set; }
 
 	public override void _Ready()
@@ -210,6 +211,17 @@ public partial class TradeScene : Node2D
 		else FinishTrade();
 		RefreshItemButtons();
 		LogStoredItems();
+		_localizationReady = true;
+	}
+
+	public override void _Notification(int what)
+	{
+		if (what != NotificationTranslationChanged || !_localizationReady) return;
+		RefreshScore();
+		RefreshProgress();
+		RefreshShowcases();
+		if (TradeActive) RefreshOffer();
+		_inventoryUI.UpdateUI(_storedItems);
 	}
 
 	private void NormalizeLeftShowcaseNames()
@@ -432,7 +444,7 @@ public partial class TradeScene : Node2D
 			int itemIndex = _showcaseItems[i];
 			_showcaseIcons[i].Texture = itemIndex < 0 ? null :
 				GD.Load<Texture2D>(Items[itemIndex].ArtPath);
-			_showcaseLabels[i].Text = itemIndex < 0 ? "СВОБОДНО" : Items[itemIndex].Name.ToUpperInvariant();
+			_showcaseLabels[i].Text = itemIndex < 0 ? "СВОБОДНО" : GetItemName(itemIndex).ToUpperInvariant();
 			_showcaseGlass[i].Color = new Color(0.77f, 0.9f, 0.88f, 0.58f);
 			_showcaseSlots[i].Disabled = Failed || Completed ||
 				(itemIndex < 0 && (SelectedInventoryIndex < 0 || SelectedInventoryIndex >= _storedItems.Count));
@@ -443,9 +455,9 @@ public partial class TradeScene : Node2D
 	{
 		int basePrice = Items[ItemIndex].BasePrice;
 		OfferedPrice = PriceForPercent(basePrice, Percentage);
-		_baseLabel.Text = $"Обычно: {basePrice}$";
-		_percentLabel.Text = $"К цене: {(Percentage >= 0 ? "+" : "")}{Percentage}%";
-		_offerLabel.Text = $"Получим: {OfferedPrice}$";
+		_baseLabel.Text = GameLocalization.Format("Обычно: {0}$", basePrice);
+		_percentLabel.Text = GameLocalization.Format("К цене: {0}{1}%", Percentage >= 0 ? "+" : "", Percentage);
+		_offerLabel.Text = GameLocalization.Format("Получим: {0}$", OfferedPrice);
 		_declineButton.Text = $"× ({RerollsRemaining})";
 		_declineButton.Disabled = RerollsRemaining <= 0;
 	}
@@ -507,12 +519,12 @@ public partial class TradeScene : Node2D
 		RefreshProgress();
 	}
 
-	private void RefreshScore() => _scoreLabel.Text = $"Счёт: {Score}$";
+	private void RefreshScore() => _scoreLabel.Text = GameLocalization.Format("Счёт: {0}$", Score);
 
 	private void RefreshProgress()
 	{
-		_dayLabel.Text = $"День: {CurrentDay} / {FinalDay}";
-		_energyLabel.Text = $"Энергия: {EnergyRemaining} / {EnergyPerDay}";
+		_dayLabel.Text = GameLocalization.Format("День: {0} / {1}", CurrentDay, FinalDay);
+		_energyLabel.Text = GameLocalization.Format("Энергия: {0} / {1}", EnergyRemaining, EnergyPerDay);
 		if (Completed)
 		{
 			_quotaLabel.Text = "Все квоты выплачены";
@@ -522,10 +534,10 @@ public partial class TradeScene : Node2D
 		{
 			int target = QuotaStage == 0 ? FirstQuota : SecondQuota;
 			int deadline = QuotaStage == 0 ? FirstDeadline : FinalDay;
-			_quotaLabel.Text = $"Квота {QuotaStage + 1} / 2: {target}$";
-			_deadlineLabel.Text = $"Срок: конец дня {deadline}";
+			_quotaLabel.Text = GameLocalization.Format("Квота {0} / 2: {1}$", QuotaStage + 1, target);
+			_deadlineLabel.Text = GameLocalization.Format("Срок: конец дня {0}", deadline);
 		}
-		_statusLabel.Text = StatusText;
+		_statusLabel.Text = GameLocalization.Status(StatusText);
 		_endDayButton.Disabled = Failed || Completed || TradeActive;
 		_endDayButton.TooltipText = TradeActive ? "Сначала завершите сделку" : "";
 	}
