@@ -102,7 +102,6 @@ public partial class PauseMenu : CanvasLayer
 
 	public void Open()
 	{
-		GetParent<TradeScene>().CancelCameraDrag();
 		_ownsPause = true;
 		GetTree().Paused = true;
 		_openButton.Hide();

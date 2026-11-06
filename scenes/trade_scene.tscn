@@ -23,6 +23,7 @@
 [ext_resource type="Texture2D" uid="uid://bljkoxphrw4ki" path="res://art/ui/create_button.png" id="18_create_button"]
 [ext_resource type="Texture2D" uid="uid://brbt53eulckmp" path="res://art/ui/dialog_panel.png" id="18_dwgkk"]
 [ext_resource type="PackedScene" path="res://scenes/UI/RarityPanel.tscn" id="19_rarity_panel"]
+[ext_resource type="Script" path="res://scripts/Camera/WorldCamera.cs" id="23_world_camera"]
 
 [sub_resource type="StyleBoxTexture" id="CreateButtonNormal"]
 texture = ExtResource("18_create_button")
@@ -524,9 +525,11 @@ position = Vector2(3, 4)
 texture = ExtResource("13_58qc8")
 centered = false
 
-[node name="Camera2D" type="Camera2D" parent="." unique_id=550359116]
+[node name="Camera2D" type="Camera2D" parent="." unique_id=550359116 node_paths=PackedStringArray("BoundsSource")]
 position = Vector2(3011, 1820)
 zoom = Vector2(0.7, 0.7)
+script = ExtResource("23_world_camera")
+BoundsSource = NodePath("../World/RoomLayout")
 
 [node name="DELETE_LATE" type="Sprite2D" parent="." unique_id=794820871]
 position = Vector2(2856, 1630)

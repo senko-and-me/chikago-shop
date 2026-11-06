@@ -11,9 +11,6 @@ public partial class TradeScene : Node2D
 	[Export] public string SavePath { get; set; } = "user://trade_progress.json";
 	private float NextBuyerDelay() => _buyerArrivalRng.RandfRange(0.5f, 2f);
 
-	private const float MaxZoom = 1.8f;
-	private const float ZoomStep = 1.12f;
-	private const float ZoomSmoothness = 12f;
 	private const int FirstDeadline = 4;
 	private const int FinalDay = 7;
 	private const int ShowcaseCapacity = 6;
@@ -44,12 +41,7 @@ public partial class TradeScene : Node2D
 	};
 
 	private CounterWorld _world = null!;
-	private Sprite2D _roomLayout = null!;
-	private Rect2 CameraBounds => _roomLayout.GlobalTransform * _roomLayout.GetRect();
-	private float MinZoom => GetViewportRect().Size.X / CameraBounds.Size.X;
-	private float ZoomLimit => Mathf.Max(MaxZoom, MinZoom);
 	private ModularCustomer _customer = null!;
-	private Camera2D _camera = null!;
 	private PanelContainer _tradePanel = null!;
 	private Label _baseLabel = null!;
 	private Label _percentLabel = null!;
@@ -120,19 +112,10 @@ public partial class TradeScene : Node2D
 	public bool Completed { get; private set; }
 	public string StatusText { get; private set; } = "Торгуйте и завершайте день.";
 	public bool TradeActive { get; set; }
-	private bool _dragging;
-	private float _targetZoom;
-	private Vector2 _zoomAnchor;
-	public void CancelCameraDrag() => _dragging = false;
 
 	public override void _Ready()
 	{
 		_world = GetNode<CounterWorld>("World");
-		_roomLayout = GetNode<Sprite2D>("World/RoomLayout");
-		_camera = GetNode<Camera2D>("Camera2D");
-		_targetZoom = Mathf.Clamp(_camera.Zoom.X, MinZoom, ZoomLimit);
-		_camera.Zoom = Vector2.One * _targetZoom;
-		_zoomAnchor = GetViewportRect().Size / 2f;
 		_customer = GetNode<ModularCustomer>("World/TradingRoom/Customer");
 		_tradePanel = GetNode<PanelContainer>("World/TradingRoom/Item/TradePanel");
 		_baseLabel = GetNode<Label>("World/TradingRoom/Item/TradePanel/Content/BasePriceLabel");
@@ -227,9 +210,6 @@ public partial class TradeScene : Node2D
 		else FinishTrade();
 		RefreshItemButtons();
 		LogStoredItems();
-
-		GetViewport().SizeChanged += ClampCamera;
-		ClampCamera();
 	}
 
 	private void NormalizeLeftShowcaseNames()
@@ -299,18 +279,6 @@ public partial class TradeScene : Node2D
 	{
 		if (GetTree().Paused) return;
 		TickBuyers(delta);
-		ClampCamera();
-		_targetZoom = Mathf.Clamp(float.IsFinite(_targetZoom) ? _targetZoom : _camera.Zoom.X,
-			MinZoom, ZoomLimit);
-		float oldZoom = _camera.Zoom.X;
-		if (Mathf.IsEqualApprox(oldZoom, _targetZoom)) return;
-		float blend = 1f - MathF.Exp(-ZoomSmoothness * (float)delta);
-		float newZoom = Mathf.Lerp(oldZoom, _targetZoom, blend);
-		if (Mathf.Abs(newZoom - _targetZoom) < 0.0001f) newZoom = _targetZoom;
-		Vector2 offset = _zoomAnchor - GetViewportRect().Size / 2f;
-		_camera.Position += offset * (1f / oldZoom - 1f / newZoom);
-		_camera.Zoom = Vector2.One * newZoom;
-		ClampCamera();
 	}
 
 	public override void _Input(InputEvent @event)
@@ -326,52 +294,6 @@ public partial class TradeScene : Node2D
 					break;
 			}
 		}
-		else if (@event is InputEventMouseButton { Pressed: true } wheel)
-		{
-			switch (wheel.ButtonIndex)
-			{
-				case MouseButton.WheelUp: ZoomAt(wheel.Position, ZoomStep); break;
-				case MouseButton.WheelDown: ZoomAt(wheel.Position, 1f / ZoomStep); break;
-			}
-		}
-		else if (@event is InputEventMouseButton { ButtonIndex: MouseButton.Left })
-			_dragging = false;
-		else if (@event is InputEventMouseMotion motion && _dragging)
-		{
-			_camera.Position -= motion.Relative / _camera.Zoom;
-			ClampCamera();
-		}
-	}
-
-	public override void _UnhandledInput(InputEvent @event)
-	{
-		if (GetTree().Paused) return;
-		if (@event is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true })
-			_dragging = true;
-	}
-
-	private void ZoomAt(Vector2 mousePosition, float factor)
-	{
-		float newTarget = Mathf.Clamp(_targetZoom * factor, MinZoom, ZoomLimit);
-		if (Mathf.IsEqualApprox(newTarget, _targetZoom)) return;
-		_targetZoom = newTarget;
-		_zoomAnchor = mousePosition;
-	}
-
-	public void ClampCamera()
-	{
-		Rect2 bounds = CameraBounds;
-		float zoom = Mathf.Clamp(_camera.Zoom.X, MinZoom, ZoomLimit);
-		_camera.Zoom = Vector2.One * zoom;
-		Vector2 halfView = GetViewportRect().Size / (2f * _camera.Zoom);
-		Vector2 position = _camera.Position;
-		position.X = halfView.X >= bounds.Size.X / 2f
-			? bounds.GetCenter().X
-			: Mathf.Clamp(position.X, bounds.Position.X + halfView.X, bounds.End.X - halfView.X);
-		position.Y = halfView.Y >= bounds.Size.Y / 2f
-			? bounds.GetCenter().Y
-			: Mathf.Clamp(position.Y, bounds.Position.Y + halfView.Y, bounds.End.Y - halfView.Y);
-		_camera.Position = position;
 	}
 
 	public void GetItemFromAtelier() => AcquireItem("Ателье", 0, 1, AtelierSpinCost);

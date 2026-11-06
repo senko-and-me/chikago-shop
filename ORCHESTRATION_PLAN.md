@@ -7,6 +7,67 @@
 
 ## Текущий фронт
 
+### HF-24 — публикация рефакторинга UI и камеры
+
+Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; HF-22/HF-23 = DONE; `CP-HF-24`, READY проверен 2026-11-06. Commit/push явно разрешён пользователем.
+
+#### CP-HF-24
+
+Read-set: этот фронт плана, git status/diff/log/remotes/show; файлы HF-22/HF-23 и их verify evidence.
+Write-set: `ORCHESTRATION_PLAN.md`, Git index/commit и origin/main для публикации файлов HF-22/HF-23: `README.md`, `scripts/Camera/WorldCamera.cs[.uid]`, `scripts/TradeScene.cs`, `scripts/UI/InventoryUI.cs`, `scripts/UI/ItemInfoPopup.cs[.uid]`, `scripts/UI/PopupPlacement.cs[.uid]`, `scripts/UI/RarityPanel.cs`, `scripts/UI/ZoomResponsiveUi.cs`, `scripts/UI/PauseMenu.cs`, `tests/ProjectTest.cs`, только camera script/BoundsSource hunks `scenes/trade_scene.tscn`. Владелец плана и index `/root`; пересечений нет.
+Out of scope: новые продуктовые изменения, export_presets.cfg, пользовательские serialization/layout hunks trade_scene, исходный MyFont_Completed.ttf[.import], force push, source/.
+Приёмка: финальный verify HF-23 PASS, staged diff-check PASS, commit опубликован в origin/main без force; чужие изменения сохранены локально.
+
+### HF-23 — извлечь управление камерой из TradeScene
+
+Статус: `DONE`; координатор/исполнитель `/root`; HF-22 = DONE; `CP-HF-23`, READY проверен 2026-11-06.
+
+#### CP-HF-23
+
+Read-set: текущий фронт плана, AGENTS.md из запроса, `scripts/TradeScene.cs`, `scripts/UI/ZoomResponsiveUi.cs`, `scripts/UI/RarityPanel.cs`, `scripts/UI/PauseMenu.cs`, `scenes/trade_scene.tscn`, `tests/ProjectTest.cs`, `README.md`, ранее прочитанные verify/settings; новые файлы write-set; git status/diff.
+Write-set: `scripts/Camera/WorldCamera.cs[.uid]`, `scripts/TradeScene.cs` (извлечение камеры и удаление её API), `scripts/UI/PauseMenu.cs` (удаление camera-coupling), `scenes/trade_scene.tscn` (script/BoundsSource существующего Camera2D), `tests/ProjectTest.cs`, `README.md`, `ORCHESTRATION_PLAN.md`. Владелец сцены и плана `/root`; пересекающиеся задачи не исполняются. Пользовательские изменения сцены сохраняются.
+Out of scope: изменение camera tuning/UX/порогов UI, доменная логика торговли, экономика/save/RNG, source/, остальные локальные изменения, публикация.
+Приёмка: WorldCamera : Camera2D самостоятельно владеет вводом/drag/zoom/viewport lifecycle и экспортируемой ссылкой на RoomLayout, без зависимости от TradeScene; в TradeScene нет camera fields/math/resize/input-pan. Старый Camera2D node path и все tuning constants сохранены. Pause через notification прекращает drag без связи меню с камерой. Проверки: существующие camera zoom/bounds/resize/layout transform tests перенесены на самостоятельный компонент без ослабления; новая standalone-scene camera проверка, zoom anchor/pause-resume/GUI drag regression, полный tools/verify.ps1, git diff --check. Baseline HF-22 verify PASS непосредственно перед задачей.
+Read-set exception: диагностика координатора перечисленных файлов перед CP; source/ не читался.
+
+```text
+Task: HF-23
+Recommended status: REVIEW
+Changed: scripts/Camera/WorldCamera.cs[.uid]; scripts/TradeScene.cs; scripts/UI/PauseMenu.cs; scenes/trade_scene.tscn; tests/ProjectTest.cs; README.md; ORCHESTRATION_PLAN.md
+Checks: powershell -NoProfile -ExecutionPolicy Bypass -File tools/verify.ps1 -> PASS (19 domain tests, Godot import/integration); git diff --check -> PASS; rg Camera/camera/Zoom/zoom/ClampCamera/CancelCameraDrag в TradeScene/PauseMenu -> совпадений нет.
+Acceptance: скрипт WorldCamera : Camera2D подключён к прежнему Camera2D node с экспортируемой ссылкой на RoomLayout. Весь camera state/math/мышь/viewport subscription удалён из TradeScene; в его _Process остался TickBuyers, в _Input — игровая клавиша F. WorldCamera сам сбрасывает drag при pause и отписывается от SizeChanged при удалении. Максимум 1.8, шаг 1.12, smoothness 12, zoom к курсору, bounds по transform/rect схемы и width-based minimum сохранены. Старые проверки камеры перенаправлены на компонент; static UI tests останавливают именно camera processing, игровая сцена независимо управляет buyers. Новый тест создаёт камеру вообще без TradeScene, проверяет native wheel anchor, GUI isolation, world pan, pause freeze/resume и resize после удаления. Все прежние drag/Shift/hover/tooltip/save/checkpoint/экономика и HF-22 regression проходят.
+Read-set exception: диагностика координатора перед CP, перечисленная выше.
+Risks/blocker: ручной visual playtest не выполнялся; NU1900 из-за недоступного vulnerability feed NuGet, ошибок компиляции нет. Пользовательские изменения сцены и незавершённые к публикации изменения HF-22 сохранены.
+Next: проверить привычное управление камерой в игровом сеансе.
+```
+
+Координатор подтвердил HF-23 2026-11-06 по финальному verify (exit 0), standalone/regression camera tests и diff-check: REVIEW → DONE; владение сценой освобождено, основной фронт и ворота без изменений.
+
+### HF-22 — безопасный рефакторинг и оптимизация UI
+
+Статус: `DONE`; координатор/исполнитель `/root`; HF-15–HF-20 = DONE; `CP-HF-22`, READY проверен 2026-11-06.
+
+#### CP-HF-22
+
+Read-set: этот план, AGENTS.md из запроса, `scripts/UI/InventoryUI.cs`, `scripts/UI/SlotUI.cs`, `scripts/UI/RarityPanel.cs`, `scripts/UI/ZoomResponsiveUi.cs`, `scripts/UI/ProgressPanel.cs`, `scripts/TradeScene.cs` (каталог/public snapshots), `tests/ProjectTest.cs`, `tests/ChikagoShop.Domain.Tests/ArchitectureTests.cs`, `ChikagoShop.csproj`, `README.md`, `tools/verify.ps1`, `.vscode/settings.json`; точечная инвентаризация scripts/src/tests без source/; новые файлы write-set.
+Write-set: `scripts/UI/InventoryUI.cs`, `scripts/UI/ItemInfoPopup.cs[.uid]`, `scripts/UI/PopupPlacement.cs[.uid]`, `scripts/UI/RarityPanel.cs`, `scripts/UI/ZoomResponsiveUi.cs`, `tests/ProjectTest.cs`, `README.md`, `ORCHESTRATION_PLAN.md`. Владелец плана `/root`; пересекающиеся задачи не исполняются. Tab-форматирование пользовательского RarityPanel сохраняется.
+Out of scope: новая функциональность, монолитная переработка TradeScene/domain/save/RNG, экономика, локализация, сцены/арт, source/, публикация и чужие изменения вне write-set.
+Приёмка: tooltip presentation вынесен из InventoryUI; placement math вынесен в самостоятельный helper с прежним scoring; RarityPanel не ищет HUD nodes в каждом candidate/frame и не создаёт candidate/HUD массивы каждый кадр; zoom обновляет свойства только при zoom/layout change, включая resize при постоянном zoom; Shift-перенос делает один showcase snapshot на операцию. Baseline и финальный verify зелёные; сохранены drag/cancel/Shift, tooltip lifecycle/позиция, hover, placement near edges/HUD, save/checkpoint/экономика. Дополнительные regression: popup resize/scroll/pause, popup movement с изменением HUD, constant-zoom resize. Проверки: полный tools/verify.ps1 до/после, git diff --check.
+Read-set exception: координатор прочитал перечисленные файлы до CP для выбора минимального безопасного среза; source/ не читался.
+
+```text
+Task: HF-22
+Recommended status: REVIEW
+Changed: scripts/UI/InventoryUI.cs; scripts/UI/ItemInfoPopup.cs[.uid]; scripts/UI/PopupPlacement.cs[.uid]; scripts/UI/RarityPanel.cs; scripts/UI/ZoomResponsiveUi.cs; tests/ProjectTest.cs; README.md; ORCHESTRATION_PLAN.md
+Checks: baseline и финальный powershell -NoProfile -ExecutionPolicy Bypass -File tools/verify.ps1 -> PASS (19 domain tests, Godot import и вся integration-регрессия); git diff --check -> PASS. Измерение GC.GetAllocatedBytesForCurrentThread: 1000 warmed-up вызовов PopupPlacement.FindPosition -> 0 managed bytes.
+Acceptance: ItemInfoPopup владеет стилем/позиционированием/lifecycle и отключает _Process, пока скрыт; InventoryUI отвечает за ячейки/выбор/перенос. PopupPlacement отделяет геометрию от scene lookup, порядок candidates/scoring сохранён. RarityPanel кеширует 6 HUD references после полной инициализации сцены вместо 36 GetNode на каждый visible frame; obstacle bounds читаются один раз за frame; candidates/obstacles используют stackalloc. Скрытая rarity table не выполняет _Process. ZoomResponsiveUi пропускает повторные записи при неизменном zoom/layout; Resize сигналов достаточно для обновления центров и зазора ценника при постоянном zoom. Shift-перенос получает один snapshot вместо snapshot для каждого проверяемого свободного/занятого слота. Новые тесты подтверждают constant-zoom resize, следование tooltip при scroll/resize, немедленное открытие и выключение при pause, актуальность cached HUD geometry при перемещении препятствия, allocation-free placement. Все прежние drag/Shift/tooltip/hover/save/checkpoint/trade/economy тесты проходят без ослабления.
+Read-set exception: диагностика координатора перед CP, перечисленная выше.
+Risks/blocker: FPS/CPU всей игры не профилировались, ручной visual playtest не выполнялся. NU1900 из-за недоступного vulnerability feed NuGet, компиляция без ошибок. Экономика/RNG/save schema/TradeScene не менялись; пользовательские export/trade_scene/font originals и tab-форматирование RarityPanel сохранены.
+Next: продолжать извлечение TradeScene только отдельной задачей основного плана с проверками соответствующего доменного сценария.
+```
+
+Координатор подтвердил HF-22 2026-11-06 по baseline/final verify (exit 0), новым regression и diff-check: REVIEW → DONE; основной фронт и ворота без изменений.
+
 ### HF-21 — публикация drag/drop, шрифта и hover-исправлений
 
 Статус: `DONE`; координатор/исполнитель `/root`; HF-15–HF-20 = DONE; `CP-HF-21`, READY проверен 2026-11-06. Commit/push явно разрешён пользователем.

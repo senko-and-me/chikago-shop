@@ -14,6 +14,9 @@ public partial class ProjectTest : SceneTree
         try
         {
             TestEconomyConfig();
+            TestPopupPlacement();
+            await TestStandaloneCamera();
+            await TestUiLayoutInvalidation();
             await TestPauseAndZoomUi();
             await TestCollapsibleProgress();
             await TestRarityPopupGeometry();
@@ -48,6 +51,165 @@ public partial class ProjectTest : SceneTree
 
     private static string ExpectedItemTooltip(int index) =>
         $"{TradeScene.GetItemName(index)}\nРедкость: {TradeScene.GetItemRarity(index)}\nСтоимость: {TradeScene.GetItemBasePrice(index)}$";
+
+    private static void TestPopupPlacement()
+    {
+        Rect2 viewport = new(0, 0, 1000, 700);
+        Rect2 anchor = new(400, 300, 100, 80);
+        Vector2 size = new(200, 120);
+        Vector2 right = PopupPlacement.FindPosition(viewport, anchor, size, ReadOnlySpan<Rect2>.Empty);
+        Check(right == new Vector2(512, 280), "Unobstructed popups must keep the existing preferred right-hand placement");
+        ReadOnlySpan<Rect2> obstacles = stackalloc Rect2[] { new(right, size) };
+        Vector2 left = PopupPlacement.FindPosition(viewport, anchor, size, obstacles);
+        Check(left == new Vector2(188, 280), "Popups must move to the left when the preferred side is occupied");
+        for (int i = 0; i < 32; i++) PopupPlacement.FindPosition(viewport, anchor, size, obstacles);
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        for (int i = 0; i < 1000; i++) PopupPlacement.FindPosition(viewport, anchor, size, obstacles);
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        Check(allocated == 0, $"Popup geometry must allocate no managed memory in steady state (actual {allocated} bytes)");
+        GD.Print("Popup placement: 1000 calculations, 0 managed bytes allocated");
+    }
+
+    private async Task TestStandaloneCamera()
+    {
+        // Deliberately contains no TradeScene: navigation must work with just bounds and a viewport.
+        var scene = new Node2D();
+        var boundsSource = new Sprite2D
+        {
+            Texture = GD.Load<Texture2D>("res://art/rooms/room_layout.jpg"),
+            Centered = false, Position = new Vector2(100, 200), Scale = Vector2.One * 4
+        };
+        scene.AddChild(boundsSource);
+        var camera = new WorldCamera
+        {
+            BoundsSource = boundsSource, Zoom = Vector2.One * 0.7f,
+            Position = (boundsSource.Transform * boundsSource.GetRect()).GetCenter()
+        };
+        scene.AddChild(camera);
+        var layer = new CanvasLayer();
+        scene.AddChild(layer);
+        var button = new Button { Position = new Vector2(12, 12), Size = new Vector2(160, 64), Text = "UI" };
+        layer.AddChild(button);
+        Root.AddChild(scene);
+        camera.SetProcess(false);
+        await ToSignal(this, SignalName.ProcessFrame);
+        try
+        {
+            void Move(Vector2 point, Vector2 relative, MouseButtonMask mask = 0) =>
+                Root.PushInput(new InputEventMouseMotion { Position = point, GlobalPosition = point,
+                    Relative = relative, ButtonMask = mask }, true);
+            void Left(Vector2 point, bool pressed) => Root.PushInput(new InputEventMouseButton
+            {
+                Position = point, GlobalPosition = point, ButtonIndex = MouseButton.Left,
+                Pressed = pressed, ButtonMask = pressed ? MouseButtonMask.Left : 0
+            }, true);
+
+            Vector2 pointer = Root.GetVisibleRect().Size * new Vector2(0.6f, 0.55f);
+            Vector2 screenOffset = pointer - Root.GetVisibleRect().Size / 2;
+            Vector2 anchoredWorldPoint = camera.Position + screenOffset / camera.Zoom;
+            float zoomBefore = camera.Zoom.X;
+            Root.PushInput(new InputEventMouseButton { Position = pointer, GlobalPosition = pointer,
+                ButtonIndex = MouseButton.WheelUp, Pressed = true }, true);
+            Check(camera.Zoom.X == zoomBefore, "Standalone camera wheel input must preserve smooth zoom");
+            camera._Process(1d / 60d);
+            Check(camera.Zoom.X > zoomBefore &&
+                  (camera.Position + screenOffset / camera.Zoom).DistanceTo(anchoredWorldPoint) < 0.01f,
+                "The extracted camera must zoom toward the world point under the cursor");
+
+            Vector2 positionBefore = camera.Position;
+            Vector2 uiPoint = button.GetGlobalRect().GetCenter();
+            Move(uiPoint, Vector2.Zero);
+            Left(uiPoint, true);
+            Move(uiPoint + new Vector2(40, 0), new Vector2(40, 0), MouseButtonMask.Left);
+            Left(uiPoint + new Vector2(40, 0), false);
+            Check(camera.Position == positionBefore, "A GUI click/drag must not start world-camera panning");
+            Move(pointer, Vector2.Zero);
+            Left(pointer, true);
+            Move(pointer + new Vector2(40, 0), new Vector2(40, 0), MouseButtonMask.Left);
+            Check(camera.Position.X < positionBefore.X, "Dragging empty world space must still pan the standalone camera");
+
+            Paused = true;
+            Vector2 pausedPosition = camera.Position;
+            Vector2 pausedZoom = camera.Zoom;
+            camera._Process(1);
+            camera._Input(new InputEventMouseMotion { Relative = new Vector2(100, 100) });
+            Check(camera.Position == pausedPosition && camera.Zoom == pausedZoom,
+                "Pause must freeze the independent camera's motion and zoom");
+            Paused = false;
+            Move(pointer + new Vector2(60, 0), new Vector2(20, 0), MouseButtonMask.Left);
+            Check(camera.Position == pausedPosition, "Resuming must not revive a mouse drag that began before pause");
+            Left(pointer + new Vector2(60, 0), false);
+        }
+        finally
+        {
+            Paused = false;
+            scene.QueueFree();
+        }
+        await ToSignal(this, SignalName.ProcessFrame);
+        Vector2I originalSize = Root.Size;
+        Root.Size = new Vector2I(originalSize.X - 20, originalSize.Y);
+        await ToSignal(this, SignalName.ProcessFrame);
+        Root.Size = originalSize;
+        await ToSignal(this, SignalName.ProcessFrame);
+        GD.Print("Standalone camera, zoom anchor, GUI input isolation and pause lifecycle checks passed");
+    }
+
+    private async Task TestUiLayoutInvalidation()
+    {
+        var game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
+        game.SavePath = "";
+        Root.AddChild(game);
+        game.SetProcess(false);
+        game.GetNode<WorldCamera>("Camera2D").SetProcess(false);
+        var camera = game.GetNode<Camera2D>("Camera2D");
+        var zoomUi = game.GetNode<ZoomResponsiveUi>("ZoomResponsiveUi");
+        camera.Zoom = Vector2.One * 0.7f;
+        zoomUi.UpdateForZoom(0.7f);
+        var button = game.GetNode<Control>("World/Atelier/GetItemButton");
+        var hint = button.GetNode<Control>("PriceHint");
+        button.Size += new Vector2(100, 40);
+        hint.Size += new Vector2(80, 20);
+        var tradePanel = game.GetNode<Control>("World/TradingRoom/Item/TradePanel");
+        tradePanel.Size += new Vector2(80, 40);
+        for (int i = 0; i < 3; i++) await ToSignal(this, SignalName.ProcessFrame);
+        Rect2 hintRect = hint.GetTransform() * new Rect2(Vector2.Zero, hint.Size);
+        Check(Mathf.Abs(-hintRect.End.Y * 0.7f - 8) < 0.1f &&
+              Mathf.Abs(hintRect.GetCenter().X - button.Size.X / 2) < 0.1f &&
+              tradePanel.PivotOffset == tradePanel.Size / 2,
+            "Resizing controls at constant zoom must invalidate cached pivots and price-hint placement");
+
+        game.GetItemFromAtelier();
+        var inventory = game.GetNode<InventoryUI>("HUD/InventoryUI");
+        for (int i = 0; i < 2; i++) await ToSignal(this, SignalName.ProcessFrame);
+        Check(!inventory.ItemPopup.IsProcessing(), "Hidden item tooltips must not run a frame callback");
+        inventory.Scroller.Size = new Vector2(110, inventory.Scroller.Size.Y);
+        for (int i = 0; i < 2; i++) await ToSignal(this, SignalName.ProcessFrame);
+        var slot = (SlotUI)inventory.Container.GetChild(1);
+        Vector2 point = slot.GetGlobalRect().GetCenter();
+        Root.PushInput(new InputEventMouseMotion { Position = point, GlobalPosition = point }, true);
+        Check(inventory.ItemPopup.Visible && inventory.ItemPopup.IsProcessing(),
+            "Showing a tooltip must immediately activate its presentation updates");
+        Vector2 oldAnchor = slot.GetGlobalRect().Position;
+        inventory.Scroller.ScrollHorizontal = 10;
+        for (int i = 0; i < 2; i++) await ToSignal(this, SignalName.ProcessFrame);
+        Check(slot.GetGlobalRect().Position.X < oldAnchor.X && inventory.ItemPopup.Visible &&
+              Mathf.Abs(inventory.ItemPopup.GetGlobalRect().GetCenter().X - slot.GetGlobalRect().GetCenter().X) < 0.1f,
+            "A visible tooltip must follow horizontal scrolling without becoming detached from its item");
+        slot.Size += new Vector2(20, 12);
+        inventory.Container.Position += new Vector2(12, 0);
+        ((ItemInfoPopup)inventory.ItemPopup).Refresh();
+        Rect2 popupRect = inventory.ItemPopup.GetGlobalRect();
+        Check(Mathf.Abs(slot.GetGlobalRect().Position.Y - popupRect.End.Y - 8) < 0.1f &&
+              Mathf.Abs(slot.GetGlobalRect().GetCenter().X - popupRect.GetCenter().X) < 0.1f,
+            "Tooltip presentation must follow moved and resized inventory slots");
+        game.GetNode<PauseMenu>("PauseMenu").Open();
+        Check(!inventory.ItemPopup.Visible && !inventory.ItemPopup.IsProcessing(),
+            "Pause must hide the extracted tooltip and stop its processing");
+        game.GetNode<PauseMenu>("PauseMenu").Close();
+        game.QueueFree();
+        await ToSignal(this, SignalName.ProcessFrame);
+        GD.Print("Constant-zoom layout invalidation and item popup lifecycle checks passed");
+    }
 
     private async Task TestPauseAndZoomUi()
     {
@@ -220,6 +382,7 @@ public partial class ProjectTest : SceneTree
         game.SavePath = "";
         Root.AddChild(game);
         game.SetProcess(false);
+        game.GetNode<WorldCamera>("Camera2D").SetProcess(false);
         var camera = game.GetNode<Camera2D>("Camera2D");
         game.TryUnlockMusicWorkshop();
         try
@@ -301,6 +464,21 @@ public partial class ProjectTest : SceneTree
                     await ToSignal(this, SignalName.ProcessFrame);
                     Check(Root.GuiGetHoveredControl() == hotspot && layer.Visible && !priceHint.Visible,
                         "Real pointer hover must show the table without the overlay stealing input");
+                    var scorePanel = game.GetNode<Control>("HUD/Root/ScorePanel");
+                    Vector2 scorePosition = scorePanel.Position;
+                    Vector2 scoreSize = scorePanel.Size;
+                    Rect2 oldPopupRect = popup.Popup.GetGlobalRect();
+                    scorePanel.GlobalPosition = oldPopupRect.Position;
+                    scorePanel.Size = oldPopupRect.Size;
+                    popup.UpdatePlacement();
+                    Rect2 movedPopupRect = popup.Popup.GetGlobalRect();
+                    Check(movedPopupRect.Position != oldPopupRect.Position &&
+                          movedPopupRect.Intersection(scorePanel.GetGlobalRect()).Area <
+                          oldPopupRect.Intersection(scorePanel.GetGlobalRect()).Area,
+                        "Cached HUD references must use fresh geometry to reduce overlap when a HUD obstacle moves over the popup");
+                    scorePanel.Position = scorePosition;
+                    scorePanel.Size = scoreSize;
+                    popup.UpdatePlacement();
                     Root.PushInput(new InputEventMouseMotion { Position = mainPoint, GlobalPosition = mainPoint }, true);
                     await ToSignal(this, SignalName.ProcessFrame);
                     Check(priceHint.Visible && !layer.Visible,
@@ -409,7 +587,7 @@ public partial class ProjectTest : SceneTree
         if (path.StartsWith("World/", StringComparison.Ordinal))
         {
             game.GetNode<Camera2D>("Camera2D").Position = control.GetGlobalRect().GetCenter();
-            game.ClampCamera();
+            game.GetNode<WorldCamera>("Camera2D").ClampToBounds();
         }
         await ToSignal(this, SignalName.ProcessFrame);
         await ToSignal(this, SignalName.ProcessFrame);
@@ -441,6 +619,7 @@ public partial class ProjectTest : SceneTree
         game.SavePath = "";
         Root.AddChild(game);
         game.SetProcess(false);
+        game.GetNode<WorldCamera>("Camera2D").SetProcess(false);
         game.Score = 10000;
         game.GetItemFromAtelier();
         game.GetItemFromAtelier();
@@ -942,53 +1121,54 @@ public partial class ProjectTest : SceneTree
 		Check(!game.TradeActive && game.ShowcaseItems.Count(item => item >= 0) == 1,
 		    "The no-reroll item must leave the trade only through a completed sale");
 
-        var camera = game.GetNode<Camera2D>("Camera2D");
+        var camera = game.GetNode<WorldCamera>("Camera2D");
+        Check(camera.BoundsSource == roomLayout, "The camera component must receive the room-layout bounds from the scene");
         Rect2 cameraBounds = roomLayout.GlobalTransform * roomLayout.GetRect();
         float widthZoom = game.GetViewportRect().Size.X / cameraBounds.Size.X;
         Check(camera.Position.Y > 1625, "The camera must start in the lower-left showroom");
         float oldZoom = camera.Zoom.X;
-        for (int frame = 0; frame < 120; frame++) game._Process(1d / 60d);
+        for (int frame = 0; frame < 120; frame++) camera._Process(1d / 60d);
         Check(Mathf.IsEqualApprox(camera.Zoom.X, oldZoom) && camera.Zoom.X >= widthZoom && camera.Zoom.X <= 1.8f,
             "Camera zoom must remain stable without wheel input");
-        game._Input(new InputEventMouseButton { ButtonIndex = MouseButton.WheelUp, Position = new Vector2(640, 360), Pressed = true });
+        camera._Input(new InputEventMouseButton { ButtonIndex = MouseButton.WheelUp, Position = new Vector2(640, 360), Pressed = true });
         Check(Mathf.IsEqualApprox(camera.Zoom.X, oldZoom), "Wheel input must not jump to the target zoom");
-        game._Process(1d / 60d);
+        camera._Process(1d / 60d);
         Check(camera.Zoom.X > oldZoom && camera.Zoom.X < oldZoom * 1.12f,
             "Mouse wheel zoom must advance smoothly between frames");
         float zoomAfterStep = camera.Zoom.X;
-        game._Input(new InputEventMouseButton { ButtonIndex = MouseButton.WheelDown, Position = new Vector2(640, 360), Pressed = true });
-        game._Process(1d / 60d);
+        camera._Input(new InputEventMouseButton { ButtonIndex = MouseButton.WheelDown, Position = new Vector2(640, 360), Pressed = true });
+        camera._Process(1d / 60d);
         Check(camera.Zoom.X < zoomAfterStep && camera.Zoom.X > oldZoom,
             "Zooming back out must also advance smoothly");
         for (int step = 0; step < 100; step++)
-            game._Input(new InputEventMouseButton { ButtonIndex = MouseButton.WheelDown, Position = new Vector2(640, 360), Pressed = true });
-        for (int frame = 0; frame < 180; frame++) game._Process(1d / 60d);
+            camera._Input(new InputEventMouseButton { ButtonIndex = MouseButton.WheelDown, Position = new Vector2(640, 360), Pressed = true });
+        for (int frame = 0; frame < 180; frame++) camera._Process(1d / 60d);
         Check(Mathf.IsEqualApprox(camera.Zoom.X, widthZoom, 0.001f) && widthZoom < 0.3f &&
               Mathf.IsEqualApprox(camera.Position.X, cameraBounds.GetCenter().X),
             "Zoom-out must stop exactly at the layout width, beyond the old fixed 0.3 limit");
         camera.Zoom = Vector2.One * 1.8f;
         camera.Position = cameraBounds.GetCenter();
-        game.ClampCamera();
+        camera.ClampToBounds();
         float startingX = camera.Position.X;
-        game._UnhandledInput(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = true });
-        game._Input(new InputEventMouseMotion { Relative = new Vector2(100, 0) });
+        camera._UnhandledInput(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = true });
+        camera._Input(new InputEventMouseMotion { Relative = new Vector2(100, 0) });
         Check(Mathf.IsEqualApprox(camera.Position.X, startingX - 100f / camera.Zoom.X), "Dragging must pan the camera");
         camera.Zoom = Vector2.One * 1.8f;
         camera.Position = new Vector2(-100, -100);
-        game.ClampCamera();
+        camera.ClampToBounds();
         Vector2 halfView = game.GetViewportRect().Size / (2f * camera.Zoom);
         Check((camera.Position - halfView).IsEqualApprox(cameraBounds.Position),
             "The top-left camera boundary must match RoomLayout without padding");
         camera.Position = new Vector2(100000, 100000);
-        game.ClampCamera();
+        camera.ClampToBounds();
         Check((camera.Position + halfView).IsEqualApprox(cameraBounds.End),
             "The bottom-right camera boundary must match RoomLayout without padding");
         camera.Position = new Vector2(4582, 1103);
-        game.ClampCamera();
+        camera.ClampToBounds();
         Check(camera.Position.X > 3622 && camera.Position.Y < 1625, "The camera must reach the upper-right workshop");
-        game.ClampCamera();
+        camera.ClampToBounds();
         camera.Position = new Vector2(4582, 2183);
-        game.ClampCamera();
+        camera.ClampToBounds();
         Check(camera.Position.X > 3622 && camera.Position.Y > 1625,
             "The camera must reach the lower-right showroom");
 
@@ -998,14 +1178,14 @@ public partial class ProjectTest : SceneTree
         roomLayout.Scale *= new Vector2(0.5f, 0.2f);
         cameraBounds = roomLayout.GlobalTransform * roomLayout.GetRect();
         camera.Zoom = Vector2.One * 0.001f;
-        game.ClampCamera();
+        camera.ClampToBounds();
         Check(Mathf.IsEqualApprox(camera.Zoom.X, game.GetViewportRect().Size.X / cameraBounds.Size.X) &&
               camera.Position.IsEqualApprox(cameraBounds.GetCenter()),
             "Bounds must follow the layout transform; zoom-out depends only on width even for a short layout");
         Vector2I windowSize = Root.Size;
         Root.Size = new Vector2I(960, 900);
         camera.Zoom = Vector2.One * 0.001f;
-        game.ClampCamera();
+        camera.ClampToBounds();
         Check(Mathf.IsEqualApprox(camera.Zoom.X, game.GetViewportRect().Size.X / cameraBounds.Size.X),
             "Resizing the viewport must recalculate the width-based zoom boundary");
         Root.Size = windowSize;
@@ -1252,6 +1432,7 @@ public partial class ProjectTest : SceneTree
         game.SavePath = SavePath;
         Root.AddChild(game);
         game.SetProcess(false);
+        game.GetNode<WorldCamera>("Camera2D").SetProcess(false);
         await ToSignal(this, SignalName.ProcessFrame);
         return game;
     }
