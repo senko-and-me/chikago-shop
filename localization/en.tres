@@ -86,5 +86,8 @@ messages = {
 &"неповторимая одежда": &"unique clothing",
 &"первоклассный инструмент": &"first-class instrument",
 &"эксклюзивный инструмент": &"exclusive instrument",
-&"неповторимый инструмент": &"unique instrument"
+&"неповторимый инструмент": &"unique instrument",
+&"Полировка": &"Polishing",
+&"ОЧИЩЕНО": &"CLEANED",
+&"Зажми и протирай туда-сюда": &"Hold and rub back and forth"
 }

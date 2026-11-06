@@ -18,10 +18,6 @@ config/features=PackedStringArray("4.7", "C#", "Mobile")
 
 GameLocalization="*res://scripts/Localization/GameLocalization.cs"
 
-[internationalization]
-
-locale/fallback="ru"
-
 [display]
 
 window/size/viewport_width=1280
@@ -36,6 +32,10 @@ project/assembly_name="ChikagoShop"
 [gui]
 
 theme/custom="res://themes/game_theme.tres"
+
+[internationalization]
+
+locale/fallback="ru"
 
 [physics]
 
