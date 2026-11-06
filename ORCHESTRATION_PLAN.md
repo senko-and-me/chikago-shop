@@ -1541,3 +1541,10 @@ MVP считается готовым только если одновремен
 - музыка, расширенный SFX и аудиомикшер, если владелец продукта отдельно не вернёт их в MVP;
 - другие языки, controller/mobile UX;
 - Steam-функции, достижения, облачные сохранения и production telemetry.
+
+### HF-53 — checkpoint и merge feature/dialogue-system
+
+Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-06. Пользователь поручил пустой checkpoint перед merge. Checkpoint main: fea23cb.
+CP-HF-53: read-set — текущий фронт обеих веток ORCHESTRATION_PLAN.md, AGENTS.md, tools/verify.ps1, git status/diff/log/branches/remotes, OS TEMP/chikago-hf53-verify.log; write-set — ORCHESTRATION_PLAN.md, Git index/commits, main и origin/main; merge только ORCHESTRATION_PLAN.md, README.md, dialogue/intro.ru.json, scenes/trade_scene.tscn, scripts/Dialogue/DialoguePlayer.cs[.uid], scripts/MainMenu.cs, scripts/TradeScene.cs, scripts/UI/ZoomResponsiveUi.cs, src/ChikagoShop.Domain/Dialogue/DialogueSession.cs, src/ChikagoShop.Domain/Dialogue/SentencePages.cs, tests/ChikagoShop.Domain.Tests/DialogueSessionTests.cs, tests/ChikagoShop.Domain.Tests/SentencePagesTests.cs, tests/ProjectTest.cs. Зависимости HF-52 DONE в исходной ветке; активных пересечений нет. Владелец плана/index `/root`.
+Out of scope: source/, новая продуктовая логика, force push, удаление веток.
+Приёмка: пустой checkpoint предшествует merge, feature/dialogue-system является предком main, tools/verify.ps1 и git diff --check PASS, push origin main без force, чистое дерево и main...origin/main=0/0.
