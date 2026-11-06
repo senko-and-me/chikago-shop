@@ -9,7 +9,7 @@
 
 ### HF-26 — публикация свободной витрины и выхода в меню
 
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; HF-25 = DONE; `CP-HF-26`, READY проверен 2026-11-06. Commit/push явно разрешён пользователем.
+Статус: `DONE`; координатор/исполнитель `/root`; HF-25 = DONE; `CP-HF-26`, READY проверен 2026-11-06. Commit/push явно разрешён пользователем.
 
 #### CP-HF-26
 
@@ -18,6 +18,19 @@ Write-set: `ORCHESTRATION_PLAN.md`, Git index/commit и origin/main для пу�
 Out of scope: новые продуктовые изменения, пользовательские export_presets.cfg/scenes/trade_scene.tscn/MyFont_Completed.ttf[.import], source/, force push.
 Приёмка: финальный verify HF-25 PASS; staged diff-check PASS; проверенный commit опубликован в origin/main без force; прочие локальные изменения сохранены.
 
+
+```text
+Task: HF-26
+Recommended status: REVIEW
+Changed: опубликованы ORCHESTRATION_PLAN.md; scripts/TradeScene.cs; scripts/UI/PauseMenu.cs; tests/ProjectTest.cs.
+Checks: git fetch origin -> PASS; HEAD...origin/main перед commit = 0/0; git diff --cached --check -> PASS; git push origin main -> PASS (exit 0).
+Acceptance: edb5068 опубликован в origin/main без force. Product-код после финального verify HF-25 не менялся. Пользовательские export_presets.cfg, scenes/trade_scene.tscn и исходный MyFont_Completed.ttf[.import] сохранены локально.
+Read-set exception: нет.
+Risks/blocker: нет.
+Next: продолжить работу по запросу пользователя.
+```
+
+Координатор подтвердил HF-26 2026-11-06 по успешному push: REVIEW → DONE; evidence публикуется отдельным документационным коммитом.
 
 ### HF-25 — свободная витрина во время сделки и выход в меню
 
