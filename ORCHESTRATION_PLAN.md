@@ -7,6 +7,161 @@
 
 ## Текущий фронт
 
+### HF-36 — публикация вышивки, двухминутного дня и редких предметов
+
+Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; HF-31…HF-35 DONE; READY проверен 2026-11-06. Пользователь явно запросил push.
+
+#### CP-HF-36
+
+Read-set: текущий фронт плана, git status/diff/log/remotes, файлы и verify evidence HF-31…HF-35, tools/verify.ps1; отдельный временный worktree выбранного commit для проверки публикации.
+Write-set: ORCHESTRATION_PLAN.md; Git index/commit и origin/main только для файлов HF-31…HF-35: README.md, localization/en.tres, scripts/CounterWorld.cs, scripts/Days/DayCycleController.cs, scripts/TradeScene.cs, scripts/UI/PauseMenu.cs, scripts/UI/EmbroideryGame.cs[.uid], scripts/Crafting/WorkshopItemCatalog.cs[.uid], src/ChikagoShop.Domain/Days/DaySession.cs, src/ChikagoShop.Domain/Crafting/EmbroiderySession.cs, WeightedItemTable.cs в той же папке; tests/ProjectTest.cs, tests/ChikagoShop.Domain.Tests/DaySessionTests.cs, EmbroiderySessionTests.cs и WeightedItemTableTests.cs в той же папке; шесть art/items/placeholder_{clothing,music}_{first,exclusive,unique}.svg[.import]. Отдельный worktree в OS TEMP для проверки итогового commit. Владелец плана/index `/root`, пересечений нет.
+Out of scope: source/, пользовательские export_presets.cfg/project.godot/scenes/trade_scene.tscn/MyFont_Completed.ttf[.import], исходный atelier_embroidery_v4.html, новые продуктовые изменения, force push.
+Приёмка: выбранные файлы составляют самостоятельный commit; полный tools/verify.ps1 в отдельном worktree PASS, staged diff-check PASS; push origin/main без force, пользовательские файлы сохранены локально.
+
+### HF-35 — цветные заглушки высоких редкостей в обеих мастерских
+
+Статус: `DONE`; координатор/исполнитель `/root`; HF-34 DONE; READY проверен 2026-11-06.
+
+#### CP-HF-35
+
+Read-set: текущий фронт плана, scripts/TradeScene.cs, scripts/CounterWorld.cs, scripts/UI/InventoryUI.cs, scripts/UI/SlotUI.cs, scripts/Configuration/EconomyConfigProvider.cs, config/economy.v1.json, src/ChikagoShop.Domain/Configuration/EconomyConfig.cs, src/ChikagoShop.Domain/Items/ItemDefinition.cs, scenes/trade_scene.tscn (только позиции предметов), tests/ProjectTest.cs, tests/ChikagoShop.Domain.Tests/ChikagoShop.Domain.Tests.csproj, localization/en.tres, README.md, tools/verify.ps1, git status/diff; новые файлы write-set.
+Write-set: ORCHESTRATION_PLAN.md; scripts/Crafting/WorkshopItemCatalog.cs[.uid]; src/ChikagoShop.Domain/Crafting/WeightedItemTable.cs; tests/ChikagoShop.Domain.Tests/WeightedItemTableTests.cs; scripts/TradeScene.cs (извлечение таблицы предметов в каталог, вызовы выбора и исправление подсказок); scripts/CounterWorld.cs; tests/ProjectTest.cs; localization/en.tres; README.md; art/items/placeholder_clothing_first.svg[.import], placeholder_clothing_exclusive.svg[.import], placeholder_clothing_unique.svg[.import], placeholder_music_first.svg[.import], placeholder_music_exclusive.svg[.import], placeholder_music_unique.svg[.import] в том же art/items/.
+Out of scope: source/, .tscn, пользовательские project/export/font, существующие изображения, формула качества вышивки, новый баланс цен/весов, save schema, публикация. Владелец `/root`, пересечений нет.
+Приёмка: добавлены шесть цветных квадратов (по first_class/exclusive/unique для atelier/music), полный дроп всех пяти редкостей с весами/ценами config; крафт/инвентарь/витрина/сделка отображают новые вещи, tooltip/рероллы/продажа и reload работают. Старые индексы 0–3 сохранены, новые добавлены в конец; каталог/выбор вне TradeScene. Проверки: domain тесты всех весовых границ, integration принудительных новых предметов и полного игрового цикла, tools/verify.ps1, git diff --check.
+
+```text
+Task: HF-35
+Recommended status: REVIEW
+Changed: scripts/Crafting/WorkshopItemCatalog.cs[.uid]; src/ChikagoShop.Domain/Crafting/WeightedItemTable.cs; tests/ChikagoShop.Domain.Tests/WeightedItemTableTests.cs; scripts/TradeScene.cs; scripts/CounterWorld.cs; tests/ProjectTest.cs; localization/en.tres; README.md; ORCHESTRATION_PLAN.md; шесть art/items/placeholder_{clothing,music}_{first,exclusive,unique}.svg[.import].
+Checks: tools/verify.ps1 -> PASS (41 domain tests, build, Godot import/integration); git diff --check -> PASS. Лог: OS TEMP/chikago-hf35-verify.log.
+Acceptance: по три временных предмета каждой мастерской с отдельными цветами; одежда 80/120/200$, инструменты 120/180/300$, rerolls 2/1/1 из общего config. Каталог хранит прежние индексы 0–3, дополняет их 4–9; цены/названия редкостей/веса/рероллы берутся из config. Все 100 tickets каждой категории проверены на веса 60/25/10/4/1. Domain selector не зависит от Godot. Интеграция принудительно проверяет все шесть предметов: прозрачное поле/различимость цветов, inventory icon/tooltip, showcase icon, единственный нужный trade sprite, цену оффера, reroll, active-trade reload и продажу. Существующие saves/локализация/торговля/вышивка/таймер проходят. RU/EN названия новых предметов, подсказки комнат больше не обещают лишь два вида вещей.
+Read-set exception: нет; source/ не читался. Существующие scene sprites прочитаны только для определения размещения, .tscn не редактировалась.
+Risks/blocker: ручной visual playtest не выполнялся; квадраты намеренно временные. Качество вышивки остаётся независимой оценкой; дроп определяется существующими весами редкостей. Пользовательские изменения сохранены, commit/push не выполнялись.
+Next: проверить выпадение цветных предметов в обеих мастерских игрового сеанса.
+```
+
+Координатор подтвердил HF-35 2026-11-06 по финальному verify (exit 0), полной регрессии и diff-check: REVIEW → DONE; основные ворота без изменений.
+
+### HF-34 — двухминутный день без остановки часов на мини-игре
+
+Статус: `DONE`; координатор/исполнитель `/root`; HF-33 DONE; READY проверен 2026-11-06.
+
+#### CP-HF-34
+
+Read-set: текущий фронт плана, src/ChikagoShop.Domain/Days/DaySession.cs, scripts/Days/DayCycleController.cs, scripts/UI/EmbroideryGame.cs, scripts/UI/PauseMenu.cs, scripts/TradeScene.cs, tests/ChikagoShop.Domain.Tests/DaySessionTests.cs, tests/ProjectTest.cs, README.md, tools/verify.ps1, git status/diff.
+Write-set: ORCHESTRATION_PLAN.md, src/ChikagoShop.Domain/Days/DaySession.cs, scripts/Days/DayCycleController.cs, scripts/UI/EmbroideryGame.cs, scripts/TradeScene.cs (только forwarding таймера контроллеру), tests/ChikagoShop.Domain.Tests/DaySessionTests.cs, tests/ProjectTest.cs, README.md.
+Out of scope: source/, HTML, сцены, пользовательские настройки/art/font, формула качества/таймер вышивки, save schema, публикация. Владелец `/root`, пересечений нет.
+Приёмка: полный день 120 секунд, HUD 02:00; часы идут на всех экранах мини-игры, но обычная пауза замораживает их. Нельзя начать крафт после закрытия; запущенный до закрытия крафт оплачивается/фиксируется при «Начать» и может завершиться после 00:00 без повторной награды/списания. Часы видны поверх модального экрана. Существующие saves сохраняют остаток, старые без clock получают 120. Domain/GUI regressions, tools/verify.ps1, git diff --check.
+
+```text
+Task: HF-34
+Recommended status: REVIEW
+Changed: src/ChikagoShop.Domain/Days/DaySession.cs; scripts/Days/DayCycleController.cs; scripts/UI/EmbroideryGame.cs; scripts/TradeScene.cs; tests/ChikagoShop.Domain.Tests/DaySessionTests.cs; tests/ProjectTest.cs; README.md; ORCHESTRATION_PLAN.md
+Checks: tools/verify.ps1 -> PASS (39 domain tests, build, Godot import/integration); git diff --check -> PASS. Лог: OS TEMP/chikago-hf34-verify.log.
+Acceptance: новый день/чекпоинт/legacy reset получают 120 секунд, HUD 02:00. На ready/play/result вышивки день тикает через DayCycleController, обычная пауза сохраняет заморозку, двойного тика нет. Часы продублированы в верхнем правом углу модального окна. Покупка партии фиксируется существующим AcquireItem и save при «Начать», повторное нажатие не дублирует её; после 00:00 готовую партию можно забрать, день остаётся закрыт. Timeout до начала бесплатно закрывает окно; новые крафты закрытого дня запрещены. GUI regression покрывает все три экрана, обе границы timeout, одну покупку, 00:00 в модальном окне, следующий двухминутный день. Save/reload точной доли секунды (109.75), legacy saves, обычная пауза, последние сделки и вся прежняя регрессия проходят.
+Read-set exception: нет; source/ не читался.
+Risks/blocker: ручной visual playtest не выполнялся. Существующие saves с clock сохраняют прежний остаток, полные две минуты даются новому дню. Незавершённая вышивка при перезапуске не восстанавливается, но уже оплаченная партия сохранена в инвентаре. Посторонние изменения сохранены, публикация не выполнялась.
+Next: проверить двухминутный день и окончание времени во время вышивки в игровом сеансе.
+```
+
+Координатор подтвердил HF-34 2026-11-06 по полному verify (exit 0) и diff-check: REVIEW → DONE; основные ворота без изменений.
+
+### HF-33 — карточки времени, стежков и промахов
+
+Статус: `DONE`; координатор/исполнитель `/root`; HF-32 DONE; READY проверен 2026-11-06.
+
+#### CP-HF-33
+
+Read-set: текущий фронт плана, scripts/UI/EmbroideryGame.cs, tests/ProjectTest.cs (Embroidery), localization/en.tres, tools/verify.ps1, git status/diff; приложенный референс.
+Write-set: ORCHESTRATION_PLAN.md, scripts/UI/EmbroideryGame.cs, tests/ProjectTest.cs, localization/en.tres. Владелец `/root`; активных пересечений нет.
+Out of scope: source/, HTML, сцены, игровые правила/баланс/save schema, пользовательские изменения, публикация.
+Приёмка: вместо одной строки три компактные карточки «ВРЕМЯ / СТЕЖКИ / ПРОМАХИ» в текущей палитре, с крупными актуальными числами и RU/EN; карточки не перекрывают ткань/шкалу. Проверки: GUI regression для начальных значений, попаданий, промахов, времени и размещения при 1280×720/960×540; tools/verify.ps1; git diff --check.
+
+```text
+Task: HF-33
+Recommended status: REVIEW
+Changed: scripts/UI/EmbroideryGame.cs; tests/ProjectTest.cs; localization/en.tres; ORCHESTRATION_PLAN.md
+Checks: финальный tools/verify.ps1 -> PASS (39 domain tests, build, Godot import/integration); git diff --check -> PASS. Лог: OS TEMP/chikago-hf33-verify.log.
+Acceptance: три карточки с тёмным фоном, тонкой приглушённой золотистой рамкой, малыми заголовками и крупными кремовыми числами над тканью. Время с десятыми долями, стежки выполнено/всего и промахи обновляются из текущей сессии. RU/EN. GUI regression подтверждает стартовые/конечные значения, промахи, формат времени, перевод и размещение при двух размерах экрана; прежние проверки проходят.
+Read-set exception: нет; source/ не читался.
+Risks/blocker: ручной visual playtest не выполнялся; посторонние изменения сохранены.
+Next: посмотреть карточки в мини-игре ателье.
+```
+
+Координатор подтвердил HF-33 2026-11-06 по финальному verify (exit 0) и diff-check: REVIEW → DONE; основные ворота без изменений.
+
+### HF-32 — шкала качества S–D в палитре игры
+
+Статус: `DONE`; координатор/исполнитель `/root`; HF-31 DONE; READY проверен 2026-11-06.
+
+#### CP-HF-32
+
+Read-set: текущий фронт плана, scripts/UI/EmbroideryGame.cs, tests/ProjectTest.cs (Embroidery), tools/verify.ps1, git status/diff; приложенный пользователем референс.
+Write-set: ORCHESTRATION_PLAN.md, scripts/UI/EmbroideryGame.cs, tests/ProjectTest.cs. Единственный владелец `/root`, пересечений нет.
+Out of scope: source/, HTML, сцены, баланс/формулы качества/крафт/save schema, посторонние пользовательские изменения, публикация.
+Приёмка: высокая вертикальная шкала с золотистой рамкой, пятью секциями и буквами S/A/B/C/D слева; приглушённые шалфейный/охра/медь/терракота/бордовый в текущей палитре. Текущий ранг выделен, заполнение соответствует качеству, процент под шкалой. Проверки: существующий GUI regression расширен на размещение и выделение ранга, tools/verify.ps1, git diff --check.
+
+```text
+Task: HF-32
+Recommended status: REVIEW
+Changed: scripts/UI/EmbroideryGame.cs; tests/ProjectTest.cs; ORCHESTRATION_PLAN.md
+Checks: tools/verify.ps1 -> PASS (39 domain tests, build, Godot import/integration); git diff --check -> PASS. Лог: OS TEMP/chikago-hf32-verify.log.
+Acceptance: шкала высотой с ткань, золотистая рамка, градиент шалфейный → охра → медь → терракота → бордовый, пять равных секций. Слева S/A/B/C/D с золотым выделением текущего ранга, процент снизу. Пустая часть затемняется при падении качества. GUI regression подтверждает геометрию и выравнивание букв на 1280×720/960×540, смену выделения S на текущий ранг и процент.
+Read-set exception: нет; source/ не читался.
+Risks/blocker: ручной visual playtest не выполнялся. Ранее существовавшие изменения сохранены.
+Next: посмотреть обновлённую шкалу в мини-игре ателье.
+```
+
+Координатор подтвердил HF-32 2026-11-06 по полному verify (exit 0) и diff-check: REVIEW → DONE; основные ворота без изменений.
+
+### HF-31 — вышивка при создании одежды в Godot
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY проверен 2026-11-06. HF-30 не решает уточнённую задачу пользователя: HTML является референсом, цель — игровой крафт.
+
+#### CP-HF-31
+
+Read-set: текущий фронт плана, AGENTS.md, atelier_embroidery_v4.html, scripts/TradeScene.cs, scripts/Days/DayCycleController.cs, scripts/UI/PauseMenu.cs, scripts/Camera/WorldCamera.cs, scripts/Localization/GameLocalization.cs, localization/en.tres, tests/ProjectTest.cs, ChikagoShop.csproj, src/ChikagoShop.Domain/ChikagoShop.Domain.csproj, tests/ChikagoShop.Domain.Tests/DaySessionTests.cs, tools/verify.ps1, .vscode/settings.json, README.md, git status/diff; новые файлы write-set.
+Write-set: ORCHESTRATION_PLAN.md; src/ChikagoShop.Domain/Crafting/EmbroiderySession.cs; tests/ChikagoShop.Domain.Tests/EmbroiderySessionTests.cs; scripts/UI/EmbroideryGame.cs[.uid]; scripts/TradeScene.cs (только подключение контроллера к кнопке); scripts/UI/PauseMenu.cs (защита владения паузой); tests/ProjectTest.cs; localization/en.tres; README.md; atelier_embroidery_v4.html (только отмена собственных ошибочных изменений HF-30 по уточнению пользователя).
+Out of scope: source/, .tscn, пользовательские project/export/font, save schema, новый баланс/редкости/цены от оценки вышивки, музыкальный крафт, публикация. Активных пересечений нет, владелец `/root`.
+Приёмка: кнопка ателье открывает модальную мини-игру с пяльцами, тканью, точками и нитью; 10 секунд, последовательные попадания/промахи, оценка, краткие RU/EN подписи. До начала можно отменить без затрат; после старта завершение или timeout выдаёт прежние три вещи за 90$ и 1 энергию ровно один раз при подтверждении результата. Мир и таймер дня приостановлены, мышь/touch не управляют миром; выход освобождает паузу. Domain tests и Godot GUI regression для интеграции/повтора/отмены/timeout/геометрии; полный tools/verify.ps1 и git diff --check.
+
+```text
+Task: HF-31
+Recommended status: REVIEW
+Changed: src/ChikagoShop.Domain/Crafting/EmbroiderySession.cs; tests/ChikagoShop.Domain.Tests/EmbroiderySessionTests.cs; scripts/UI/EmbroideryGame.cs[.uid]; scripts/TradeScene.cs; scripts/UI/PauseMenu.cs; tests/ProjectTest.cs; localization/en.tres; README.md; ORCHESTRATION_PLAN.md; atelier_embroidery_v4.html (отмена HF-30).
+Checks: tools/verify.ps1 -> PASS (39 domain tests, build без предупреждений, Godot import и полная integration regression); git diff --check -> PASS. Лог: OS TEMP/chikago-hf31-verify.log.
+Acceptance: игровой вход ателье открывает отдельный CanvasLayer с пяльцами, тканью, четырьмя случайными узорами, нитью и пульсирующей целью. Правила последовательности, таймера 10 секунд и оценки живут в чистом домене. Промах обозначается крестиком, качество падает; результат показывает процент и ранг. До старта отмена кнопкой/Esc бесплатна. После старта финал/timeout выдаёт прежнюю партию при «Забрать», однократно списывает 90$ и энергию, сохраняет прежним способом. GUI regression проверяет настоящую кнопку ателье, mouse/touch, заморозку дня/камеры, ownership паузы, выход из сцены, RU/EN и размеры 1280×720/960×540; прежняя торговля/save/день также PASS. Доменные тесты покрывают все четыре узора, границу попадания, terminal-state, invalid input и timeout. HTML восстановлен как исходный референс.
+Read-set exception: нет; source/ не читался.
+Risks/blocker: ручной visual playtest не выполнялся. Качество является оценкой результата без влияния на цену/редкость; новый баланс не запрашивался. Незавершённая вышивка не сохраняется и не выдаёт товары/списания при перезапуске. Пользовательские project.godot/export/scene/font сохранены; commit/push не выполнялись.
+Next: проверить вышивку через «Создать» в ателье игрового сеанса.
+```
+
+Координатор подтвердил HF-31 2026-11-06 по финальному verify (exit 0) и diff-check: REVIEW → DONE; основные стадии и ворота не менялись.
+
+### HF-30 — лаконичный экран вышивки
+
+Статус: `DONE`; координатор/исполнитель `/root`; независимая правка HTML по прямому запросу пользователя; READY проверен 2026-11-06.
+
+#### CP-HF-30
+
+Read-set: ORCHESTRATION_PLAN.md (координатор), AGENTS.md, atelier_embroidery_v4.html, git status/diff, наличие локального Node.js.
+Write-set: atelier_embroidery_v4.html, ORCHESTRATION_PLAN.md. Владелец `/root`; пересечений с активными задачами нет.
+Out of scope: source/, Godot/C# и сцены, игровые правила/таймер/подсчёт качества, публикация.
+Приёмка: сохранены стиль, узоры и управление; сокращены стартовые/итоговые тексты, удалены повторные пояснения во время крафта; доступные названия сохранены. Проверки: Node.js syntax/runtime smoke с DOM/canvas stub для старта, попадания, промаха, завершения, повтора и выбора узора; git diff --check.
+
+```text
+Task: HF-30
+Recommended status: REVIEW
+Changed: atelier_embroidery_v4.html; ORCHESTRATION_PLAN.md
+Checks: Node.js syntax/runtime smoke (initialization/start/miss/all hits/restart/timeout/pattern change) -> PASS; git diff --check -> PASS.
+Acceptance: одна короткая подсказка перед стартом; убраны длинный help/footer, подзаголовок, дублирование ранга и текст над точкой/промахом. Результат сокращён до качества и ранга. Пяльцы, ткань, палитра, счётчики, четыре узора и правила сохранены; кнопка повтора и выбор узора имеют доступные названия.
+Read-set exception: нет; координатор прочитал план; source/ не читался. Git найден по стандартному пути после отсутствия в PATH.
+Risks/blocker: браузерный visual smoke не выполнялся; runtime проверен с DOM/canvas stub. Пользовательские изменения остальных файлов сохранены.
+Next: открыть HTML в браузере для визуальной оценки.
+```
+
+Координатор подтвердил HF-30 2026-11-06 по runtime smoke и проверке изменений: REVIEW → DONE. Основная стадия и её ворота без изменений.
+
 ### HF-29 — раздельная публикация локализации и таймера
 
 Статус: `DONE`; координатор/исполнитель `/root`; HF-27/HF-28 = DONE; `CP-HF-29`, READY проверен 2026-11-06. Пользователь явно разрешил push раздельных изменений.

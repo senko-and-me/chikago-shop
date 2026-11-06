@@ -69,5 +69,22 @@ messages = {
 &"Настройки": &"Settings",
 &"Начать с чекпоинта": &"Restart from checkpoint",
 &"В главное меню": &"Main menu",
-&"Назад": &"Back"
+&"Назад": &"Back",
+&"Вышивка": &"Embroidery",
+&"Нажимай на светящиеся точки": &"Tap the glowing dots",
+&"Начать": &"Start",
+&"Готово": &"Done",
+&"Время вышло": &"Time is up",
+&"Забрать": &"Collect",
+&"ВРЕМЯ": &"TIME",
+&"СТЕЖКИ": &"STITCHES",
+&"ПРОМАХИ": &"MISSES",
+&"Одежда  •  90$ за 3": &"Clothing  •  3 for $90",
+&"Инструменты  •  140$ за 3": &"Instruments  •  3 for $140",
+&"первоклассная одежда": &"first-class clothing",
+&"эксклюзивная одежда": &"exclusive clothing",
+&"неповторимая одежда": &"unique clothing",
+&"первоклассный инструмент": &"first-class instrument",
+&"эксклюзивный инструмент": &"exclusive instrument",
+&"неповторимый инструмент": &"unique instrument"
 }

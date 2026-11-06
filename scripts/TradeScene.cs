@@ -19,21 +19,7 @@ public partial class TradeScene : Node2D
 	private const int MusicSpinCost = 140;
 	private const int MusicUnlockCost = 100;
 	private const int ItemsPerSpin = 3;
-	private static readonly Dictionary<string, int> RerollsByRarity = new(StringComparer.Ordinal)
-	{
-		["common"] = 3,
-		["ordinary"] = 2,
-		["first_class"] = 2,
-		["exclusive"] = 1,
-		["unique"] = 1
-	};
-	private static readonly (int BasePrice, string RarityId, string Rarity, string Kind, string Name, string ArtPath)[] Items =
-	[
-		(30, "common", "Ширпотреб", "hat", "шляпка-клош", "res://art/items/hat_cloche.png"),
-		(50, "ordinary", "Заурядная", "gloves", "перчатки", "res://art/items/gloves.png"),
-		(45, "common", "Ширпотреб", "guitar", "гитара", "res://art/items/guitar.svg"),
-		(75, "ordinary", "Заурядная", "trumpet", "труба", "res://art/items/trumpet.svg")
-	];
+	private static readonly IReadOnlyList<CraftItem> Items = WorkshopItemCatalog.Items;
 	private static readonly JsonSerializerOptions JsonOptions = new()
 	{
 		PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
@@ -81,6 +67,7 @@ public partial class TradeScene : Node2D
 	private int _activeShowcaseIndex = -1;
 	private double _buyerCountdown;
 	private DayCycleController _dayCycle = null!;
+	private EmbroideryGame _embroidery = null!;
 	private int _energyRemaining = EnergyPerDay;
 	public bool DayClosed => _dayCycle.Session.IsClosed;
 	public double DayRemainingSeconds => _dayCycle.Session.RemainingSeconds;
@@ -92,8 +79,8 @@ public partial class TradeScene : Node2D
 	public static string GetItemArtPath(int index) => Items[index].ArtPath;
 	public static string GetItemRarity(int index) => GameLocalization.Text(Items[index].Rarity);
 	public static int GetItemBasePrice(int index) => Items[index].BasePrice;
-	public static int GetItemRerollLimit(int index) => GetRerollsForRarity(Items[index].RarityId);
-	public static int GetRerollsForRarity(string rarityId) => RerollsByRarity[rarityId];
+	public static int GetItemRerollLimit(int index) => Items[index].Rerolls;
+	public static int GetRerollsForRarity(string rarityId) => WorkshopItemCatalog.RerollsFor(rarityId);
 	public int ItemIndex { get; set; } = -1;
 	public int CustomerIndex { get; set; } = -1;
 	public int Percentage { get; set; }
@@ -209,6 +196,8 @@ public partial class TradeScene : Node2D
 		EnergyRemaining = EnergyPerDay;
 		CheckpointEnergy = EnergyPerDay;
 		_dayCycle = new DayCycleController(this);
+		_embroidery = new EmbroideryGame(() => AcquireItem("atelier", AtelierSpinCost));
+		AddChild(_embroidery);
 		bool restored = LoadProgress();
 		RefreshScore();
 		RefreshProgress();
@@ -247,8 +236,9 @@ public partial class TradeScene : Node2D
 
 	private void EnsureMusicWorkshopUi()
 	{
+		GetNode<Label>("World/Atelier/HintLabel").Text = "Одежда  •  90$ за 3";
 		Node2D workshop = GetNode<Node2D>("World/MusicWorkshop");
-		workshop.GetNode<Label>("HintLabel").Text = "Гитара или труба  •  140$ за 3";
+		workshop.GetNode<Label>("HintLabel").Text = "Инструменты  •  140$ за 3";
 		workshop.GetNode<Label>("GetItemButton/PriceHint/Label").Text = "3 предмета  •  140$";
 
 		if (!workshop.HasNode("LockedOverlay"))
@@ -318,12 +308,12 @@ public partial class TradeScene : Node2D
 		}
 	}
 
-	public void GetItemFromAtelier() => AcquireItem("Ателье", 0, 1, AtelierSpinCost);
+	public void GetItemFromAtelier() => _embroidery.Open();
 
 	public void GetItemFromMusicWorkshop()
 	{
 		if (!MusicWorkshopUnlocked) return;
-		AcquireItem("Муз. штуки", 2, 3, MusicSpinCost);
+		AcquireItem("music", MusicSpinCost);
 	}
 
 	public void TryUnlockMusicWorkshop()
@@ -338,7 +328,7 @@ public partial class TradeScene : Node2D
 		SaveProgress();
 	}
 
-	private void AcquireItem(string workshop, int firstIndex, int lastIndex, int cost)
+	private void AcquireItem(string workshop, int cost)
 	{
 		if (Failed || Completed || EnergyRemaining <= 0 || Score < cost) return;
 
@@ -346,7 +336,7 @@ public partial class TradeScene : Node2D
 		EnergyRemaining--;
 		for (int itemNumber = 0; itemNumber < ItemsPerSpin; itemNumber++)
 		{
-			int index = _rng.RandiRange(firstIndex, lastIndex);
+			int index = WorkshopItemCatalog.Roll(workshop, _rng.RandiRange(0, WorkshopItemCatalog.TotalWeight(workshop) - 1));
 			_storedItems.Add(index);
 			GD.Print($"{workshop}: получен предмет {Items[index].Name} (индекс {index}).");
 		}
@@ -552,6 +542,7 @@ public partial class TradeScene : Node2D
 	}
 
 	public void EndDay() => _dayCycle.EndDay();
+	public void TickCraftDay(double delta) => _dayCycle.Tick(delta);
 
 	public void PersistProgress() => SaveProgress();
 
@@ -733,14 +724,14 @@ public partial class TradeScene : Node2D
 		_storedItems.Clear();
 		_checkpointItems.Clear();
 		foreach (int index in data.StoredItems ?? [])
-			if (index >= 0 && index < Items.Length) _storedItems.Add(index);
+			if (index >= 0 && index < Items.Count) _storedItems.Add(index);
 		foreach (int index in data.CheckpointItems ?? [])
-			if (index >= 0 && index < Items.Length) _checkpointItems.Add(index);
+			if (index >= 0 && index < Items.Count) _checkpointItems.Add(index);
 		for (int i = 0; i < Mathf.Min(ShowcaseCapacity, data.ShowcaseItems?.Length ?? 0); i++)
-			if (data.ShowcaseItems![i] >= 0 && data.ShowcaseItems[i] < Items.Length)
+			if (data.ShowcaseItems![i] >= 0 && data.ShowcaseItems[i] < Items.Count)
 				_showcaseItems[i] = data.ShowcaseItems[i];
 		for (int i = 0; i < Mathf.Min(ShowcaseCapacity, data.CheckpointShowcaseItems?.Length ?? 0); i++)
-			if (data.CheckpointShowcaseItems![i] >= 0 && data.CheckpointShowcaseItems[i] < Items.Length)
+			if (data.CheckpointShowcaseItems![i] >= 0 && data.CheckpointShowcaseItems[i] < Items.Count)
 				_checkpointShowcaseItems[i] = data.CheckpointShowcaseItems[i];
 		_buyerCountdown = Array.Exists(_showcaseItems, item => item >= 0)
 			? double.IsFinite(data.BuyerCountdown) && data.BuyerCountdown > 0 && data.BuyerCountdown <= 2
@@ -769,12 +760,12 @@ public partial class TradeScene : Node2D
 		if (data.SaveVersion < 3 && CustomerIndex == 1) CustomerIndex = 3;
 		Percentage = Mathf.Clamp(data.Percentage, -30, 30);
 		RerollsRemaining = Mathf.Clamp(data.RerollsRemaining, 0, 3);
-		if (data.SaveVersion < 2 && ItemIndex >= 0 && ItemIndex < Items.Length)
+		if (data.SaveVersion < 2 && ItemIndex >= 0 && ItemIndex < Items.Count)
 		{
 			RerollsRemaining = GetItemRerollLimit(ItemIndex);
 		}
 		TradeActive = data.TradeActive;
-		if (ItemIndex < 0 || ItemIndex >= Items.Length || CustomerIndex < 0 ||
+		if (ItemIndex < 0 || ItemIndex >= Items.Count || CustomerIndex < 0 ||
 			CustomerIndex >= _customer.GetAppearanceCount() || Failed || Completed)
 			TradeActive = false;
 		if (!TradeActive) _activeShowcaseIndex = -1;

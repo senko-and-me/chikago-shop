@@ -5,7 +5,7 @@ public enum EndDayAction { Closed, WaitForTrade, Advance }
 // Closing shop and moving to the next calendar day are separate operations.
 public sealed class DaySession
 {
-    public const double DurationSeconds = 60;
+    public const double DurationSeconds = 120;
     public double RemainingSeconds { get; private set; } = DurationSeconds;
     public bool IsClosed { get; private set; }
     public bool CanReceiveBuyers => !IsClosed;

@@ -16,12 +16,14 @@ public partial class ProjectTest : SceneTree
         try
         {
             TestEconomyConfig();
+            await TestPlaceholderItems();
             TestPopupPlacement();
             await TestStandaloneCamera();
             await TestUiLayoutInvalidation();
             await TestPauseAndZoomUi();
             await TestCollapsibleProgress();
             await TestRarityPopupGeometry();
+            await TestEmbroidery();
             await TestMouseControls();
             await TestInventoryTransfers();
             await TestTradeScene();
@@ -42,6 +44,308 @@ public partial class ProjectTest : SceneTree
         {
             TranslationServer.SetLocale(originalLocale);
         }
+    }
+
+    private async Task TestPlaceholderItems()
+    {
+        const string path = "user://placeholder_items_test.json";
+        TradeScene game = null;
+        var scene = GD.Load<PackedScene>("res://scenes/trade_scene.tscn");
+        async Task<TradeScene> Load()
+        {
+            var loaded = scene.Instantiate<TradeScene>();
+            loaded.SavePath = path;
+            Root.AddChild(loaded);
+            loaded.SetProcess(false);
+            await ToSignal(this, SignalName.ProcessFrame);
+            return loaded;
+        }
+        try
+        {
+            var config = EconomyConfigProvider.Load();
+            foreach (string workshop in new[] { "atelier", "music" })
+            {
+                int[] counts = new int[WorkshopItemCatalog.Items.Count];
+                Check(WorkshopItemCatalog.TotalWeight(workshop) == config.Rarities.Sum(rarity => rarity.Weight),
+                    "Crafting must use the configured rarity weight total");
+                for (int ticket = 0; ticket < WorkshopItemCatalog.TotalWeight(workshop); ticket++)
+                    counts[WorkshopItemCatalog.Roll(workshop, ticket)]++;
+                foreach (var rarity in config.Rarities)
+                {
+                    int index = WorkshopItemCatalog.Items.Select((item,index)=>(item,index))
+                        .Single(entry => entry.item.WorkshopId == workshop && entry.item.RarityId == rarity.Id).index;
+                    Check(counts[index] == rarity.Weight && TradeScene.GetItemBasePrice(index) == rarity.BasePrices[workshop] &&
+                          TradeScene.GetItemRerollLimit(index) == rarity.Rerolls,
+                        "All five workshop rarities must use the configured odds, prices and rerolls");
+                }
+            }
+            Check(TradeScene.GetItemKind(0) == "hat" && TradeScene.GetItemKind(1) == "gloves" &&
+                  TradeScene.GetItemKind(2) == "guitar" && TradeScene.GetItemKind(3) == "trumpet",
+                "Legacy save indices must keep their original item identity");
+            var colors = new System.Collections.Generic.HashSet<Color>();
+            for (int index=4;index<10;index++)
+            {
+                var texture = GD.Load<Texture2D>(TradeScene.GetItemArtPath(index));
+                var image = texture.GetImage();
+                Check(image.GetWidth() == 128 && image.GetHeight() == 128 && image.GetPixel(0,0).A == 0,
+                    "Placeholder icons must be square with transparent padding");
+                colors.Add(image.GetPixel(64,64));
+            }
+            Check(colors.Count == 6, "Every new placeholder must have a distinct color");
+            using (var file = FileAccess.Open(path, FileAccess.ModeFlags.Write))
+                file.StoreString("{\"save_version\":8,\"day_remaining_seconds\":120,\"score\":1000,\"energy_remaining\":2,\"stored_items\":[4,5,6,7,8,9]}");
+            game = await Load();
+            for(int index=4;index<10;index++)
+            {
+                var inventory = game.GetNode<HBoxContainer>("HUD/InventoryUI/ScrollContainer/HBoxContainer");
+                var slot = inventory.GetChild<SlotUI>(0);
+                string art = TradeScene.GetItemArtPath(index);
+                Check(game.StoredItems[0] == index && slot.GetNode<TextureRect>("Icon").Texture.ResourcePath == art &&
+                      slot.ItemInfo == ExpectedItemTooltip(index),
+                    "New placeholder identity, art and tooltip must survive inventory reload");
+                SelectInventorySlot(game,0);
+                game.PlaceItemInShowcase(0);
+                Check(game.GetNode<TextureRect>("World/ShowroomLeft/Showcases/Slot1/Icon").Texture.ResourcePath == art,
+                    "Showcases must display the matching colored square");
+                game._Process(game.BuyerCountdown+0.001);
+                var visible = game.GetNode<Node2D>("World/TradingRoom/Item").GetChildren().OfType<Sprite2D>()
+                    .Where(sprite => sprite.Visible).ToArray();
+                Check(game.ItemIndex == index && visible.Length == 1 && visible[0].Texture.ResourcePath == art &&
+                      game.RerollsRemaining == TradeScene.GetItemRerollLimit(index),
+                    "Each colored square must have its own visible trading sprite and rarity rerolls");
+                game.RerollCustomer();
+                int remaining = game.RerollsRemaining;
+                game.QueueFree();
+                await ToSignal(this, SignalName.ProcessFrame);
+                game = await Load();
+                Check(game.TradeActive && game.ItemIndex == index && game.RerollsRemaining == remaining,
+                    "Active placeholder trades must preserve identity and spent rerolls across reload");
+                int cash = game.Score, offer = game.OfferedPrice;
+                Check(offer == TradeScene.PriceForPercent(TradeScene.GetItemBasePrice(index), game.Percentage),
+                    "High-rarity offers must use the correct workshop base price");
+                game.AcceptTrade();
+                Check(game.Score == cash+offer && !game.TradeActive,
+                    "Placeholder sales must credit their offer and finish the trade");
+            }
+        }
+        finally
+        {
+            if(game != null && GodotObject.IsInstanceValid(game)) game.QueueFree();
+            if(FileAccess.FileExists(path)) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(path));
+        }
+        await ToSignal(this, SignalName.ProcessFrame);
+        GD.Print("All six colored placeholder items, configured rarity odds, trading and reload checks passed");
+    }
+
+    private async Task TestEmbroidery()
+    {
+        var game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
+        game.SavePath = "";
+        Root.AddChild(game);
+        await ToSignal(this, SignalName.ProcessFrame);
+        Vector2I originalSize = Root.Size;
+        string originalLocale = TranslationServer.GetLocale();
+        try
+        {
+            var embroidery = game.GetNode<EmbroideryGame>("EmbroideryGame");
+            double dayTime = game.DayRemainingSeconds;
+            await ClickControl(game, "World/Atelier/GetItemButton");
+            Check(embroidery.IsOpen && Paused && game.StoredItems.Length == 0 && game.Score == 220,
+                "Atelier click must open embroidery without granting items or charging before confirmation");
+            double beforeCraftFrame = game.DayRemainingSeconds;
+            await ToSignal(this, SignalName.ProcessFrame);
+            Check(game.DayRemainingSeconds < beforeCraftFrame && beforeCraftFrame <= dayTime,
+                "The trading clock must continue on the ready embroidery screen");
+            game.GetNode<PauseMenu>("PauseMenu").Open();
+            Check(!game.GetNode<Control>("PauseMenu/Root/Overlay").Visible,
+                "Pause menu must not steal the embroidery pause");
+            await ClickControl(game, "EmbroideryGame/Surface/Cancel");
+            Check(!Paused && !embroidery.IsOpen && game.Score == 220 && game.EnergyRemaining == 2,
+                "Cancel before start must restore the world without cost");
+
+            foreach (Vector2I size in new[] { new Vector2I(1280,720), new Vector2I(960,540) })
+            {
+                Root.Size = size;
+                game.GetItemFromAtelier();
+                await ToSignal(this, SignalName.ProcessFrame);
+                var surface = embroidery.GetNode<EmbroiderySurface>("Surface");
+                Check(new Rect2(Vector2.Zero, Root.GetVisibleRect().Size).Encloses(surface.PanelRect),
+                    "Embroidery panel must fit the viewport independently of camera zoom");
+                Check(surface.PanelRect.Encloses(surface.QualityTrackRect.Grow(3)) &&
+                      surface.QualityTrackRect.Size.Y == surface.FabricRect.Size.Y,
+                    "The framed quality scale must span the fabric height and fit the panel");
+                foreach (string stat in new[] { "Time", "Stitches", "Misses" })
+                {
+                    var card = surface.GetNode<Control>("Stat" + stat);
+                    Check(surface.PanelRect.Encloses(card.GetRect()) && card.GetRect().End.Y < surface.FabricRect.Position.Y,
+                        "Stat cards must fit above the embroidery fabric");
+                }
+                Check(surface.GetNode<Label>("StatTime/Value").Text == "10.0" &&
+                      surface.GetNode<Label>("StatStitches/Value").Text == "0 / " + embroidery.Session.Points.Count &&
+                      surface.GetNode<Label>("StatMisses/Value").Text == "0",
+                    "Ready stat cards must show full time, current pattern length and zero misses");
+                for (int i = 0; i < 5; i++)
+                {
+                    var label = surface.GetNode<Label>("Rank" + "SABCD"[i]);
+                    Check(label.Text == "SABCD"[i].ToString() && surface.PanelRect.Encloses(label.GetRect()) &&
+                          label.GetRect().End.X < surface.QualityTrackRect.Position.X &&
+                          Mathf.IsEqualApprox(label.GetRect().GetCenter().Y,
+                              surface.QualityTrackRect.Position.Y + surface.QualityTrackRect.Size.Y * (i + 0.5f) / 5),
+                        "Ranks S–D must align to the five sections to the left of the scale");
+                }
+                Check(surface.GetNode<Label>("RankS").GetThemeColor("font_color") == new Color("ffe0a0"),
+                    "The initial S rank must be highlighted in warm gold");
+                foreach (string button in new[] { "Action", "Cancel" })
+                    Check(surface.PanelRect.Encloses(surface.GetNode<Control>(button).GetRect()),
+                        "Embroidery buttons must fit the panel");
+                await ClickControl(game, "EmbroideryGame/Surface/Cancel");
+            }
+
+            game.GetItemFromAtelier();
+            Root.PushInput(new InputEventKey { Pressed = true, Keycode = Key.Escape }, true);
+            Check(!embroidery.IsOpen && !Paused, "Escape must cancel the ready craft without opening pause menu");
+
+            TranslationServer.SetLocale("en");
+            game.GetItemFromAtelier();
+            await ToSignal(this, SignalName.ProcessFrame);
+            Check(embroidery.GetNode<Label>("Surface/Title").Text == "Embroidery" &&
+                  embroidery.GetNode<Button>("Surface/Action").Text == "Start",
+                "Embroidery text must follow the chosen language");
+            Check(embroidery.GetNode<Label>("Surface/StatTime/Heading").Text == "TIME" &&
+                  embroidery.GetNode<Label>("Surface/StatStitches/Heading").Text == "STITCHES" &&
+                  embroidery.GetNode<Label>("Surface/StatMisses/Heading").Text == "MISSES",
+                "Stat card headings must follow the chosen language");
+            await ClickControl(game, "EmbroideryGame/Surface/Action");
+            var board = embroidery.GetNode<EmbroiderySurface>("Surface");
+            var camera = game.GetNode<WorldCamera>("Camera2D");
+            Vector2 cameraPosition = camera.Position;
+            Vector2 cameraZoom = camera.Zoom;
+            Vector2 badPoint = board.FabricRect.Position + Vector2.One * 2;
+            PushEmbroideryClick(badPoint);
+            Check(embroidery.Session.Misses == 1, "A real click outside the target must count a miss");
+            Root.PushInput(new InputEventMouseButton { Position = badPoint, ButtonIndex = MouseButton.WheelUp, Pressed = true }, true);
+            Check(camera.Zoom == cameraZoom && camera.Position == cameraPosition,
+                "The camera must ignore wheel and craft clicks while embroidery owns pause");
+            int count = embroidery.Session.Points.Count;
+            for (int i=0;i<count;i++)
+            {
+                Vector2 point = board.ScreenPoint(i);
+                if (i == 0)
+                {
+                    Root.PushInput(new InputEventScreenTouch { Position = point, Index = 0, Pressed = true }, true);
+                    Root.PushInput(new InputEventScreenTouch { Position = point, Index = 0, Pressed = false }, true);
+                }
+                else PushEmbroideryClick(point);
+            }
+            await ToSignal(this, SignalName.ProcessFrame);
+            Check(embroidery.Session.Complete && embroidery.Session.Stitches == count &&
+                  embroidery.Session.Misses == 1 && game.StoredItems.Length == 3 && game.Score == 130,
+                "Mouse and touch must stitch the ordered pattern, with the purchase committed at start");
+            Check(board.GetNode<Label>("StatStitches/Value").Text == $"{count} / {count}" &&
+                  board.GetNode<Label>("StatMisses/Value").Text == "1" &&
+                  board.GetNode<Label>("StatTime/Value").Text == FormattableString.Invariant($"{embroidery.Session.RemainingSeconds:0.0}"),
+                "Stat cards must reflect actual elapsed time, completed stitches and misses");
+            Check(board.GetNode<Label>("Rank" + embroidery.Session.Rank).GetThemeColor("font_color") == new Color("ffe0a0") &&
+                  board.GetNode<Label>("RankS").GetThemeColor("font_color") == new Color("a99b83") &&
+                  board.GetNode<Label>("Quality").Text == embroidery.Session.Quality + "%",
+                "The active rank must follow quality, with only the percentage below the scale");
+            await ClickControl(game, "EmbroideryGame/Surface/Action");
+            embroidery.Activate();
+            Check(!Paused && !embroidery.IsOpen && game.StoredItems.Length == 3 && game.Score == 130 && game.EnergyRemaining == 1,
+                "Collect must keep the paid clothing batch without duplicating it and unpause");
+            CraftAtelier(game);
+            Check(game.StoredItems.Length == 6 && game.Score == 40 && game.EnergyRemaining == 0,
+                "Timeout must settle the same paid batch with a lower assessment");
+            game.GetItemFromAtelier();
+            Check(!embroidery.IsOpen && !Paused, "Unavailable crafting must never open or pause");
+            game.NewGame();
+            game.SetProcess(false);
+            embroidery.SetProcess(false);
+            game.GetItemFromAtelier();
+            double readyTime = game.DayRemainingSeconds;
+            game._Process(1);
+            Check(game.DayRemainingSeconds == readyTime, "The paused world must not double-tick the craft clock");
+            embroidery._Process(1);
+            Check(game.DayRemainingSeconds == readyTime - 1 && embroidery.Session.RemainingSeconds == 10,
+                "Waiting to start must spend day time without spending embroidery time");
+            embroidery.Activate();
+            embroidery.Activate();
+            Check(game.Score == 130 && game.EnergyRemaining == 1 && game.StoredItems.Length == 3,
+                "Starting must commit the paid batch only once");
+            embroidery._Process(2);
+            Check(game.DayRemainingSeconds == readyTime - 3 && embroidery.Session.RemainingSeconds == 8,
+                "Playing must advance both clocks by the same delta");
+            embroidery._Process(8);
+            double resultTime = game.DayRemainingSeconds;
+            embroidery._Process(1);
+            Check(game.DayRemainingSeconds == resultTime - 1 && embroidery.Session.RemainingSeconds == 0,
+                "Viewing the finished result must continue to spend day time");
+            embroidery.Activate();
+
+            game.NewGame();
+            game._Process(119.5);
+            game.GetItemFromAtelier();
+            embroidery._Process(0.5);
+            Check(game.DayClosed && !embroidery.IsOpen && !Paused && game.StoredItems.Length == 0 && game.Score == 220,
+                "Expiry on the ready screen must cancel the unstarted craft without charging");
+
+            game.NewGame();
+            game._Process(119.5);
+            game.GetItemFromAtelier();
+            embroidery.Activate();
+            embroidery._Process(0.5);
+            Check(game.DayClosed && embroidery.IsOpen && Paused && game.EnergyRemaining == 0 &&
+                  game.StoredItems.Length == 3 && game.Score == 130 &&
+                  embroidery.GetNode<Label>("Surface/DayTimer").Text == "00:00",
+                "Expiry during a started craft must close the day and retain the paid batch");
+            embroidery._Process(10);
+            embroidery.Activate();
+            embroidery.Activate();
+            Check(!Paused && !embroidery.IsOpen && game.StoredItems.Length == 3 && game.Score == 130 && game.DayClosed,
+                "Finishing after expiry must neither lose nor duplicate the paid batch");
+            game.GetItemFromAtelier();
+            Check(!embroidery.IsOpen, "A closed day must reject another embroidery session");
+            game.EndDay();
+            Check(!game.DayClosed && game.DayRemainingSeconds == 120 && game.EnergyRemaining == 2,
+                "After finishing the craft, the next day must start with two minutes");
+            game.NewGame();
+            game.GetItemFromAtelier();
+            game.QueueFree();
+            await ToSignal(this, SignalName.ProcessFrame);
+            Check(!Paused, "Removing a crafting scene must release its pause");
+        }
+        finally
+        {
+            Root.Size = originalSize;
+            TranslationServer.SetLocale(originalLocale);
+            if (GodotObject.IsInstanceValid(game)) game.QueueFree();
+        }
+        await ToSignal(this, SignalName.ProcessFrame);
+        GD.Print("Embroidery GUI, payment, timeout, localization and pause checks passed");
+    }
+
+    private void PushEmbroideryClick(Vector2 point)
+    {
+        Root.PushInput(new InputEventMouseMotion { Position = point, GlobalPosition = point }, true);
+        Root.PushInput(new InputEventMouseButton { Position = point, GlobalPosition = point,
+            ButtonIndex = MouseButton.Left, Pressed = true, ButtonMask = MouseButtonMask.Left }, true);
+        Root.PushInput(new InputEventMouseButton { Position = point, GlobalPosition = point,
+            ButtonIndex = MouseButton.Left, Pressed = false }, true);
+    }
+
+    private static void CraftAtelier(TradeScene game)
+    {
+        game.GetItemFromAtelier();
+        FinishEmbroidery(game);
+    }
+
+    private static void FinishEmbroidery(TradeScene game)
+    {
+        var embroidery = game.GetNode<EmbroideryGame>("EmbroideryGame");
+        if (!embroidery.IsOpen) return;
+        embroidery.Activate();
+        embroidery._Process(10);
+        embroidery.Activate();
     }
 
     private static void TestEconomyConfig()
@@ -187,7 +491,7 @@ public partial class ProjectTest : SceneTree
               tradePanel.PivotOffset == tradePanel.Size / 2,
             "Resizing controls at constant zoom must invalidate cached pivots and price-hint placement");
 
-        game.GetItemFromAtelier();
+        CraftAtelier(game);
         var inventory = game.GetNode<InventoryUI>("HUD/InventoryUI");
         for (int i = 0; i < 2; i++) await ToSignal(this, SignalName.ProcessFrame);
         Check(!inventory.ItemPopup.IsProcessing(), "Hidden item tooltips must not run a frame callback");
@@ -269,7 +573,7 @@ public partial class ProjectTest : SceneTree
               TradeScene.GetItemBasePrice(2) == 45 && TradeScene.GetItemBasePrice(3) == 75,
             "Inventory prices must match the current trade catalog");
 
-        game.GetItemFromAtelier();
+        CraftAtelier(game);
         game.SelectInventoryItem(0);
         game.PlaceItemInShowcase(0);
         double countdown = game.BuyerCountdown;
@@ -529,6 +833,7 @@ public partial class ProjectTest : SceneTree
             "A fresh scene must not show a phantom item or trade");
 
         await ClickControl(game, "World/Atelier/GetItemButton");
+        FinishEmbroidery(game);
         Check(game.StoredItems.Length == 3 && game.Score == 130 && game.EnergyRemaining == 1,
             "A mouse click must create three paid atelier items");
         await ClickControl(game, "HUD/InventoryUI/ScrollContainer/HBoxContainer/" +
@@ -560,6 +865,7 @@ public partial class ProjectTest : SceneTree
         Check(!game.TradeActive && game.Score == score + offer && !world.ItemVisible,
             "The accept button must sell once and hide the trade");
         await ClickControl(game, "World/Atelier/GetItemButton");
+        FinishEmbroidery(game);
         var inventory = game.GetNode<HBoxContainer>("HUD/InventoryUI/ScrollContainer/HBoxContainer");
         await ClickControl(game, "HUD/InventoryUI/ScrollContainer/HBoxContainer/" + inventory.GetChild(0).Name);
         await ClickControl(game, "World/Showroom/Showcases/Slot4");
@@ -633,10 +939,10 @@ public partial class ProjectTest : SceneTree
         game.SetProcess(false);
         game.GetNode<WorldCamera>("Camera2D").SetProcess(false);
         game.Score = 10000;
-        game.GetItemFromAtelier();
-        game.GetItemFromAtelier();
+        CraftAtelier(game);
+        CraftAtelier(game);
         AdvanceDayForTest(game);
-        game.GetItemFromAtelier();
+        CraftAtelier(game);
         await ToSignal(this, SignalName.ProcessFrame);
         var inventory = game.GetNode<InventoryUI>("HUD/InventoryUI");
         var first = game.GetNode<Button>("World/ShowroomLeft/Showcases/Slot1");
@@ -763,7 +1069,7 @@ public partial class ProjectTest : SceneTree
         Check(game.StoredItems.SequenceEqual(before), "Pause must also reject quick transfers");
         game.GetNode<PauseMenu>("PauseMenu").Close();
         game.NewGame();
-        game.GetItemFromAtelier();
+        CraftAtelier(game);
         game.Score = 0;
         for (int i = 0; i < 4 && !game.Failed; i++) AdvanceDayForTest(game);
         before = game.StoredItems;
@@ -939,7 +1245,9 @@ public partial class ProjectTest : SceneTree
         for (int day = 0; day < 4; day++)
         {
             atelierButton.EmitSignal(Button.SignalName.Pressed);
+            FinishEmbroidery(game);
             atelierButton.EmitSignal(Button.SignalName.Pressed);
+            FinishEmbroidery(game);
             AdvanceDayForTest(game);
         }
         var inventoryScroll = game.GetNode<ScrollContainer>("HUD/InventoryUI/ScrollContainer");
@@ -989,12 +1297,13 @@ public partial class ProjectTest : SceneTree
 		game.RefreshItemButtons();
 		game.TryUnlockMusicWorkshop();
         atelierButton.EmitSignal(Button.SignalName.Pressed);
+            FinishEmbroidery(game);
         musicButton.EmitSignal(Button.SignalName.Pressed);
-        Check(game.StoredItems.Length == 6 && game.StoredItems.Take(3).All(index => index is >= 0 and <= 1) &&
-              game.StoredItems.Skip(3).All(index => index is >= 2 and <= 3) && game.Score == 670 &&
+        Check(game.StoredItems.Length == 6 && game.StoredItems.Take(3).All(index => WorkshopItemCatalog.Items[index].WorkshopId == "atelier") &&
+              game.StoredItems.Skip(3).All(index => WorkshopItemCatalog.Items[index].WorkshopId == "music") && game.Score == 670 &&
               game.EnergyRemaining == 0 && atelierButton.Disabled && musicButton.Disabled,
             "Unlocking and two paid spins must consume 330 dollars and both energy, producing three category items each");
-        game.GetItemFromAtelier();
+        CraftAtelier(game);
         Check(game.StoredItems.Length == 6 && game.Score == 670,
             "A third spin in one day must not spend money or create items");
         game.EnergyRemaining = 20;
@@ -1033,7 +1342,7 @@ public partial class ProjectTest : SceneTree
               game.GetNode<Button>("World/ShowroomLeft/Showcases/Slot1").Disabled &&
               game.GetNode<Label>("World/ShowroomLeft/Showcases/Slot1/ItemLabel").Text == "СВОБОДНО",
             "The active item's showcase must be empty and require a selection for restocking");
-        game.GetItemFromAtelier();
+        CraftAtelier(game);
         SelectInventorySlot(game, 1);
         Check(!firstSlot.Disabled, "The freed showcase must accept another selected item during the trade");
         var secondSlot = game.GetNode<Button>("World/ShowroomLeft/Showcases/Slot2");
@@ -1052,9 +1361,8 @@ public partial class ProjectTest : SceneTree
         foreach (string kind in new[] { "hat", "gloves", "guitar", "trumpet" })
             Check(game.GetNode<Sprite2D>($"World/TradingRoom/Item/{char.ToUpperInvariant(kind[0])}{kind[1..]}").Visible ==
                   (kind == TradeScene.GetItemKind(firstItem)), "Only the selected item illustration must be visible");
-        int[] prices = [30, 50, 45, 75];
         Check(game.Percentage is >= -30 and <= 30, "Offer percentage is out of range");
-        Check(game.OfferedPrice == TradeScene.PriceForPercent(prices[firstItem], game.Percentage),
+        Check(game.OfferedPrice == TradeScene.PriceForPercent(TradeScene.GetItemBasePrice(firstItem), game.Percentage),
             "Offer price does not match the percentage");
         Check(game.GetNode<Label>("World/TradingRoom/Item/TradePanel/Content/OfferLabel").Text == $"Получим: {game.OfferedPrice}$",
             "The panel must show the amount received");
@@ -1109,7 +1417,7 @@ public partial class ProjectTest : SceneTree
 
         SelectInventorySlot(game, 0);
         game.GetNode<Button>("World/ShowroomLeft/Showcases/Slot3").EmitSignal(Button.SignalName.Pressed);
-        game.GetItemFromAtelier();
+        CraftAtelier(game);
         SelectInventorySlot(game, 0);
         game.PlaceItemInShowcase(4);
         int[] displayed = game.ShowcaseItems;
@@ -1212,7 +1520,7 @@ public partial class ProjectTest : SceneTree
         if (FileAccess.FileExists(SavePath)) DirAccess.RemoveAbsolute(absolutePath);
         var scene = GD.Load<PackedScene>("res://scenes/trade_scene.tscn");
         var game = await CreateGame(scene);
-        game.GetItemFromAtelier();
+        CraftAtelier(game);
         SelectInventorySlot(game, 0);
         game.PlaceItemInShowcase(0);
         game._Process(game.BuyerCountdown + 0.01);
@@ -1258,7 +1566,7 @@ public partial class ProjectTest : SceneTree
 		game.Score = 500;
 		game.RefreshItemButtons();
 		game.TryUnlockMusicWorkshop();
-        game.GetItemFromAtelier();
+        CraftAtelier(game);
         game.GetItemFromMusicWorkshop();
         int[] itemsBeforePlacement = game.StoredItems;
         SelectInventorySlot(game, 0);
@@ -1311,7 +1619,7 @@ public partial class ProjectTest : SceneTree
               game.ShowcaseItems[5] == itemsBeforePlacement[1] &&
               game.StoredItems.SequenceEqual(itemsBeforePlacement.Skip(2)),
             "Failure at the deadline must preserve unsold goods and keep the sold item removed");
-        game.GetItemFromAtelier();
+        CraftAtelier(game);
         game._Input(new InputEventKey { Keycode = Key.R, Pressed = true });
         Check(game.StoredItems.SequenceEqual(itemsBeforePlacement.Skip(2)),
             "Failure and R must not create items");
@@ -1324,7 +1632,7 @@ public partial class ProjectTest : SceneTree
 		game.Score = 500;
 		game.RefreshItemButtons();
 		game.TryUnlockMusicWorkshop();
-        game.GetItemFromAtelier();
+        CraftAtelier(game);
         game.GetItemFromMusicWorkshop();
         int[] checkpointItems = game.StoredItems;
         SelectInventorySlot(game, 0);
@@ -1430,9 +1738,9 @@ public partial class ProjectTest : SceneTree
         {
             if (FileAccess.FileExists(SavePath)) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(SavePath));
             game = await CreateGame(scene);
-            Check(!game.DayClosed && game.DayRemainingSeconds == 60 &&
-                  game.GetNode<Label>("HUD/Root/DayTimer").Text == "01:00",
-                "A new day must start with a full minute in mm:ss format");
+            Check(!game.DayClosed && game.DayRemainingSeconds == 120 &&
+                  game.GetNode<Label>("HUD/Root/DayTimer").Text == "02:00",
+                "A new day must start with a full two minutes in mm:ss format");
             foreach (Vector2I size in new[] { new Vector2I(1280, 720), new Vector2I(960, 540) })
             foreach (float zoom in new[] { 0.25f, 1.8f })
             {
@@ -1446,16 +1754,16 @@ public partial class ProjectTest : SceneTree
                     "The timer must stay centered at the top, in bounds, and ignore mouse input regardless of zoom");
             }
             game._Process(0.25);
-            Check(game.DayRemainingSeconds == 59.75 && game.GetNode<Label>("HUD/Root/DayTimer").Text == "01:00",
+            Check(game.DayRemainingSeconds == 119.75 && game.GetNode<Label>("HUD/Root/DayTimer").Text == "02:00",
                 "The timer must count partial seconds without showing zero early");
             game._Process(0.75);
-            Check(game.GetNode<Label>("HUD/Root/DayTimer").Text == "00:59", "The timer must roll from minutes to seconds");
+            Check(game.GetNode<Label>("HUD/Root/DayTimer").Text == "01:59", "The timer must roll from minutes to seconds");
 
             foreach (bool manual in new[] { true, false })
             {
                 game.NewGame();
                 game.Score = 1000;
-                game.GetItemFromAtelier();
+                CraftAtelier(game);
                 SelectInventorySlot(game, 0);
                 game.PlaceItemInShowcase(0);
                 SelectInventorySlot(game, 0);
@@ -1486,7 +1794,7 @@ public partial class ProjectTest : SceneTree
                       !game.GetNode<Button>("World/TradingRoom/Item/TradePanel/Content/Buttons/DeclineButton").Disabled,
                     "Closed-day controls must block production/advance and retain both trade actions");
                 int cash = game.Score;
-                game.GetItemFromAtelier();
+                CraftAtelier(game);
                 game.EndDay();
                 game._Process(120);
                 Check(game.DayClosed && game.TradeActive && game.ItemIndex == item && game.Score == cash &&
@@ -1517,22 +1825,22 @@ public partial class ProjectTest : SceneTree
                 Check(!game.TradeActive && game.BuyerCountdown == 0, "No further buyers may arrive after the last sale");
                 await ClickControl(game, "HUD/Root/ProgressPanel/Content/EndDayButton");
                 Check(!game.DayClosed && game.CurrentDay == 5 && game.QuotaStage == 1 &&
-                      game.Score == cash + offer - game.FirstQuota && game.EnergyRemaining == 2 && game.DayRemainingSeconds == 60 &&
+                      game.Score == cash + offer - game.FirstQuota && game.EnergyRemaining == 2 && game.DayRemainingSeconds == 120 &&
                       game.BuyerCountdown is >= 0.5 and <= 2,
                     "The next day must settle the quota using the last sale, restore energy/time and schedule a fresh buyer delay");
                 game._Process(game.BuyerCountdown + 0.001);
                 Check(game.TradeActive, "Buyers must return when the next day starts");
                 game.ReturnToCheckpoint();
-                Check(!game.TradeActive && !game.DayClosed && game.DayRemainingSeconds == 60 && game.EnergyRemaining == 2,
+                Check(!game.TradeActive && !game.DayClosed && game.DayRemainingSeconds == 120 && game.EnergyRemaining == 2,
                     "Checkpoint restore must start a fresh open day");
             }
 
             game.NewGame();
-            game.GetItemFromAtelier();
+            CraftAtelier(game);
             SelectInventorySlot(game, 0);
             game.PlaceItemInShowcase(0);
             int displayedItem = game.ShowcaseItems[0];
-            game._Process(60);
+            game._Process(120);
             Check(game.DayClosed && !game.TradeActive && game.EnergyRemaining == 0 && game.ShowcaseItems[0] == displayedItem,
                 "Expiry must cancel a pending buyer in the same frame instead of creating a new last trade");
             game._Process(120);
@@ -1543,15 +1851,15 @@ public partial class ProjectTest : SceneTree
             game.QueueFree();
             await ToSignal(this, SignalName.ProcessFrame);
             game = await CreateGame(scene);
-            Check(!Paused && !game.DayClosed && game.DayRemainingSeconds == 49.75 && game.EnergyRemaining == 2,
+            Check(!Paused && !game.DayClosed && game.DayRemainingSeconds == 109.75 && game.EnergyRemaining == 2,
                 "Pause/menu save must restore the exact remaining fraction without charging offline time");
             game.QueueFree();
             await ToSignal(this, SignalName.ProcessFrame);
             using (var legacy = FileAccess.Open(SavePath, FileAccess.ModeFlags.Write))
                 legacy.StoreString("{\"save_version\":7,\"energy_remaining\":1}");
             game = await CreateGame(scene);
-            Check(!game.DayClosed && game.DayRemainingSeconds == 60 && game.EnergyRemaining == 1,
-                "Pre-timer saves must gain a full minute while preserving their spent energy");
+            Check(!game.DayClosed && game.DayRemainingSeconds == 120 && game.EnergyRemaining == 1,
+                "Pre-timer saves must gain two full minutes while preserving their spent energy");
         }
         finally
         {
@@ -1561,7 +1869,7 @@ public partial class ProjectTest : SceneTree
             Root.Size = originalSize;
         }
         await ToSignal(this, SignalName.ProcessFrame);
-        GD.Print("Minute timer, manual/timeout closure, last sale, quota, pause and save migration checks passed");
+        GD.Print("Two-minute timer, manual/timeout closure, last sale, quota, pause and save migration checks passed");
     }
 
     private async Task TestLocalization()
@@ -1645,7 +1953,7 @@ public partial class ProjectTest : SceneTree
             var gameScene = GD.Load<PackedScene>("res://scenes/trade_scene.tscn");
             game = await CreateGame(gameScene);
             game.NewGame();
-            game.GetItemFromAtelier();
+            CraftAtelier(game);
             Check(game.GetNode<Label>("HUD/Root/ScorePanel/ScoreLabel").Text == "Cash: $130" &&
                   game.GetNode<Label>("HUD/Root/ProgressPanel/Content/DayLabel").Text == "Day: 1 / 7",
                 "Dynamic cash and day labels must use English with their actual values");

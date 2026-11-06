@@ -9,9 +9,9 @@ public sealed class DaySessionTests
     public void TimeoutClosesExactlyOnceAndDiscardsEnergy()
     {
         var day = new DaySession();
-        Assert.That(day.RemainingSeconds, Is.EqualTo(60));
+        Assert.That(day.RemainingSeconds, Is.EqualTo(120));
         Assert.That(day.AvailableEnergy(2), Is.EqualTo(2));
-        Assert.That(day.Tick(59.75), Is.False);
+        Assert.That(day.Tick(119.75), Is.False);
         Assert.That(day.Tick(0.25), Is.True);
         Assert.That(day.IsClosed, Is.True);
         Assert.That(day.CanReceiveBuyers, Is.False);
@@ -30,18 +30,18 @@ public sealed class DaySessionTests
         Assert.That(day.IsClosed, Is.True);
         day.Reset();
         Assert.That(day.IsClosed, Is.False);
-        Assert.That(day.RemainingSeconds, Is.EqualTo(60));
+        Assert.That(day.RemainingSeconds, Is.EqualTo(120));
         Assert.That(day.RequestEnd(tradeActive: false), Is.EqualTo(EndDayAction.Closed));
     }
 
-    [TestCase(null, false, 60, false)]
+    [TestCase(null, false, 120, false)]
     [TestCase(12.5, false, 12.5, false)]
     [TestCase(12.5, true, 0, true)]
     [TestCase(0, false, 0, true)]
     [TestCase(-5, false, 0, true)]
-    [TestCase(200, false, 60, false)]
-    [TestCase(double.NaN, false, 60, false)]
-    [TestCase(double.PositiveInfinity, false, 60, false)]
+    [TestCase(200, false, 120, false)]
+    [TestCase(double.NaN, false, 120, false)]
+    [TestCase(double.PositiveInfinity, false, 120, false)]
     public void RestoreHandlesOldAndInvalidSaves(double? remaining, bool closed, double expectedTime, bool expectedClosed)
     {
         var day = new DaySession();
@@ -58,6 +58,6 @@ public sealed class DaySessionTests
     {
         var day = new DaySession();
         Assert.That(day.Tick(delta), Is.False);
-        Assert.That(day.RemainingSeconds, Is.EqualTo(60));
+        Assert.That(day.RemainingSeconds, Is.EqualTo(120));
     }
 }

@@ -29,6 +29,15 @@ public partial class CounterWorld : Node2D
     public override void _Ready()
     {
         _item = GetNode<Node2D>("TradingRoom/Item");
+        foreach (CraftItem item in WorkshopItemCatalog.Items)
+        {
+            if (!item.ArtPath.Contains("placeholder_")) continue;
+            _item.AddChild(new Sprite2D
+            {
+                Name = item.Kind, Texture = GD.Load<Texture2D>(item.ArtPath),
+                Position = new Vector2(64, -48), Visible = false
+            });
+        }
         RefreshItem();
     }
 

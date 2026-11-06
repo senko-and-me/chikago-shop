@@ -35,7 +35,8 @@ public sealed class DayCycleController
 
     public void Tick(double delta)
     {
-        if (_game.GetTree().Paused || _game.Failed || _game.Completed) return;
+        bool crafting = _game.GetNodeOrNull<EmbroideryGame>("EmbroideryGame")?.IsOpen == true;
+        if ((_game.GetTree().Paused && !crafting) || _game.Failed || _game.Completed) return;
         bool closed = Session.Tick(delta);
         bool secondChanged = RefreshTimer();
         if (closed) _game.SynchronizeDayState();
