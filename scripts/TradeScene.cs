@@ -68,6 +68,8 @@ public partial class TradeScene : Node2D
 	private double _buyerCountdown;
 	private DayCycleController _dayCycle = null!;
 	private EmbroideryGame _embroidery = null!;
+	private EmbroideryGame _polishing = null!;
+	public bool CraftMiniGameOpen => (_embroidery?.IsOpen ?? false) || (_polishing?.IsOpen ?? false);
 	private int _energyRemaining = EnergyPerDay;
 	public bool DayClosed => _dayCycle.Session.IsClosed;
 	public double DayRemainingSeconds => _dayCycle.Session.RemainingSeconds;
@@ -198,6 +200,8 @@ public partial class TradeScene : Node2D
 		_dayCycle = new DayCycleController(this);
 		_embroidery = new EmbroideryGame(() => AcquireItem("atelier", AtelierSpinCost));
 		AddChild(_embroidery);
+		_polishing = new EmbroideryGame(() => AcquireItem("music", MusicSpinCost), polishing: true);
+		AddChild(_polishing);
 		bool restored = LoadProgress();
 		RefreshScore();
 		RefreshProgress();
@@ -313,7 +317,7 @@ public partial class TradeScene : Node2D
 	public void GetItemFromMusicWorkshop()
 	{
 		if (!MusicWorkshopUnlocked) return;
-		AcquireItem("music", MusicSpinCost);
+		_polishing.Open();
 	}
 
 	public void TryUnlockMusicWorkshop()

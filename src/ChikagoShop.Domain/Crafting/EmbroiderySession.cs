@@ -3,7 +3,7 @@ namespace ChikagoShop.Domain.Crafting;
 public enum EmbroideryState { Ready, Playing, Finished }
 
 // Coordinates use the reference canvas (840 x 480), independent of display size.
-public sealed class EmbroiderySession
+public sealed class EmbroiderySession : ICraftSession
 {
     private static readonly (double X, double Y)[][] Patterns =
     [

@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ателье 1928 — Вышивка</title>
+<style>
+:root{font-family:Georgia,'Times New Roman',serif;color:#f5e8d0;background:#191d20}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:20px;background:radial-gradient(ellipse at 50% 0%,#354039,#15191c 75%)}.wrap{width:min(900px,100%)}header{text-align:center;margin-bottom:18px}h1{font-size:clamp(26px,5vw,42px);font-weight:normal;letter-spacing:.07em;margin:8px 0}.eyebrow{font:12px Arial,sans-serif;letter-spacing:.28em;color:#c9ae7f}.sub{font:14px Arial,sans-serif;color:#c6c2b7}.panel{background:#252a2b;border:1px solid #8e7953;border-radius:14px;padding:18px;box-shadow:0 20px 65px #0006}.top{display:flex;gap:14px;flex-wrap:wrap;justify-content:space-between;align-items:center;margin-bottom:12px}.stats{display:flex;gap:10px;flex-wrap:wrap}.stat{min-width:100px;background:#171d1e;border:1px solid #4e544f;border-radius:8px;padding:9px 14px;font:12px Arial,sans-serif;color:#b7bbaf}.stat strong{display:block;color:#fff1d8;font-size:21px;margin-top:3px}button,select{font:15px Arial,sans-serif;border-radius:7px;border:1px solid #ac9061;background:#323b39;color:#f8ebd1;padding:10px 15px;cursor:pointer}button:hover{background:#4b574f}button.primary{background:#aa824a;color:#161719;border-color:#dfb879;font-weight:700}button:disabled{opacity:.5;cursor:default}select{max-width:100%}.play-area{display:flex;align-items:stretch;gap:17px}.stage{flex:1;min-width:0;position:relative;overflow:hidden;border-radius:9px;border:9px solid #7e5634;box-shadow:inset 0 0 0 3px #c59e69,0 5px 15px #0007;background:#d1b68c;touch-action:manipulation}.stage:before{content:"";pointer-events:none;position:absolute;inset:0;border:3px solid #c99f6d;z-index:3}canvas{display:block;width:100%;height:auto;cursor:crosshair;touch-action:manipulation}.overlay{position:absolute;z-index:5;inset:0;background:#141b1dd9;display:flex;align-items:center;justify-content:center;text-align:center;padding:25px}.overlay.hidden{display:none}.overlay-inner{max-width:470px}.overlay h2{font-weight:normal;font-size:30px;color:#f3d49b;margin:0 0 12px}.overlay p{font:15px/1.6 Arial,sans-serif;color:#eee3cc}.bottom{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-top:14px}.help{font:13px/1.55 Arial,sans-serif;color:#c7c4ba;max-width:530px}.small{font-size:12px;color:#c6a97a;text-align:center;margin-top:17px} .quality-side{width:108px;flex:0 0 108px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:#1b2222;border:1px solid #5e594a;border-radius:10px;padding:13px 8px}.quality-title{font:11px Arial,sans-serif;letter-spacing:.13em;color:#dfca9d;text-align:center}.quality-body{height:330px;display:flex;gap:7px;align-items:stretch}.rank-labels{height:100%;display:flex;flex-direction:column;justify-content:space-between;font:700 22px Georgia,serif;color:#8e8d80;padding:0 0 1px}.rank-labels span{height:20%;display:flex;align-items:center;justify-content:center}.rank-labels span.active{color:#ffe0a0;text-shadow:0 0 8px #e0ad5f99}.quality-track{height:100%;width:32px;border:3px solid #d0ac76;background:linear-gradient(#303838,#272a2b);position:relative;overflow:hidden}.quality-fill{position:absolute;bottom:0;left:0;right:0;height:100%;background:linear-gradient(0deg,#943f43 0%,#c28349 45%,#d5c271 72%,#b9dba4 100%);transition:height .28s ease}.quality-mark{position:absolute;left:0;right:0;height:1px;background:#151e1fd9;z-index:2}.quality-value{font:bold 20px Arial,sans-serif;color:#ffe0a0}.quality-detail{font:11px Arial,sans-serif;color:#b5b5a7;text-align:center}.stage.miss-shake{animation:stage-shake .23s ease}@keyframes stage-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}65%{transform:translateX(4px)}}@media(max-width:600px){.play-area{gap:7px}.quality-side{width:62px;flex-basis:62px;gap:6px;padding:8px 3px}.quality-body{height:205px;gap:4px}.rank-labels{font-size:15px}.quality-track{width:19px}.quality-title{font-size:8px;letter-spacing:0}.quality-value{font-size:15px}.quality-detail{font-size:9px}.panel{padding:10px}.stat{min-width:79px;padding:8px}.stat strong{font-size:18px}.stage{border-width:6px}}
+</style>
+</head>
+<body>
+<div class="wrap"><header><div class="eyebrow">CHICAGO • 1928</div><h1>АТЕЛЬЕ «ЗОЛОТАЯ НИТЬ»</h1><div class="sub">Мини-игра: ручная декоративная вышивка</div></header>
+<div class="panel"><div class="top"><label>Узор: <select id="pattern"><option value="zig">Зигзаг</option><option value="fan">Веер</option><option value="flower">Цветок</option><option value="diamond">Ромб</option></select></label><div class="stats"><div class="stat">ВРЕМЯ<strong id="time">10.0</strong></div><div class="stat">СТЕЖКИ<strong id="progress">0 / 0</strong></div><div class="stat">ПРОМАХИ<strong id="misses">0</strong></div></div></div>
+<div class="play-area"><div class="stage" id="stage"><canvas id="canvas" width="840" height="480" aria-label="Ткань с точками для вышивки"></canvas><div class="overlay" id="overlay"><div class="overlay-inner"><h2 id="overlayTitle">Первый заказ</h2><p id="overlayText">За 10 секунд проколи все подсвеченные точки в правильном порядке. Нитка сама образует узор. Чем точнее ты попадаешь, тем лучше результат.</p><button class="primary" id="start">Начать вышивку</button></div></div></div><aside class="quality-side" aria-label="Шкала качества вышивки"><div class="quality-title">КАЧЕСТВО</div><div class="quality-body"><div class="rank-labels" id="rankLabels"><span>S</span><span>A</span><span>B</span><span>C</span><span>D</span></div><div class="quality-track"><div class="quality-fill" id="qualityFill"></div><div class="quality-mark" style="top:20%"></div><div class="quality-mark" style="top:40%"></div><div class="quality-mark" style="top:60%"></div><div class="quality-mark" style="top:80%"></div></div></div><div class="quality-value" id="qualityValue">100%</div><div class="quality-detail" id="qualityRank">Ранг S</div></aside></div>
+<div class="bottom"><div class="help">Кликай по <b>золотистой светящейся точке</b>, чтобы сделать следующий прокол. Сходящееся кольцо — только анимация, ждать его не нужно. Если нажать не туда, засчитывается ошибка. Можно играть мышкой или пальцем.</div><button id="reset">Начать заново ↻</button></div></div><div class="small">Игровое упрощение ручной вышивки и узоров ар-деко • работает без интернета</div></div>
+<script>
+(()=>{
+'use strict';
+const c=document.getElementById('canvas'),ctx=c.getContext('2d'),patternSelect=document.getElementById('pattern'),timeEl=document.getElementById('time'),progEl=document.getElementById('progress'),missEl=document.getElementById('misses'),overlay=document.getElementById('overlay'),title=document.getElementById('overlayTitle'),message=document.getElementById('overlayText'),startBtn=document.getElementById('start');
+const patterns={
+ zig:{points:[[150,180],[210,300],[270,180],[330,300],[390,180],[450,300],[510,180],[570,300],[630,180],[690,300]],label:'Зигзаг'},
+ fan:{points:[[300,340],[235,190],[300,340],[325,135],[300,340],[420,120],[300,340],[520,165],[300,340],[600,250]],label:'Веер'},
+ flower:{points:[[420,240],[410,142],[420,240],[515,177],[420,240],[510,322],[420,240],[325,323],[420,240],[325,178]],label:'Цветок'},
+ diamond:{points:[[420,96],[625,240],[420,384],[215,240],[420,125],[590,240],[420,355],[250,240],[420,154],[555,240],[420,326],[285,240]],label:'Ромб'}
+};
+let path=patterns.zig.points, idx=0, misses=0, state='ready', remaining=10, endAt=0, raf=0, pulse=0, targetSince=performance.now(), hitFlash=null, missFlash=null;
+const stage=document.getElementById('stage'),qualityFill=document.getElementById('qualityFill'),qualityValue=document.getElementById('qualityValue'),qualityRank=document.getElementById('qualityRank'),rankLabels=[...document.querySelectorAll('#rankLabels span')];
+function score(final=false){const elapsed=state==='ready'?0:10-remaining;return Math.max(0,Math.round(100-misses*12-elapsed*1.1-(final&&idx<path.length?(path.length-idx)*7:0)))}
+function rank(n){return n>=90?'S':n>=75?'A':n>=60?'B':n>=40?'C':'D'}
+function updateQuality(final=false){const n=score(final),r=rank(n);qualityFill.style.height=n+'%';qualityValue.textContent=n+'%';qualityRank.textContent='Ранг '+r;rankLabels.forEach(el=>el.classList.toggle('active',el.textContent===r))}
+function choose(){path=patterns[patternSelect.value].points;idx=0;misses=0;remaining=10;state='ready';targetSince=performance.now();hitFlash=null;missFlash=null;update();draw()}
+function update(){timeEl.textContent=remaining.toFixed(1);progEl.textContent=`${idx} / ${path.length}`;missEl.textContent=misses;updateQuality(state==='end')}
+function overlayShow(head,desc,btn){title.textContent=head;message.textContent=desc;startBtn.textContent=btn;overlay.classList.remove('hidden')}
+function start(){cancelAnimationFrame(raf);path=patterns[patternSelect.value].points;idx=0;misses=0;remaining=10;state='play';targetSince=performance.now();hitFlash=null;missFlash=null;endAt=performance.now()+10000;overlay.classList.add('hidden');update();tick()}
+function end(win){state='end';cancelAnimationFrame(raf);remaining=win?remaining:0;update();draw();const quality=score(true);overlayShow(win?'Заказ выполнен!':'Время вышло!',win?`Узор «${patterns[patternSelect.value].label}» готов. Промахов: ${misses}. Качество: ${quality}/100 (ранг ${rank(quality)}).`:`Успели сделать ${idx} из ${path.length} проколов. Промахов: ${misses}. Качество: ${quality}/100 (ранг ${rank(quality)}).`, 'Попробовать ещё раз')}
+function tick(){if(state!=='play')return;remaining=Math.max(0,(endAt-performance.now())/1000);pulse+=.07;update();draw();if(remaining<=0)end(false);else raf=requestAnimationFrame(tick)}
+function draw(){const w=c.width,h=c.height;ctx.clearRect(0,0,w,h);ctx.fillStyle='#d4bd96';ctx.fillRect(0,0,w,h);
+ // Linen weave: two very subtle thread systems.
+ ctx.strokeStyle='rgba(110,78,43,.12)';ctx.lineWidth=.8;for(let x=0;x<w;x+=7){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke()}for(let y=0;y<h;y+=7){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}
+ // Wooden embroidery hoop.
+ ctx.beginPath();ctx.ellipse(420,240,348,212,0,0,Math.PI*2);ctx.lineWidth=16;ctx.strokeStyle='#7b4d2b';ctx.stroke();ctx.beginPath();ctx.ellipse(420,240,342,205,0,0,Math.PI*2);ctx.lineWidth=5;ctx.strokeStyle='#e7b97b';ctx.stroke();ctx.beginPath();ctx.ellipse(420,240,334,198,0,0,Math.PI*2);ctx.lineWidth=2;ctx.strokeStyle='#79522e';ctx.stroke();
+ // Faint pattern guide.
+ ctx.beginPath();path.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.strokeStyle='rgba(79,63,43,.29)';ctx.lineWidth=2;ctx.setLineDash([6,8]);ctx.stroke();ctx.setLineDash([]);
+ // Actual stitched line.
+ if(idx>1){ctx.beginPath();path.slice(0,idx).forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.strokeStyle='#501b2c';ctx.lineWidth=8;ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();ctx.strokeStyle='#b5374a';ctx.lineWidth=5;ctx.stroke()}
+ // osu!-inspired visual entrance: an approaching ring, but NO timing restriction.
+ const now=performance.now();
+ const t=Math.min(1,(now-targetSince)/340);
+ const ease=1-Math.pow(1-t,3);
+ path.forEach(([x,y],i)=>{
+   const next=i===idx && state==='play',done=i<idx;
+   if(next){
+     ctx.save();ctx.globalAlpha=.25+.75*ease;
+     const radius=12+(1-ease)*7;
+     ctx.beginPath();ctx.arc(x,y,radius,0,Math.PI*2);ctx.fillStyle='#ffedab';ctx.fill();
+     ctx.strokeStyle='#fff7d8';ctx.lineWidth=2.5;ctx.stroke();
+     ctx.beginPath();ctx.arc(x,y,20+(1-ease)*33+Math.sin(pulse)*1.2,0,Math.PI*2);
+     ctx.strokeStyle='rgba(255,245,195,.9)';ctx.lineWidth=3;ctx.stroke();
+     ctx.fillStyle='#765127';ctx.font='bold 15px Arial';ctx.fillText(`${idx+1}`,x+23,y-14);
+     ctx.restore();
+   }else{
+     ctx.beginPath();ctx.arc(x,y,done?5:6,0,Math.PI*2);ctx.fillStyle=done?'#a12f43':'#977d5b';ctx.fill();
+   }
+ });
+ if(hitFlash && now-hitFlash.at<240){
+   const f=(now-hitFlash.at)/240;
+   ctx.beginPath();ctx.arc(hitFlash.x,hitFlash.y,9+f*22,0,2*Math.PI);
+   ctx.strokeStyle=`rgba(255,250,219,${(1-f)*.75})`;ctx.lineWidth=3-f*2;ctx.stroke();
+ }
+ if(missFlash && now-missFlash.at<650){
+   const f=(now-missFlash.at)/650;ctx.save();ctx.globalAlpha=1-f;ctx.strokeStyle='#b32137';ctx.lineWidth=5;const size=11+f*9;ctx.beginPath();ctx.moveTo(missFlash.x-size,missFlash.y-size);ctx.lineTo(missFlash.x+size,missFlash.y+size);ctx.moveTo(missFlash.x+size,missFlash.y-size);ctx.lineTo(missFlash.x-size,missFlash.y+size);ctx.stroke();ctx.font='bold 21px Arial';ctx.textAlign='center';ctx.fillStyle='#a21c32';ctx.fillText('ПРОМАХ',missFlash.x,Math.max(29,missFlash.y-22-f*20));ctx.restore();
+ }
+ if(state==='play'&&idx<path.length){const [x,y]=path[idx];ctx.save();ctx.globalAlpha=.25+.75*ease;ctx.fillStyle='#70583b';ctx.font='14px Arial';ctx.textAlign='center';ctx.fillText('Следующий прокол',x,y-33);ctx.restore()}
+}
+function hit(e){if(state!=='play')return;const r=c.getBoundingClientRect(),x=(e.clientX-r.left)*c.width/r.width,y=(e.clientY-r.top)*c.height/r.height;const [px,py]=path[idx];if(Math.hypot(x-px,y-py)<25){hitFlash={x:px,y:py,at:performance.now()};idx++;targetSince=performance.now();if(idx===path.length){remaining=Math.max(0,(endAt-performance.now())/1000);end(true)}else{update();draw()}}else{misses++;missFlash={x,y,at:performance.now()};stage.classList.remove('miss-shake');void stage.offsetWidth;stage.classList.add('miss-shake');update();draw()}}
+c.addEventListener('pointerdown',hit);startBtn.addEventListener('click',start);document.getElementById('reset').addEventListener('click',start);patternSelect.addEventListener('change',()=>{cancelAnimationFrame(raf);choose();overlayShow('Новый узор',`Выбран узор «${patterns[patternSelect.value].label}». На выполнение есть 10 секунд.`,'Начать')});choose();
+})();
+</script>
+</body></html>

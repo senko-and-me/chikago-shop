@@ -7,6 +7,42 @@
 
 ## Текущий фронт
 
+### HF-38 — слияние всей рабочей ветки и публикация в main
+
+Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; HF-37 DONE; READY проверен 2026-11-06. Пользователь явно поручил включить все локальные изменения, слить feature/second-minigame в main и отправить на GitHub.
+
+#### CP-HF-38
+
+Read-set: ORCHESTRATION_PLAN.md, AGENTS.md, tools/verify.ps1, git status/diff/log/branches/remotes; OS TEMP/chikago-hf38-verify.log. Содержимое source/ не читается.
+Write-set: ORCHESTRATION_PLAN.md; Git index/commits, feature/second-minigame, main и origin/main. В commit включается весь текущий неигнорируемый набор git status: README.md, export_presets.cfg, localization/en.tres, project.godot, scenes/trade_scene.tscn, scripts/Days/DayCycleController.cs, scripts/TradeScene.cs, scripts/UI/EmbroideryGame.cs, scripts/UI/PauseMenu.cs, src/ChikagoShop.Domain/Crafting/EmbroiderySession.cs, tests/ProjectTest.cs; MyFont_Completed.ttf[.import], atelier_embroidery_v4.html, atelier_polishing_v8.html, scripts/UI/PolishingSurface.cs[.uid], src/ChikagoShop.Domain/Crafting/ICraftSession.cs, src/ChikagoShop.Domain/Crafting/PolishingSession.cs, tests/ChikagoShop.Domain.Tests/PolishingSessionTests.cs; art/minigames/polishing_guitar.svg[.import], polishing_guitar_mask.svg[.import], polishing_sax.svg[.import], polishing_sax_mask.svg[.import], polishing_trumpet.svg[.import], polishing_trumpet_mask.svg[.import], polishing_violin.svg[.import], polishing_violin_mask.svg[.import]. Владелец плана/index `/root`; активных пересечений нет. Содержимое продуктовых файлов не меняется.
+Out of scope: source/, ignored/generated files, новая продуктовая логика, force push, удаление веток.
+Приёмка: полный tools/verify.ps1 PASS, git diff --check PASS; все неигнорируемые локальные изменения закоммичены; feature/second-minigame слита в main; push origin main без force; чистое рабочее дерево и main...origin/main=0/0.
+
+
+### HF-37 — полировка инструментов в общем окне крафта
+
+Статус: `DONE`; координатор/исполнитель `/root`; HF-36 DONE; READY проверен 2026-11-06; ветка feature/second-minigame.
+
+#### CP-HF-37
+
+Read-set: текущий фронт плана, AGENTS.md, atelier_polishing_v8.html, scripts/UI/EmbroideryGame.cs, src/ChikagoShop.Domain/Crafting/EmbroiderySession.cs, scripts/TradeScene.cs, scripts/Days/DayCycleController.cs, scripts/UI/PauseMenu.cs, tests/ProjectTest.cs, tests/ChikagoShop.Domain.Tests/EmbroiderySessionTests.cs, README.md, localization/en.tres, tools/verify.ps1, git status/diff; render/verify logs и screenshot OS TEMP/chikago-polishing-preview.png для визуальной диагностики.
+Write-set: ORCHESTRATION_PLAN.md; scripts/UI/EmbroideryGame.cs (общая оболочка двух мини-игр); scripts/UI/PolishingSurface.cs[.uid]; src/ChikagoShop.Domain/Crafting/ICraftSession.cs, EmbroiderySession.cs, PolishingSession.cs; tests/ChikagoShop.Domain.Tests/PolishingSessionTests.cs; scripts/TradeScene.cs (подключение второй оболочки/кнопки и общий флаг модальности); scripts/Days/DayCycleController.cs; scripts/UI/PauseMenu.cs; tests/ProjectTest.cs; localization/en.tres; README.md; art/minigames/polishing_{violin,trumpet,sax,guitar}.svg[.import] и polishing_{violin,trumpet,sax,guitar}_mask.svg[.import], извлечённые из точного HTML-референса. Диагностические logs и screenshot OS TEMP/chikago-polishing-preview.png.
+Out of scope: source/, HTML-референсы, .tscn, пользовательские project/export/font, новые правила выпадения/цены/редкости, save schema, публикация. Владелец `/root`; активных пересечений нет.
+Приёмка: музыкальный крафт открывает полировку с содержимым HTML v8 (четыре инструмента, тряпка, два слоя налёта, повторные быстрые проходы/развороты, допуск края47, промахи, цель85%, 10с). Рамка/палитра/карточки/шкала/кнопки/старт/результат общие с вышивкой, средняя карточка показывает очищенный процент. День продолжает идти; камера/другие действия заблокированы; отмена до старта бесплатна, старт фиксирует3 инструмента за140$ и1 энергию однократно. Закрытие дня, повторы, RU/EN, mouse/touch, save/reload совместимы. Domain regressions и реальные GUI events для полировки/вышивки; tools/verify.ps1 и git diff --check.
+
+```text
+Task: HF-37
+Recommended status: REVIEW
+Changed: scripts/UI/EmbroideryGame.cs; scripts/UI/PolishingSurface.cs[.uid]; src/ChikagoShop.Domain/Crafting/ICraftSession.cs, EmbroiderySession.cs, PolishingSession.cs; tests/ChikagoShop.Domain.Tests/PolishingSessionTests.cs; scripts/TradeScene.cs; scripts/Days/DayCycleController.cs; scripts/UI/PauseMenu.cs; tests/ProjectTest.cs; localization/en.tres; README.md; ORCHESTRATION_PLAN.md; восемь art/minigames/polishing_*.svg[.import] (четыре изображения и четыре точные маски из HTML).
+Checks: tools/verify.ps1 -> PASS (exit 0, 47 domain tests, build, Godot import/integration); отдельный запуск ProjectTest с gl_compatibility и --polishing-preview -> все checks PASS, stderr пуст; screenshot OS TEMP/chikago-polishing-preview.png осмотрен; git diff --check -> PASS. Итоговый лог OS TEMP/chikago-hf37-verify-final.log.
+Acceptance: музыка открывает полировку в том же классе оболочки, что вышивка: изменены только рабочая область, заголовок/подсказка и средняя карточка (очищено вместо стежков). Четыре SVG/маски извлечены из пользовательского v8, отдельно показана тряпка; shader последовательно открывает материал сквозь тёмный и матовый слои. Pure domain рассчитывает прогресс по маске, усилие скорости/разворота, два слоя, радиус34, ограничение длины прохода34, допуск47, cooldown промаха240ms, цель85% и оценку v8. Общие 10с, S–D, статистика, кнопки и двухминутные часы сохранены. Domain tests проверяют неподвижное удержание/отпускание, очередность слоёв, успех/terminal, скорость/разворот, ограничение прыжка, допуск/промахи и invalid input. Integration проверяет все четыре mask-ресурса, реальную кнопку музыки, общий layout при двух размерах, RU/EN, held mouse/touch events и отпускание вне области, idempotent покупку, оба timeout дня и reload оплаченной партии. Прежняя вышивка/торговля/сохранения проходят. Визуально проверена настоящая отрисовка саксофона с налётом в общей оболочке.
+Read-set exception: нет; source/ не читался. HTML не изменён, новый контент извлечён только из названного референса. GPU smoke запущен в скрытом/offscreen окне, чтобы не мешать пользователю.
+Risks/blocker: ручной playtest сложности не выполнялся; покрытие слоёв семплируется с шагом7, поэтому это порт механики v8, а не побитовое совпадение canvas. Качество по-прежнему не влияет на редкость/цену. Пользовательские project/export/scene/font и HTML сохранены; commit/push не выполнялись.
+Next: пройти полировку через кнопку создания музыкальных инструментов в игровом сеансе.
+```
+
+Координатор подтвердил HF-37 2026-11-06 по финальному verify (exit 0), GUI regression и GPU screenshot: REVIEW → DONE; основные ворота без изменений.
+
 ### HF-36 — публикация вышивки, двухминутного дня и редких предметов
 
 Статус: `DONE`; координатор/исполнитель `/root`; HF-31…HF-35 DONE; READY проверен 2026-11-06. Пользователь явно запросил push.

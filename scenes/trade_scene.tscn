@@ -1,9 +1,6 @@
 [gd_scene format=3 uid="uid://6ciouuso5bqi"]
 
 [ext_resource type="Script" uid="uid://bj66ajuqbshg0" path="res://scripts/TradeScene.cs" id="1_main"]
-[ext_resource type="Script" path="res://scripts/UI/PauseMenu.cs" id="20_pause"]
-[ext_resource type="Script" path="res://scripts/UI/ZoomResponsiveUi.cs" id="21_zoom_ui"]
-[ext_resource type="Script" path="res://scripts/UI/ProgressPanel.cs" id="22_progress"]
 [ext_resource type="Script" uid="uid://c6334skyxf3jy" path="res://scripts/CounterWorld.cs" id="2_world"]
 [ext_resource type="Texture2D" uid="uid://b4uvatfdjuqe3" path="res://art/rooms/music_room.jpg" id="4_pi35y"]
 [ext_resource type="PackedScene" uid="uid://u2ve41t8yhqn" path="res://scenes/customer.tscn" id="5_customer"]
@@ -23,7 +20,10 @@
 [ext_resource type="Texture2D" uid="uid://bljkoxphrw4ki" path="res://art/ui/create_button.png" id="18_create_button"]
 [ext_resource type="Texture2D" uid="uid://brbt53eulckmp" path="res://art/ui/dialog_panel.png" id="18_dwgkk"]
 [ext_resource type="PackedScene" path="res://scenes/UI/RarityPanel.tscn" id="19_rarity_panel"]
-[ext_resource type="Script" path="res://scripts/Camera/WorldCamera.cs" id="23_world_camera"]
+[ext_resource type="Script" uid="uid://dxn8wgvls5a4a" path="res://scripts/UI/PauseMenu.cs" id="20_pause"]
+[ext_resource type="Script" uid="uid://bdswgixl6srw1" path="res://scripts/UI/ZoomResponsiveUi.cs" id="21_zoom_ui"]
+[ext_resource type="Script" uid="uid://dqhunfpycjxyp" path="res://scripts/UI/ProgressPanel.cs" id="22_progress"]
+[ext_resource type="Script" uid="uid://cnnctojfahevu" path="res://scripts/Camera/WorldCamera.cs" id="23_world_camera"]
 
 [sub_resource type="StyleBoxTexture" id="CreateButtonNormal"]
 texture = ExtResource("18_create_button")
@@ -193,6 +193,8 @@ mouse_filter = 1
 mouse_default_cursor_shape = 16
 
 [node name="RarityPanel" parent="World/Atelier" unique_id=1554035197 instance=ExtResource("19_rarity_panel")]
+layout_mode = 3
+anchors_preset = 0
 offset_left = 1130.0
 offset_top = 360.0
 offset_right = 1870.0
@@ -273,6 +275,8 @@ mouse_filter = 1
 mouse_default_cursor_shape = 16
 
 [node name="RarityPanel" parent="World/MusicWorkshop" unique_id=922423804 instance=ExtResource("19_rarity_panel")]
+layout_mode = 3
+anchors_preset = 0
 offset_left = 50.0
 offset_top = 330.0
 offset_right = 790.0
@@ -589,17 +593,17 @@ text = "Энергия: 2 / 2"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="ProgressToggleButton" type="Button" parent="HUD/Root"]
+[node name="ProgressToggleButton" type="Button" parent="HUD/Root" unique_id=989856316]
 custom_minimum_size = Vector2(40, 44)
 layout_mode = 0
 offset_left = 360.0
 offset_top = 25.0
 offset_right = 400.0
 offset_bottom = 69.0
+tooltip_text = "Свернуть панель"
 mouse_default_cursor_shape = 2
 theme_override_font_sizes/font_size = 28
 text = "<"
-tooltip_text = "Свернуть панель"
 
 [node name="ProgressPanel" type="PanelContainer" parent="HUD/Root" unique_id=1016591818]
 custom_minimum_size = Vector2(330, 0)
@@ -676,8 +680,8 @@ offset_top = -3.0
 offset_bottom = -3.0
 metadata/_edit_use_anchors_ = true
 
-[node name="PauseMenu" type="CanvasLayer" parent="."]
+[node name="PauseMenu" type="CanvasLayer" parent="." unique_id=1134775950]
 script = ExtResource("20_pause")
 
-[node name="ZoomResponsiveUi" type="Node" parent="."]
+[node name="ZoomResponsiveUi" type="Node" parent="." unique_id=1770471945]
 script = ExtResource("21_zoom_ui")
