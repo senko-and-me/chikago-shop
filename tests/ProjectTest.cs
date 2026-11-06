@@ -18,6 +18,7 @@ public partial class ProjectTest : SceneTree
             await TestCollapsibleProgress();
             await TestRarityPopupGeometry();
             await TestMouseControls();
+            await TestInventoryTransfers();
             await TestTradeScene();
             await TestProgress();
             await TestMainMenu();
@@ -126,6 +127,7 @@ public partial class ProjectTest : SceneTree
             "Settings must open inside pause without resuming gameplay");
         Check(game.GetNode<CheckButton>(content + "Settings/FullscreenButton").IsVisibleInTree(),
             "Pause settings must expose the fullscreen control");
+        CheckFullscreenText(game.GetNode<CheckButton>(content + "Settings/FullscreenButton"));
         Root.PushInput(new InputEventKey { Keycode = Key.Escape, Pressed = true }, true);
         Check(Paused && game.GetNode<Control>(content + "Menu").Visible,
             "Escape in settings must return to the pause menu");
@@ -231,6 +233,7 @@ public partial class ProjectTest : SceneTree
                     var popup = game.GetNode<RarityPanel>($"World/{room}/RarityPanel");
                     var button = game.GetNode<Control>($"World/{room}/GetItemButton");
                     var hotspot = button.GetNode<Control>("RarityHotspot");
+                    var priceHint = button.GetNode<Control>("PriceHint");
                     var layer = popup.GetNode<CanvasLayer>("PopupLayer");
                     Check(layer.Layer > game.GetNode<CanvasLayer>("HUD").Layer &&
                           layer.Layer < game.GetNode<CanvasLayer>("PauseMenu").Layer,
@@ -287,15 +290,32 @@ public partial class ProjectTest : SceneTree
                     camera.Position = button.GetGlobalRect().GetCenter() -
                         new Vector2(0, game.GetViewportRect().Size.Y * 0.1f) / 0.7f;
                     camera.ForceUpdateScroll();
+                    Vector2 mainPoint = button.GetGlobalTransformWithCanvas() * (button.Size / 2);
+                    Root.PushInput(new InputEventMouseMotion { Position = mainPoint, GlobalPosition = mainPoint }, true);
+                    await ToSignal(this, SignalName.ProcessFrame);
+                    Check(priceHint.Visible && !layer.Visible,
+                        "Hovering the create button must show the price without the rarity table");
                     Vector2 point = hotspot.GetGlobalTransformWithCanvas() * (hotspot.Size / 2);
                     Root.PushInput(new InputEventMouseMotion { Position = point, GlobalPosition = point }, true);
                     await ToSignal(this, SignalName.ProcessFrame);
                     await ToSignal(this, SignalName.ProcessFrame);
-                    Check(Root.GuiGetHoveredControl() == hotspot && layer.Visible,
+                    Check(Root.GuiGetHoveredControl() == hotspot && layer.Visible && !priceHint.Visible,
                         "Real pointer hover must show the table without the overlay stealing input");
+                    Root.PushInput(new InputEventMouseMotion { Position = mainPoint, GlobalPosition = mainPoint }, true);
+                    await ToSignal(this, SignalName.ProcessFrame);
+                    Check(priceHint.Visible && !layer.Visible,
+                        "Returning from the question mark to the main button must restore its price tag");
                     Root.PushInput(new InputEventMouseMotion { Position = new Vector2(3, 3), GlobalPosition = new Vector2(3, 3) }, true);
                     await ToSignal(this, SignalName.ProcessFrame);
-                    Check(!layer.Visible, "Real pointer exit must hide the table");
+                    Check(!layer.Visible && !priceHint.Visible, "Leaving the button must hide both hints");
+                    Root.PushInput(new InputEventMouseMotion { Position = point, GlobalPosition = point }, true);
+                    await ToSignal(this, SignalName.ProcessFrame);
+                    Check(layer.Visible && !priceHint.Visible,
+                        "Entering the question mark directly must keep the price tag hidden");
+                    Root.PushInput(new InputEventMouseMotion { Position = new Vector2(3, 3), GlobalPosition = new Vector2(3, 3) }, true);
+                    await ToSignal(this, SignalName.ProcessFrame);
+                    Check(!layer.Visible && !priceHint.Visible,
+                        "Leaving the question mark directly must not leave a stale price tag visible");
                 }
             }
         }
@@ -413,6 +433,159 @@ public partial class ProjectTest : SceneTree
             Position = point, GlobalPosition = point, ButtonIndex = MouseButton.Left, Pressed = false
         }, true);
         await ToSignal(this, SignalName.ProcessFrame);
+    }
+
+    private async Task TestInventoryTransfers()
+    {
+        var game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
+        game.SavePath = "";
+        Root.AddChild(game);
+        game.SetProcess(false);
+        game.Score = 10000;
+        game.GetItemFromAtelier();
+        game.GetItemFromAtelier();
+        game.EndDay();
+        game.GetItemFromAtelier();
+        await ToSignal(this, SignalName.ProcessFrame);
+        var inventory = game.GetNode<InventoryUI>("HUD/InventoryUI");
+        var first = game.GetNode<Button>("World/ShowroomLeft/Showcases/Slot1");
+        var second = game.GetNode<Button>("World/ShowroomLeft/Showcases/Slot2");
+        int count = game.StoredItems.Length;
+        int item = game.StoredItems[0];
+
+        async Task<Variant> DragTo(Control target, bool replay = false, Variant oldData = default,
+            float zoom = 0.7f, string previewArt = null)
+        {
+            var spriteScales = game.FindChildren("*", "Sprite2D", true, false).OfType<Sprite2D>()
+                .ToDictionary(sprite => sprite, sprite => sprite.Scale);
+            Vector2 showcaseIconSize = first.GetNode<Control>("Icon").Size;
+            var camera = game.GetNode<Camera2D>("Camera2D");
+            camera.Zoom = Vector2.One * zoom;
+            camera.Position = target == null ? first.GetGlobalRect().GetCenter() : target.GetGlobalRect().GetCenter();
+            camera.ForceUpdateScroll();
+            await ToSignal(this, SignalName.ProcessFrame);
+            var slot = (SlotUI)inventory.Container.GetChild(0);
+            var originalTexture = slot.GetNode<TextureRect>("Icon").Texture;
+            if (previewArt != null) slot.SetItemTexture(GD.Load<Texture2D>(previewArt));
+            Vector2 start = slot.GetGlobalTransformWithCanvas() * (slot.Size / 2);
+            Root.PushInput(new InputEventMouseMotion { Position = start, GlobalPosition = start }, true);
+            Root.PushInput(new InputEventMouseButton { Position = start, GlobalPosition = start,
+                ButtonIndex = MouseButton.Left, Pressed = true, ButtonMask = MouseButtonMask.Left }, true);
+            if (replay) slot.ForceDrag(oldData, new Control());
+            else
+            {
+                Vector2 moved = start + new Vector2(0, -80);
+                Root.PushInput(new InputEventMouseMotion { Position = moved, GlobalPosition = moved,
+                    Relative = new Vector2(0, -80), ButtonMask = MouseButtonMask.Left }, true);
+            }
+            Check(Root.GuiIsDragging(), $"Holding and moving an inventory item must start native drag-and-drop (start={start}, hovered={Root.GuiGetHoveredControl()?.GetPath()}, threshold={Root.GuiDragThreshold})");
+            if (!replay)
+            {
+                var preview = (Control)Root.FindChild("InventoryDragPreview", true, false);
+                Check(preview != null && preview.Size == new Vector2(50, 50),
+                    $"Drag preview must remain 50x50 instead of expanding to source texture size (actual={preview?.Size})");
+                var image = preview.GetNode<TextureRect>("Icon");
+                Check(image.Texture == slot.GetNode<TextureRect>("Icon").Texture &&
+                      image.GetGlobalRect().Size == new Vector2(50, 50),
+                    "The dragged item's artwork must fit the fixed screen-space preview bounds");
+                Check(image.GetGlobalRect().GetCenter().DistanceTo(start + new Vector2(0, -80)) < 0.1f,
+                    "The cursor must sit at the center of the dragged artwork when dragging begins");
+                Check(!slot.GetNode<TextureRect>("Icon").Visible && slot.SelfModulate == Colors.White,
+                    "The source slot must look empty and unselected while its item is being dragged");
+                await ToSignal(this, SignalName.ProcessFrame);
+                Check(preview.GetGlobalRect().Size == new Vector2(50, 50) && image.GetGlobalRect().Size == new Vector2(50, 50),
+                    "Preview and artwork bounds must remain fixed after layout regardless of camera zoom");
+            }
+            Check(!inventory.ItemPopup.Visible, "Dragging must hide the item information popup");
+            Variant data = Root.GuiGetDragData();
+            Vector2 end = target == null ? new Vector2(5, 400) :
+                target.GetGlobalTransformWithCanvas() * (target.Size / 2);
+            Root.PushInput(new InputEventMouseMotion { Position = end, GlobalPosition = end,
+                Relative = end - start, ButtonMask = MouseButtonMask.Left }, true);
+            if (!replay)
+            {
+                var preview = (Control)Root.FindChild("InventoryDragPreview", true, false);
+                Check(preview.GetNode<Control>("Icon").GetGlobalRect().GetCenter().DistanceTo(end) < 0.1f,
+                    "The artwork must remain centered on the cursor after moving to the drop target");
+            }
+            Root.PushInput(new InputEventMouseButton { Position = end, GlobalPosition = end,
+                ButtonIndex = MouseButton.Left, Pressed = false }, true);
+            await ToSignal(this, SignalName.ProcessFrame);
+            Check(Root.FindChild("InventoryDragPreview", true, false) == null,
+                "Drop and cancellation must remove the drag preview");
+            if (IsInstanceValid(slot) && !slot.IsQueuedForDeletion())
+                Check(slot.GetNode<TextureRect>("Icon").Visible,
+                    "Ending the drag must reveal the current source-slot image on both cancellation and successful placement");
+            Check(spriteScales.All(entry => entry.Key.Scale == entry.Value) &&
+                  first.GetNode<Control>("Icon").Size == showcaseIconSize,
+                "Dragging and dropping must preserve all world sprite scales and showcase icon bounds");
+            if (previewArt != null) slot.SetItemTexture(originalTexture);
+            return data;
+        }
+
+        foreach (float zoom in new[] { 0.25f, 1.8f })
+        foreach (int itemIndex in new[] { 0, 1 })
+            await DragTo(null, zoom: zoom, previewArt: TradeScene.GetItemArtPath(itemIndex));
+        await DragTo(null);
+        Check(game.StoredItems.Length == count && game.ShowcaseItems.All(value => value == -1),
+            "Releasing outside showcases must cancel without losing an item");
+        Variant payload = await DragTo(first);
+        Check(game.StoredItems.Length == count - 1 && game.ShowcaseItems[0] == item,
+            "A real GUI drag must move exactly the dragged item to its target showcase");
+        await DragTo(second, true, payload);
+        Check(game.StoredItems.Length == count - 1 && game.ShowcaseItems[1] == -1,
+            "Replaying an old drag must not move the next item or duplicate the transferred item");
+        await DragTo(first);
+        Check(game.StoredItems.Length == count - 1 && game.ShowcaseItems[0] == item,
+            "Dropping on an occupied showcase must leave both items untouched");
+        game._Process(game.BuyerCountdown + 0.01);
+        Check(game.TradeActive, "The displayed item must become reserved for a trade");
+        await DragTo(first);
+        Check(game.StoredItems.Length == count - 1 && game.ShowcaseItems[0] == -1 && first.Disabled,
+            "Dropping on a reserved showcase must not replace the item being sold");
+
+        async Task ShiftClick()
+        {
+            var slot = (SlotUI)inventory.Container.GetChild(0);
+            Vector2 point = slot.GetGlobalTransformWithCanvas() * (slot.Size / 2);
+            Root.PushInput(new InputEventMouseMotion { Position = point, GlobalPosition = point }, true);
+            Root.PushInput(new InputEventMouseButton { Position = point, GlobalPosition = point,
+                ButtonIndex = MouseButton.Left, Pressed = true, ShiftPressed = true, ButtonMask = MouseButtonMask.Left }, true);
+            Root.PushInput(new InputEventMouseButton { Position = point, GlobalPosition = point,
+                ButtonIndex = MouseButton.Left, Pressed = false, ShiftPressed = true }, true);
+            await ToSignal(this, SignalName.ProcessFrame);
+        }
+        int next = game.StoredItems[0];
+        await ShiftClick();
+        Check(game.StoredItems.Length == count - 2 && game.ShowcaseItems[1] == next && first.Disabled,
+            "Shift-click must move to the first available showcase and skip the reserved slot");
+        for (int i = 0; i < 4; i++) await ShiftClick();
+        Check(game.ShowcaseItems.Count(value => value >= 0) == 5 && game.StoredItems.Length == count - 6,
+            "Repeated Shift-clicks must fill both showrooms without duplicate transfers");
+        int[] before = game.StoredItems;
+        await ShiftClick();
+        Check(game.StoredItems.SequenceEqual(before), "Shift-click with no free showcases must keep inventory intact");
+        game.GetNode<PauseMenu>("PauseMenu").Open();
+        Check(((SlotUI)inventory.Container.GetChild(0)).CreateDragData(0).VariantType == Variant.Type.Nil,
+            "Pause must reject new drag payloads");
+        ((SlotUI)inventory.Container.GetChild(0)).QuickTransfer(0);
+        Check(game.StoredItems.SequenceEqual(before), "Pause must also reject quick transfers");
+        game.GetNode<PauseMenu>("PauseMenu").Close();
+        game.NewGame();
+        game.GetItemFromAtelier();
+        game.Score = 0;
+        for (int i = 0; i < 4 && !game.Failed; i++) game.EndDay();
+        before = game.StoredItems;
+        Check(game.Failed && before.Length == 3, "Terminal transfer checks need a failed game with remaining items");
+        var remainingSlot = (SlotUI)inventory.Container.GetChild(0);
+        Check(remainingSlot.CreateDragData(0).VariantType == Variant.Type.Nil,
+            "A terminal game must reject item drags");
+        remainingSlot.QuickTransfer(0);
+        Check(game.StoredItems.SequenceEqual(before) && game.ShowcaseItems.All(value => value == -1),
+            "A terminal game must reject quick transfers without losing items");
+        game.QueueFree();
+        await ToSignal(this, SignalName.ProcessFrame);
+        GD.Print("Inventory drag/drop, cancellation, stale payload and Shift transfer checks passed");
     }
 
     private async Task TestTradeScene()
@@ -1025,6 +1198,11 @@ public partial class ProjectTest : SceneTree
         await ToSignal(this, SignalName.ProcessFrame);
         Check(ProjectSettings.GetSetting("gui/theme/custom").AsString() == "res://themes/game_theme.tres",
             "The art team's font must be configured as the global UI theme");
+        var gameFont = GD.Load<Theme>("res://themes/game_theme.tres").DefaultFont;
+        foreach (char letter in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя")
+            Check(gameFont.HasChar(letter), $"The game font must include English and Russian letters: {letter}");
+        Check(menu.GetNode<CheckButton>("SettingsMenuContainer/Settings/FullscreenButton").GetThemeFont("font") == gameFont,
+            "Explicit menu fonts must use the same completed font as the global UI theme");
         Check(menu.GameScene.ResourcePath == "res://scenes/trade_scene.tscn", "Play must open the trade scene");
         foreach (string path in new[]
         {
@@ -1038,12 +1216,34 @@ public partial class ProjectTest : SceneTree
             "Settings must use the art team's finished panel");
         menu.OnSettingsPressed();
         Check(!mainView.Visible && settingsView.Visible, "Settings must open");
+        CheckFullscreenText(menu.GetNode<CheckButton>("SettingsMenuContainer/Settings/FullscreenButton"));
         menu.OnBackPressed();
         Check(mainView.Visible && !settingsView.Visible, "Back must return to the main menu");
         menu.OnPlayPressed();
         await ToSignal(this, SignalName.ProcessFrame);
         Check(CurrentScene is TradeScene, "Play must enter the game");
         GD.Print("Main menu checks passed");
+    }
+
+    private static void CheckFullscreenText(CheckButton button)
+    {
+        foreach (string state in new[] { "normal", "hover", "pressed", "hover_pressed", "disabled" })
+        {
+            var style = button.GetThemeStylebox(state) as StyleBoxFlat;
+            Check(style != null && style.BgColor.R > 0.8f && style.BgColor.G > 0.8f && style.BgColor.B > 0.8f,
+                "Fullscreen text must have a light opaque background in every state");
+        }
+        foreach (bool enabled in new[] { false, true })
+        {
+            button.SetPressedNoSignal(enabled);
+            foreach (string state in new[] { "font_color", "font_hover_color", "font_pressed_color",
+                         "font_hover_pressed_color", "font_focus_color", "font_disabled_color" })
+            {
+                Color color = button.GetThemeColor(state);
+                Check(color.R < 0.3f && color.G < 0.3f && color.B < 0.3f && color.A == 1,
+                    "Fullscreen text must stay dark and legible in all interaction and toggle states");
+            }
+        }
     }
 
     private async Task<TradeScene> CreateGame(PackedScene scene)

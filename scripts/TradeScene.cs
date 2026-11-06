@@ -192,14 +192,23 @@ public partial class TradeScene : Node2D
 		_atelierGetItemButton.Pressed += GetItemFromAtelier;
 		_musicGetItemButton.Pressed += GetItemFromMusicWorkshop;
 		_musicUnlockButton.Pressed += TryUnlockMusicWorkshop;
-		_atelierGetItemButton.MouseEntered += () => _priceHints[0].Show();
-		_atelierGetItemButton.MouseExited += () => _priceHints[0].Hide();
-		_musicGetItemButton.MouseEntered += () => _priceHints[1].Show();
-		_musicGetItemButton.MouseExited += () => _priceHints[1].Hide();
-		_rarityHotspots[0].MouseEntered += () => _rarityPanels[0].Show();
-		_rarityHotspots[0].MouseExited += () => _rarityPanels[0].Hide();
-		_rarityHotspots[1].MouseEntered += () => _rarityPanels[1].Show();
-		_rarityHotspots[1].MouseExited += () => _rarityPanels[1].Hide();
+		for (int i = 0; i < _rarityHotspots.Length; i++)
+		{
+			int index = i;
+			Button button = i == 0 ? _atelierGetItemButton : _musicGetItemButton;
+			button.MouseEntered += () => _priceHints[index].Visible = !_rarityPanels[index].Visible;
+			button.MouseExited += () => _priceHints[index].Hide();
+			_rarityHotspots[index].MouseEntered += () =>
+			{
+				_priceHints[index].Hide();
+				_rarityPanels[index].Show();
+			};
+			_rarityHotspots[index].MouseExited += () =>
+			{
+				_rarityPanels[index].Hide();
+				_priceHints[index].Visible = button.IsHovered();
+			};
+		}
 		GetNode<Button>("HUD/Root/ProgressPanel/Content/CheckpointButton").Pressed += ReturnToCheckpoint;
 		GetNode<Button>("HUD/Root/ProgressPanel/Content/NewGameButton").Pressed += NewGame;
 

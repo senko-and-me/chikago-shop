@@ -7,6 +7,163 @@
 
 ## Текущий фронт
 
+### HF-21 — публикация drag/drop, шрифта и hover-исправлений
+
+Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; HF-15–HF-20 = DONE; `CP-HF-21`, READY проверен 2026-11-06. Commit/push явно разрешён пользователем.
+
+#### CP-HF-21
+
+Read-set: этот фронт плана, git status/diff/log/remotes; проверенные файлы HF-15–HF-20; diagnostic diff пользовательских export_presets.cfg/scenes/trade_scene.tscn/scripts/UI/RarityPanel.cs.
+Write-set: `ORCHESTRATION_PLAN.md`, Git index/commit и origin/main для публикации `ORCHESTRATION_PLAN.md`, `art/fonts/game.ttf`, `scenes/main_menu.tscn`, `scripts/TradeScene.cs`, `scripts/UI/InventoryUI.cs`, `scripts/UI/PauseMenu.cs`, `scripts/UI/SlotUI.cs`, `tests/ProjectTest.cs`. Владелец плана `/root`; пересечений нет.
+Out of scope: пользовательские изменения export/trade_scene/formatting RarityPanel, дубли исходного MyFont_Completed.ttf[.import], force push, source/.
+Приёмка: финальный verify HF-20 PASS, diff-check PASS, проверенный commit опубликован в origin/main без force; остальные локальные изменения сохранены.
+
+### HF-20 — скрывать ценник при наведении на вопрос
+
+Статус: `DONE`; координатор/исполнитель `/root`; HF-13 = DONE; `CP-HF-20`, READY проверен 2026-11-06.
+
+#### CP-HF-20
+
+Read-set: текущий фронт плана, AGENTS.md из запроса, `scripts/TradeScene.cs` (связи UI hover), `scripts/UI/RarityPanel.cs`, `tests/ProjectTest.cs` (hover regression), ранее прочитанные verify/settings; локальная XML-документация GodotSharp BaseButton.IsHovered; git status/diff.
+Write-set: `scripts/TradeScene.cs` (только hover-связи UI), `tests/ProjectTest.cs`, `ORCHESTRATION_PLAN.md`. Владелец плана `/root`; пересечений с активными задачами нет.
+Out of scope: доменная логика, экономика, save schema, изменение размещения таблицы, source/, прочие локальные изменения.
+Приёмка: в обеих мастерских при наведении на ? видна таблица и скрыт ценник; при переходе обратно на кнопку ценник возвращается, таблица скрывается; при выходе наружу скрыты обе подсказки, включая прямой вход/выход через ?. Проверки: реальные GUI motion-события на двух viewport, существующий popup geometry suite, полный tools/verify.ps1, git diff --check.
+
+```text
+Task: HF-20
+Recommended status: REVIEW
+Changed: scripts/TradeScene.cs (только UI hover-связи); tests/ProjectTest.cs; ORCHESTRATION_PLAN.md
+Checks: powershell -NoProfile -ExecutionPolicy Bypass -File tools/verify.ps1 -> PASS (19 domain tests, Godot import/integration); git diff --check -> PASS.
+Acceptance: оба workshop hover-сценария проверены настоящими событиями мыши при viewport 1280×720 и 960×540: кнопка → ? скрывает ценник и показывает rarity; ? → кнопка возвращает ценник; кнопка → наружу и прямой ? → наружу скрывают обе подсказки. Прямой вход на ? не оставляет ценник видимым. Адаптивная геометрия таблицы и прежние регрессии проходят. Доменная логика TradeScene не менялась.
+Read-set exception: нет.
+Risks/blocker: ручной visual playtest не выполнялся; прочие локальные изменения сохранены.
+Next: проверить hover в игровом сеансе.
+```
+
+Координатор подтвердил HF-20 2026-11-06 по verify (exit 0) и diff-check: REVIEW → DONE; основной фронт и ворота без изменений.
+
+### HF-19 — центр drag preview и пустая исходная ячейка
+
+Статус: `DONE`; координатор/исполнитель `/root`; HF-18 = DONE; `CP-HF-19`, READY проверен 2026-11-06.
+
+#### CP-HF-19
+
+Read-set: текущий фронт плана, AGENTS.md из запроса, `scripts/UI/SlotUI.cs`, drag/Shift tests в `tests/ProjectTest.cs`, ранее прочитанные verify/settings; git status/diff.
+Write-set: `scripts/UI/SlotUI.cs`, `tests/ProjectTest.cs`, `ORCHESTRATION_PLAN.md`. Владелец плана `/root`; пересечений нет.
+Out of scope: доменная логика, save schema, source/, остальные локальные изменения.
+Приёмка: центр картинки drag совпадает с курсором во время движения при разных zoom; исходная ячейка без картинки и выделения до конца drag; отмена возвращает текущую картинку, успешный перенос не оставляет скрытой следующую. Размер preview 50×50 и Shift-перенос сохранены. Проверки: native GUI geometry/lifecycle regression, полный tools/verify.ps1, git diff --check.
+
+```text
+Task: HF-19
+Recommended status: REVIEW
+Changed: scripts/UI/SlotUI.cs; tests/ProjectTest.cs; ORCHESTRATION_PLAN.md
+Checks: powershell -NoProfile -ExecutionPolicy Bypass -File tools/verify.ps1 -> PASS (19 domain tests, Godot import/integration); git diff --check -> PASS.
+Acceptance: отрицательное смещение перенесено с preview root на artwork: движок позиционирует root в курсор, центр картинки совпадает с ним при начале и после движения. Source icon скрыт, SelfModulate белый; NotificationDragEnd восстанавливает текущую картинку и актуальное выделение после отмены/успешного drop. Native GUI tests проверяют центрирование, пустую ячейку, восстановление картинки, обе текстуры, zoom 0.25/0.7/1.8, размер 50×50 и прежние Shift/drop-регрессии.
+Read-set exception: нет.
+Risks/blocker: ручной visual playtest не выполнялся; остальные локальные изменения сохранены.
+Next: проверить жест в игровом сеансе.
+```
+
+Координатор подтвердил HF-19 2026-11-06 по verify (exit 0) и diff-check: REVIEW → DONE; основной фронт и ворота без изменений.
+
+### HF-18 — ограничить масштаб drag preview
+
+Статус: `DONE`; координатор/исполнитель `/root`; HF-16 = DONE; `CP-HF-18`, READY проверен 2026-11-06.
+
+#### CP-HF-18
+
+Read-set: текущий фронт плана, AGENTS.md из запроса, `scripts/UI/SlotUI.cs`, `scripts/UI/InventoryUI.cs`, `scripts/CounterWorld.cs`, `scripts/TradeScene.cs` (RefreshItem/Showcases), `scenes/trade_scene.tscn` (Item sprites), `scenes/customer.tscn` (поиск Scale), `tests/ProjectTest.cs`, ранее прочитанные verify/settings; git status/diff.
+Write-set: `scripts/UI/SlotUI.cs`, `tests/ProjectTest.cs`, `ORCHESTRATION_PLAN.md`. Владелец плана `/root`; пересекающиеся задачи не исполняются.
+Out of scope: экономика, save schema, изменение камеры/мировых объектов, source/, прочие локальные изменения.
+Приёмка: drag preview ограничен 50×50 экранными пикселями сразу и после кадра layout, независимо от zoom/размера исходной текстуры; после drop/cancel preview удаляется, исходные масштабы inventory/showcase/trade sprites не меняются. Проверки: regression preview geometry на настоящем GUI drag для обеих atelier textures и разных zoom, полный tools/verify.ps1, git diff --check.
+Read-set exception: точечная диагностика координатором перечисленных файлов до CP; source/ не читался.
+
+```text
+Task: HF-18
+Recommended status: REVIEW
+Changed: scripts/UI/SlotUI.cs; tests/ProjectTest.cs; ORCHESTRATION_PLAN.md
+Checks: baseline geometry regression -> FAIL (drag preview 1448×1086 вместо 50×50); после исправления powershell -NoProfile -ExecutionPolicy Bypass -File tools/verify.ps1 -> PASS (19 domain tests, Godot import/integration); git diff --check -> PASS.
+Acceptance: создание TextureRect с Texture до ExpandMode раздувало Size до исходного minimum texture. Preview теперь состоит из фиксированного Control 50×50 и дочернего TextureRect с IgnoreSize до назначения текстуры. Native GUI drag проверяет размеры root/artwork сразу и после layout для hat/gloves при zoom 0.25/1.8 и прежних сценариях 0.7; drop/cancel удаляют preview. Проверены неизменность Scale всех world Sprite2D и размеров showcase icon, размещение, отмена, отказные случаи и Shift-перенос.
+Read-set exception: первичная диагностика координатора, перечисленная выше.
+Risks/blocker: ручной visual playtest не выполнялся; NU1900 из-за недоступности vulnerability feed NuGet. Прочие локальные изменения сохранены.
+Next: перезапустить игровой сеанс для загрузки исправленного preview.
+```
+
+Координатор подтвердил HF-18 2026-11-06 по финальному verify (exit 0) и diff-check: REVIEW → DONE; основной фронт и ворота без изменений.
+
+### HF-17 — заменить игровой шрифт
+
+Статус: `DONE`; координатор/исполнитель `/root`; HF-16 = DONE; `CP-HF-17`, READY проверен 2026-11-06.
+
+#### CP-HF-17
+
+Read-set: текущий фронт плана, AGENTS.md из запроса, `MyFont_Completed.ttf[.import]`, `art/fonts/game.ttf[.import]`, `themes/game_theme.tres`, `scenes/main_menu.tscn`, `scenes/UI/ShowcaseSlot.tscn`, `tests/ProjectTest.cs`, `.gitignore`, ранее прочитанные verify/settings; точечный поиск font references в project.godot/themes/scenes/scripts/tests/README.md; git status/diff.
+Write-set: `art/fonts/game.ttf`, `tests/ProjectTest.cs`, `ORCHESTRATION_PLAN.md`. Единственный владелец плана `/root`; пересечений с активными задачами нет.
+Out of scope: локализация/переводы, размеры/цвета UI, перемещение пользовательского исходного шрифта, source/.
+Приёмка: канонический art/fonts/game.ttf побайтово совпадает с MyFont_Completed.ttf; все три existing references сохраняют корректный UID и используют новый файл; default theme поддерживает латинские/русские буквы, GUI-регрессии зелёные. Проверки: SHA256 обоих файлов, font glyph integration test, полный tools/verify.ps1, git diff --check.
+
+```text
+Task: HF-17
+Recommended status: REVIEW
+Changed: art/fonts/game.ttf; tests/ProjectTest.cs; ORCHESTRATION_PLAN.md
+Checks: SHA256 source/runtime -> MATCH (C453F9141C92FF051FCF893FBABB7D35FDE97D57B1B2681B6755B2D0BAAF3FAF); powershell -NoProfile -ExecutionPolicy Bypass -File tools/verify.ps1 -> PASS (19 domain tests, Godot import/integration); git diff --check -> PASS.
+Acceptance: runtime font заменён байтами MyFont_Completed.ttf, UID и все ссылки на game.ttf сохранены; шрифт общей темы и explicit menu font совпадают, все заглавные/строчные латинские и русские буквы включая Ё/ё присутствуют. GUI-регрессии размеров/подсказок/drag-and-drop проходят. Переводы и локализация не добавлялись.
+Read-set exception: нет.
+Risks/blocker: ручной visual playtest не выполнялся; исходный пользовательский MyFont_Completed.ttf[.import] сохранён на месте.
+Next: локализация по отдельному запросу пользователя.
+```
+
+Координатор подтвердил HF-17 2026-11-06 по verify (exit 0), SHA256 и diff-check: REVIEW → DONE; основной фронт и ворота без изменений.
+
+### HF-16 — drag-and-drop, Shift-перенос и контраст настроек
+
+Статус: `DONE`; координатор/исполнитель `/root`; HF-15 = DONE; `CP-HF-16`, READY проверен 2026-11-06.
+
+#### CP-HF-16
+
+Read-set: этот план, AGENTS.md из запроса, `scripts/UI/InventoryUI.cs`, `scripts/UI/SlotUI.cs`, `scripts/UI/PauseMenu.cs`, `scripts/MainMenu.cs`, `scripts/TradeScene.cs` (существующий placement API/инициализация/disabled states), `scenes/UI/ShowcaseSlot.tscn`, `scenes/main_menu.tscn`, `tests/ProjectTest.cs`, ранее прочитанные verify/settings; официальная документация Godot Control drag/drop; git status/diff.
+Write-set: `scripts/UI/InventoryUI.cs`, `scripts/UI/SlotUI.cs`, `scripts/UI/PauseMenu.cs`, `scenes/main_menu.tscn`, `tests/ProjectTest.cs`, `ORCHESTRATION_PLAN.md`. Владелец сцены и плана `/root`; пересекающиеся задачи не исполняются.
+Out of scope: новая доменная логика TradeScene, возврат с витрины, экономика/save schema, source/, чужие изменения вне write-set.
+Приёмка: drag предмета на свободную витрину с иконкой-превью; отмена/занятый/reserved слот не теряют товар; Shift+клик переносит в первый свободный слот среди шести, полные витрины без потерь. Пауза/terminal states блокируют перенос, устаревший drag payload отклоняется. Старый выбор+клик сохранён. Fullscreen-текст контрастен во всех состояниях main menu и pause. Проверки: GUI drag/Shift, отказные случаи/повторный drop, theme checks, полный tools/verify.ps1, git diff --check.
+
+```text
+Task: HF-16
+Recommended status: REVIEW
+Changed: scripts/UI/InventoryUI.cs; scripts/UI/SlotUI.cs; scripts/UI/PauseMenu.cs; scenes/main_menu.tscn; tests/ProjectTest.cs; ORCHESTRATION_PLAN.md
+Checks: powershell -NoProfile -ExecutionPolicy Bypass -File tools/verify.ps1 -> PASS (0 ошибок компиляции, 19 domain tests, Godot import/integration); git diff --check -> PASS.
+Acceptance: native GUI drag через viewport переносит предмет, вне витрины отменяется, занятый/reserved слот отклоняется, replay старого payload не переносит следующий предмет. Реальные Shift+клики заполняют обе комнаты, пропуская reserved; при заполнении товар остаётся в inventory. Пауза и поражение отклоняют drag и quick move. Прежние GUI выбор+размещение/продажа и tooltip regression проходят. Во всех normal/hover/pressed/hover_pressed/disabled состояниях fullscreen имеет светлую непрозрачную подложку и тёмный текст, включая focus и оба toggle-state; проверено в main menu и pause. TradeScene не изменён: адаптер использует существующий placement API.
+Read-set exception: дополнительно прочитаны локальная XML-документация GodotSharp Viewport drag API и официальный viewport.cpp для диагностики синтетических drag-событий.
+Risks/blocker: ручной visual playtest не выполнялся; NU1900 из-за недоступности vulnerability feed NuGet. Новые пользовательские MyFont_Completed.ttf[.import] и прочие изменения вне write-set сохранены.
+Next: проверить drag и Shift+клик в игровом сеансе.
+```
+
+Координатор подтвердил HF-16 2026-11-06 по финальному verify (exit 0) и diff-check: REVIEW → DONE; владение сценой освобождено, основной фронт и ворота без изменений.
+
+### HF-15 — восстановить сборку подсказок inventory
+
+Статус: `DONE`; координатор/исполнитель `/root`; зависимость HF-13 = DONE; `CP-HF-15`, READY проверен 2026-11-06.
+
+#### CP-HF-15
+
+Read-set: текущий фронт плана, AGENTS.md из запроса, `scripts/UI/InventoryUI.cs`, `scripts/UI/SlotUI.cs`, `tests/ProjectTest.cs`, `ChikagoShop.csproj`, ранее прочитанные `tools/verify.ps1`, `.vscode/settings.json`; git status/diff/show для этих файлов и diagnostic diff `scripts/UI/RarityPanel.cs`.
+Write-set: `scripts/UI/InventoryUI.cs`, `scripts/UI/SlotUI.cs`, `ORCHESTRATION_PLAN.md`. Единственный владелец плана `/root`; пересекающиеся задачи не исполняются.
+Out of scope: экономика, save schema, прочие локальные изменения, source/.
+Приёмка: устранены все 11 воспроизведённых CS1061 (ItemPopup/VisibleItemInfo/ItemInfo), восстановлена реализация мгновенной подсказки HF-13 с сохранением текущего tab-форматирования. Существующие regression tests HF-13 остаются без ослабления. Проверки: полный tools/verify.ps1, git diff --check, git diff -w относительно HEAD не показывает поведенческих изменений в двух восстановленных файлах.
+Read-set exception: точечная диагностика координатором перечисленных файлов до CP; source/ не читался.
+
+```text
+Task: HF-15
+Recommended status: REVIEW
+Changed: scripts/UI/InventoryUI.cs; scripts/UI/SlotUI.cs; ORCHESTRATION_PLAN.md
+Checks: baseline dotnet build ChikagoShop.csproj --no-restore -> FAIL (11 CS1061, воспроизведено); после исправления powershell -NoProfile -ExecutionPolicy Bypass -File tools/verify.ps1 -> PASS (0 ошибок сборки, 19 domain tests, Godot import и integration); git diff --check -> PASS; git diff -w по двум UI-файлам -> пусто относительно HEAD.
+Acceptance: восстановлены ItemPopup/VisibleItemInfo/ItemInfo и весь код мгновенной подсказки HF-13; GUI-регрессии проходят без изменений тестов. Сохранены tab-отступы; исправлены хвостовые пробелы только в write-set. Прочие локальные изменения не затронуты.
+Read-set exception: диагностика координатора до CP, перечисленная выше.
+Risks/blocker: GUI build callback редактора отдельно не запускался; проверена сборка той же csproj и headless Godot. Остаётся NU1900 из-за недоступности vulnerability feed NuGet; ошибок компиляции нет.
+Next: повторно запустить игру в открытом редакторе Godot.
+```
+
+Координатор подтвердил HF-15 2026-11-06 по финальному verify (exit 0) и diff-check: REVIEW → DONE; основной фронт и ворота без изменений.
+
 ### HF-14 — публикация исправлений UI
 
 Статус: `DONE`; координатор/исполнитель `/root`; зависимости HF-11/HF-12/HF-13 = DONE; `CP-HF-14`, READY проверен 2026-11-06. Commit/push явно разрешён пользователем.

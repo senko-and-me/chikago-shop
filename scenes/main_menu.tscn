@@ -10,6 +10,13 @@
 [ext_resource type="FontFile" uid="uid://q8nuqkeci347" path="res://art/fonts/game.ttf" id="8_font"]
 [ext_resource type="Texture2D" uid="uid://ti6uump1r481" path="res://art/ui/settings_panel.png" id="9_settings_panel"]
 
+[sub_resource type="StyleBoxFlat" id="FullscreenSetting"]
+bg_color = Color(0.94, 0.91, 0.85, 1)
+content_margin_left = 14.0
+content_margin_right = 14.0
+content_margin_top = 10.0
+content_margin_bottom = 10.0
+
 [node name="MainMenu" type="Control" unique_id=1262597174]
 layout_mode = 3
 anchors_preset = 15
@@ -125,8 +132,17 @@ horizontal_alignment = 1
 [node name="FullscreenButton" type="CheckButton" parent="SettingsMenuContainer/Settings" unique_id=1182591822]
 custom_minimum_size = Vector2(360, 64)
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_hover_color = Color(0.82, 0.82, 0.82, 1)
+theme_override_colors/font_color = Color(0.16, 0.12, 0.1, 1)
+theme_override_colors/font_hover_color = Color(0.16, 0.12, 0.1, 1)
+theme_override_colors/font_pressed_color = Color(0.16, 0.12, 0.1, 1)
+theme_override_colors/font_hover_pressed_color = Color(0.16, 0.12, 0.1, 1)
+theme_override_colors/font_focus_color = Color(0.16, 0.12, 0.1, 1)
+theme_override_colors/font_disabled_color = Color(0.16, 0.12, 0.1, 1)
+theme_override_styles/normal = SubResource("FullscreenSetting")
+theme_override_styles/hover = SubResource("FullscreenSetting")
+theme_override_styles/pressed = SubResource("FullscreenSetting")
+theme_override_styles/hover_pressed = SubResource("FullscreenSetting")
+theme_override_styles/disabled = SubResource("FullscreenSetting")
 theme_override_fonts/font = ExtResource("8_font")
 theme_override_font_sizes/font_size = 25
 text = "Полный экран"
