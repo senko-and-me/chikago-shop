@@ -31,6 +31,7 @@ public partial class ProjectTest : SceneTree
             await TestProgress();
             await TestDayCycle();
             await TestLocalization();
+            await TestLongSentenceScroll();
             await TestMainMenu();
             GD.Print("All C# project checks passed");
             Quit();
@@ -2072,6 +2073,70 @@ public partial class ProjectTest : SceneTree
         menu.OnBackPressed();
         Check(mainView.Visible && !settingsView.Visible, "Back must return to the main menu");
         menu.OnPlayPressed();
+        Check(menu.ActiveDialogue != null && !mainView.Visible && CurrentScene == menu,
+            "Play must start the prologue without creating a running game");
+        var dialogue = menu.ActiveDialogue;
+        menu.OnPlayPressed();
+        Check(menu.ActiveDialogue == dialogue, "Repeated Play must not create duplicate dialogues");
+        var dialogueStyle = dialogue.GetNode<PanelContainer>("Panel").GetThemeStylebox("panel") as StyleBoxTexture;
+        Check(dialogueStyle?.Texture?.ResourcePath == "res://art/ui/dialog_panel.png",
+            "Dialogue panel must use the supplied sprite as its background");
+        Check(dialogue.Theme.DefaultFont == gameFont &&
+              dialogue.GetNode<Label>("Panel/Content/Speaker").GetThemeFont("font") == gameFont &&
+              dialogue.GetNode<RichTextLabel>("Panel/Content/Text").GetThemeFont("normal_font") == gameFont,
+            "Dialogue labels and speech must use the project's shared font");
+        Check(!dialogue.HasNode("Panel/Content/Actions") && !dialogue.HasNode("Panel/Content/Hint") &&
+              dialogue.GetNode<Control>("Panel/Content").GetChildCount() == 2,
+            "Only speaker and speech must remain in the cloud, with no buttons, counter or hints");
+        Check(!dialogue.HasNode("Panel/Content/Rule") &&
+              dialogue.GetNode<PanelContainer>("Panel").Material is ShaderMaterial,
+            "The divider must be removed and the cloud edges must fade smoothly");
+        Vector2I dialogueViewport = Root.Size;
+        foreach (var size in new[] { new Vector2I(1280, 720), new Vector2I(960, 540) })
+        {
+            Root.Size = size;
+            await ToSignal(this, SignalName.ProcessFrame);
+            await ToSignal(this, SignalName.ProcessFrame);
+            var panel = dialogue.GetNode<Control>("Panel");
+            var text = dialogue.GetNode<RichTextLabel>("Panel/Content/Text");
+            Check(panel.Size.Y >= 220 && panel.Size.Y <= 250 &&
+                  panel.Size.X <= Root.GetVisibleRect().Size.X * 0.79f &&
+                  text.GlobalPosition.X >= panel.GlobalPosition.X + 112 &&
+                  text.GetGlobalRect().End.X <= panel.GetGlobalRect().End.X - 112 &&
+                  text.GetGlobalRect().End.Y <= panel.GetGlobalRect().End.Y - 64,
+                "The cloud must retain horizontal and bottom text padding at both viewport sizes");
+            Check(new Rect2(Vector2.Zero, Root.GetVisibleRect().Size).Encloses(panel.GetGlobalRect()) &&
+                  panel.GetGlobalRect().Encloses(text.GetGlobalRect()) && text.Size.Y > 40 &&
+                  (text.ScrollActive || text.GetContentHeight() <= text.Size.Y) &&
+                  text.GetThemeFontSize("normal_font_size") == 20,
+                "Speech must retain its font size, using scrolling when needed inside the cloud");
+        }
+        Root.Size = dialogueViewport;
+        await ToSignal(this, SignalName.ProcessFrame);
+        Check(dialogue.Session.Count == 24 && dialogue.Session.Current.Speaker == "Покупательница",
+            "The prologue must begin directly with the customer, without the opening storyboard");
+        await ClickControl(dialogue, "Panel/Content/Text");
+        Check(!dialogue.IsRevealing && dialogue.Session.Index == 0,
+            "First click must reveal text without skipping the storyboard");
+        string firstPage = dialogue.GetNode<RichTextLabel>("Panel/Content/Text").Text;
+        dialogue._Input(new InputEventKey { Pressed = true, Keycode = Key.Space });
+        Check(dialogue.IsRevealing && (dialogue.Session.Index > 0 ||
+              dialogue.GetNode<RichTextLabel>("Panel/Content/Text").Text != firstPage),
+            "Space must advance the fully revealed page, including continuation of a long speech");
+        int heldIndex = dialogue.Session.Index;
+        string heldText = dialogue.GetNode<RichTextLabel>("Panel/Content/Text").Text;
+        dialogue._Input(new InputEventKey { Pressed = true, Echo = true, Keycode = Key.Space });
+        Check(dialogue.Session.Index == heldIndex && dialogue.GetNode<RichTextLabel>("Panel/Content/Text").Text == heldText,
+            "Held keys must not skip dialogue");
+        dialogue._Input(new InputEventKey { Pressed = true, Keycode = Key.Escape });
+        await ToSignal(this, SignalName.ProcessFrame);
+        Check(CurrentScene == menu && menu.ActiveDialogue == null && mainView.Visible,
+            "Escape must return to the menu without quitting or starting gameplay");
+        menu.OnPlayPressed();
+        Check(menu.ActiveDialogue.Session.Index == 0, "A cancelled prologue must restart from its first frame");
+        Root.Size = new Vector2I(960, 540);
+        await CompletePrologue(menu);
+        Root.Size = dialogueViewport;
         await ToSignal(this, SignalName.ProcessFrame);
         Check(CurrentScene is TradeScene, "Play must enter the game");
         var game = (TradeScene)CurrentScene;
@@ -2092,6 +2157,7 @@ public partial class ProjectTest : SceneTree
             "The returned main menu must respond to input");
         menu.OnBackPressed();
         menu.OnPlayPressed();
+        await CompletePrologue(menu);
         await ToSignal(this, SignalName.ProcessFrame);
         game = (TradeScene)CurrentScene;
         game.SetProcess(false);
@@ -2099,6 +2165,98 @@ public partial class ProjectTest : SceneTree
               game.ShowcaseItems.SequenceEqual(showcases) && game.TradeActive == active && game.ItemIndex == activeItem,
             "Reentering from the menu must retain saved goods and the active trade");
         GD.Print("Main menu checks passed");
+    }
+
+    private async Task CompletePrologue(MainMenu menu)
+    {
+        var dialogue = menu.ActiveDialogue;
+        Check(dialogue != null, "Play must always open the prologue");
+        await ToSignal(this, SignalName.ProcessFrame);
+        await ToSignal(this, SignalName.ProcessFrame);
+        int count = dialogue.Session.Count;
+        bool checkedScrolling = false;
+        for (int index = 0; index < count; index++)
+        {
+            Check(CurrentScene == menu && dialogue.Session.Index == index,
+                "Gameplay must not begin before all dialogue lines have been acknowledged");
+            string original = dialogue.Session.Current.Text;
+            string reconstructed = "";
+            int pages = 0;
+            while (!dialogue.Session.IsComplete && dialogue.Session.Index == index)
+            {
+                Check(++pages < 50, "Pagination must always make progress");
+                if (dialogue.IsRevealing) dialogue.Advance();
+                var text = dialogue.GetNode<RichTextLabel>("Panel/Content/Text");
+                var speaker = dialogue.GetNode<Label>("Panel/Content/Speaker");
+                Check(speaker.Visible == !string.IsNullOrWhiteSpace(dialogue.Session.Current.Speaker) &&
+                      speaker.Text != "Раскадровка", "Actions must not display a narration heading");
+                Check(text.GetThemeFontSize("normal_font_size") == 20 &&
+                      (text.ScrollActive || text.GetContentHeight() <= text.Size.Y),
+                    "Every page must retain font size, allowing scrolling for long sentences");
+                Check(text.GetVScrollBar().GetThemeStylebox("grabber") is StyleBoxFlat,
+                    "Long dialogue must use a styled scrollbar");
+                if (!checkedScrolling && text.ScrollActive && text.GetContentHeight() > text.Size.Y)
+                {
+                    await ToSignal(this, SignalName.ProcessFrame);
+                    await ToSignal(this, SignalName.ProcessFrame);
+                    var scrollbar = text.GetVScrollBar();
+                    Check(scrollbar.IsVisibleInTree() && scrollbar.MaxValue > scrollbar.Page,
+                        "Overflowing sentences must expose a usable scroll range");
+                    string page = text.Text;
+                    dialogue._Input(new InputEventMouseButton { Pressed = true, ButtonIndex = MouseButton.Left,
+                        Position = scrollbar.GetGlobalRect().GetCenter() });
+                    Check(dialogue.Session.Index == index && text.Text == page,
+                        "Clicking the scrollbar must not advance the dialogue");
+                    scrollbar.Value = scrollbar.MaxValue;
+                    Check(scrollbar.Value > 0, "The end of the long sentence must be reachable by scrolling");
+                    checkedScrolling = true;
+                }
+                reconstructed += text.Text;
+                if (reconstructed.Length < original.Length)
+                {
+                    string ending = text.Text.TrimEnd().TrimEnd('»', '”', '"', '\'', ')', ']', '*');
+                    Check(ending.Length > 0 && ".!?…".Contains(ending[^1]),
+                        "A continuing speech must end on a complete sentence");
+                }
+                dialogue._Input(new InputEventMouseButton { Pressed = true, ButtonIndex = MouseButton.Left });
+            }
+            Check(reconstructed == original, "All pages must reproduce the entire original speech without loss or duplication");
+        }
+        dialogue.Advance(); // Completed sessions must not start the game twice.
+        await ToSignal(this, SignalName.ProcessFrame);
+    }
+
+    private async Task TestLongSentenceScroll()
+    {
+        const string path = "user://long_sentence_scroll_test.json";
+        string sentence = string.Join(" ", Enumerable.Repeat("Длинное предложение для проверки прокрутки", 20)) + ".";
+        using (var file = FileAccess.Open(path, FileAccess.ModeFlags.Write))
+            file.StoreString(System.Text.Json.JsonSerializer.Serialize(new[] { new { speaker = "Френки", text = sentence } }));
+        var dialogue = new DialoguePlayer { DialoguePath = path };
+        Root.AddChild(dialogue);
+        try
+        {
+            await ToSignal(this, SignalName.ProcessFrame);
+            await ToSignal(this, SignalName.ProcessFrame);
+            dialogue.Advance();
+            var text = dialogue.GetNode<RichTextLabel>("Panel/Content/Text");
+            await ToSignal(this, SignalName.ProcessFrame);
+            var bar = text.GetVScrollBar();
+            Check(text.Text == sentence && text.ScrollActive && text.GetThemeFontSize("normal_font_size") == 20 &&
+                  bar.IsVisibleInTree() && bar.MaxValue > bar.Page,
+                "A very long sentence must stay whole with the normal font and a usable scrollbar");
+            dialogue._Input(new InputEventMouseButton { Pressed = true, ButtonIndex = MouseButton.Left,
+                Position = bar.GetGlobalRect().GetCenter() });
+            Check(!dialogue.Session.IsComplete, "Scrollbar interaction must not finish the dialogue");
+            bar.Value = bar.MaxValue;
+            Check(bar.Value > 0, "The end of the sentence must be reachable");
+        }
+        finally
+        {
+            dialogue.QueueFree();
+            DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(path));
+        }
+        await ToSignal(this, SignalName.ProcessFrame);
     }
 
     private static void CheckFullscreenText(CheckButton button)

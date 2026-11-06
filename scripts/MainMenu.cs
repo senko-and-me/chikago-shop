@@ -8,6 +8,8 @@ public partial class MainMenu : Control
 	private CenterContainer _settingsMenu = null!;
 	private Button _russian = null!;
 	private Button _english = null!;
+	public DialoguePlayer ActiveDialogue { get; private set; }
+	private bool _startingGame;
 
 	public override void _Ready()
 	{
@@ -68,11 +70,39 @@ public partial class MainMenu : Control
 
 	public override void _Input(InputEvent @event)
 	{
+		if (ActiveDialogue != null) return;
 		if (@event is InputEventKey { Pressed: true, Echo: false, Keycode: Key.Escape })
 			GetTree().Quit();
 	}
 
-	public void OnPlayPressed() => GetTree().ChangeSceneToPacked(GameScene);
+	public void OnPlayPressed()
+	{
+		if (ActiveDialogue != null || _startingGame) return;
+		_mainMenu.Hide();
+		_settingsMenu.Hide();
+		ActiveDialogue = new DialoguePlayer();
+		ActiveDialogue.Finished += () =>
+		{
+			if (_startingGame) return;
+			_startingGame = true;
+			var error = GetTree().ChangeSceneToPacked(GameScene);
+			if (error != Error.Ok)
+			{
+				_startingGame = false;
+				CloseDialogue();
+				GD.PushError($"Could not open game: {error}");
+			}
+		};
+		ActiveDialogue.Cancelled += CloseDialogue;
+		AddChild(ActiveDialogue);
+	}
+
+	private void CloseDialogue()
+	{
+		ActiveDialogue.QueueFree();
+		ActiveDialogue = null;
+		_mainMenu.Show();
+	}
 
 	public void OnSettingsPressed()
 	{
