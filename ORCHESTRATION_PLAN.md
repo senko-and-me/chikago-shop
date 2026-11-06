@@ -7,6 +7,91 @@
 
 ## Текущий фронт
 
+### HF-14 — публикация исправлений UI
+
+Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; зависимости HF-11/HF-12/HF-13 = DONE; `CP-HF-14`, READY проверен 2026-11-06. Commit/push явно разрешён пользователем.
+
+#### CP-HF-14
+
+Read-set: этот план, git status/diff/log/remotes; ранее проверенные файлы HF-11–HF-13; diff пользовательских `export_presets.cfg`, `scenes/trade_scene.tscn`, `scripts/UI/PauseMenu.cs` для определения границ публикации.
+Write-set: `ORCHESTRATION_PLAN.md`, Git index/commit и origin/main для публикации только `ORCHESTRATION_PLAN.md`, `scenes/UI/RarityPanel.tscn`, `scenes/UI/ShowcaseSlot.tscn`, `scripts/UI/InventoryUI.cs`, `scripts/UI/SlotUI.cs`, `scripts/UI/ZoomResponsiveUi.cs`, `tests/ProjectTest.cs`. Владелец плана `/root`; пересечений с активными задачами нет.
+Out of scope: включение пользовательских изменений export/pause/trade_scene, force push, source/.
+Приёмка: проверки HF-13 PASS, diff-check PASS, commit отправлен в origin/main без force; пользовательские изменения остаются в рабочем дереве.
+
+### HF-13 — мгновенные подсказки и отступы UI
+
+Статус: `DONE`; координатор/исполнитель `/root`; зависимости HF-08/HF-10/HF-12 = DONE; `CP-HF-13`, READY проверен 2026-11-06.
+
+#### CP-HF-13
+
+Read-set: этот план, AGENTS.md из запроса, `scripts/UI/InventoryUI.cs`, `scripts/UI/SlotUI.cs`, `scripts/UI/ZoomResponsiveUi.cs`, `scripts/UI/RarityPanel.cs`, `scenes/UI/RarityPanel.tscn`, `scenes/UI/InventoryUI.tscn`, `scenes/UI/SlotUI.tscn`, `scenes/trade_scene.tscn`, `themes/game_theme.tres`, `tests/ProjectTest.cs`, ранее прочитанные `tools/verify.ps1`, `.vscode/settings.json`; git status/diff.
+Write-set: `scripts/UI/InventoryUI.cs`, `scripts/UI/SlotUI.cs`, `scripts/UI/ZoomResponsiveUi.cs`, `scripts/UI/RarityPanel.cs`, `scenes/UI/RarityPanel.tscn`, `tests/ProjectTest.cs`, `ORCHESTRATION_PLAN.md`. Единственный владелец сцены и плана `/root`; пересекающиеся VF-задачи не исполняются.
+Out of scope: экономика, save schema, изменение арта, source/, пользовательские изменения.
+Приёмка: информация inventory сразу при наведении, центрирована над ячейкой с зазором 8 px, скрывается при выходе и обновляется при смене предмета; ценник отделён от кнопки на 8 screen px при zoom; заголовки плавно проявляются при zoom 0.23–0.35; текст rarity table имеет безопасные отступы и раздельные колонки. Проверки: новые GUI/geometry regression, полный tools/verify.ps1, git diff --check.
+Read-set exception: координатор точечно прочитал перечисленные UI-файлы перед CP для диагностики скриншотов; source/ не читался.
+
+```text
+Task: HF-13
+Recommended status: REVIEW
+Changed: scripts/UI/InventoryUI.cs; scripts/UI/SlotUI.cs; scripts/UI/ZoomResponsiveUi.cs; scenes/UI/RarityPanel.tscn; tests/ProjectTest.cs; ORCHESTRATION_PLAN.md
+Checks: powershell -NoProfile -ExecutionPolicy Bypass -File tools/verify.ps1 -> PASS (19 domain tests, Godot import/integration); git diff --check -> PASS.
+Acceptance: GUI mouse enter показывает custom popup синхронно без кадра ожидания; системная задержанная подсказка отключена. Проверены центрирование/зазор 8 px над ячейкой, скрытие при выходе, актуальность после создания/перемещения/reload. Ценники обеих мастерских сохраняют центр и экранный зазор 8 px при zoom 0.23/0.3/0.5/1/1.8. Все 13 элементов заголовков скрыты при 0.23, плавно проявлены при 0.29, полностью видны при 0.35. Обе таблицы rarity сохраняют внутренний отступ и расстояния колонок при 36 сочетаниях zoom/позиции/viewport 1280×720 и 960×540; адаптивное размещение и GUI hover сохранены.
+Read-set exception: диагностика координатора перед CP, перечисленная выше.
+Risks/blocker: ручной visual playtest не выполнялся. NU1900 из-за недоступного vulnerability feed NuGet, ошибок сборки и предупреждений компилятора нет. У края viewport item popup сдвигается по X для сохранения текста на экране.
+Next: проверить внешний вид в новом игровом сеансе.
+```
+
+Координатор подтвердил HF-13 2026-11-06 по финальному verify (exit 0) и diff-check: REVIEW → DONE; владение сценой освобождено. Пользовательские изменения сохранены; основной фронт и ворота без изменений.
+
+### HF-12 — убрать подсветку витрин при нажатии
+
+Статус: `DONE`; координатор/исполнитель `/root`; зависимость HF-11 = DONE; `CP-HF-12`, READY проверен 2026-11-06.
+
+#### CP-HF-12
+
+Read-set: этот план, ранее прочитанные инструкции AGENTS.md, `scenes/UI/ShowcaseSlot.tscn`, `tests/ProjectTest.cs`, `tools/verify.ps1`, `.vscode/settings.json`; git status/diff.
+Write-set: `scenes/UI/ShowcaseSlot.tscn`, `tests/ProjectTest.cs`, `ORCHESTRATION_PLAN.md`. Единственный владелец сцены и плана `/root`; пересекающиеся VF-задачи не исполняются.
+Out of scope: inventory, торговая логика, пользовательские изменения, source/.
+Приёмка: фон слотов прозрачен при нажатии, включая нажатие с наведением; клики размещения работают. Проверки: scene-contract всех шести слотов, полный `tools/verify.ps1`, `git diff --check`.
+
+```text
+Task: HF-12
+Recommended status: REVIEW
+Changed: scenes/UI/ShowcaseSlot.tscn; tests/ProjectTest.cs; ORCHESTRATION_PLAN.md
+Checks: powershell -NoProfile -ExecutionPolicy Bypass -File tools/verify.ps1 -> PASS; git diff --check -> PASS.
+Acceptance: pressed и hover_pressed прозрачны без рамок на всех шести слотах; GUI-размещение и торговля проходят, 19 domain tests зелёные.
+Read-set exception: нет.
+Risks/blocker: ручной visual playtest не выполнялся; NU1900 при проверке vulnerability feed NuGet, build без ошибок.
+Next: перезапустить игровой сеанс.
+```
+
+Координатор подтвердил HF-12 2026-11-06 по verify (exit 0) и diff-check: REVIEW → DONE; владение сценой освобождено, основные ворота без изменений.
+
+### HF-11 — убрать подсветку витрин при наведении
+
+Статус: `DONE`; координатор/исполнитель `/root`; зависимости отсутствуют; `CP-HF-11`, READY проверен 2026-11-06.
+
+#### CP-HF-11
+
+Read-set: этот план, инструкции AGENTS.md из запроса, `scenes/UI/ShowcaseSlot.tscn`, `tests/ProjectTest.cs`, `tools/verify.ps1`, `.vscode/settings.json`; точечный поиск обработчиков в `scripts/TradeScene.cs`, `scripts/UI/SlotUI.cs`; git status/diff.
+Write-set: `scenes/UI/ShowcaseSlot.tscn`, `tests/ProjectTest.cs`, `ORCHESTRATION_PLAN.md`. Единственный владелец сцены и плана `/root`; пересекающиеся VF-задачи не исполняются.
+Out of scope: подсветка inventory, эффект нажатия, торговая логика, пользовательские изменения, source/.
+Приёмка: при наведении все шесть витрин используют прозрачный фон без выделения; размещение товара работает. Проверки: scene-contract для hover всех шести слотов, существующие GUI-тесты размещения, полный `tools/verify.ps1`, `git diff --check`.
+Read-set exception: точечная диагностика перечисленных файлов координатором до оформления CP; source/ не читался.
+
+```text
+Task: HF-11
+Recommended status: REVIEW
+Changed: scenes/UI/ShowcaseSlot.tscn; tests/ProjectTest.cs; ORCHESTRATION_PLAN.md
+Checks: powershell -NoProfile -ExecutionPolicy Bypass -File tools/verify.ps1 -> PASS (19 domain tests, Godot import и integration); git diff --check -> PASS.
+Acceptance: прозрачный hover без рамки проверен для всех шести витрин; существующие GUI-тесты размещения и торговли проходят.
+Read-set exception: диагностика координатора до CP, перечисленная выше.
+Risks/blocker: ручной visual playtest не выполнялся; build выдал NU1900 из-за недоступности vulnerability feed api.nuget.org, ошибок нет.
+Next: перезапустить игровой сеанс для загрузки сцены.
+```
+
+Координатор подтвердил HF-11 2026-11-06 по verify (exit 0) и diff-check: REVIEW → DONE. Основной фронт и ворота не изменены; владение сценой освобождено. Пользовательские изменения export_presets.cfg, scenes/trade_scene.tscn и scripts/UI/PauseMenu.cs сохранены.
+
 ### HF-10 — раннее проявление заголовков и публикация UI
 
 Статус: `DONE`; координатор/исполнитель `/root`; зависимости HF-08/HF-09 = DONE; `CP-HF-10`, READY проверен 2026-11-05.

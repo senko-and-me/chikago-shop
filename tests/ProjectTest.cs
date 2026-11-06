@@ -62,23 +62,36 @@ public partial class ProjectTest : SceneTree
             "Showroom/ShowroomHeader", "Showroom/ShowroomLabel", "Showroom/ShowroomHint",
             "ShowroomLeft/ShowroomHeader", "ShowroomLeft/ShowroomLabel", "ShowroomLeft/ShowroomHint",
             "TradingRoom/SalesRoomLabel" }.Select(path => game.GetNode<CanvasItem>("World/" + path)).ToArray();
-        ui.UpdateForZoom(0.3f);
+        ui.UpdateForZoom(0.23f);
         Check(headers.All(header => !header.Visible && Mathf.IsZeroApprox(header.Modulate.A)),
-            "All room titles, descriptions and backplates must disappear at zoom 0.3");
+            "All room titles, descriptions and backplates must disappear at zoom 0.23");
         Check(panel.Scale.X > 1 && panel.Scale.X <= 1.65f && hud.Scale == Vector2.One,
             "Small world UI must grow moderately on zoom-out while HUD stays fixed");
-        ui.UpdateForZoom(0.4f);
+        ui.UpdateForZoom(0.29f);
         Check(headers.All(header => header.Visible && header.Modulate.A > 0 && header.Modulate.A < 1),
-            "Room headings must fade in gradually above 0.3");
-        ui.UpdateForZoom(0.5f);
+            "Room headings must fade in gradually above 0.23");
+        ui.UpdateForZoom(0.35f);
         Check(headers.All(header => header.Visible && Mathf.IsEqualApprox(header.Modulate.A, 1)),
-            "Room headings must reach full opacity at 0.5");
+            "Room headings must reach full opacity at 0.35");
         ui.UpdateForZoom(0.1f);
         Check(Mathf.IsEqualApprox(panel.Scale.X, 1.65f), "Zoom compensation must be capped");
         foreach (float zoom in new[] { 1f, 1.8f })
         {
             ui.UpdateForZoom(zoom);
             Check(panel.Scale == Vector2.One, "Zooming in must restore the original UI scale without cumulative growth");
+        }
+        foreach (float zoom in new[] { 0.23f, 0.3f, 0.5f, 1f, 1.8f })
+        {
+            ui.UpdateForZoom(zoom);
+            foreach (string room in new[] { "Atelier", "MusicWorkshop" })
+            {
+                var button = game.GetNode<Control>($"World/{room}/GetItemButton");
+                var hint = button.GetNode<Control>("PriceHint");
+                Rect2 rect = hint.GetTransform() * new Rect2(Vector2.Zero, hint.Size);
+                Check(Mathf.Abs(-rect.End.Y * zoom - 8) < 0.1f &&
+                      Mathf.Abs(rect.GetCenter().X - button.Size.X / 2) < 0.1f,
+                    "Price hints must remain centered above both buttons with an eight-screen-pixel gap at every zoom");
+            }
         }
         Check(TradeScene.GetItemBasePrice(0) == 30 && TradeScene.GetItemBasePrice(1) == 50 &&
               TradeScene.GetItemBasePrice(2) == 45 && TradeScene.GetItemBasePrice(3) == 75,
@@ -238,13 +251,21 @@ public partial class ProjectTest : SceneTree
                         Rect2 rect = popup.Popup.GetGlobalRect();
                         Check(layer.Visible && game.GetViewportRect().Grow(-11).Encloses(rect),
                             $"The entire {room} table must fit on screen at zoom {zoom}, near {relativePoint}");
-                        Check(rect.Size.X <= 460 && rect.Size.Y <= 260 &&
+                        Check(rect.Size.X <= 500 && rect.Size.Y <= 280 &&
                               popup.Values.GetNode<Label>("Price0").GetThemeFontSize("font_size") * popup.Popup.Scale.X >= 15,
                             "Rarity tables must stay compact with readable screen-space text at every zoom");
                         foreach (Label cell in popup.Values.GetChildren().OfType<Label>())
-                            Check(rect.Grow(1).Encloses(cell.GetGlobalRect()) &&
+                            Check(rect.Grow(-18 * popup.Popup.Scale.X).Encloses(cell.GetGlobalRect()) &&
                                   cell.Size.X >= cell.GetMinimumSize().X,
                                 "Every heading, rarity and value must fit inside the compact table without clipping");
+                        for (int row = 0; row < 6; row++)
+                        for (int col = 0; col < 3; col++)
+                        {
+                            var left = (Label)popup.Values.GetChild(row * 4 + col);
+                            var right = (Label)popup.Values.GetChild(row * 4 + col + 1);
+                            Check(right.GetGlobalRect().Position.X - left.GetGlobalRect().End.X >= 15 * popup.Popup.Scale.X,
+                                "Rarity table columns must retain clear spacing in every popup placement");
+                        }
                         Rect2 anchor = button.GetGlobalTransformWithCanvas() * new Rect2(Vector2.Zero, button.Size);
                         // The centered baseline leaves enough space to avoid both the button and every HUD panel.
                         if (zoom == 0.7f && relativePoint == new Vector2(0.5f, 0.4f))
@@ -306,9 +327,18 @@ public partial class ProjectTest : SceneTree
         await ClickControl(game, "HUD/InventoryUI/ScrollContainer/HBoxContainer/" +
             game.GetNode<HBoxContainer>("HUD/InventoryUI/ScrollContainer/HBoxContainer").GetChild(0).Name);
         Check(game.SelectedInventoryIndex == 0, "Inventory must accept mouse selection");
-        Check(Root.GuiGetHoveredControl()?.GetTooltip() == ExpectedItemTooltip(game.StoredItems[0]),
+        var inventoryUi = game.GetNode<InventoryUI>("HUD/InventoryUI");
+        Check(inventoryUi.ItemPopup.Visible && inventoryUi.VisibleItemInfo == ExpectedItemTooltip(game.StoredItems[0]),
             "Hovering the inventory image must expose its name, rarity and price");
+        var hoveredSlot = (SlotUI)Root.GuiGetHoveredControl();
+        Rect2 itemRect = hoveredSlot.GetGlobalRect();
+        Rect2 infoRect = inventoryUi.ItemPopup.GetGlobalRect();
+        Check(Mathf.Abs(itemRect.Position.Y - infoRect.End.Y - 8) < 1 &&
+              Mathf.Abs(itemRect.GetCenter().X - infoRect.GetCenter().X) < 1,
+            "Item information must be centered directly above the slot with an eight-pixel gap");
+        Check(hoveredSlot.TooltipText == "", "The delayed system tooltip must stay disabled");
         await ClickControl(game, "World/ShowroomLeft/Showcases/Slot1");
+        Check(!inventoryUi.ItemPopup.Visible, "Leaving the inventory must hide item information");
         await ToSignal(this, SignalName.ProcessFrame);
         Check(!game.TradeActive, "Mouse placement must wait for a buyer");
         game._Process(game.BuyerCountdown + 0.001);
@@ -366,6 +396,12 @@ public partial class ProjectTest : SceneTree
         Check(control.IsVisibleInTree(), $"Mouse target must be visible: {path}");
         Vector2 point = control.GetGlobalTransformWithCanvas() * (control.Size / 2);
         Root.PushInput(new InputEventMouseMotion { Position = point, GlobalPosition = point }, true);
+        if (control is SlotUI slot)
+        {
+            var inventoryUi = game.GetNode<InventoryUI>("HUD/InventoryUI");
+            Check(inventoryUi.ItemPopup.Visible && inventoryUi.VisibleItemInfo == slot.ItemInfo,
+                "Item information must appear synchronously on mouse enter without waiting for a timer or another frame");
+        }
         await ToSignal(this, SignalName.ProcessFrame);
         Root.PushInput(new InputEventMouseButton
         {
@@ -439,6 +475,19 @@ public partial class ProjectTest : SceneTree
                   normalStyle.BorderWidthTop == 0 && normalStyle.BorderWidthRight == 0 &&
                   normalStyle.BorderWidthBottom == 0,
                 "Showcase controls must not render a dark rectangular frame");
+            var hoverStyle = (StyleBoxFlat)slot.GetThemeStylebox("hover");
+            Check(hoverStyle.BgColor.A == 0 && hoverStyle.BorderWidthLeft == 0 &&
+                  hoverStyle.BorderWidthTop == 0 && hoverStyle.BorderWidthRight == 0 &&
+                  hoverStyle.BorderWidthBottom == 0,
+                "Hovering a showcase slot must not highlight its background or border");
+            foreach (string state in new[] { "pressed", "hover_pressed" })
+            {
+                var pressedStyle = (StyleBoxFlat)slot.GetThemeStylebox(state);
+                Check(pressedStyle.BgColor.A == 0 && pressedStyle.BorderWidthLeft == 0 &&
+                      pressedStyle.BorderWidthTop == 0 && pressedStyle.BorderWidthRight == 0 &&
+                      pressedStyle.BorderWidthBottom == 0,
+                    $"Pressing a showcase slot must not highlight its background or border ({state})");
+            }
         }
         var atelierButton = game.GetNode<Button>("World/Atelier/GetItemButton");
         var musicButton = game.GetNode<Button>("World/MusicWorkshop/GetItemButton");
@@ -1014,8 +1063,14 @@ public partial class ProjectTest : SceneTree
         for (int i = 0; i < items.Length; i++)
         {
             var slot = (SlotUI)container.GetChild(i);
-            Check(slot.GetTooltip(slot.Size / 2) == ExpectedItemTooltip(items[i]),
+            Check(slot.ItemInfo == ExpectedItemTooltip(items[i]),
                 "Inventory tooltips must follow each current item's name, rarity and price after creation, movement and reload");
+            var inventoryUi = game.GetNode<InventoryUI>("HUD/InventoryUI");
+            slot.EmitSignal(Control.SignalName.MouseEntered);
+            Check(inventoryUi.ItemPopup.Visible && inventoryUi.VisibleItemInfo == ExpectedItemTooltip(items[i]),
+                "The immediate popup must show fresh content after creation, movement and reload");
+            slot.EmitSignal(Control.SignalName.MouseExited);
+            Check(!inventoryUi.ItemPopup.Visible, "Item information must hide immediately on mouse exit");
             Check(slot.GetNode<TextureRect>("Icon").MouseFilter == Control.MouseFilterEnum.Ignore,
                 "Inventory artwork must allow its slot to receive hover and click input");
         }

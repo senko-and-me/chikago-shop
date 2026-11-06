@@ -44,11 +44,20 @@ public partial class ZoomResponsiveUi : Node
         {
             entry.Control.PivotOffset = entry.Control.Size / 2f;
             entry.Control.Scale = entry.Scale * scale;
+            if (entry.Control.Name == "PriceHint")
+            {
+                // Keep a constant screen-space gap after scaling around the center.
+                var button = entry.Control.GetParent<Control>();
+                float gap = 8 / Mathf.Max(zoom, 0.01f);
+                Vector2 pivot = entry.Control.PivotOffset;
+                entry.Control.Position = new Vector2((button.Size.X - entry.Control.Size.X) / 2,
+                    -gap - pivot.Y - (entry.Control.Size.Y - pivot.Y) * entry.Control.Scale.Y);
+            }
         }
-        float alpha = Mathf.SmoothStep(0.3f, 0.5f, zoom);
+        float alpha = Mathf.SmoothStep(0.23f, 0.35f, zoom);
         foreach (var entry in _headers)
         {
-            entry.Item.Visible = zoom > 0.3f;
+            entry.Item.Visible = zoom > 0.23f;
             Color color = entry.Color;
             color.A *= alpha;
             entry.Item.Modulate = color;

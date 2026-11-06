@@ -2,6 +2,7 @@ using Godot;
 
 public partial class SlotUI : Button
 {
+    public string ItemInfo { get; set; } = "";
     // Сигнал, который сообщит инвентарю, что этот слот нажали
     [Signal] public delegate void SlotSelectedEventHandler(int slotIndex);
 

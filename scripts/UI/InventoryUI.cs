@@ -12,8 +12,66 @@ public partial class InventoryUI : Control
     public int SelectedIndex { get; private set; } = -1;
 
     private TradeScene _tradeScene = null!;
+    private PanelContainer _itemPopup = null!;
+    private Label _itemInfo = null!;
+    private SlotUI _hoveredSlot;
+    public PanelContainer ItemPopup => _itemPopup;
+    public string VisibleItemInfo => _itemInfo.Text;
 
-    public override void _Ready() => Scroller.GuiInput += OnScrollerGuiInput;
+    public override void _Ready()
+    {
+        Scroller.GuiInput += OnScrollerGuiInput;
+        var layer = new CanvasLayer { Name = "ItemInfoLayer", Layer = 25 };
+        AddChild(layer);
+        _itemPopup = new PanelContainer { Name = "ItemPopup", Visible = false, MouseFilter = MouseFilterEnum.Ignore };
+        var style = new StyleBoxFlat { BgColor = new Color(0.12f, 0.1f, 0.09f, 0.94f),
+            ContentMarginLeft = 12, ContentMarginRight = 12, ContentMarginTop = 8, ContentMarginBottom = 8 };
+        _itemPopup.AddThemeStyleboxOverride("panel", style);
+        _itemInfo = new Label { MouseFilter = MouseFilterEnum.Ignore };
+        _itemInfo.AddThemeFontSizeOverride("font_size", 18);
+        _itemInfo.AddThemeColorOverride("font_color", Colors.White);
+        layer.AddChild(_itemPopup);
+        _itemPopup.AddChild(_itemInfo);
+    }
+
+    public override void _Notification(int what)
+    {
+        if (what == NotificationPaused && _itemPopup != null) HideItemInfo();
+    }
+
+    private void HideItemInfo()
+    {
+        _hoveredSlot = null;
+        _itemPopup.Hide();
+    }
+
+    private void ShowItemInfo(SlotUI slot)
+    {
+        if (GetTree().Paused || slot.IsQueuedForDeletion()) return;
+        _hoveredSlot = slot;
+        UpdateItemInfo();
+    }
+
+    public override void _Process(double delta)
+    {
+        if (_hoveredSlot == null) return;
+        if (!IsInstanceValid(_hoveredSlot) || _hoveredSlot.IsQueuedForDeletion() ||
+            !_hoveredSlot.IsVisibleInTree() || GetViewport().GuiGetHoveredControl() != _hoveredSlot)
+            HideItemInfo();
+        else UpdateItemInfo();
+    }
+
+    private void UpdateItemInfo()
+    {
+        if (_hoveredSlot == null) return;
+        _itemInfo.Text = _hoveredSlot.ItemInfo;
+        _itemPopup.Size = _itemPopup.GetCombinedMinimumSize();
+        Rect2 anchor = _hoveredSlot.GetGlobalTransformWithCanvas() * new Rect2(Vector2.Zero, _hoveredSlot.Size);
+        Vector2 position = new(anchor.GetCenter().X - _itemPopup.Size.X / 2, anchor.Position.Y - _itemPopup.Size.Y - 8);
+        position.X = Mathf.Clamp(position.X, 8, Mathf.Max(8, GetViewportRect().Size.X - _itemPopup.Size.X - 8));
+        _itemPopup.Position = position;
+        _itemPopup.Show();
+    }
 
     public void Initialize(TradeScene tradeScene)
     {
@@ -29,10 +87,11 @@ public partial class InventoryUI : Control
         {
             int itemIndex = storedItems[i];
             _slots[i].SetItemTexture(GD.Load<Texture2D>(TradeScene.GetItemArtPath(itemIndex)));
-            _slots[i].TooltipText = $"{TradeScene.GetItemName(itemIndex)}\n" +
+            _slots[i].ItemInfo = $"{TradeScene.GetItemName(itemIndex)}\n" +
                 $"Редкость: {TradeScene.GetItemRarity(itemIndex)}\n" +
                 $"Стоимость: {TradeScene.GetItemBasePrice(itemIndex)}$";
         }
+        UpdateItemInfo();
         
         // Сбрасываем выделение, если выбранный слот опустел
         if (SelectedIndex >= storedItems.Count)
@@ -50,6 +109,8 @@ public partial class InventoryUI : Control
             slot.SetIndex(index);
             slot.SlotSelected += OnSlotClicked;
             Container.AddChild(slot);
+            slot.MouseEntered += () => ShowItemInfo(slot);
+            slot.MouseExited += () => { if (_hoveredSlot == slot) HideItemInfo(); };
             _slots.Add(slot);
         }
 
@@ -57,6 +118,7 @@ public partial class InventoryUI : Control
         {
             int last = _slots.Count - 1;
             SlotUI slot = _slots[last];
+            if (_hoveredSlot == slot) HideItemInfo();
             _slots.RemoveAt(last);
             slot.QueueFree();
         }
