@@ -9,7 +9,7 @@
 
 ### HF-21 — публикация drag/drop, шрифта и hover-исправлений
 
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; HF-15–HF-20 = DONE; `CP-HF-21`, READY проверен 2026-11-06. Commit/push явно разрешён пользователем.
+Статус: `DONE`; координатор/исполнитель `/root`; HF-15–HF-20 = DONE; `CP-HF-21`, READY проверен 2026-11-06. Commit/push явно разрешён пользователем.
 
 #### CP-HF-21
 
@@ -17,6 +17,19 @@ Read-set: этот фронт плана, git status/diff/log/remotes; пров�
 Write-set: `ORCHESTRATION_PLAN.md`, Git index/commit и origin/main для публикации `ORCHESTRATION_PLAN.md`, `art/fonts/game.ttf`, `scenes/main_menu.tscn`, `scripts/TradeScene.cs`, `scripts/UI/InventoryUI.cs`, `scripts/UI/PauseMenu.cs`, `scripts/UI/SlotUI.cs`, `tests/ProjectTest.cs`. Владелец плана `/root`; пересечений нет.
 Out of scope: пользовательские изменения export/trade_scene/formatting RarityPanel, дубли исходного MyFont_Completed.ttf[.import], force push, source/.
 Приёмка: финальный verify HF-20 PASS, diff-check PASS, проверенный commit опубликован в origin/main без force; остальные локальные изменения сохранены.
+
+```text
+Task: HF-21
+Recommended status: REVIEW
+Changed: опубликованы восемь файлов write-set HF-21.
+Checks: git fetch origin -> PASS; HEAD...origin/main перед commit = 0/0; git diff --cached --check -> PASS; git push origin main -> PASS (exit 0).
+Acceptance: cb83985 опубликован в origin/main без force; drag/drop, Shift-перенос, новый runtime font, контраст fullscreen, hover-взаимоисключение и regression tests отправлены. Product-код после финального verify HF-20 не менялся. Пользовательские изменения вне scope и исходный MyFont_Completed.ttf[.import] сохранены локально.
+Read-set exception: нет.
+Risks/blocker: нет.
+Next: продолжить работу по запросу пользователя.
+```
+
+Координатор подтвердил HF-21 2026-11-06 по успешному push: REVIEW → DONE; evidence публикуется отдельным документационным коммитом.
 
 ### HF-20 — скрывать ценник при наведении на вопрос
 
