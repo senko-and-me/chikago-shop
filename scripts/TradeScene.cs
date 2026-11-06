@@ -253,7 +253,7 @@ public partial class TradeScene : Node2D
 				Position = Vector2.Zero,
 				Size = new Vector2(1920f, 1080f),
 				Color = new Color(0.015f, 0.015f, 0.015f, 0.97f),
-				MouseFilter = Control.MouseFilterEnum.Stop,
+				MouseFilter = Control.MouseFilterEnum.Pass,
 				ZIndex = 100
 			};
 			workshop.AddChild(overlay);

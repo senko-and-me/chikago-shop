@@ -7,6 +7,302 @@
 
 ## Текущий фронт
 
+### HF-53 — checkpoint и merge feature/dialogue-system
+
+Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-06. Пользователь поручил пустой checkpoint перед merge. Checkpoint main: fea23cb.
+CP-HF-53: read-set — текущий фронт обеих веток ORCHESTRATION_PLAN.md, AGENTS.md, tools/verify.ps1, git status/diff/log/branches/remotes, OS TEMP/chikago-hf53-verify.log; write-set — ORCHESTRATION_PLAN.md, Git index/commits, main и origin/main; merge только ORCHESTRATION_PLAN.md, README.md, dialogue/intro.ru.json, scenes/trade_scene.tscn, scripts/Dialogue/DialoguePlayer.cs[.uid], scripts/MainMenu.cs, scripts/TradeScene.cs, scripts/UI/ZoomResponsiveUi.cs, src/ChikagoShop.Domain/Dialogue/DialogueSession.cs, src/ChikagoShop.Domain/Dialogue/SentencePages.cs, tests/ChikagoShop.Domain.Tests/DialogueSessionTests.cs, tests/ChikagoShop.Domain.Tests/SentencePagesTests.cs, tests/ProjectTest.cs. Зависимости HF-52 DONE в исходной ветке; активных пересечений нет. Владелец плана/index `/root`.
+Out of scope: source/, новая продуктовая логика, force push, удаление веток.
+Приёмка: пустой checkpoint предшествует merge, feature/dialogue-system является предком main, tools/verify.ps1 и git diff --check PASS, push origin main без force, чистое дерево и main...origin/main=0/0.
+
+### HF-52 — перетаскивание камеры поверх закрытой комнаты
+
+Статус: `DONE`; координатор/исполнитель `/root`; зависимости отсутствуют; READY 2026-11-06. CP-HF-52: read-set — текущий фронт, scripts/TradeScene.cs (EnsureMusicWorkshopUi), scripts/Camera/WorldCamera.cs, tests/ProjectTest.cs (camera/mouse controls), tools/verify.ps1; write-set — scripts/TradeScene.cs (только MouseFilter overlay), tests/ProjectTest.cs, ORCHESTRATION_PLAN.md. Владелец `/root`, пересечений нет. Out of scope: source/, новая доменная логика/рефакторинг TradeScene, экономика/покупка комнаты, ассеты, посторонние изменения, публикация. Приёмка: ЛКМ-drag с чёрной поверхности закрытой комнаты двигает камеру; overlay блокирует нижележащие кнопки, покупка отдельной кнопкой/GUI/пауза сохранены. Проверки: реальный Root.PushInput drag с overlay, существующие camera/lock/mouse regression, полный verify и diff-check.
+
+
+```text
+Task: HF-52
+Recommended status: REVIEW
+Changed: scripts/TradeScene.cs (MouseFilter locked overlay), tests/ProjectTest.cs, ORCHESTRATION_PLAN.md.
+Checks: tools/verify.ps1 с Godot .NET и DOTNET_ROLL_FORWARD=Major -> PASS (exit 0, build, 53 domain tests, import/integration); git diff --check -> PASS. Evidence: OS TEMP/chikago-hf52-verify.log.
+Acceptance: overlay переведён Stop → Pass: пустая закрытая поверхность передаёт необработанный ЛКМ камере, нижележащие GUI-кнопки не становятся кликабельными. Новый тест реальными Root.PushInput проверяет drag на чёрном фоне и заголовке закрытия, остановку после отпускания, отсутствие списания/крафта и рабочую покупку комнаты после drag. Прежние тесты блокировки камеры на GUI/паузе и полной мышиной торговли проходят.
+Read-set exception: координатор точечно нашёл путь WorldCamera после диагностики, source/ не читался.
+Risks/blocker: нет; пользовательские изменения сохранены, публикация не выполнялась.
+Next: проверить перетаскивание закрытой комнаты в игровом сеансе.
+```
+
+Координатор подтвердил HF-52 2026-11-06 по verify и diff-check: REVIEW → DONE.
+### HF-51 — компактная табличка сделки в центре комнаты
+
+Статус: `DONE`; координатор/исполнитель `/root`; HF-50 DONE; READY 2026-11-06. CP-HF-51: read-set — текущий фронт, scenes/trade_scene.tscn (TradingRoom/TradePanel styles), scripts/UI/ZoomResponsiveUi.cs, tests/ProjectTest.cs (зум/покупатели), art/rooms/cashier.jpg, tools/verify.ps1; write-set — сцена, ZoomResponsiveUi.cs, tests/ProjectTest.cs, ORCHESTRATION_PLAN.md. Владелец сцены `/root`, пересечений нет. Out of scope: source/, TradeScene/домен, ассеты/положение NPC и предмета, пользовательские изменения, публикация. Приёмка: надпись удалена; уменьшенная панель по центру свободной части комнаты, без пересечения с кассой/товарами/внешностями, ограниченное экранное увеличение при zoom-in. Проверки: геометрия и GUI trade/localization regression, полный verify, diff-check.
+
+
+```text
+Task: HF-51
+Recommended status: REVIEW
+Changed: scenes/trade_scene.tscn, scripts/UI/ZoomResponsiveUi.cs, tests/ProjectTest.cs, ORCHESTRATION_PLAN.md.
+Checks: tools/verify.ps1 с Godot .NET и DOTNET_ROLL_FORWARD=Major -> PASS (exit 0, build, 53 domain tests, import/integration); git diff --check -> PASS. Evidence: OS TEMP/chikago-hf51-verify.log.
+Acceptance: SalesRoomLabel удалён; табличка 320×200 вместо 420×280, центр по X комнаты, над зоной товара и кассы. Шрифт 22/26 вместо 27/33, кнопки высотой 44 вместо 78, знаки 30 вместо 48. Для TradePanel масштаб ограничен 0.6–1.2 с компенсацией zoom-in: при 1.8 экранный множитель 1.08 вместо 1.8. Регрессия проверяет отсутствие пересечения с зоной кассы (по исходному фону), всеми спрайтами товара и всеми 18 покупателями при zoom 0.25/0.7/1/1.8; компактность, удаление заголовка, GUI-клики и RU/EN проходят.
+Read-set exception: координатор прочитал art/rooms/cashier.jpg для определения зоны кассы; source/ не читался.
+Risks/blocker: ручной visual smoke не выполнялся; пользовательские изменения сохранены, публикация не выполнялась.
+Next: оценить компактную табличку над кассой при приближении.
+```
+
+Координатор подтвердил HF-51 2026-11-06 по verify и diff-check: REVIEW → DONE.
+### HF-50 — окно сделки не перекрывает покупателя
+
+Статус: `DONE`; координатор/исполнитель `/root`; зависимости отсутствуют; READY 2026-11-06. CP-HF-50: read-set — текущий фронт, scenes/trade_scene.tscn (TradingRoom), scenes/customer.tscn, scripts/UI/ZoomResponsiveUi.cs, tests/ProjectTest.cs (покупатель/зум), tools/verify.ps1, git status/diff; write-set — scenes/trade_scene.tscn (только offsets TradePanel), tests/ProjectTest.cs, ORCHESTRATION_PLAN.md. Владелец сцены `/root`, пересечений нет. Out of scope: source/, TradeScene.cs/домен/экономика, ассеты и положение NPC, другие пользовательские изменения, публикация. Приёмка: панель слева от покупателя без пересечения со всеми 18 внешностями при диапазоне компенсации зума; прежние GUI-продажа/реролл проходят. Проверки: геометрическая regression, полный verify, diff-check.
+
+
+```text
+Task: HF-50
+Recommended status: REVIEW
+Changed: scenes/trade_scene.tscn (TradePanel offsets), tests/ProjectTest.cs, ORCHESTRATION_PLAN.md.
+Checks: tools/verify.ps1 с Godot .NET и DOTNET_ROLL_FORWARD=Major -> PASS (exit 0, build, 53 domain tests, import/integration); git diff --check -> PASS. Evidence: OS TEMP/chikago-hf50-verify.log.
+Acceptance: панель сделки сдвинута влево на 597 world units без изменения размера/высоты и положения NPC. Геометрический тест проверяет отсутствие пересечения с bounds тела/одежды/волос всех 18 внешностей при zoom 0.25/0.7/1/1.8 (включая максимум UI-компенсации 1.65). Прежние реальные GUI-клики продажи/реролла, торговля и полная регрессия проходят.
+Read-set exception: координатор точечно прочитал сцену покупателя и zoom UI перед CP для диагностики геометрии. source/ не читался.
+Risks/blocker: ручной visual smoke не выполнялся; пользовательские изменения сохранены, публикация не выполнялась.
+Next: посмотреть покупателя рядом с окном сделки в игровом окне.
+```
+
+Координатор подтвердил HF-50 2026-11-06 по verify и diff-check: REVIEW → DONE.
+### HF-49 — стилизованная прокрутка длинных предложений
+
+Статус: `DONE`; координатор/исполнитель `/root`; HF-48 DONE; READY 2026-11-06. CP-HF-49: read-set — текущий фронт, scripts/Dialogue/DialoguePlayer.cs, tests/ProjectTest.cs (диалог), README.md, tools/verify.ps1; write-set — эти три файла и ORCHESTRATION_PLAN.md. Владелец `/root`, пересечений нет. Out of scope: ассеты/source/, сценарий/домен, остальные изменения, публикация. Приёмка: шрифт всегда 20, предложения от трёх строк прокручиваются в пределах облачка, тонкий золотистый scrollbar; короткие страницы без scroll, границы предложений/отступы сохранены; drag scrollbar не переключает окно. Проверки: integration шрифта/вместимости/scrollbar/управления двух размеров, verify, diff-check.
+
+
+```text
+Task: HF-49
+Recommended status: REVIEW
+Changed: scripts/Dialogue/DialoguePlayer.cs, tests/ProjectTest.cs, README.md, ORCHESTRATION_PLAN.md.
+Checks: финальный tools/verify.ps1 с Godot .NET и DOTNET_ROLL_FORWARD=Major -> PASS (exit 0, build, 53 domain tests, import/integration); git diff --check -> PASS. Evidence: OS TEMP/chikago-hf49-verify.log.
+Acceptance: уменьшение шрифта удалено, каждая страница использует 20. При трёх строках или overflow включается ScrollActive; текст принимает колесо, VScrollBar имеет тёмный желобок и золотистый ползунок с hover/pressed состояниями. Каждый новый экран сбрасывает scroll наверх. ЛКМ по scrollbar не переключает диалог; прочее управление сохранено. Отдельный integration с длинным предложением из временного JSON подтверждает весь текст на одной странице, стандартный шрифт, видимый диапазон прокрутки и доступность конца; полные прогоны исходного сценария двух размеров сохраняют границы/содержимое. DialoguePath позволяет загружать диалог из заданного ресурса, по умолчанию прежний intro.
+Read-set exception: нет. Временный тестовый user:// JSON удаляется в finally.
+Risks/blocker: ручной visual smoke не выполнялся; если весь текст уже помещается, движок не показывает ненужный scrollbar.
+Next: оценить прокрутку длинного предложения в игровом окне.
+```
+
+Координатор подтвердил HF-49 2026-11-06 по финальному verify и diff-check: REVIEW → DONE.
+### HF-48 — целые предложения и действия без заголовка
+
+Статус: `DONE`; координатор/исполнитель `/root`; HF-47 DONE; READY 2026-11-06. CP-HF-48: read-set — текущий фронт, scripts/Dialogue/DialoguePlayer.cs, src/ChikagoShop.Domain/Dialogue/DialogueSession.cs, tests/ChikagoShop.Domain.Tests/DialogueSessionTests.cs, tests/ProjectTest.cs (диалог), dialogue/intro.ru.json, README.md, tools/verify.ps1; write-set — перечисленные файлы, новые src/ChikagoShop.Domain/Dialogue/SentencePages.cs и tests/ChikagoShop.Domain.Tests/SentencePagesTests.cs, ORCHESTRATION_PLAN.md. Владелец `/root`, пересечений нет. Out of scope: source/, ассеты, save/экономика, остальные сюжетные реплики, публикация. Приёмка: удалён начальный двухабзацный кадр, действия без имени; страницы заканчиваются на границе предложения, слишком длинное одиночное предложение помещается уменьшением шрифта целиком; текст не теряется. Проверки: unit границ/слишком длинного предложения/ремарок и integration всего текста/геометрии/запуска двух размеров, verify, diff-check.
+
+
+```text
+Task: HF-48
+Recommended status: REVIEW
+Changed: scripts/Dialogue/DialoguePlayer.cs, src/ChikagoShop.Domain/Dialogue/DialogueSession.cs, SentencePages.cs в той же папке, tests/ChikagoShop.Domain.Tests/DialogueSessionTests.cs, SentencePagesTests.cs в той же папке, tests/ProjectTest.cs, dialogue/intro.ru.json, README.md, ORCHESTRATION_PLAN.md.
+Checks: финальный tools/verify.ps1 с Godot .NET и DOTNET_ROLL_FORWARD=Major -> PASS (exit 0, build, 53 domain tests, import/integration); git diff --check -> PASS. Evidence: OS TEMP/chikago-hf48-verify.log.
+Acceptance: удалены оба абзаца начальной постановки, первый экран — покупательница; осталось 24 записи, включая 22 неизменённые реплики. Ремарки имеют пустое имя, Label скрывается. SentencePages выбирает последние целые предложения, помещающиеся на странице, с закрывающими кавычками/маркерами/пробелами. Одиночное длинное предложение остаётся целым, при необходимости уменьшается шрифт страницы. Unit-тесты покрывают границы, многоточие, кавычки, действия и пустое имя; полный integration проверяет конец каждого продолжающегося окна, отсутствие потерь текста/scroll/обрезки, старт и весь сценарий при двух размерах.
+Read-set exception: повторно прочитан пользовательский сценарий.doc для восстановления JSON после ошибки PowerShell-конвертации массива; восстановлены исходные 22 реплики и сохранённые ремарки, удалены только два согласованных начальных абзаца. source/ не читался.
+Risks/blocker: ручной visual smoke не выполнялся; очень длинное предложение имеет меньший шрифт, чтобы не прерывать его и сохранить компактное облачко.
+Next: оценить переходы между целыми предложениями в игровом окне.
+```
+
+Координатор подтвердил HF-48 2026-11-06 по финальному verify и diff-check: REVIEW → DONE.
+### HF-47 — компактное облачко для коротких реплик
+
+Статус: `DONE`; координатор/исполнитель `/root`; HF-46 DONE; READY 2026-11-06. CP-HF-47: read-set — текущий фронт, scripts/Dialogue/DialoguePlayer.cs, tests/ProjectTest.cs (геометрия), tools/verify.ps1; write-set — эти два C# файла и ORCHESTRATION_PLAN.md. Единственный владелец `/root`. Out of scope: source/, ассеты/шрифт/отступы, сценарий/домен, посторонние изменения, публикация. Приёмка: ниже само облачко, прежние отступы и полный текст страницами; проверки: полный verify двух размеров и diff-check.
+
+
+```text
+Task: HF-47
+Recommended status: REVIEW
+Changed: scripts/Dialogue/DialoguePlayer.cs, tests/ProjectTest.cs, ORCHESTRATION_PLAN.md.
+Checks: tools/verify.ps1 с Godot .NET и DOTNET_ROLL_FORWARD=Major -> PASS (exit 0, build, 47 domain tests, import/integration); git diff --check -> PASS. Evidence: OS TEMP/chikago-hf47-verify.log.
+Acceptance: высота 220–250 вместо 280–310, отступы 112/64 сохранены. Полные прогоны сценария при двух размерах подтверждают читаемость страниц без обрезки/scroll/потери текста, геометрия компактной панели проверена.
+Read-set exception: нет.
+Risks/blocker: ручной visual smoke не выполнялся.
+Next: оценить компактное облачко в игровом окне.
+```
+
+Координатор подтвердил HF-47 2026-11-06 по verify и diff-check: REVIEW → DONE.
+### HF-46 — больше отступов и ниже облачко
+
+Статус: `DONE`; координатор/исполнитель `/root`; HF-45 DONE; READY 2026-11-06. CP-HF-46: read-set — текущий фронт, scripts/Dialogue/DialoguePlayer.cs, tests/ProjectTest.cs (диалог), tools/verify.ps1; write-set — эти два C# файла и ORCHESTRATION_PLAN.md. Владелец `/root`, пересечений нет. Out of scope: шрифт/ассеты/source/, сценарий/домен, пользовательские изменения, публикация. Приёмка: высота уменьшена, равные боковые и вертикальные отступы увеличены, весь текст доступен страницами без scroll. Проверки: геометрия/полный текст двух размеров, verify, diff-check.
+
+
+```text
+Task: HF-46
+Recommended status: REVIEW
+Changed: scripts/Dialogue/DialoguePlayer.cs, tests/ProjectTest.cs, ORCHESTRATION_PLAN.md.
+Checks: tools/verify.ps1 с Godot .NET и DOTNET_ROLL_FORWARD=Major -> PASS (exit 0, build, 47 domain tests, import/integration); git diff --check -> PASS. Evidence: OS TEMP/chikago-hf46-verify.log.
+Acceptance: высота облачка 280–310 вместо 320–370, боковые отступы 112 вместо 80, сверху/снизу 64 вместо 56. Общий шрифт/размер сохранён. Проверены новые отступы и полный проход всех страниц без обрезки, scroll или потери текста при двух разрешениях.
+Read-set exception: нет.
+Risks/blocker: ручной visual smoke не выполнялся.
+Next: оценить новые пропорции в игровом окне.
+```
+
+Координатор подтвердил HF-46 2026-11-06 по verify и diff-check: REVIEW → DONE.
+### HF-45 — более мелкая и ровная типографика диалога
+
+Статус: `DONE`; координатор/исполнитель `/root`; HF-44 DONE; READY 2026-11-06. CP-HF-45: read-set — текущий фронт, scripts/Dialogue/DialoguePlayer.cs, tests/ProjectTest.cs (диалог), tools/verify.ps1; write-set — scripts/Dialogue/DialoguePlayer.cs, tests/ProjectTest.cs (уточнение прежней проверки пагинации), ORCHESTRATION_PLAN.md. Владелец `/root`, пересечений нет. Out of scope: ассеты/source/, сценарий, новые элементы UI, домен, пользовательские изменения, публикация. Приёмка: немного меньший общий текст, симметричные отступы сверху/снизу, одинаковое положение начала коротких и длинных реплик; сохранены пагинация и читаемость. Проверки: существующий полный прогон всех реплик/страниц двух размеров, verify, diff-check.
+
+
+```text
+Task: HF-45
+Recommended status: REVIEW
+Changed: scripts/Dialogue/DialoguePlayer.cs, tests/ProjectTest.cs, ORCHESTRATION_PLAN.md.
+Checks: финальный tools/verify.ps1 с Godot .NET и DOTNET_ROLL_FORWARD=Major -> PASS (exit 0, build, 47 domain tests, import/integration); git diff --check -> PASS. Evidence: OS TEMP/chikago-hf45-verify.log.
+Acceptance: общий проектный шрифт сохранён; имя/реплики 20 вместо 23, титр 18 вместо 20, межстрочное расстояние 5 вместо 6. Отступы сверху/снизу уравнены до 56, боковые остались 80. Короткие и длинные реплики начинаются на одних направляющих, без смены масштаба/выравнивания при печати. Полный прогон текста подтверждает вместимость и сохранность при двух разрешениях. Удалено устаревшее требование теста обязательно видеть несколько страниц: при новом шрифте исходный сценарий помещается целыми репликами; постраничный алгоритм и проверки высоты/полноты сохранены.
+Read-set exception: нет; координатор расширил write-set на уточнение теста по результатам verify.
+Risks/blocker: ручной visual smoke не выполнялся; пользовательские изменения сохранены.
+Next: оценить уменьшенный текст в игровом окне.
+```
+
+Координатор подтвердил HF-45 2026-11-06 по финальному verify и diff-check: REVIEW → DONE.
+### HF-44 — диалог без служебных элементов и прокрутки
+
+Статус: `DONE`; координатор/исполнитель `/root`; HF-43 DONE; READY 2026-11-06. CP-HF-44: read-set — текущий фронт, scripts/Dialogue/DialoguePlayer.cs, tests/ProjectTest.cs (диалог), README.md (управление), tools/verify.ps1; write-set — эти три файла и ORCHESTRATION_PLAN.md. Владелец `/root`, пересечений нет. Out of scope: исходные ассеты/source/, сюжетные тексты, save/домен, пользовательские изменения, публикация. Приёмка: только имя/реплика, без счётчика/кнопки/подсказок/scroll; Space/ЛКМ раскрывают текст и переключают страницы; длинные реплики делятся по вместимости с сохранением всего текста, resize пересчитывает текущую страницу; отступы сохранены. Проверки: integration пагинации/управления/геометрии обоих размеров, полный verify, diff-check.
+
+
+```text
+Task: HF-44
+Recommended status: REVIEW
+Changed: scripts/Dialogue/DialoguePlayer.cs, tests/ProjectTest.cs, README.md, ORCHESTRATION_PLAN.md.
+Checks: финальный tools/verify.ps1 с Godot .NET и DOTNET_ROLL_FORWARD=Major -> PASS (exit 0, build, 47 domain tests, import/integration); git diff --check -> PASS. Evidence: OS TEMP/chikago-hf44-verify.log.
+Acceptance: убраны Actions/кнопка/счётчик/Hint; в Content только имя и реплика. ScrollActive=false, текст занимает всю оставшуюся высоту. Space и ЛКМ раскрывают текущую страницу/переключают следующую, echo игнорируется; Esc по-прежнему возвращает в меню. Пагинация измеряет реальную высоту RichTextLabel с общим шрифтом, переносами и межстрочным расстоянием, разделяет по пробелам и пересчитывает страницу при resize. Полные прогоны диалога при 960×540 и исходном 1280×720 подтверждают вместимость каждой страницы, конечность переходов и точное восстановление всех исходных реплик конкатенацией страниц. Реальный GUI-клик по тексту, Space, отмена/повтор и переход в gameplay проходят. Горизонтальные отступы 80, верхний 64 и нижний 48 сохранены; доступная высота текста >150.
+Read-set exception: нет.
+Risks/blocker: ручной visual smoke не выполнялся; пользовательские изменения сохранены, commit/push не выполнялись.
+Next: оценить чтение диалога по страницам в игровом окне.
+```
+
+Координатор подтвердил HF-44 2026-11-06 по финальному verify и diff-check: REVIEW → DONE.
+### HF-43 — немного уменьшить окно диалога
+
+Статус: `DONE`; координатор/исполнитель `/root`; HF-42 DONE; READY 2026-11-06. CP-HF-43: read-set — текущий фронт, scripts/Dialogue/DialoguePlayer.cs, tests/ProjectTest.cs (диалог), tools/verify.ps1; write-set — эти два C# файла и ORCHESTRATION_PLAN.md. Владелец `/root`, пересечений нет. Out of scope: ассеты/source/, шрифт/тексты/отступы, доменная логика, пользовательские изменения, публикация. Приёмка: панель немного уже и ниже, весь контент внутри, читаемость сохранена при 1280×720/960×540. Проверки: layout/integration, verify, diff-check.
+
+
+```text
+Task: HF-43
+Recommended status: REVIEW
+Changed: scripts/Dialogue/DialoguePlayer.cs, tests/ProjectTest.cs, ORCHESTRATION_PLAN.md.
+Checks: tools/verify.ps1 с Godot .NET и DOTNET_ROLL_FORWARD=Major -> PASS (exit 0, build, 47 domain tests, import/integration); git diff --check -> PASS. Evidence: OS TEMP/chikago-hf43-verify.log.
+Acceptance: ширина уменьшена с 84% до 78% viewport, высота с 54% (340–420) до 47% (320–370). Шрифт/отступы сохранены, подсказки внутри; layout двух разрешений и полная регрессия проходят.
+Read-set exception: нет.
+Risks/blocker: ручной visual smoke не выполнялся.
+Next: оценить размер окна в игре.
+```
+
+Координатор подтвердил HF-43 2026-11-06 по verify и diff-check: REVIEW → DONE.
+### HF-42 — высота облачка под весь текст диалога
+
+Статус: `DONE`; координатор/исполнитель `/root`; HF-41 DONE; READY 2026-11-06. CP-HF-42: read-set — текущий фронт, scripts/Dialogue/DialoguePlayer.cs, tests/ProjectTest.cs (диалог), tools/verify.ps1; write-set — эти два C# файла и ORCHESTRATION_PLAN.md. Владелец `/root`, пересечений нет. Out of scope: исходные ассеты/source/, сценарий/домен, прочие пользовательские изменения, публикация. Приёмка: облачко выше, имя/реплики/счётчик/кнопка/подсказки внутри него с отступами, без выхода за viewport при 1280×720/960×540. Проверки: layout/integration и полный verify, diff-check.
+
+
+```text
+Task: HF-42
+Recommended status: REVIEW
+Changed: scripts/Dialogue/DialoguePlayer.cs, tests/ProjectTest.cs, ORCHESTRATION_PLAN.md.
+Checks: tools/verify.ps1 с Godot .NET и DOTNET_ROLL_FORWARD=Major -> PASS (exit 0, build, 47 domain tests, import/integration); git diff --check -> PASS. Evidence: OS TEMP/chikago-hf42-verify.log.
+Acceptance: высота облачка 340–420 вместо 280–340, нижняя граница в 16 px от viewport. Подсказки перемещены внутрь общего фона; отступы сверху/снизу 64/48 удерживают текст на плотной части облачка. Layout-тест проверяет нахождение подсказок и кнопки внутри панели и доступность текста при обоих разрешениях, регрессия проходит.
+Read-set exception: нет.
+Risks/blocker: ручной visual smoke не выполнялся.
+Next: оценить высоту облачка в игровом окне.
+```
+
+Координатор подтвердил HF-42 2026-11-06 по verify и diff-check: REVIEW → DONE.
+### HF-41 — внутренние отступы облачка
+
+Статус: `DONE`; координатор/исполнитель `/root`; HF-40 DONE; READY 2026-11-06. CP-HF-41: read-set — текущий фронт, scripts/Dialogue/DialoguePlayer.cs, tests/ProjectTest.cs (диалог), tools/verify.ps1; write-set — эти два C# файла и ORCHESTRATION_PLAN.md; единственный владелец `/root`, пересечений нет. Out of scope: ассеты, source/, логика/сценарий, пользовательские изменения, публикация. Приёмка: контент дальше от мягких краёв, доступная высота текста >80 при двух поддерживаемых размерах. Проверки: существующий layout/integration, полный verify, diff-check.
+
+
+```text
+Task: HF-41
+Recommended status: REVIEW
+Changed: scripts/Dialogue/DialoguePlayer.cs, ORCHESTRATION_PLAN.md.
+Checks: tools/verify.ps1 с Godot .NET и DOTNET_ROLL_FORWARD=Major -> PASS (exit 0, build, 47 domain tests, import/integration); git diff --check -> PASS. Evidence: OS TEMP/chikago-hf41-verify.log.
+Acceptance: внутренние отступы увеличены с 48/48/24/24 до 80/80/40/36 (слева/справа/сверху/снизу). Существующий layout-тест подтверждает доступность текста/кнопки при 1280×720 и 960×540, прежний диалоговый цикл проходит.
+Read-set exception: нет.
+Risks/blocker: ручной visual smoke не выполнялся.
+Next: оценить отступы в игровом окне.
+```
+
+Координатор подтвердил HF-41 2026-11-06 по verify и diff-check: REVIEW → DONE.
+### HF-40 — шрифт и края диалогового облачка
+
+Статус: `DONE`; координатор/исполнитель `/root`; HF-39 DONE; READY 2026-11-06. CP-HF-40: read-set — текущий фронт, scripts/Dialogue/DialoguePlayer.cs, tests/ProjectTest.cs (диалог), themes/game_theme.tres, art/ui/dialog_panel.png.import, tools/verify.ps1, скриншот пользователя; write-set — ORCHESTRATION_PLAN.md, scripts/Dialogue/DialoguePlayer.cs, tests/ProjectTest.cs. Единственный владелец `/root`, пересечений нет. Out of scope: исходный PNG/шрифт, source/, сюжет/домен, пользовательские изменения, публикация. Приёмка: явная общая тема и шрифт реплик проекта, отсутствие Rule, плавное затухание альфы на границах спрайта без прямого среза; прежние размеры/управление. Проверки: integration шрифта/оформления/layout, полный verify, diff-check.
+
+
+```text
+Task: HF-40
+Recommended status: REVIEW
+Changed: scripts/Dialogue/DialoguePlayer.cs, tests/ProjectTest.cs, ORCHESTRATION_PLAN.md.
+Checks: финальный tools/verify.ps1 с Godot .NET и DOTNET_ROLL_FORWARD=Major -> PASS (exit 0, build, 47 domain tests, import/integration); git diff --check -> PASS. Evidence: OS TEMP/chikago-hf40-verify.log.
+Acceptance: общая Theme проекта явно подключена к DialoguePlayer, все начертания RichTextLabel используют её DefaultFont; проверено совпадение font resource для имени, реплик и кнопки. Rule удалён. На самой панели canvas shader плавно обнуляет альфу по всем границам исходного PNG, убирая прямоугольный срез; дочерние тексты/кнопка материал не наследуют. Layout и управление проходят прежнюю регрессию.
+Read-set exception: нет.
+Risks/blocker: ручной visual smoke не выполнялся; исходные ассеты и пользовательские изменения сохранены.
+Next: оценить края облачка в игровом окне.
+```
+
+Координатор подтвердил HF-40 2026-11-06 по финальному verify и diff-check: REVIEW → DONE.
+### HF-39 — композиция и оформление диалога
+
+Статус: `DONE`; координатор/исполнитель `/root`; HF-38-D DONE; READY проверен 2026-11-06. CP-HF-39: read-set — текущий фронт, scripts/Dialogue/DialoguePlayer.cs, tests/ProjectTest.cs (диалог), tools/verify.ps1, приложенный скриншот; write-set — эти два C# файла и ORCHESTRATION_PLAN.md. Владелец `/root`, пересечений нет. Out of scope: исходные PNG/сценарий, доменные правила, source/, пользовательские изменения, публикация. Приёмка: компактная нижняя панель со спрайтом, оформленные имя/разделитель/кнопка, второстепенные подсказки снаружи; текст/кнопка доступны при 1280×720/960×540. Проверки: layout integration, полный verify с Godot .NET и roll-forward, diff-check.
+
+```text
+Task: HF-39
+Recommended status: REVIEW
+Changed: scripts/Dialogue/DialoguePlayer.cs, tests/ProjectTest.cs, ORCHESTRATION_PLAN.md.
+Checks: tools/verify.ps1 с Godot .NET и DOTNET_ROLL_FORWARD=Major -> PASS (exit 0, build, 47 domain tests, import/integration); git diff --check -> PASS. Evidence: OS TEMP/chikago-hf39-verify.log.
+Acceptance: нижняя панель высотой 280–340 вместо растянутой центральной; сохранён PNG. Более тёмный тёплый фон, двухстрочный титр, имя и тонкий золотистый разделитель, кремовые реплики с увеличенным межстрочным расстоянием; компактная кнопка с отдельными hover/pressed стилями. Счётчик и подсказки приглушены, подсказки вынесены за панель. Проверены положение/высота, текст/кнопка и подсказки при двух разрешениях, прежний диалоговый цикл и регрессия.
+Read-set exception: нет.
+Risks/blocker: ручной visual smoke не выполнялся; изменения пользователя сохранены, публикация не выполнялась.
+Next: оценить оформление в игровом окне.
+```
+
+Координатор подтвердил HF-39 2026-11-06 по verify и diff-check: REVIEW → DONE.
+
+### HF-38-D — спрайт окна диалога
+
+Статус: `DONE`; координатор/исполнитель `/root`; HF-37-D DONE; READY проверен 2026-11-06. Единственный владелец write-set `/root`, пересечений нет.
+
+#### CP-HF-38-D
+
+Read-set: текущий фронт плана, scripts/Dialogue/DialoguePlayer.cs, tests/ProjectTest.cs (диалог), art/ui/dialog_panel.png, tools/verify.ps1, ранее определённый путь Godot .NET, git status/diff.
+Write-set: ORCHESTRATION_PLAN.md, scripts/Dialogue/DialoguePlayer.cs, tests/ProjectTest.cs (проверка текстуры панели).
+Out of scope: исходный спрайт, сценарий/логика переходов, source/, прочие пользовательские изменения, commit/push.
+Приёмка: фон Panel использует прикреплённый dialog_panel.png вместо программной заливки/рамки; текст и навигация внутри панели при 1280×720/960×540. Проверки: существующие integration layout/клики и проверка ресурса StyleBoxTexture, tools/verify.ps1 с Godot .NET и DOTNET_ROLL_FORWARD=Major, git diff --check.
+
+```text
+Task: HF-38-D
+Recommended status: REVIEW
+Changed: scripts/Dialogue/DialoguePlayer.cs, tests/ProjectTest.cs, ORCHESTRATION_PLAN.md.
+Checks: tools/verify.ps1 с локальным Godot 4.7.2 .NET и DOTNET_ROLL_FORWARD=Major -> PASS (exit 0, 47 domain tests, build/import/integration); git diff --check -> PASS. Evidence: OS TEMP/chikago-hf38-verify.log.
+Acceptance: StyleBoxTexture использует исходный dialog_panel.png с прозрачностью и растяжением по панели; программная заливка/рамка заменена спрайтом. Отступы 48 по горизонтали и 28 по вертикали удерживают контент внутри мягких краёв. Проверены текстура, доступность текста/кнопок при двух размерах окна и все прежние переходы/клики.
+Read-set exception: нет; source/ не читался.
+Risks/blocker: ручной visual smoke не выполнялся; исходный PNG и пользовательские изменения сохранены.
+Next: посмотреть спрайт в игровом окне.
+```
+
+Координатор подтвердил HF-38-D 2026-11-06 по verify и diff-check: REVIEW → DONE; основные ворота без изменений.
+
+### HF-37-D — вступительный диалог по сценарию
+
+Статус: `DONE`; координатор/исполнитель `/root`; зависимости отсутствуют; READY проверен 2026-11-06, пакет CP-HF-37-D создан до реализации. Единственный владелец плана и перечисленных файлов `/root`, активных пересечений нет.
+
+#### CP-HF-37-D
+
+Read-set: этот план, AGENTS.md, scripts/MainMenu.cs, scenes/main_menu.tscn, ChikagoShop.csproj, tests/ProjectTest.cs, tests/ChikagoShop.Domain.Tests/DaySessionTests.cs, tools/verify.ps1, .vscode/settings.json, README.md; пользовательский C:/Users/artem/Downloads/сценарий.doc (текст вступления/раскадровки); список путей art/ и существующий art/rooms/showroom.jpg, art/fonts/game.ttf; новые файлы write-set.
+Write-set: ORCHESTRATION_PLAN.md, scripts/MainMenu.cs, scripts/Dialogue/DialoguePlayer.cs[.uid], src/ChikagoShop.Domain/Dialogue/DialogueSession.cs, tests/ChikagoShop.Domain.Tests/DialogueSessionTests.cs, tests/ProjectTest.cs, dialogue/intro.ru.json, README.md.
+Out of scope: source/, project.godot и его пользовательские изменения, TradeScene.cs, save schema, экономика, обучение и диалоги следующих дней, новый арт/озвучка, публикация. Существующие изображения временно используются как фон, новые иллюстрации раскадровки не создаются.
+Приёмка: «Играть» запускает раскадровку и все реплики вступления в исходном порядке, до завершения игровая сцена/таймер не создаются; посимвольный вывод, следующий шаг кнопкой/Enter/Space, возврат в меню через Escape; финал однократно открывает прежнюю игровую сцену. Данные отдельно от UI, последовательность вне MainMenu/TradeScene. Проверки: domain tests загрузки/порядка/границ, Godot integration запуска/ввода/отмены/завершения/повторного запуска, tools/verify.ps1, git diff --check.
+Read-set exception: координатор точечно искал расположение меню/тестов и инструменты чтения DOC перед оформлением CP. DOC прочитан с FileShare.ReadWrite, так как открыт другим приложением; source/ не читался.
+
+```text
+Task: HF-37-D
+Recommended status: REVIEW
+Changed: ORCHESTRATION_PLAN.md, README.md, scripts/MainMenu.cs, scripts/Dialogue/DialoguePlayer.cs[.uid], src/ChikagoShop.Domain/Dialogue/DialogueSession.cs, tests/ChikagoShop.Domain.Tests/DialogueSessionTests.cs, tests/ProjectTest.cs, dialogue/intro.ru.json.
+Checks: tools/verify.ps1 -GodotPath <локальный Godot 4.7.2 .NET console> с DOTNET_ROLL_FORWARD=Major -> PASS (build: 0 ошибок/предупреждений; 47 domain tests; Godot import и полная integration regression); git diff --check -> PASS. Evidence: OS TEMP/chikago-hf37-verify.log.
+Acceptance: «Играть» открывает 26 последовательных записей (22 исходные реплики и 4 ремарки), имена говорящих, печать текста, раскрытие/переход кнопкой или Enter/Space. Esc возвращает в меню, повторный запуск начинает заново; повторный Play/финальный Advance не дублируют переход. Gameplay создаётся только после последней записи; прежний save загружается без изменений. Проверены реальные GUI-клики, клавиатура/игнорирование echo, текст всех записей, доступность панели/кнопки при 1280×720 и 960×540, отмена/повтор и возврат из gameplay.
+Read-set exception: дополнительно просмотрен art/ui/dialog_panel.png для оценки пригодности (не использован); точечный поиск Godot .NET в Downloads для диагностики toolchain. Configured Steam Godot не поддерживает C#, первый verify с ним непригоден; выбран установленный Godot .NET через существующий параметр -GodotPath. На машине только runtime .NET 10, поэтому testhost запущен с roll-forward без изменения проекта. Первый sandbox-запуск Godot не мог записать системные логи, финальная проверка выполнена с одобренным повышением доступа. source/ не читался.
+Risks/blocker: ручной visual smoke не выполнен. Фон существующий временный, действия раскадровки представлены текстом; отдельные иллюстрации, звонок/озвучка и дальнейшее обучение вне scope. Текст сценария пока русский при обоих языках UI. Пользовательский project.godot сохранён; commit/push не выполнялись.
+Next: проверить вступление в игровом окне и согласовать следующую итерацию постановки.
+```
+
+Координатор подтвердил HF-37-D 2026-11-06 по финальному verify (exit 0), integration acceptance и diff-check: REVIEW → DONE. Статус задачи: `DONE`; основные ворота без изменений.
+
+
+
 ### HF-38 — слияние всей рабочей ветки и публикация в main
 
 Статус: `DONE`; координатор/исполнитель `/root`; HF-37 DONE; READY проверен 2026-11-06. Пользователь явно поручил включить все локальные изменения, слить feature/second-minigame в main и отправить на GitHub.
@@ -1541,10 +1837,3 @@ MVP считается готовым только если одновремен
 - музыка, расширенный SFX и аудиомикшер, если владелец продукта отдельно не вернёт их в MVP;
 - другие языки, controller/mobile UX;
 - Steam-функции, достижения, облачные сохранения и production telemetry.
-
-### HF-53 — checkpoint и merge feature/dialogue-system
-
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-06. Пользователь поручил пустой checkpoint перед merge. Checkpoint main: fea23cb.
-CP-HF-53: read-set — текущий фронт обеих веток ORCHESTRATION_PLAN.md, AGENTS.md, tools/verify.ps1, git status/diff/log/branches/remotes, OS TEMP/chikago-hf53-verify.log; write-set — ORCHESTRATION_PLAN.md, Git index/commits, main и origin/main; merge только ORCHESTRATION_PLAN.md, README.md, dialogue/intro.ru.json, scenes/trade_scene.tscn, scripts/Dialogue/DialoguePlayer.cs[.uid], scripts/MainMenu.cs, scripts/TradeScene.cs, scripts/UI/ZoomResponsiveUi.cs, src/ChikagoShop.Domain/Dialogue/DialogueSession.cs, src/ChikagoShop.Domain/Dialogue/SentencePages.cs, tests/ChikagoShop.Domain.Tests/DialogueSessionTests.cs, tests/ChikagoShop.Domain.Tests/SentencePagesTests.cs, tests/ProjectTest.cs. Зависимости HF-52 DONE в исходной ветке; активных пересечений нет. Владелец плана/index `/root`.
-Out of scope: source/, новая продуктовая логика, force push, удаление веток.
-Приёмка: пустой checkpoint предшествует merge, feature/dialogue-system является предком main, tools/verify.ps1 и git diff --check PASS, push origin main без force, чистое дерево и main...origin/main=0/0.

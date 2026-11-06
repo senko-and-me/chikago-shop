@@ -58,7 +58,9 @@ public partial class ZoomResponsiveUi : Node
         foreach (var entry in _elements)
         {
             entry.Control.PivotOffset = entry.Control.Size / 2f;
-            entry.Control.Scale = entry.Scale * scale;
+            entry.Control.Scale = entry.Scale * (entry.Control.Name == "TradePanel"
+                ? Mathf.Clamp(1f / Mathf.Max(zoom, 0.01f), 0.6f, 1.2f)
+                : scale);
             if (entry.Control.Name == "PriceHint")
             {
                 // Keep a constant screen-space gap after scaling around the center.
