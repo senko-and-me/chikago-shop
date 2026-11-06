@@ -9,7 +9,7 @@
 
 ### HF-38 — слияние всей рабочей ветки и публикация в main
 
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; HF-37 DONE; READY проверен 2026-11-06. Пользователь явно поручил включить все локальные изменения, слить feature/second-minigame в main и отправить на GitHub.
+Статус: `DONE`; координатор/исполнитель `/root`; HF-37 DONE; READY проверен 2026-11-06. Пользователь явно поручил включить все локальные изменения, слить feature/second-minigame в main и отправить на GitHub.
 
 #### CP-HF-38
 
@@ -19,6 +19,18 @@ Out of scope: source/, ignored/generated files, новая продуктова�
 Приёмка: полный tools/verify.ps1 PASS, git diff --check PASS; все неигнорируемые локальные изменения закоммичены; feature/second-minigame слита в main; push origin main без force; чистое рабочее дерево и main...origin/main=0/0.
 
 
+```text
+Task: HF-38
+Recommended status: REVIEW
+Changed: 37 файлов в e0790fa; merge fd4d7c7 в main; origin/main обновлён без force.
+Checks: tools/verify.ps1 -> PASS (exit 0, build, 47 domain tests, Godot import/integration); staged diff-check -> PASS; push origin main -> PASS; рабочее дерево чистое; main...origin/main=0/0; feature/second-minigame является предком main.
+Acceptance: все неигнорируемые локальные изменения, включая пользовательские настройки/сцену/шрифт и оба HTML-референса, опубликованы в main по прямому запросу пользователя.
+Read-set exception: нет; source/ не читался.
+Risks/blocker: нет.
+Next: продолжить по запросу пользователя.
+```
+
+Координатор подтвердил HF-38 2026-11-06 по verify, успешному merge/push и чистому дереву: REVIEW → DONE. Эта запись публикуется отдельным документационным commit.
 ### HF-37 — полировка инструментов в общем окне крафта
 
 Статус: `DONE`; координатор/исполнитель `/root`; HF-36 DONE; READY проверен 2026-11-06; ветка feature/second-minigame.
