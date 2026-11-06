@@ -68,7 +68,8 @@ public partial class DialoguePlayer : Control
         panel.AnchorBottom = 1;
         void LayoutPanel()
         {
-            panel.OffsetTop = -Math.Clamp(Size.Y * 0.34f, 220, 250) - 16;
+            // Keep room for three full lines below the speaker, including padding.
+            panel.OffsetTop = -Math.Clamp(Size.Y * 0.34f, 260, 280) - 16;
             panel.OffsetBottom = -16;
         }
         Resized += LayoutPanel;
@@ -97,6 +98,12 @@ public partial class DialoguePlayer : Control
             _text.AddThemeFontOverride(font, Theme.DefaultFont);
         _text.AddThemeConstantOverride("line_separation", 5);
         _text.AddThemeColorOverride("default_color", new Color("f2e6d1"));
+        // Reserve actual font metrics, not just a fixed panel height: the speaker,
+        // theme padding and viewport layout must never squeeze a third line out.
+        _text.CustomMinimumSize = new Vector2(0,
+            Mathf.Ceil(_text.GetThemeFont("normal_font").GetHeight(20) * 3 +
+                _text.GetThemeConstant("line_separation") * 3 +
+                _text.GetThemeStylebox("normal").GetMinimumSize().Y));
         column.AddChild(_text);
         var scrollbar = _text.GetVScrollBar();
         scrollbar.CustomMinimumSize = new Vector2(8, 0);
@@ -143,7 +150,7 @@ public partial class DialoguePlayer : Control
             return _text.GetContentHeight() <= _text.Size.Y;
         });
         _text.Text = source.Substring(_pageStart, _pageEnd - _pageStart);
-        _text.ScrollActive = _text.GetLineCount() >= 3 || _text.GetContentHeight() > _text.Size.Y;
+        _text.ScrollActive = _text.GetContentHeight() > _text.Size.Y;
         _text.ScrollToLine(0);
         _text.VisibleCharacters = 0;
         _characters = 0;

@@ -7,6 +7,103 @@
 
 ## Текущий фронт
 
+### HF-59 — публикация карточек улучшений и исправлений диалога
+
+Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; HF-54…HF-58 DONE; READY 2026-11-07. Пользователь явно поручил push на GitHub.
+CP-HF-59: read-set — текущий фронт, git status/diff/log/branches/remotes, tools/verify.ps1, OS TEMP/chikago-hf58-verify.log и chikago-hf58-preview.log. Write-set — ORCHESTRATION_PLAN.md, Git index/commit, main и origin/main; публикация всех текущих16 файлов: ORCHESTRATION_PLAN.md, README.md, localization/en.tres, scripts/Crafting/WorkshopItemCatalog.cs, scripts/Days/DayCycleController.cs, scripts/Dialogue/DialoguePlayer.cs, scripts/TradeScene.cs, scripts/UI/InventoryUI.cs, scripts/UI/PauseMenu.cs, scripts/UI/RarityPanel.cs, src/ChikagoShop.Domain/Days/DaySession.cs, tests/ProjectTest.cs, scripts/UI/DayTransitionCard.cs[.uid], src/ChikagoShop.Domain/Days/DayUpgradeSession.cs, tests/ChikagoShop.Domain.Tests/DayUpgradeSessionTests.cs. Единственный владелец index/плана `/root`; пересечений нет.
+Out of scope: source/, ignored/generated files, новая продуктовая логика, force push, удаление веток.
+Приёмка: полный verify и GPU evidence HF-58 PASS, staged diff-check PASS, commit включает все изменения HF-54…58; push origin main без force; чистое дерево и main...origin/main=0/0.
+### HF-58 — карты стоимости одежды и инструментов
+
+Статус: `DONE`; координатор/исполнитель `/root`; HF-57 DONE; READY 2026-11-07.
+CP-HF-58: read-set — текущий фронт, src/ChikagoShop.Domain/Days/DayUpgradeSession.cs, scripts/UI/DayTransitionCard.cs, scripts/Days/DayCycleController.cs, scripts/Crafting/WorkshopItemCatalog.cs, scripts/UI/RarityPanel.cs, scripts/UI/InventoryUI.cs, scripts/UI/SlotUI.cs, scripts/CounterWorld.cs (поиск использования стоимости), scripts/TradeScene.cs (цены/торговля/forwarding/save/checkpoint), tests/ChikagoShop.Domain.Tests/DayUpgradeSessionTests.cs, tests/ProjectTest.cs, localization/en.tres, README.md, tools/verify.ps1, git status/diff. Write-set — ORCHESTRATION_PLAN.md, src/ChikagoShop.Domain/Days/DayUpgradeSession.cs, scripts/UI/DayTransitionCard.cs, scripts/Days/DayCycleController.cs, scripts/UI/RarityPanel.cs, scripts/UI/InventoryUI.cs, scripts/TradeScene.cs (готовый domain price/forwarding/refresh/save fields), tests/ChikagoShop.Domain.Tests/DayUpgradeSessionTests.cs, tests/ProjectTest.cs, localization/en.tres, README.md. Единственный владелец save schema/плана `/root`; пересечений нет. Предыдущие локальные изменения сохраняются.
+Out of scope: source/, сцены/ассеты, стоимость крафта/открытия комнаты, новый баланс вероятностей, новая доменная логика TradeScene, commit/push.
+Приёмка: две новые карты +20% базовой стоимости atelier/music за выбор, складываются до конца игры; три предложения из пула7 на каждом переходе. Эффект действует на старые/новые вещи категории, инвентарные подсказки/таблицы/офферы/продажа/reload согласованы. Повышенные цены зелёные, ниже baseline красные, неизменные нейтральные. Выбор/уровни/checkpoint/newgame/старые saves совместимы. Domain rounding/stack/isolation и GUI выбор/reload/торговля/все редкости; tools/verify.ps1 и git diff --check. Evidence: OS TEMP/chikago-hf58-verify.log и GPU preview logs/screenshot.
+```text
+Task: HF-58
+Recommended status: REVIEW
+Changed: src/ChikagoShop.Domain/Days/DayUpgradeSession.cs; scripts/UI/DayTransitionCard.cs; scripts/Days/DayCycleController.cs; scripts/UI/RarityPanel.cs; scripts/UI/InventoryUI.cs; scripts/TradeScene.cs (вызовы готовой цены/refresh/save/checkpoint); tests/ChikagoShop.Domain.Tests/DayUpgradeSessionTests.cs; tests/ProjectTest.cs; localization/en.tres; README.md; ORCHESTRATION_PLAN.md. Предыдущие локальные изменения сохранены.
+Checks: tools/verify.ps1 -> PASS (exit 0, build, 70 domain tests, Godot import/integration); GPU ProjectTest gl_compatibility/--day-card-preview -> PASS (exit 0, stderr пуст); screenshots OS TEMP/chikago-price-upgrade-preview.png и chikago-price-table-preview.png осмотрены; git diff --check -> PASS. Evidence: OS TEMP/chikago-hf58-verify.log, chikago-hf58-preview.log.
+Acceptance: карты «Имя на этикетке» (одежда) и «Коллекционный звук» (инструменты) добавляют20п.п. базовой стоимости категории за выбор, действуют до конца игры и складываются аддитивно. Пул7, одновременно3 предложения; atelier price появляется4→5, music price5→6. Domain рассчитывает цены с decimal/half-up и ограничением уровня6; статический базовый каталог не меняется. Текущая цена применяется к обеим точкам расчёта оффера, старым/новым товарам и tooltip; таблица показывает все5 повышенных цен зелёным, другую категорию нейтральной. Save v10 и checkpoint сохраняют оба уровня; v1…9 читаются с нулевыми price-level по умолчанию. Domain тестирует stack/isolation/однократность/rounding/overflow/restore; GUI обе карты кнопкой, все10 товаров/5 редкостей, реальные таблицы/цвета, активную сделку и reload, продажу ровноодинраз, создание новых вещей, повторную карту40%, перенос на новый день, сохранение/rollback checkpoint/newgame. Крафт90$/140$, вероятности и предыдущие улучшения сохранены. GPU screenshots подтверждают карту +20% и таблицу36/60/96/144/240$ зелёным для одежды.
+Read-set exception: нет; source/ не читался.
+Risks/blocker:20% — демонстрационный баланс, стоимость крафта не меняется; commit/push не выполнялись.
+Next: при переходе4→5 выбрать «Имя на этикетке» и открыть таблицу одежды.
+```
+
+Координатор подтвердил HF-58 2026-11-07 по verify, GPU regression и screenshots: REVIEW → DONE.
+### HF-57 — выбор одного из трёх улучшений между днями
+
+Статус: `DONE`; координатор/исполнитель `/root`; HF-56 DONE; READY 2026-11-07. Пользователь уточнил: карточки должны предлагать три улучшения, сюжетные заставки HF-56 заменяются.
+CP-HF-57: read-set — текущий фронт, scripts/UI/DayTransitionCard.cs, scripts/Days/DayCycleController.cs, scripts/TradeScene.cs (подключение, энергия/HUD, переходы, save/load), scripts/UI/PauseMenu.cs, src/ChikagoShop.Domain/Days/DaySession.cs, tests/ChikagoShop.Domain.Tests/DaySessionTests.cs, tests/ProjectTest.cs (дни/карточки/save), localization/en.tres, README.md, tools/verify.ps1, .vscode/settings.json, git status/diff; write-set — ORCHESTRATION_PLAN.md, scripts/UI/DayTransitionCard.cs, scripts/Days/DayCycleController.cs, scripts/TradeScene.cs (только forwarding, save/load полей и HUD), src/ChikagoShop.Domain/Days/DayUpgradeSession.cs, src/ChikagoShop.Domain/Days/DaySession.cs, tests/ChikagoShop.Domain.Tests/DayUpgradeSessionTests.cs, tests/ChikagoShop.Domain.Tests/DaySessionTests.cs, tests/ProjectTest.cs, localization/en.tres, README.md. OS TEMP/chikago-hf57-verify.log и preview logs/screenshot. Единственный владелец схемы/плана `/root`; пересечений нет. Локальные HF-54…56 сохраняются.
+Уточнение пользователя: категорийные улучшения повышают редкие шансы одежды/инструментов до конца игры, выше baseline зелёным, ниже красным. Read/write-set дополнен: scripts/Crafting/WorkshopItemCatalog.cs, scripts/UI/RarityPanel.cs; read-set: config/economy.v1.json, src/ChikagoShop.Domain/Configuration/EconomyConfig.cs, src/ChikagoShop.Domain/Crafting/WeightedItemTable.cs, scenes/trade_scene.tscn (только пути панелей). Диагностика: точечный rg --files scripts для поиска RarityPanel.cs. Save schema и checkpoint fields принадлежат только `/root`.
+Out of scope: source/, сцены/ассеты, финальный баланс, новая доменная логика в TradeScene, commit/push.
+Приёмка: на переходах1→2…6→7 одновременно три карточки, выбрать ровно одну; пул демо:50$ сразу /1 энергия на следующий день /30сек на следующий день /постоянные редкие шансы atelier /постоянные редкие шансы music. Эффект однократный, UI показывает его срок/величину; pending/выбор/эффект переживают reload, нет обхода через перезапуск; квоты/final/failed/старые saves совместимы. Проверки: domain одноразовости/invalid/restore/time cap; integration три эффекта/reload/все6 переходов/RU/EN/mouse/keyboard/layout и полный verify/diff-check; GPU screenshot.
+```text
+Task: HF-57
+Recommended status: REVIEW
+Changed: scripts/UI/DayTransitionCard.cs; scripts/Days/DayCycleController.cs; src/ChikagoShop.Domain/Days/DayUpgradeSession.cs; src/ChikagoShop.Domain/Days/DaySession.cs; scripts/Crafting/WorkshopItemCatalog.cs; scripts/UI/RarityPanel.cs; scripts/TradeScene.cs (forwarding, применение готового roll, HUD, save/checkpoint fields); tests/ChikagoShop.Domain.Tests/DayUpgradeSessionTests.cs; tests/ProjectTest.cs; localization/en.tres; README.md; ORCHESTRATION_PLAN.md. Локальные предыдущие изменения сохранены.
+Checks: tools/verify.ps1 -> PASS (exit 0, build, 67 domain tests, Godot import/integration); GPU ProjectTest с gl_compatibility/--day-card-preview -> PASS (exit 0, stderr пуст), screenshot OS TEMP/chikago-day-card-preview.png осмотрен; git diff --check -> PASS. Evidence: OS TEMP/chikago-hf57-verify.log, chikago-hf57-preview.log.
+Acceptance: повествовательные заставки заменены на три одновременно видимых карточки, выбрать ровно одну кнопкой/1–3; набор детерминированно меняется по дням из пяти вариантов (50$, энергия, время, одежда, инструменты). Базовые деньги/энергия/время подтверждены пользователем; категорийные бонусы действуют до конца игры и складываются. Первый уровень даёт45/25/18/9/3 вместо60/25/10/4/1; domain переносит до15п.п. из common к трём редким классам, сохраняет сумму100 и положительность. Общий источник весов используется roll и таблицей: выше baseline зелёный, ниже красный, обычные значения чёрные. Save v9 хранит pending/выбор/уровни/снимок checkpoint; старые saves загружаются без бонусов. Перезапуск до выбора возвращает те же три карточки; после выбора не повторяет награду, сохраняет3 энергии или150сек; новые дни сбрасывают временные эффекты, сохраняют категории. Checkpoint восстанавливает снимок категорий, новая игра сбрасывает. Domain тестирует одноразовость/непредлагаемый выбор/stack/restore/time bounds; integration все6 переходов, RU/EN, 960×540/1280×720, кнопки/клавиши/echo/Escape, failed/final, reload каждого из5 бонусов, checkpoint/newgame и все100 tickets обеих категорий против отображённых весов/цветов.
+Read-set exception: точечно найдены/прочитаны RarityPanel.cs, config и catalog для уточнения категорийного улучшения; read/write-set расширен координатором в CP до правок; source/ не читался.
+Risks/blocker: баланс демонстрационный; набор из5 вариантов ротируется по дням, без RNG. Обновлённые механики доменные, TradeScene не получает новых правил. Commit/push не выполнялись.
+Next: завершить день и выбрать улучшение; категорийные карточки появляются с перехода2→3.
+```
+
+Координатор подтвердил HF-57 2026-11-07 по verify, GPU regression и screenshot: REVIEW → DONE. HF-56 заменён уточнённым требованием пользователя.
+### HF-56 — демо-карточки между днями 1–7
+
+Статус: `DONE`; координатор/исполнитель `/root`; HF-55 DONE; READY 2026-11-06.
+CP-HF-56: read-set — текущий фронт, scripts/Days/DayCycleController.cs, scripts/TradeScene.cs (подключение/EndDay/AdvanceToNextDay), scripts/UI/PauseMenu.cs, scripts/UI/EmbroideryGame.cs (стиль/модальность), scripts/Localization/GameLocalization.cs, src/ChikagoShop.Domain/Days/DaySession.cs, tests/ProjectTest.cs, localization/en.tres, README.md, tools/verify.ps1, git status/diff; render logs и screenshot OS TEMP/chikago-day-card-preview.png; write-set — ORCHESTRATION_PLAN.md, scripts/UI/DayTransitionCard.cs[.uid], scripts/Days/DayCycleController.cs, scripts/TradeScene.cs (только forwarding свойства модальности), scripts/UI/PauseMenu.cs (блокировка поверх карточки), tests/ProjectTest.cs, localization/en.tres, README.md. Владелец `/root`, пересечений нет; локальные HF-54/HF-55 сохраняются.
+Out of scope: source/, сцены/ассеты, новый баланс/сюжетные последствия, save schema, новая доменная логика в TradeScene, commit/push.
+Приёмка: шесть отдельных демо-карточек1→2…6→7, заголовок/атмосферный текст/кнопка продолжения RU/EN, viewport960×540/1280×720. Успешный переход фиксируется существующим кодом, до продолжения часы/покупатели/камера/пауза блокированы; повторное нажатие не перескакивает день. Нет карточки после7/при поражении; reload/checkpoint/new game/освобождение не оставляют pause. Проверки: integration всех переходов/квоты/failed/final/reload/mouse/keyboard/layout, полный tools/verify.ps1 и git diff --check. Evidence: OS TEMP/chikago-hf56-verify.log.
+```text
+Task: HF-56
+Recommended status: REVIEW
+Changed: scripts/UI/DayTransitionCard.cs[.uid]; scripts/Days/DayCycleController.cs; scripts/TradeScene.cs (forwarding свойства DayTransitionOpen); scripts/UI/PauseMenu.cs; tests/ProjectTest.cs; localization/en.tres; README.md; ORCHESTRATION_PLAN.md. Локальные HF-54/HF-55 сохранены.
+Checks: tools/verify.ps1 -> PASS (exit 0, build, 59 domain tests, Godot import/integration); дополнительный build и GPU ProjectTest с gl_compatibility/--day-card-preview -> PASS (exit 0, stderr пуст); screenshot OS TEMP/chikago-day-card-preview.png осмотрен; git diff --check -> PASS. Evidence: OS TEMP/chikago-hf56-verify.log, chikago-hf56-preview.log.
+Acceptance: шесть отдельных карточек со своим атмосферным текстом: Первый след, Город присматривается, Цена обещания, Долг закрыт, После полуночи, Последний рассвет. Тёмный фон, золотая рамка/номера дней, общий шрифт, без scroll. После успешного перехода существующая логика сохраняет новый день; CanvasLayer120 замораживает мир до кнопки/Space/Enter. Повторный EndDay/Close не пропускает день; pause/craft поверх карточки не открываются. Квота после4, проигрыш и победа после7 сохранены. Integration всех6 переходов при960×540/1280×720 наRU/EN проверяет разные заголовки, route/кнопку, bounds, блокировку повторов/часов/действий, mouse/keyboard, квоту, final/failed, checkpoint/newgame, free/reload без оставшегося pause и повторной оплаты. GPU screenshot6→7 подтверждает внешний вид и читаемость.
+Read-set exception: точечно прочитан .vscode/settings.json для запуска GPU-проверки настроенным Godot; source/ не читался.
+Risks/blocker: тексты демо, без сюжетных последствий и новых иллюстраций; при reload уже сохранённого перехода карточка не повторяется. Commit/push не выполнялись.
+Next: завершить первый день и нажать «Начать следующий день» для просмотра первой карточки.
+```
+
+Координатор подтвердил HF-56 2026-11-06 по verify, GPU regression и screenshot: REVIEW → DONE.
+### HF-55 — устойчивое место под три строки диалога
+
+Статус: `DONE`; координатор/исполнитель `/root`; HF-54 DONE; READY 2026-11-06.
+CP-HF-55: read-set — текущий фронт, scripts/Dialogue/DialoguePlayer.cs, tests/ProjectTest.cs (диалог), tools/verify.ps1, git status/diff; write-set — ORCHESTRATION_PLAN.md, scripts/Dialogue/DialoguePlayer.cs, tests/ProjectTest.cs. Владелец `/root`, активных пересечений нет; локальные HF-54 сохраняются.
+Out of scope: source/, сюжет/домен, ассеты, остальные экраны, commit/push.
+Приёмка: текстовое поле гарантированно вмещает три строки фактического шрифта с межстрочными интервалами; три примера пользователя проверены при переходах и resize, scrollbar только при реальном переполнении. Проверки: GUI integration последовательности при960×540,1096×616,1280×720,1600×900; прежний long overflow; tools/verify.ps1; git diff --check. Evidence: OS TEMP/chikago-hf55-verify.log.
+```text
+Task: HF-55
+Recommended status: REVIEW
+Changed: scripts/Dialogue/DialoguePlayer.cs; tests/ProjectTest.cs; ORCHESTRATION_PLAN.md. Локальные HF-54 сохранены.
+Checks: tools/verify.ps1 -> PASS (exit 0, build, 59 domain tests, Godot import/integration); git diff --check -> PASS. Evidence: OS TEMP/chikago-hf55-verify.log.
+Acceptance: RichTextLabel получает минимальную высоту по фактическим метрикам трёх строк шрифта20, межстрочным интервалам и theme padding; VBox/Panel не сжимают поле ниже неё. Три реплики из screenshots проходят последовательно на960×540,1096×616,1280×720,1600×900 и после resize: текст целиком, при числе строк до3 scroll выключен и scrollbar скрыт. Прежние fitting/long-overflow tests и полный prologue проходят; очень длинное предложение доступно через scroll.
+Read-set exception: нет; source/ не читался.
+Risks/blocker: screenshots запущенного пользователем процесса не воспроизведены как live GUI; проверено headless через настоящий Godot layout. Commit/push не выполнялись.
+Next: перезапустить игровую сцену и оценить обновлённый диалог.
+```
+
+Координатор подтвердил HF-55 2026-11-06 по verify и diff-check: REVIEW → DONE.
+### HF-54 — прокрутка только при переполнении диалога
+
+Статус: `DONE`; координатор/исполнитель `/root`; HF-53 DONE; READY 2026-11-06.
+CP-HF-54: read-set — текущий фронт, scripts/Dialogue/DialoguePlayer.cs, tests/ProjectTest.cs (диалог), tools/verify.ps1, git status/diff; write-set — ORCHESTRATION_PLAN.md, scripts/Dialogue/DialoguePlayer.cs, tests/ProjectTest.cs. Единственный владелец `/root`, пересечений нет.
+Out of scope: source/, сценарий/домен, ассеты, другие экраны, commit/push.
+Приёмка: помещающиеся реплики, включая три строки и пример пользователя, без scroll; переполняющее предложение целиком доступно через прежний scrollbar, шрифт20 и управление сохранены. Проверки: integration fitting/overflow на 1280×720 и 960×540, tools/verify.ps1, git diff --check. Evidence: OS TEMP/chikago-hf54-verify.log.
+```text
+Task: HF-54
+Recommended status: REVIEW
+Changed: scripts/Dialogue/DialoguePlayer.cs; tests/ProjectTest.cs; ORCHESTRATION_PLAN.md.
+Checks: tools/verify.ps1 -> PASS (exit 0, build, 59 domain tests, Godot import/integration); git diff --check -> PASS. Evidence: OS TEMP/chikago-hf54-verify.log.
+Acceptance: удалено включение scroll по трём строкам; минимальная высота облачка260 (максимум280) вмещает три полные строки с прежним шрифтом20 и внутренними отступами. Integration проверяет точную реплику со screenshot при1280×720, три строки при960×540: весь текст помещается, scroll выключен, scrollbar скрыт. Длинное предложение остаётся целым, scrollbar и доступность конца/защита от случайного клика проверены на обоих размерах. Существующие сценарий/управление/полировка проходят.
+Read-set exception: нет; source/ не читался.
+Risks/blocker: ручной visual smoke не выполнялся; commit/push не выполнялись.
+Next: посмотреть реплику Кастелло в игровом сеансе.
+```
+
+Координатор подтвердил HF-54 2026-11-06 по verify и diff-check: REVIEW → DONE.
 ### HF-53 — checkpoint и merge feature/dialogue-system
 
 Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-06. Пользователь поручил пустой checkpoint перед merge. Checkpoint main: fea23cb.

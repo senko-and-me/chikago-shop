@@ -72,6 +72,8 @@ public partial class TradeScene : Node2D
 	public bool CraftMiniGameOpen => (_embroidery?.IsOpen ?? false) || (_polishing?.IsOpen ?? false);
 	private int _energyRemaining = EnergyPerDay;
 	public bool DayClosed => _dayCycle.Session.IsClosed;
+	public bool DayTransitionOpen => _dayCycle?.TransitionOpen ?? false;
+	public ChikagoShop.Domain.Days.DayUpgradeSession DayUpgrades => _dayCycle?.Upgrades;
 	public double DayRemainingSeconds => _dayCycle.Session.RemainingSeconds;
 	public int[] StoredItems => _storedItems.ToArray();
 	public int[] ShowcaseItems => (int[])_showcaseItems.Clone();
@@ -81,6 +83,7 @@ public partial class TradeScene : Node2D
 	public static string GetItemArtPath(int index) => Items[index].ArtPath;
 	public static string GetItemRarity(int index) => GameLocalization.Text(Items[index].Rarity);
 	public static int GetItemBasePrice(int index) => Items[index].BasePrice;
+	public int GetItemPrice(int index) => DayUpgrades.Price(Items[index].WorkshopId, Items[index].BasePrice);
 	public static int GetItemRerollLimit(int index) => Items[index].Rerolls;
 	public static int GetRerollsForRarity(string rarityId) => WorkshopItemCatalog.RerollsFor(rarityId);
 	public int ItemIndex { get; set; } = -1;
@@ -214,6 +217,7 @@ public partial class TradeScene : Node2D
 		RefreshItemButtons();
 		LogStoredItems();
 		_localizationReady = true;
+		_dayCycle.ResumeUpgradeChoice();
 	}
 
 	public override void _Notification(int what)
@@ -340,7 +344,7 @@ public partial class TradeScene : Node2D
 		EnergyRemaining--;
 		for (int itemNumber = 0; itemNumber < ItemsPerSpin; itemNumber++)
 		{
-			int index = WorkshopItemCatalog.Roll(workshop, _rng.RandiRange(0, WorkshopItemCatalog.TotalWeight(workshop) - 1));
+			int index = WorkshopItemCatalog.Roll(workshop, _rng.RandiRange(0, WorkshopItemCatalog.TotalWeight(workshop) - 1), DayUpgrades);
 			_storedItems.Add(index);
 			GD.Print($"{workshop}: получен предмет {Items[index].Name} (индекс {index}).");
 		}
@@ -457,7 +461,7 @@ public partial class TradeScene : Node2D
 
 	private void RefreshOffer()
 	{
-		int basePrice = Items[ItemIndex].BasePrice;
+		int basePrice = GetItemPrice(ItemIndex);
 		OfferedPrice = PriceForPercent(basePrice, Percentage);
 		_baseLabel.Text = GameLocalization.Format("Обычно: {0}$", basePrice);
 		_percentLabel.Text = GameLocalization.Format("К цене: {0}{1}%", Percentage >= 0 ? "+" : "", Percentage);
@@ -473,7 +477,7 @@ public partial class TradeScene : Node2D
 	{
 		if (!TradeActive || RerollsRemaining <= 0) return;
 		RerollsRemaining--;
-		int basePrice = Items[ItemIndex].BasePrice;
+		int basePrice = GetItemPrice(ItemIndex);
 		var higher = new List<int>();
 		var lower = new List<int>();
 		for (int value = -30; value <= 30; value++)
@@ -528,7 +532,7 @@ public partial class TradeScene : Node2D
 	private void RefreshProgress()
 	{
 		_dayLabel.Text = GameLocalization.Format("День: {0} / {1}", CurrentDay, FinalDay);
-		_energyLabel.Text = GameLocalization.Format("Энергия: {0} / {1}", EnergyRemaining, EnergyPerDay);
+		_energyLabel.Text = GameLocalization.Format("Энергия: {0} / {1}", EnergyRemaining, _dayCycle.Upgrades.EnergyCapacity);
 		if (Completed)
 		{
 			_quotaLabel.Text = "Все квоты выплачены";
@@ -553,6 +557,13 @@ public partial class TradeScene : Node2D
 	public void SynchronizeDayState()
 	{
 		_buyerCountdown = 0;
+		RefreshDayPresentation();
+	}
+
+	public void RefreshDayPresentation()
+	{
+		_inventoryUI.UpdateUI(_storedItems);
+		RefreshScore();
 		RefreshProgress();
 		RefreshItemButtons();
 		SaveProgress();
@@ -584,6 +595,7 @@ public partial class TradeScene : Node2D
 				EnergyRemaining = EnergyPerDay;
 				CheckpointEnergy = EnergyRemaining;
 				CheckpointMusicWorkshopUnlocked = MusicWorkshopUnlocked;
+				_dayCycle.CaptureCheckpointUpgrades();
 				_checkpointItems.Clear();
 				_checkpointItems.AddRange(_storedItems);
 				Array.Copy(_showcaseItems, _checkpointShowcaseItems, ShowcaseCapacity);
@@ -620,6 +632,7 @@ public partial class TradeScene : Node2D
 		_buyerCountdown = Array.Exists(_showcaseItems, item => item >= 0) ? NextBuyerDelay() : 0;
 		_inventoryUI.DeselectAll();
 		CurrentDay = CheckpointDay;
+		_dayCycle.RestoreCheckpointUpgrades();
 		Score = CheckpointScore;
 		EnergyRemaining = CheckpointEnergy;
 		MusicWorkshopUnlocked = CheckpointMusicWorkshopUnlocked;
@@ -692,7 +705,12 @@ public partial class TradeScene : Node2D
 		}
 		var data = new ProgressData
 		{
-			SaveVersion = 8, Day = CurrentDay, Score = Score, EnergyRemaining = EnergyRemaining,
+			SaveVersion = 10, Day = CurrentDay, Score = Score, EnergyRemaining = EnergyRemaining,
+			UpgradePending = _dayCycle.Upgrades.Pending, SelectedUpgrade = (int)_dayCycle.Upgrades.Selected,
+			AtelierUpgradeLevel = _dayCycle.Upgrades.AtelierLevel, MusicUpgradeLevel = _dayCycle.Upgrades.MusicLevel,
+			CheckpointAtelierUpgradeLevel = _dayCycle.CheckpointAtelierLevel, CheckpointMusicUpgradeLevel = _dayCycle.CheckpointMusicLevel,
+			AtelierPriceLevel = DayUpgrades.AtelierPriceLevel, MusicPriceLevel = DayUpgrades.MusicPriceLevel,
+			CheckpointAtelierPriceLevel = _dayCycle.CheckpointAtelierPriceLevel, CheckpointMusicPriceLevel = _dayCycle.CheckpointMusicPriceLevel,
 			DayRemainingSeconds = DayRemainingSeconds, DayClosed = DayClosed,
 			Accepted = Accepted,
 			Declined = Declined, QuotaStage = QuotaStage, CheckpointDay = CheckpointDay,
@@ -724,7 +742,11 @@ public partial class TradeScene : Node2D
 			return false;
 		}
 		if (data == null) return false;
-		_dayCycle.Restore(data.SaveVersion >= 8 ? data.DayRemainingSeconds : null, data.SaveVersion >= 8 && data.DayClosed);
+		_dayCycle.Restore(data.SaveVersion >= 8 ? data.DayRemainingSeconds : null, data.SaveVersion >= 8 && data.DayClosed,
+			data.SaveVersion >= 9 && data.UpgradePending,
+			data.SaveVersion >= 9 ? (ChikagoShop.Domain.Days.DayUpgrade)data.SelectedUpgrade : ChikagoShop.Domain.Days.DayUpgrade.None,
+			data.Day, data.AtelierUpgradeLevel, data.MusicUpgradeLevel, data.CheckpointAtelierUpgradeLevel, data.CheckpointMusicUpgradeLevel,
+			data.AtelierPriceLevel, data.MusicPriceLevel, data.CheckpointAtelierPriceLevel, data.CheckpointMusicPriceLevel);
 		_storedItems.Clear();
 		_checkpointItems.Clear();
 		foreach (int index in data.StoredItems ?? [])
@@ -745,7 +767,7 @@ public partial class TradeScene : Node2D
 			? data.ActiveShowcaseIndex : -1;
 		CurrentDay = Mathf.Clamp(data.Day, 1, FinalDay);
 		Score = Mathf.Max(0, data.Score);
-		EnergyRemaining = data.SaveVersion < 6 ? EnergyPerDay : Mathf.Clamp(data.EnergyRemaining, 0, EnergyPerDay);
+		EnergyRemaining = data.SaveVersion < 6 ? EnergyPerDay : Mathf.Clamp(data.EnergyRemaining, 0, _dayCycle.Upgrades.EnergyCapacity);
 		Accepted = Mathf.Max(0, data.Accepted);
 		Declined = Mathf.Max(0, data.Declined);
 		QuotaStage = Mathf.Clamp(data.QuotaStage, 0, 2);
@@ -789,6 +811,16 @@ public partial class TradeScene : Node2D
 	private sealed class ProgressData
 	{
 		public int SaveVersion { get; set; } = 1;
+		public bool UpgradePending { get; set; }
+		public int SelectedUpgrade { get; set; }
+		public int AtelierPriceLevel { get; set; }
+		public int MusicPriceLevel { get; set; }
+		public int CheckpointAtelierPriceLevel { get; set; }
+		public int CheckpointMusicPriceLevel { get; set; }
+		public int AtelierUpgradeLevel { get; set; }
+		public int MusicUpgradeLevel { get; set; }
+		public int CheckpointAtelierUpgradeLevel { get; set; }
+		public int CheckpointMusicUpgradeLevel { get; set; }
 		public double? DayRemainingSeconds { get; set; }
 		public bool DayClosed { get; set; }
 		public int Day { get; set; } = 1;

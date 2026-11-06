@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Godot;
+using ChikagoShop.Domain.Days;
 
 public partial class ProjectTest : SceneTree
 {
@@ -32,6 +33,8 @@ public partial class ProjectTest : SceneTree
             await TestShowcaseReuse();
             await TestProgress();
             await TestDayCycle();
+            await TestDayTransitionCards();
+            await TestCategoryPriceUpgrades();
             await TestLocalization();
             await TestLongSentenceScroll();
             await TestMainMenu();
@@ -1084,6 +1087,7 @@ public partial class ProjectTest : SceneTree
             "End day must close the shop and discard unused energy with mouse input");
         await ClickControl(game, "HUD/Root/ProgressPanel/Content/EndDayButton");
         Check(game.CurrentDay == 2 && !game.DayClosed, "The next day must start with a separate mouse click");
+        await ClickControl(game, "DayTransitionCard/Root/Center/Card/Content/Choices/Cash/Content/Choose");
         await ClickControl(game, "PauseMenu/Root/PauseButton");
         await ClickControl(game, "PauseMenu/Root/Overlay/Center/Panel/Content/Menu/CheckpointButton");
         Check(game.CurrentDay == 1 && game.Score == 220, "Checkpoint handler must be connected");
@@ -2053,6 +2057,7 @@ public partial class ProjectTest : SceneTree
                       game.Score == cash + offer - game.FirstQuota && game.EnergyRemaining == 2 && game.DayRemainingSeconds == 120 &&
                       game.BuyerCountdown is >= 0.5 and <= 2,
                     "The next day must settle the quota using the last sale, restore energy/time and schedule a fresh buyer delay");
+                await ClickControl(game, "DayTransitionCard/Root/Center/Card/Content/Choices/Atelier/Content/Choose");
                 game._Process(game.BuyerCountdown + 0.001);
                 Check(game.TradeActive, "Buyers must return when the next day starts");
                 game.ReturnToCheckpoint();
@@ -2095,6 +2100,289 @@ public partial class ProjectTest : SceneTree
         }
         await ToSignal(this, SignalName.ProcessFrame);
         GD.Print("Two-minute timer, manual/timeout closure, last sale, quota, pause and save migration checks passed");
+    }
+
+    private async Task TestDayTransitionCards()
+    {
+        var scene = GD.Load<PackedScene>("res://scenes/trade_scene.tscn");
+        Vector2I originalSize = Root.Size;
+        string language = GameLocalization.Language;
+        TradeScene game = null;
+        const string content = "DayTransitionCard/Root/Center/Card/Content/";
+        try
+        {
+            game = await CreateGame(scene);
+            foreach (string locale in new[] { "ru", "en" })
+            foreach (var size in new[] { new Vector2I(960, 540), new Vector2I(1280, 720) })
+            {
+                TranslationServer.SetLocale(locale);
+                Root.Size = size;
+                game.NewGame();
+                game.Score = 2000;
+                for (int day = 1; day <= 6; day++)
+                {
+                    game.EndDay();
+                    Check(game.DayClosed && !game.DayTransitionOpen, "Closing alone must not show a new-day card");
+                    game.EndDay();
+                    await ToSignal(this, SignalName.ProcessFrame);
+                    await ToSignal(this, SignalName.ProcessFrame);
+                    var card = game.GetNode<DayTransitionCard>("DayTransitionCard");
+                    Check(game.DayTransitionOpen && Paused && game.CurrentDay == day + 1 && game.DayRemainingSeconds == 120 &&
+                          game.GetNode<Label>(content + "Route").Text == $"{day:00}  →  {day + 1:00}",
+                        "Each of the six transitions must show its own card with the new day frozen at two minutes");
+                    Check(card.Options.Count == 3 && card.Options.Distinct().Count() == 3 &&
+                          game.GetNode(content + "Choices").GetChildCount() == 3, "Each transition must offer exactly three different upgrades");
+                    if (day == 6 && locale == "ru" && size.X == 1280 && OS.GetCmdlineUserArgs().Contains("--day-card-preview"))
+                    {
+                        await ToSignal(this, SignalName.ProcessFrame);
+                        await ToSignal(this, SignalName.ProcessFrame);
+                        Root.GetTexture().GetImage().SavePng(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "chikago-day-card-preview.png"));
+                    }
+                    foreach (var option in card.Options)
+                    {
+                        foreach (string node in new[] { "Amount", "Title", "Description", "Duration", "Choose" })
+                        {
+                            var control = game.GetNode<Control>(content + $"Choices/{option}/Content/{node}");
+                            Check(Root.GetVisibleRect().Encloses(control.GetGlobalRect()), "Upgrade card content must fit both sizes and languages");
+                        }
+                        var button = game.GetNode<Button>(content + $"Choices/{option}/Content/Choose");
+                        Check(button.Tr(button.Text) == (locale == "en" ? "Choose" : "Выбрать"), "Upgrade buttons must translate");
+                    }
+                    double remaining = game.DayRemainingSeconds;
+                    int cash = game.Score;
+                    var camera = game.GetNode<Camera2D>("Camera2D");
+                    Vector2 position = camera.Position;
+                    game.EndDay();
+                    game._Process(60);
+                    game.TickCraftDay(60);
+                    game.GetNode<PauseMenu>("PauseMenu").Open();
+                    game.GetItemFromAtelier();
+                    Check(game.DayRemainingSeconds == remaining && game.Score == cash && game.CurrentDay == day + 1 &&
+                          !game.CraftMiniGameOpen && camera.Position == position &&
+                          !game.GetNode<Control>("PauseMenu/Root/Overlay").Visible,
+                        "Repeated advance, pause and crafting must not act underneath a day card");
+                    if (day == 4) Check(game.QuotaStage == 1, "The 4-to-5 choice must follow ordinary quota settlement");
+                    DayUpgrade choice = card.Options[0];
+                    card._Input(new InputEventKey { Pressed = true, Echo = true, Keycode = Key.Key1 });
+                    card._Input(new InputEventKey { Pressed = true, Keycode = Key.Escape });
+                    Check(card.IsOpen, "Held keys and Escape must not bypass upgrade selection");
+                    if (day % 2 == 0) await ClickControl(game, content + $"Choices/{choice}/Content/Choose");
+                    else card._Input(new InputEventKey { Pressed = true, Keycode = Key.Key1 });
+                    card.Choose(card.Options[1]);
+                    Check(!Paused && !game.DayTransitionOpen && game.CurrentDay == day + 1,
+                        "Mouse/keyboard selection must apply only one upgrade without skipping a day");
+                    Check(game.DayUpgrades.Selected == choice && game.Score == cash + (choice == DayUpgrade.Cash ? 50 : 0) &&
+                          game.EnergyRemaining == (choice == DayUpgrade.Energy ? 3 : 2) &&
+                          game.DayRemainingSeconds == (choice == DayUpgrade.Time ? 150 : 120), "The chosen upgrade must change only its intended stat");
+                }
+                game.EndDay();
+                game.EndDay();
+                Check(game.Completed && !game.DayTransitionOpen && !Paused, "Winning after day seven must not show a day-eight card");
+            }
+            game.NewGame();
+            game.CurrentDay = 4;
+            game.Score = 0;
+            game.EndDay();
+            game.EndDay();
+            Check(game.Failed && !game.DayTransitionOpen && !Paused, "An unpaid quota must not show a successful transition");
+            game.NewGame();
+            game.EndDay();
+            game.EndDay();
+            game.ReturnToCheckpoint();
+            Check(!Paused && !game.DayTransitionOpen && game.CurrentDay == 1, "Checkpoint restore must release the card pause");
+            game.EndDay();
+            game.EndDay();
+            game.NewGame();
+            Check(!Paused && !game.DayTransitionOpen && game.CurrentDay == 1, "New game must release the card pause");
+            game.EndDay();
+            game.EndDay();
+            game.QueueFree();
+            await ToSignal(this, SignalName.ProcessFrame);
+            Check(!Paused, "Freeing an open card must release its pause");
+            game = await CreateGame(scene);
+            Check(game.CurrentDay == 2 && Paused && game.DayTransitionOpen && game.DayRemainingSeconds == 120,
+                "Reload before selection must reopen the three choices without repeating the day transition");
+            foreach (DayUpgrade choice in new[] { DayUpgrade.Cash, DayUpgrade.Energy, DayUpgrade.Time, DayUpgrade.Atelier, DayUpgrade.Music })
+            {
+                game.NewGame();
+                game.Score = 1000;
+                game.CurrentDay = choice is DayUpgrade.Atelier or DayUpgrade.Music ? 3 : 1;
+                game.EndDay();
+                game.EndDay();
+                var card = game.GetNode<DayTransitionCard>("DayTransitionCard");
+                card.Choose(choice);
+                int cash = game.Score;
+                int energy = game.EnergyRemaining;
+                double time = game.DayRemainingSeconds;
+                int atelierLevel = game.DayUpgrades.AtelierLevel;
+                int musicLevel = game.DayUpgrades.MusicLevel;
+                game.QueueFree();
+                await ToSignal(this, SignalName.ProcessFrame);
+                game = await CreateGame(scene);
+                Check(!Paused && !game.DayTransitionOpen && game.Score == cash && game.EnergyRemaining == energy &&
+                      game.DayRemainingSeconds == time && game.DayUpgrades.AtelierLevel == atelierLevel && game.DayUpgrades.MusicLevel == musicLevel,
+                    "Every upgrade must survive reload with no repeated reward, lost energy or clamped bonus time");
+                game.GetNode<DayTransitionCard>("DayTransitionCard").Choose(choice);
+                Check(game.Score == cash && game.EnergyRemaining == energy && game.DayRemainingSeconds == time, "Reload must not reapply a reward");
+                if (choice is DayUpgrade.Atelier or DayUpgrade.Music)
+                {
+                    foreach (string room in new[] { "Atelier", "MusicWorkshop" })
+                    {
+                        var panel = game.GetNode<RarityPanel>($"World/{room}/RarityPanel");
+                        panel.RefreshChances();
+                        bool boosted = (room == "Atelier") == (choice == DayUpgrade.Atelier);
+                        Check(panel.Values.GetNode<Label>("Chance0").Text == (boosted ? "45%" : "60%") &&
+                              panel.Values.GetNode<Label>("Chance2").Text == (boosted ? "18%" : "10%"), "Category chances must match the actual boosted table");
+                        Check(panel.Values.GetNode<Label>("Chance0").GetThemeColor("font_color") == (boosted ? new Color("bf3232") : Colors.Black) &&
+                              panel.Values.GetNode<Label>("Chance2").GetThemeColor("font_color") == (boosted ? new Color("208447") : Colors.Black),
+                            "Chances below baseline must be red and above baseline green; the other category stays neutral");
+                    }
+                    int[] counts = new int[10];
+                    string workshop = choice == DayUpgrade.Atelier ? "atelier" : "music";
+                    for (int ticket = 0; ticket < 100; ticket++) counts[WorkshopItemCatalog.Roll(workshop, ticket, game.DayUpgrades)]++;
+                    foreach (var item in WorkshopItemCatalog.Items.Select((item, index) => (item, index)).Where(x => x.item.WorkshopId == workshop))
+                        Check(counts[item.index] == WorkshopItemCatalog.RarityWeight(workshop, item.item.RarityId, game.DayUpgrades), "All 100 tickets must match the displayed category chances");
+                }
+                game.EndDay();
+                game.EndDay();
+                Check(game.DayUpgrades.AtelierLevel == atelierLevel && game.DayUpgrades.MusicLevel == musicLevel &&
+                      game.DayRemainingSeconds == 120 && game.EnergyRemaining == 2, "Category upgrades must persist across days while daily energy/time expire");
+                game.ReturnToCheckpoint();
+                Check(game.DayUpgrades.AtelierLevel == (game.CheckpointDay == 5 ? atelierLevel : 0) &&
+                      game.DayUpgrades.MusicLevel == (game.CheckpointDay == 5 ? musicLevel : 0), "Checkpoint restore must retain exactly its captured category upgrades");
+            }
+        }
+        finally
+        {
+            if (game != null && GodotObject.IsInstanceValid(game)) game.QueueFree();
+            Paused = false;
+            TranslationServer.SetLocale(language);
+            Root.Size = originalSize;
+            if (FileAccess.FileExists(SavePath)) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(SavePath));
+        }
+        await ToSignal(this, SignalName.ProcessFrame);
+        GD.Print("All six day transition cards, localization, layout, input, quotas and reload checks passed");
+    }
+
+    private async Task TestCategoryPriceUpgrades()
+    {
+        var scene = GD.Load<PackedScene>("res://scenes/trade_scene.tscn");
+        TradeScene game = null;
+        string language = GameLocalization.Language;
+        Vector2I size = Root.Size;
+        try
+        {
+            TranslationServer.SetLocale("ru");
+            Root.Size = new Vector2I(1280, 720);
+            foreach (DayUpgrade choice in new[] { DayUpgrade.AtelierPrice, DayUpgrade.MusicPrice })
+            {
+                bool clothing = choice == DayUpgrade.AtelierPrice;
+                using (var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Write))
+                    file.StoreString(System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        save_version = 10, day = clothing ? 4 : 5, score = 1000, energy_remaining = 2,
+                        quota_stage = clothing ? 0 : 1, checkpoint_day = clothing ? 1 : 5,
+                        day_remaining_seconds = 120, music_workshop_unlocked = true,
+                        stored_items = Enumerable.Range(0, 10).ToArray()
+                    }));
+                game = await CreateGame(scene);
+                game.EndDay();
+                game.EndDay();
+                await ToSignal(this, SignalName.ProcessFrame);
+                await ToSignal(this, SignalName.ProcessFrame);
+                var card = game.GetNode<DayTransitionCard>("DayTransitionCard");
+                Check(card.Options.Contains(choice) && card.Options.Count == 3,
+                    $"Price card {choice} must be reachable: day={game.CurrentDay}, failed={game.Failed}, pending={game.DayUpgrades.Pending}, options={string.Join(',', card.Options)}");
+                if (clothing && OS.GetCmdlineUserArgs().Contains("--day-card-preview"))
+                    Root.GetTexture().GetImage().SavePng(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "chikago-price-upgrade-preview.png"));
+                await ClickControl(game, $"DayTransitionCard/Root/Center/Card/Content/Choices/{choice}/Content/Choose");
+                Check(!Paused && !game.DayTransitionOpen, "Selecting a price card must apply it and resume the day");
+                foreach (int index in Enumerable.Range(0, 10))
+                {
+                    bool boosted = WorkshopItemCatalog.Items[index].WorkshopId == (clothing ? "atelier" : "music");
+                    int expected = boosted ? (int)Math.Round(TradeScene.GetItemBasePrice(index) * 1.2m, MidpointRounding.AwayFromZero) : TradeScene.GetItemBasePrice(index);
+                    Check(game.GetItemPrice(index) == expected, "A price card must affect all rarities of only its category, including existing goods");
+                    var slot = (SlotUI)game.GetNode<InventoryUI>("HUD/InventoryUI").Container.GetChild(index);
+                    Check(slot.ItemInfo.EndsWith($"Стоимость: {expected}$"), "Existing inventory tooltips must refresh to the improved price");
+                }
+                foreach (string room in new[] { "Atelier", "MusicWorkshop" })
+                {
+                    var panel = game.GetNode<RarityPanel>($"World/{room}/RarityPanel");
+                    panel.RefreshChances();
+                    int[] baseline = room == "Atelier" ? new[] { 30, 50, 80, 120, 200 } : new[] { 45, 75, 120, 180, 300 };
+                    bool boosted = (room == "Atelier") == clothing;
+                    for (int rarity = 0; rarity < 5; rarity++)
+                    {
+                        var label = panel.Values.GetNode<Label>($"Price{rarity}");
+                        int expected = boosted ? (int)(baseline[rarity] * 1.2m) : baseline[rarity];
+                        Check(label.Text == $"{expected}$" && label.GetThemeColor("font_color") == (boosted ? new Color("208447") : Colors.Black),
+                            "Craft tables must show boosted prices in green and the other category in neutral color");
+                    }
+                    if (clothing && room == "Atelier" && OS.GetCmdlineUserArgs().Contains("--day-card-preview"))
+                    {
+                        panel.Show();
+                        await ToSignal(this, SignalName.ProcessFrame);
+                        await ToSignal(this, SignalName.ProcessFrame);
+                        Root.GetTexture().GetImage().SavePng(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "chikago-price-table-preview.png"));
+                        panel.Hide();
+                    }
+                }
+                int item = clothing ? 0 : 2;
+                SelectInventorySlot(game, item);
+                game.PlaceItemInShowcase(0);
+                game._Process(game.BuyerCountdown + 0.001);
+                Check(game.TradeActive && game.ItemIndex == item && game.OfferedPrice == TradeScene.PriceForPercent(game.GetItemPrice(item), game.Percentage),
+                    "The buyer offer must use the improved category price");
+                int offer = game.OfferedPrice;
+                int cash = game.Score;
+                game.QueueFree();
+                await ToSignal(this, SignalName.ProcessFrame);
+                game = await CreateGame(scene);
+                Check(game.TradeActive && game.OfferedPrice == offer, "Reload must retain an active trade with the improved price");
+                game.AcceptTrade();
+                game.AcceptTrade();
+                Check(game.Score == cash + offer, "Selling an improved item must credit its offer exactly once");
+                int beforeCraft = game.Score;
+                if (clothing) CraftAtelier(game); else CraftMusic(game);
+                Check(game.Score == beforeCraft - (clothing ? 90 : 140), "Price upgrades must leave production costs unchanged");
+                foreach (int index in game.StoredItems.TakeLast(3))
+                    Check(game.GetItemPrice(index) == (int)(TradeScene.GetItemBasePrice(index) * 1.2m), "Newly crafted goods must receive the category price too");
+                game.EndDay();
+                game.EndDay();
+                card = game.GetNode<DayTransitionCard>("DayTransitionCard");
+                card.Choose(choice);
+                Check(game.GetItemPrice(item) == (int)(TradeScene.GetItemBasePrice(item) * 1.4m), "Repeated price cards must add twenty percentage points rather than compound");
+                game.QueueFree();
+                await ToSignal(this, SignalName.ProcessFrame);
+                game = await CreateGame(scene);
+                Check(game.GetItemPrice(item) == (int)(TradeScene.GetItemBasePrice(item) * 1.4m), "Stacked price bonuses must survive reload");
+                game.ReturnToCheckpoint();
+                Check(game.GetItemPrice(item) == TradeScene.GetItemBasePrice(item), "Checkpoint rollback must remove price cards selected after that checkpoint");
+                game.NewGame();
+                Check(game.DayUpgrades.AtelierPriceLevel == 0 && game.DayUpgrades.MusicPriceLevel == 0, "New game must clear both category price bonuses");
+                game.QueueFree();
+                await ToSignal(this, SignalName.ProcessFrame);
+                game = null;
+            }
+            using (var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Write))
+                file.StoreString("{\"save_version\":10,\"day\":4,\"score\":1000,\"atelier_price_level\":1,\"music_price_level\":1}");
+            game = await CreateGame(scene);
+            game.EndDay(); game.EndDay();
+            game.GetNode<DayTransitionCard>("DayTransitionCard").Choose(DayUpgrade.AtelierPrice);
+            game.ReturnToCheckpoint();
+            Check(game.DayUpgrades.AtelierPriceLevel == 1 && game.DayUpgrades.MusicPriceLevel == 1,
+                "The day-five checkpoint must capture both price bonus levels before the next selection");
+        }
+        finally
+        {
+            if (game != null && GodotObject.IsInstanceValid(game)) game.QueueFree();
+            Paused = false;
+            TranslationServer.SetLocale(language);
+            Root.Size = size;
+            if (FileAccess.FileExists(SavePath)) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(SavePath));
+        }
+        await ToSignal(this, SignalName.ProcessFrame);
+        GD.Print("Category price cards, tables, inventory, sale, stacking, save and checkpoint checks passed");
     }
 
     private async Task TestLocalization()
@@ -2302,7 +2590,7 @@ public partial class ProjectTest : SceneTree
             await ToSignal(this, SignalName.ProcessFrame);
             var panel = dialogue.GetNode<Control>("Panel");
             var text = dialogue.GetNode<RichTextLabel>("Panel/Content/Text");
-            Check(panel.Size.Y >= 220 && panel.Size.Y <= 250 &&
+            Check(panel.Size.Y >= 260 && panel.Size.Y <= 280 &&
                   panel.Size.X <= Root.GetVisibleRect().Size.X * 0.79f &&
                   text.GlobalPosition.X >= panel.GlobalPosition.X + 112 &&
                   text.GetGlobalRect().End.X <= panel.GetGlobalRect().End.X - 112 &&
@@ -2431,35 +2719,118 @@ public partial class ProjectTest : SceneTree
 
     private async Task TestLongSentenceScroll()
     {
-        const string path = "user://long_sentence_scroll_test.json";
-        string sentence = string.Join(" ", Enumerable.Repeat("Длинное предложение для проверки прокрутки", 20)) + ".";
-        using (var file = FileAccess.Open(path, FileAccess.ModeFlags.Write))
-            file.StoreString(System.Text.Json.JsonSerializer.Serialize(new[] { new { speaker = "Френки", text = sentence } }));
-        var dialogue = new DialoguePlayer { DialoguePath = path };
-        Root.AddChild(dialogue);
+        Vector2I originalViewport = Root.Size;
+        const string sequencePath = "user://dialogue_scroll_sequence_test.json";
+        var examples = new[]
+        {
+            new { speaker = "Кастелло", text = "Знаешь же, мы стали работать по всему миру, последняя поставка в Великобританию на практически 11 тонн прошла все проверки и мы купаемся в золоте." },
+            new { speaker = "Френки", text = "Здесь 150 лет назад шили хлопком наших плантаций, а когда всех негров распустили, мы всей семьёй кредитами выбивали новые земли, скупали шёлк, лён, кожу животных." },
+            new { speaker = "Кастелло", text = "Проиграешь - я вышибу твои мозги и выкуплю всю мастерскую по половинной стоимости рынка, а твои дети извинятся перед всей моей семьёй за личное оскорбление в мою сторону." }
+        };
+        using (var file = FileAccess.Open(sequencePath, FileAccess.ModeFlags.Write))
+            file.StoreString(System.Text.Json.JsonSerializer.Serialize(examples));
         try
         {
-            await ToSignal(this, SignalName.ProcessFrame);
-            await ToSignal(this, SignalName.ProcessFrame);
-            dialogue.Advance();
-            var text = dialogue.GetNode<RichTextLabel>("Panel/Content/Text");
-            await ToSignal(this, SignalName.ProcessFrame);
-            var bar = text.GetVScrollBar();
-            Check(text.Text == sentence && text.ScrollActive && text.GetThemeFontSize("normal_font_size") == 20 &&
-                  bar.IsVisibleInTree() && bar.MaxValue > bar.Page,
-                "A very long sentence must stay whole with the normal font and a usable scrollbar");
-            dialogue._Input(new InputEventMouseButton { Pressed = true, ButtonIndex = MouseButton.Left,
-                Position = bar.GetGlobalRect().GetCenter() });
-            Check(!dialogue.Session.IsComplete, "Scrollbar interaction must not finish the dialogue");
-            bar.Value = bar.MaxValue;
-            Check(bar.Value > 0, "The end of the sentence must be reachable");
+            foreach (var size in new[] { new Vector2I(960, 540), new Vector2I(1096, 616), new Vector2I(1280, 720), new Vector2I(1600, 900) })
+            {
+                Root.Size = size;
+                var sequence = new DialoguePlayer { DialoguePath = sequencePath };
+                Root.AddChild(sequence);
+                try
+                {
+                    await ToSignal(this, SignalName.ProcessFrame);
+                    await ToSignal(this, SignalName.ProcessFrame);
+                    foreach (var example in examples)
+                    {
+                        if (sequence.IsRevealing) sequence.Advance();
+                        var label = sequence.GetNode<RichTextLabel>("Panel/Content/Text");
+                        Check(label.Text == example.text, "Screenshot examples must remain whole");
+                        if (label.GetLineCount() <= 3)
+                            Check(!label.ScrollActive && label.GetContentHeight() <= label.Size.Y,
+                                $"Screenshot dialogue must fit three lines at {size}: {label.GetContentHeight()}/{label.Size.Y}");
+                        Root.Size = size + new Vector2I(8, 8);
+                        await ToSignal(this, SignalName.ProcessFrame);
+                        Root.Size = size;
+                        await ToSignal(this, SignalName.ProcessFrame);
+                        await ToSignal(this, SignalName.ProcessFrame);
+                        if (sequence.IsRevealing) sequence.Advance();
+                        if (label.GetLineCount() <= 3)
+                            Check(!label.ScrollActive && !label.GetVScrollBar().IsVisibleInTree(),
+                                "Resizing must not leave a scrollbar on a three-line page");
+                        sequence.Advance();
+                    }
+                }
+                finally { sequence.QueueFree(); }
+                await ToSignal(this, SignalName.ProcessFrame);
+            }
         }
         finally
         {
-            dialogue.QueueFree();
-            DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(path));
+            Root.Size = originalViewport;
+            DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(sequencePath));
         }
-        await ToSignal(this, SignalName.ProcessFrame);
+        foreach (var size in new[] { new Vector2I(1280, 720), new Vector2I(960, 540) })
+        {
+            Root.Size = size;
+            const string fittingPath = "user://fitting_sentence_scroll_test.json";
+            string fittingText = size.X == 1280
+                ? "Знаешь же, мы стали работать по всему миру, последняя поставка в Великобританию на практически 11 тонн прошла все проверки и мы купаемся в золоте."
+                : "Первая строка\nВторая строка\nТретья строка.";
+            using (var file = FileAccess.Open(fittingPath, FileAccess.ModeFlags.Write))
+                file.StoreString(System.Text.Json.JsonSerializer.Serialize(new[] { new { speaker = "Кастелло", text = fittingText } }));
+            var fittingDialogue = new DialoguePlayer { DialoguePath = fittingPath };
+            Root.AddChild(fittingDialogue);
+            try
+            {
+                await ToSignal(this, SignalName.ProcessFrame);
+                await ToSignal(this, SignalName.ProcessFrame);
+                fittingDialogue.Advance();
+                var fittingLabel = fittingDialogue.GetNode<RichTextLabel>("Panel/Content/Text");
+                Check(fittingLabel.GetLineCount() == 3 && fittingLabel.GetContentHeight() <= fittingLabel.Size.Y &&
+                      !fittingLabel.ScrollActive && !fittingLabel.GetVScrollBar().IsVisibleInTree(),
+                    $"Three fitting lines must not enable scrolling or reserve scrollbar width: viewport={size}, lines={fittingLabel.GetLineCount()}, height={fittingLabel.GetContentHeight()}/{fittingLabel.Size.Y}, active={fittingLabel.ScrollActive}, visible={fittingLabel.GetVScrollBar().IsVisibleInTree()}");
+            }
+            finally
+            {
+                fittingDialogue.QueueFree();
+                DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(fittingPath));
+            }
+            await ToSignal(this, SignalName.ProcessFrame);
+        }
+        foreach (var size in new[] { new Vector2I(1280, 720), new Vector2I(960, 540) })
+        {
+            Root.Size = size;
+            const string path = "user://long_sentence_scroll_test.json";
+            string sentence = string.Join(" ", Enumerable.Repeat("Длинное предложение для проверки прокрутки", 20)) + ".";
+            using (var file = FileAccess.Open(path, FileAccess.ModeFlags.Write))
+                file.StoreString(System.Text.Json.JsonSerializer.Serialize(new[] { new { speaker = "Френки", text = sentence } }));
+            var dialogue = new DialoguePlayer { DialoguePath = path };
+            Root.AddChild(dialogue);
+            try
+            {
+                await ToSignal(this, SignalName.ProcessFrame);
+                await ToSignal(this, SignalName.ProcessFrame);
+                dialogue.Advance();
+                var text = dialogue.GetNode<RichTextLabel>("Panel/Content/Text");
+                await ToSignal(this, SignalName.ProcessFrame);
+                var bar = text.GetVScrollBar();
+                Check(text.Text == sentence && text.ScrollActive && text.GetThemeFontSize("normal_font_size") == 20 &&
+                      bar.IsVisibleInTree() && bar.MaxValue > bar.Page,
+                    "A very long sentence must stay whole with the normal font and a usable scrollbar");
+                dialogue._Input(new InputEventMouseButton { Pressed = true, ButtonIndex = MouseButton.Left,
+                    Position = bar.GetGlobalRect().GetCenter() });
+                Check(!dialogue.Session.IsComplete, "Scrollbar interaction must not finish the dialogue");
+                bar.Value = bar.MaxValue;
+                Check(bar.Value > 0, "The end of the sentence must be reachable");
+            }
+            finally
+            {
+                dialogue.QueueFree();
+                DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(path));
+            }
+            await ToSignal(this, SignalName.ProcessFrame);
+        }
+        Root.Size = originalViewport;
     }
 
     private static void CheckFullscreenText(CheckButton button)
@@ -2487,6 +2858,9 @@ public partial class ProjectTest : SceneTree
     {
         if (!game.DayClosed) game.EndDay();
         game.EndDay();
+        var card = game.GetNode<DayTransitionCard>("DayTransitionCard");
+        if (card.IsOpen) card.Choose(card.Options.Contains(DayUpgrade.Atelier) ? DayUpgrade.Atelier :
+            card.Options.Contains(DayUpgrade.Music) ? DayUpgrade.Music : DayUpgrade.Cash);
     }
 
     private async Task<TradeScene> CreateGame(PackedScene scene)

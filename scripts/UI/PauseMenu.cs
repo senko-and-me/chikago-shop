@@ -114,7 +114,7 @@ public partial class PauseMenu : CanvasLayer
 
 	public void Open()
 	{
-		if (GetParent<TradeScene>().CraftMiniGameOpen) return;
+		if (GetParent<TradeScene>().CraftMiniGameOpen || GetParent<TradeScene>().DayTransitionOpen) return;
 		GetParent<TradeScene>().PersistProgress();
 		_ownsPause = true;
 		GetTree().Paused = true;
@@ -150,7 +150,7 @@ public partial class PauseMenu : CanvasLayer
 
 	public override void _Input(InputEvent @event)
 	{
-		if (GetParent<TradeScene>().CraftMiniGameOpen) return;
+		if (GetParent<TradeScene>().CraftMiniGameOpen || GetParent<TradeScene>().DayTransitionOpen) return;
 		if (@event is not InputEventKey { Pressed: true, Echo: false, Keycode: Key.Escape }) return;
 		if (!_overlay.Visible) Open();
 		else if (_settings.Visible) ShowMenu();

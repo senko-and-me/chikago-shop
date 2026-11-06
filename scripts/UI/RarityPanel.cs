@@ -70,6 +70,7 @@ public partial class RarityPanel : Control
 
 	private void SyncVisibility()
 	{
+		RefreshChances();
 		_layer.Visible = IsVisibleInTree();
 		SetProcess(_layer.Visible);
 		if (_layer.Visible) UpdatePlacement();
@@ -77,7 +78,30 @@ public partial class RarityPanel : Control
 
 	public override void _Process(double delta)
 	{
-		if (IsVisibleInTree()) UpdatePlacement();
+		if (IsVisibleInTree()) { RefreshChances(); UpdatePlacement(); }
+	}
+
+	public void RefreshChances()
+	{
+		string workshop = GetParent().Name == "MusicWorkshop" ? "music" : "atelier";
+		string[] rarities = ["common", "ordinary", "first_class", "exclusive", "unique"];
+		var upgrades = (_game as TradeScene)?.DayUpgrades;
+		for (int i = 0; i < rarities.Length; i++)
+		{
+			int baseline = WorkshopItemCatalog.BaselineWeight(rarities[i]);
+			int current = WorkshopItemCatalog.RarityWeight(workshop, rarities[i], upgrades);
+			var label = Values.GetNode<Label>($"Chance{i}");
+			label.Text = $"{current}%";
+			label.TooltipText = GameLocalization.Format("Базовый шанс: {0}%", baseline);
+			label.AddThemeColorOverride("font_color", current > baseline ? new Color("208447") :
+				current < baseline ? new Color("bf3232") : Colors.Black);
+			int[] prices = [Price0, Price1, Price2, Price3, Price4];
+			int price = upgrades?.Price(workshop, prices[i]) ?? prices[i];
+			var priceLabel = Values.GetNode<Label>($"Price{i}");
+			priceLabel.Text = $"{price}$";
+			priceLabel.AddThemeColorOverride("font_color", price > prices[i] ? new Color("208447") :
+				price < prices[i] ? new Color("bf3232") : Colors.Black);
+		}
 	}
 
 	public void UpdatePlacement()

@@ -42,10 +42,11 @@ public sealed class DaySession
         IsClosed = false;
     }
 
-    public void Restore(double? remainingSeconds, bool closed)
+    public void Restore(double? remainingSeconds, bool closed, double durationSeconds = DurationSeconds)
     {
+        double duration = double.IsFinite(durationSeconds) ? Math.Clamp(durationSeconds, DurationSeconds, 150) : DurationSeconds;
         RemainingSeconds = remainingSeconds is double remaining && double.IsFinite(remaining)
-            ? Math.Clamp(remaining, 0, DurationSeconds) : DurationSeconds;
+            ? Math.Clamp(remaining, 0, duration) : duration;
         IsClosed = closed || RemainingSeconds == 0;
         if (IsClosed) RemainingSeconds = 0;
     }

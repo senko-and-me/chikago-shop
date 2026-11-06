@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using ChikagoShop.Domain.Crafting;
+using ChikagoShop.Domain.Days;
 
 public sealed record CraftItem(int BasePrice, string RarityId, string Rarity, string Kind, string Name,
     string ArtPath, string WorkshopId, int Rerolls);
@@ -28,7 +29,14 @@ public static class WorkshopItemCatalog
             .Select(entry => (entry.index, Config.Rarities.Single(rarity => rarity.Id == entry.item.RarityId).Weight))));
 
     public static int TotalWeight(string workshop) => Tables[workshop].TotalWeight;
-    public static int Roll(string workshop, int ticket) => Tables[workshop].Select(ticket);
+    public static int Roll(string workshop, int ticket, DayUpgradeSession upgrades = null) => upgrades == null
+        ? Tables[workshop].Select(ticket)
+        : new WeightedItemTable(Items.Select((item, index) => (item, index))
+            .Where(entry => entry.item.WorkshopId == workshop)
+            .Select(entry => (entry.index, RarityWeight(workshop, entry.item.RarityId, upgrades)))).Select(ticket);
+    public static int BaselineWeight(string rarityId) => Config.Rarities.Single(rarity => rarity.Id == rarityId).Weight;
+    public static int RarityWeight(string workshop, string rarityId, DayUpgradeSession upgrades = null) =>
+        upgrades?.Weight(workshop, rarityId, BaselineWeight(rarityId), BaselineWeight("common")) ?? BaselineWeight(rarityId);
     public static int RerollsFor(string rarityId) => Config.Rarities.Single(rarity => rarity.Id == rarityId).Rerolls;
 
     private static CraftItem Item(string workshop, string rarityId, string kind, string name, string art)
