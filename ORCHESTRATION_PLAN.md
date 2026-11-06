@@ -9,7 +9,7 @@
 
 ### HF-24 — публикация рефакторинга UI и камеры
 
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; HF-22/HF-23 = DONE; `CP-HF-24`, READY проверен 2026-11-06. Commit/push явно разрешён пользователем.
+Статус: `DONE`; координатор/исполнитель `/root`; HF-22/HF-23 = DONE; `CP-HF-24`, READY проверен 2026-11-06. Commit/push явно разрешён пользователем.
 
 #### CP-HF-24
 
@@ -17,6 +17,19 @@ Read-set: этот фронт плана, git status/diff/log/remotes/show; фа
 Write-set: `ORCHESTRATION_PLAN.md`, Git index/commit и origin/main для публикации файлов HF-22/HF-23: `README.md`, `scripts/Camera/WorldCamera.cs[.uid]`, `scripts/TradeScene.cs`, `scripts/UI/InventoryUI.cs`, `scripts/UI/ItemInfoPopup.cs[.uid]`, `scripts/UI/PopupPlacement.cs[.uid]`, `scripts/UI/RarityPanel.cs`, `scripts/UI/ZoomResponsiveUi.cs`, `scripts/UI/PauseMenu.cs`, `tests/ProjectTest.cs`, только camera script/BoundsSource hunks `scenes/trade_scene.tscn`. Владелец плана и index `/root`; пересечений нет.
 Out of scope: новые продуктовые изменения, export_presets.cfg, пользовательские serialization/layout hunks trade_scene, исходный MyFont_Completed.ttf[.import], force push, source/.
 Приёмка: финальный verify HF-23 PASS, staged diff-check PASS, commit опубликован в origin/main без force; чужие изменения сохранены локально.
+
+```text
+Task: HF-24
+Recommended status: REVIEW
+Changed: опубликованы 15 файлов HF-22/HF-23, перечисленных в write-set.
+Checks: git fetch origin -> PASS; HEAD...origin/main перед commit = 0/0; git diff --cached --check -> PASS; git push origin main -> PASS (exit 0).
+Acceptance: d4735c7 опубликован в origin/main без force. В trade_scene закоммичены только camera script/BoundsSource hunks; пользовательские serialization/layout изменения сцены, export и исходные font files сохранены локально. Product-код после финального verify HF-23 не менялся.
+Read-set exception: нет.
+Risks/blocker: нет.
+Next: продолжить работу по запросу пользователя.
+```
+
+Координатор подтвердил HF-24 2026-11-06 по успешному push: REVIEW → DONE; evidence публикуется отдельным документационным коммитом.
 
 ### HF-23 — извлечь управление камерой из TradeScene
 
