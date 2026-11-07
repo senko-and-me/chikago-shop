@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://bj66ajuqbshg0" path="res://scripts/TradeScene.cs" id="1_main"]
 [ext_resource type="Script" uid="uid://c6334skyxf3jy" path="res://scripts/CounterWorld.cs" id="2_world"]
-[ext_resource type="Texture2D" uid="uid://b4uvatfdjuqe3" path="res://art/rooms/music_room.jpg" id="4_pi35y"]
+[ext_resource type="Texture2D" uid="uid://bc8clisawybhl" path="res://art/rooms/music_room.jpg" id="4_pi35y"]
 [ext_resource type="PackedScene" uid="uid://u2ve41t8yhqn" path="res://scenes/customer.tscn" id="5_customer"]
 [ext_resource type="Texture2D" uid="uid://cbtl6isdq4h6k" path="res://art/items/hat_cloche.png" id="6_hat"]
 [ext_resource type="Texture2D" uid="uid://bw57e18b5g53h" path="res://art/items/gloves.png" id="7_gloves"]

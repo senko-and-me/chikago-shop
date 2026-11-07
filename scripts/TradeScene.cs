@@ -1,3 +1,4 @@
+
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -5,21 +6,32 @@ using Godot;
 
 public partial class TradeScene : Node2D
 {
-	[Export(PropertyHint.Range, "1,9999,1")] public int StartingMoney { get; set; } = 220;
-	[Export(PropertyHint.Range, "1,9999,1")] public int FirstQuota { get; set; } = 200;
-	[Export(PropertyHint.Range, "1,9999,1")] public int SecondQuota { get; set; } = 400;
-	[Export] public string SavePath { get; set; } = "user://trade_progress.json";
-	private float NextBuyerDelay() => _buyerArrivalRng.RandfRange(0.5f, 2f);
+	[Export(PropertyHint.Range, "1,9999,1")]
+	public int StartingMoney { get; set; } = 220;
+
+	[Export(PropertyHint.Range, "1,9999,1")]
+	public int FirstQuota { get; set; } = 200;
+
+	[Export(PropertyHint.Range, "1,9999,1")]
+	public int SecondQuota { get; set; } = 400;
+
+	[Export]
+	public string SavePath { get; set; } = "user://trade_progress.json";
 
 	private const int FirstDeadline = 4;
 	private const int FinalDay = 7;
 	private const int ShowcaseCapacity = 6;
-	private const int EnergyPerDay = 2;
+	private const int InitialShowcaseCapacity = 3;
+	private const int EnergyBeforeMusicUnlock = 3;
+	private const int EnergyAfterMusicUnlock = 6;
 	private const int AtelierSpinCost = 90;
 	private const int MusicSpinCost = 140;
 	private const int MusicUnlockCost = 100;
-	private const int ItemsPerSpin = 3;
-	private static readonly IReadOnlyList<CraftItem> Items = WorkshopItemCatalog.Items;
+	private const int ItemsPerSpin = 1;
+
+	private static readonly IReadOnlyList<CraftItem> Items =
+		WorkshopItemCatalog.Items;
+
 	private static readonly JsonSerializerOptions JsonOptions = new()
 	{
 		PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
@@ -45,6 +57,7 @@ public partial class TradeScene : Node2D
 	private Button _musicGetItemButton = null!;
 	private Control _musicLockedOverlay = null!;
 	private Button _musicUnlockButton = null!;
+
 	private readonly Control[] _rarityPanels = new Control[2];
 	private readonly Control[] _rarityHotspots = new Control[2];
 	private readonly Control[] _priceHints = new Control[2];
@@ -53,39 +66,67 @@ public partial class TradeScene : Node2D
 	private readonly TextureRect[] _showcaseIcons = new TextureRect[ShowcaseCapacity];
 	private readonly Label[] _showcaseLabels = new Label[ShowcaseCapacity];
 
-	// --- ДОБАВЛЕНО: Ссылки на UI инвентаря ---
+	private Label _extraShowroomHint = null!;
+	private ColorRect _rightShowroomOverlay = null!;
 	private InventoryUI _inventoryUI = null!;
-	public int SelectedInventoryIndex { get; set; } = -1; // Индекс выбранного слота (-1 если ничего не выбрано)
-	// -----------------------------------------
 
 	private readonly RandomNumberGenerator _rng = new();
 	private readonly RandomNumberGenerator _buyerArrivalRng = new();
 	private readonly List<int> _storedItems = new();
 	private readonly List<int> _checkpointItems = new();
 	private readonly int[] _showcaseItems = new int[ShowcaseCapacity];
-	private readonly int[] _checkpointShowcaseItems = new int[ShowcaseCapacity];
+	private readonly int[] _checkpointShowcaseItems =
+		new int[ShowcaseCapacity];
+
 	private int _activeShowcaseIndex = -1;
 	private double _buyerCountdown;
 	private DayCycleController _dayCycle = null!;
 	private EmbroideryGame _embroidery = null!;
 	private EmbroideryGame _polishing = null!;
-	public bool CraftMiniGameOpen => (_embroidery?.IsOpen ?? false) || (_polishing?.IsOpen ?? false);
-	private int _energyRemaining = EnergyPerDay;
+	private int _energyRemaining = EnergyBeforeMusicUnlock;
+	private bool _localizationReady;
+
+	private float NextBuyerDelay() =>
+		_buyerArrivalRng.RandfRange(0.5f, 2f);
+
+	public int SelectedInventoryIndex { get; set; } = -1;
+	public bool CraftMiniGameOpen =>
+		(_embroidery?.IsOpen ?? false) ||
+		(_polishing?.IsOpen ?? false);
+
 	public bool DayClosed => _dayCycle.Session.IsClosed;
-	public bool DayTransitionOpen => _dayCycle?.TransitionOpen ?? false;
-	public ChikagoShop.Domain.Days.DayUpgradeSession DayUpgrades => _dayCycle?.Upgrades;
-	public double DayRemainingSeconds => _dayCycle.Session.RemainingSeconds;
+	public bool DayTransitionOpen =>
+		_dayCycle?.TransitionOpen ?? false;
+
+	public ChikagoShop.Domain.Days.DayUpgradeSession DayUpgrades =>
+		_dayCycle?.Upgrades;
+
+	public double DayRemainingSeconds =>
+		_dayCycle.Session.RemainingSeconds;
+
 	public int[] StoredItems => _storedItems.ToArray();
 	public int[] ShowcaseItems => (int[])_showcaseItems.Clone();
 	public double BuyerCountdown => _buyerCountdown;
+
 	public static string GetItemKind(int index) => Items[index].Kind;
-	public static string GetItemName(int index) => GameLocalization.Text(Items[index].Name);
+	public static string GetItemName(int index) =>
+		GameLocalization.Text(Items[index].Name);
 	public static string GetItemArtPath(int index) => Items[index].ArtPath;
-	public static string GetItemRarity(int index) => GameLocalization.Text(Items[index].Rarity);
+	public static string GetItemRarity(int index) =>
+		GameLocalization.Text(Items[index].Rarity);
 	public static int GetItemBasePrice(int index) => Items[index].BasePrice;
-	public int GetItemPrice(int index) => DayUpgrades.Price(Items[index].WorkshopId, Items[index].BasePrice);
-	public static int GetItemRerollLimit(int index) => Items[index].Rerolls;
-	public static int GetRerollsForRarity(string rarityId) => WorkshopItemCatalog.RerollsFor(rarityId);
+
+	public int GetItemPrice(int index) =>
+		DayUpgrades.Price(
+			Items[index].WorkshopId,
+			Items[index].BasePrice);
+
+	public static int GetItemRerollLimit(int index) =>
+		Items[index].Rerolls;
+
+	public static int GetRerollsForRarity(string rarityId) =>
+		WorkshopItemCatalog.RerollsFor(rarityId);
+
 	public int ItemIndex { get; set; } = -1;
 	public int CustomerIndex { get; set; } = -1;
 	public int Percentage { get; set; }
@@ -95,54 +136,119 @@ public partial class TradeScene : Node2D
 	public int Accepted { get; private set; }
 	public int Declined { get; private set; }
 	public int CurrentDay { get; set; } = 1;
+
+	public int EnergyCapacity =>
+		MusicWorkshopUnlocked
+			? EnergyAfterMusicUnlock
+			: EnergyBeforeMusicUnlock;
+
+	public int InventorySlotCapacity =>
+		MusicWorkshopUnlocked ? 6 : 3;
+
 	public int EnergyRemaining
 	{
-		get => _dayCycle?.Session.AvailableEnergy(_energyRemaining) ?? _energyRemaining;
-		set => _energyRemaining = value;
+		get => Mathf.Clamp(
+			_dayCycle?.Session.AvailableEnergy(_energyRemaining)
+				?? _energyRemaining,
+			0,
+			EnergyCapacity);
+		set => _energyRemaining =
+			Mathf.Clamp(value, 0, EnergyCapacity);
 	}
+
 	public int QuotaStage { get; private set; }
 	public int CheckpointDay { get; private set; } = 1;
 	public int CheckpointScore { get; private set; }
 	public int CheckpointAccepted { get; private set; }
 	public int CheckpointDeclined { get; private set; }
-	public int CheckpointEnergy { get; private set; } = EnergyPerDay;
+
+	public int CheckpointEnergy { get; private set; } =
+		EnergyBeforeMusicUnlock;
+
 	public bool MusicWorkshopUnlocked { get; private set; }
 	public bool CheckpointMusicWorkshopUnlocked { get; private set; }
 	public bool Failed { get; private set; }
 	public bool Completed { get; private set; }
-	public string StatusText { get; private set; } = "Торгуйте и завершайте день.";
-	private bool _localizationReady;
 	public bool TradeActive { get; set; }
+
+	public string StatusText { get; private set; } =
+		"Торгуйте и завершайте день.";
 
 	public override void _Ready()
 	{
 		_world = GetNode<CounterWorld>("World");
-		_customer = GetNode<ModularCustomer>("World/TradingRoom/Customer");
-		_tradePanel = GetNode<PanelContainer>("World/TradingRoom/Item/TradePanel");
-		_baseLabel = GetNode<Label>("World/TradingRoom/Item/TradePanel/Content/BasePriceLabel");
-		_percentLabel = GetNode<Label>("World/TradingRoom/Item/TradePanel/Content/PercentLabel");
-		_offerLabel = GetNode<Label>("World/TradingRoom/Item/TradePanel/Content/OfferLabel");
-		_acceptButton = GetNode<Button>("World/TradingRoom/Item/TradePanel/Content/Buttons/AcceptButton");
-		_declineButton = GetNode<Button>("World/TradingRoom/Item/TradePanel/Content/Buttons/DeclineButton");
-		_scoreLabel = GetNode<Label>("HUD/Root/ScorePanel/ScoreLabel");
-		_dayLabel = GetNode<Label>("HUD/Root/ProgressPanel/Content/DayLabel");
-		_energyLabel = GetNode<Label>("HUD/Root/EnergyPanel/EnergyLabel");
-		_quotaLabel = GetNode<Label>("HUD/Root/ProgressPanel/Content/QuotaLabel");
-		_deadlineLabel = GetNode<Label>("HUD/Root/ProgressPanel/Content/DeadlineLabel");
-		_statusLabel = GetNode<Label>("HUD/Root/ProgressPanel/Content/StatusLabel");
-		_endDayButton = GetNode<Button>("HUD/Root/ProgressPanel/Content/EndDayButton");
-		_atelierGetItemButton = GetNode<Button>("World/Atelier/GetItemButton");
-		_musicGetItemButton = GetNode<Button>("World/MusicWorkshop/GetItemButton");
+		_customer = GetNode<ModularCustomer>(
+			"World/TradingRoom/Customer");
+
+		_tradePanel = GetNode<PanelContainer>(
+			"World/TradingRoom/Item/TradePanel");
+
+		_baseLabel = GetNode<Label>(
+			"World/TradingRoom/Item/TradePanel/Content/BasePriceLabel");
+
+		_percentLabel = GetNode<Label>(
+			"World/TradingRoom/Item/TradePanel/Content/PercentLabel");
+
+		_offerLabel = GetNode<Label>(
+			"World/TradingRoom/Item/TradePanel/Content/OfferLabel");
+
+		_acceptButton = GetNode<Button>(
+			"World/TradingRoom/Item/TradePanel/Content/Buttons/AcceptButton");
+
+		_declineButton = GetNode<Button>(
+			"World/TradingRoom/Item/TradePanel/Content/Buttons/DeclineButton");
+
+		_scoreLabel = GetNode<Label>(
+			"HUD/Root/ScorePanel/ScoreLabel");
+
+		_dayLabel = GetNode<Label>(
+			"HUD/Root/ProgressPanel/Content/DayLabel");
+
+		_energyLabel = GetNode<Label>(
+			"HUD/Root/EnergyPanel/EnergyLabel");
+
+		_quotaLabel = GetNode<Label>(
+			"HUD/Root/ProgressPanel/Content/QuotaLabel");
+
+		_deadlineLabel = GetNode<Label>(
+			"HUD/Root/ProgressPanel/Content/DeadlineLabel");
+
+		_statusLabel = GetNode<Label>(
+			"HUD/Root/ProgressPanel/Content/StatusLabel");
+
+		_endDayButton = GetNode<Button>(
+			"HUD/Root/ProgressPanel/Content/EndDayButton");
+
+		_atelierGetItemButton = GetNode<Button>(
+			"World/Atelier/GetItemButton");
+
+		_musicGetItemButton = GetNode<Button>(
+			"World/MusicWorkshop/GetItemButton");
+
 		EnsureMusicWorkshopUi();
-		_rarityPanels[0] = GetNode<Control>("World/Atelier/RarityPanel");
-		_rarityPanels[1] = GetNode<Control>("World/MusicWorkshop/RarityPanel");
-		_rarityHotspots[0] = GetNode<Control>("World/Atelier/GetItemButton/RarityHotspot");
-		_rarityHotspots[1] = GetNode<Control>("World/MusicWorkshop/GetItemButton/RarityHotspot");
-		_priceHints[0] = GetNode<Control>("World/Atelier/GetItemButton/PriceHint");
-		_priceHints[1] = GetNode<Control>("World/MusicWorkshop/GetItemButton/PriceHint");
+
+		_rarityPanels[0] = GetNode<Control>(
+			"World/Atelier/RarityPanel");
+
+		_rarityPanels[1] = GetNode<Control>(
+			"World/MusicWorkshop/RarityPanel");
+
+		_rarityHotspots[0] = GetNode<Control>(
+			"World/Atelier/GetItemButton/RarityHotspot");
+
+		_rarityHotspots[1] = GetNode<Control>(
+			"World/MusicWorkshop/GetItemButton/RarityHotspot");
+
+		_priceHints[0] = GetNode<Control>(
+			"World/Atelier/GetItemButton/PriceHint");
+
+		_priceHints[1] = GetNode<Control>(
+			"World/MusicWorkshop/GetItemButton/PriceHint");
+
 		Array.Fill(_showcaseItems, -1);
 		Array.Fill(_checkpointShowcaseItems, -1);
 		NormalizeLeftShowcaseNames();
+
 		string[] showcasePaths =
 		[
 			"World/ShowroomLeft/Showcases/Slot1",
@@ -150,70 +256,113 @@ public partial class TradeScene : Node2D
 			"World/ShowroomLeft/Showcases/Slot3",
 			"World/Showroom/Showcases/Slot4",
 			"World/Showroom/Showcases/Slot5",
-			"World/Showroom/Showcases/Slot6"
+            "World/Showroom/Showcases/Slot6"
 		];
+
 		for (int i = 0; i < ShowcaseCapacity; i++)
 		{
 			int slotIndex = i;
 			_showcaseSlots[i] = GetNode<Button>(showcasePaths[i]);
-			_showcaseGlass[i] = _showcaseSlots[i].GetNode<ColorRect>("Glass");
-			_showcaseIcons[i] = _showcaseSlots[i].GetNode<TextureRect>("Icon");
-			_showcaseLabels[i] = _showcaseSlots[i].GetNode<Label>("ItemLabel");
-			_showcaseSlots[i].Pressed += () => OnShowcasePressed(slotIndex);
+			_showcaseGlass[i] =
+				_showcaseSlots[i].GetNode<ColorRect>("Glass");
+			_showcaseIcons[i] =
+				_showcaseSlots[i].GetNode<TextureRect>("Icon");
+			_showcaseLabels[i] =
+				_showcaseSlots[i].GetNode<Label>("ItemLabel");
+
+			_showcaseSlots[i].Pressed +=
+				() => OnShowcasePressed(slotIndex);
 		}
 
-		// --- ДОБАВЛЕНО: Инициализация инвентаря ---
-		// Важно: убедись, что путь к InventoryUI правильный в твоей сцене
+		_extraShowroomHint = GetNode<Label>(
+			"World/Showroom/ShowroomHint");
+
+		EnsureExtraShowroomOverlay();
+
 		_inventoryUI = GetNode<InventoryUI>("HUD/InventoryUI");
-		_inventoryUI.Initialize(this); // Передаем ссылку на текущую сцену
-		// -----------------------------------------
+		_inventoryUI.Initialize(this);
 
 		_rng.Randomize();
 		_buyerArrivalRng.Randomize();
+
 		_acceptButton.Pressed += AcceptTrade;
 		_declineButton.Pressed += RerollCustomer;
 		_endDayButton.Pressed += EndDay;
 		_atelierGetItemButton.Pressed += GetItemFromAtelier;
 		_musicGetItemButton.Pressed += GetItemFromMusicWorkshop;
 		_musicUnlockButton.Pressed += TryUnlockMusicWorkshop;
+
 		for (int i = 0; i < _rarityHotspots.Length; i++)
 		{
 			int index = i;
-			Button button = i == 0 ? _atelierGetItemButton : _musicGetItemButton;
-			button.MouseEntered += () => _priceHints[index].Visible = !_rarityPanels[index].Visible;
-			button.MouseExited += () => _priceHints[index].Hide();
+
+			Button button = i == 0
+				? _atelierGetItemButton
+				: _musicGetItemButton;
+
+			button.MouseEntered += () =>
+				_priceHints[index].Visible =
+					!_rarityPanels[index].Visible;
+
+			button.MouseExited += () =>
+				_priceHints[index].Hide();
+
 			_rarityHotspots[index].MouseEntered += () =>
 			{
 				_priceHints[index].Hide();
 				_rarityPanels[index].Show();
 			};
+
 			_rarityHotspots[index].MouseExited += () =>
 			{
 				_rarityPanels[index].Hide();
 				_priceHints[index].Visible = button.IsHovered();
 			};
 		}
-		GetNode<Button>("HUD/Root/ProgressPanel/Content/CheckpointButton").Pressed += ReturnToCheckpoint;
-		GetNode<Button>("HUD/Root/ProgressPanel/Content/NewGameButton").Pressed += NewGame;
+
+		GetNode<Button>(
+            "HUD/Root/ProgressPanel/Content/CheckpointButton"
+		).Pressed += ReturnToCheckpoint;
+
+		GetNode<Button>(
+            "HUD/Root/ProgressPanel/Content/NewGameButton"
+		).Pressed += NewGame;
 
 		Score = StartingMoney;
 		CheckpointScore = StartingMoney;
-		EnergyRemaining = EnergyPerDay;
-		CheckpointEnergy = EnergyPerDay;
+		EnergyRemaining = EnergyCapacity;
+		CheckpointEnergy = EnergyCapacity;
+
 		_dayCycle = new DayCycleController(this);
-		_embroidery = new EmbroideryGame(() => AcquireItem("atelier", AtelierSpinCost));
+
+		_embroidery = new EmbroideryGame(
+			() => AcquireItem("atelier", AtelierSpinCost));
+
 		AddChild(_embroidery);
-		_polishing = new EmbroideryGame(() => AcquireItem("music", MusicSpinCost), polishing: true);
+
+		_polishing = new EmbroideryGame(
+			() => AcquireItem("music", MusicSpinCost),
+			polishing: true);
+
 		AddChild(_polishing);
+
 		bool restored = LoadProgress();
+
 		RefreshScore();
 		RefreshProgress();
+
 		if (restored)
 		{
-			if (TradeActive) ShowTrade();
-			else FinishTrade();
+			if (TradeActive)
+				ShowTrade();
+			else
+				FinishTrade();
 		}
-		else FinishTrade();
+		else
+		{
+			FinishTrade();
+		}
+
 		RefreshItemButtons();
 		LogStoredItems();
 		_localizationReady = true;
@@ -222,32 +371,52 @@ public partial class TradeScene : Node2D
 
 	public override void _Notification(int what)
 	{
-		if (what != NotificationTranslationChanged || !_localizationReady) return;
+		if (what != NotificationTranslationChanged ||
+			!_localizationReady)
+			return;
+
 		RefreshScore();
 		RefreshProgress();
+		RefreshCraftLabels();
 		RefreshShowcases();
-		if (TradeActive) RefreshOffer();
+
+		if (TradeActive)
+			RefreshOffer();
+
 		_inventoryUI.UpdateUI(_storedItems);
 	}
 
 	private void NormalizeLeftShowcaseNames()
 	{
-		Node showcases = GetNode("World/ShowroomLeft/Showcases");
-		string[] editorNames = ["ShowcaseSlot", "ShowcaseSlot2", "ShowcaseSlot3"];
+		Node showcases =
+			GetNode("World/ShowroomLeft/Showcases");
+
+		string[] editorNames =
+		[
+			"ShowcaseSlot",
+			"ShowcaseSlot2",
+            "ShowcaseSlot3"
+		];
+
 		for (int index = 0; index < editorNames.Length; index++)
 		{
 			string runtimeName = $"Slot{index + 1}";
-			if (!showcases.HasNode(runtimeName) && showcases.HasNode(editorNames[index]))
-				showcases.GetNode(editorNames[index]).Name = runtimeName;
+
+			if (!showcases.HasNode(runtimeName) &&
+				showcases.HasNode(editorNames[index]))
+			{
+				showcases.GetNode(editorNames[index]).Name =
+					runtimeName;
+			}
 		}
 	}
 
 	private void EnsureMusicWorkshopUi()
 	{
-		GetNode<Label>("World/Atelier/HintLabel").Text = "Одежда  •  90$ за 3";
-		Node2D workshop = GetNode<Node2D>("World/MusicWorkshop");
-		workshop.GetNode<Label>("HintLabel").Text = "Инструменты  •  140$ за 3";
-		workshop.GetNode<Label>("GetItemButton/PriceHint/Label").Text = "3 предмета  •  140$";
+		Node2D workshop =
+			GetNode<Node2D>("World/MusicWorkshop");
+
+		RefreshCraftLabels();
 
 		if (!workshop.HasNode("LockedOverlay"))
 		{
@@ -256,10 +425,12 @@ public partial class TradeScene : Node2D
 				Name = "LockedOverlay",
 				Position = Vector2.Zero,
 				Size = new Vector2(1920f, 1080f),
-				Color = new Color(0.015f, 0.015f, 0.015f, 0.97f),
+				Color = new Color(
+					0.015f, 0.015f, 0.015f, 0.97f),
 				MouseFilter = Control.MouseFilterEnum.Pass,
 				ZIndex = 100
 			};
+
 			workshop.AddChild(overlay);
 
 			Label title = new()
@@ -272,8 +443,13 @@ public partial class TradeScene : Node2D
 				VerticalAlignment = VerticalAlignment.Center,
 				MouseFilter = Control.MouseFilterEnum.Ignore
 			};
-			title.AddThemeColorOverride("font_color", Colors.White);
-			title.AddThemeFontSizeOverride("font_size", 52);
+
+			title.AddThemeColorOverride(
+				"font_color", Colors.White);
+
+			title.AddThemeFontSizeOverride(
+				"font_size", 52);
+
 			overlay.AddChild(title);
 
 			Button unlockButton = new()
@@ -282,54 +458,187 @@ public partial class TradeScene : Node2D
 				Position = new Vector2(660f, 470f),
 				Size = new Vector2(600f, 170f),
 				Text = "ОТКРЫТЬ ЗА 100$",
-				TooltipText = "Открыть музыкальную комнату за 100$",
-				MouseDefaultCursorShape = Control.CursorShape.PointingHand
+				TooltipText =
+					"Открыть музыкальную комнату за 100$",
+				MouseDefaultCursorShape =
+					Control.CursorShape.PointingHand
 			};
-			unlockButton.AddThemeColorOverride("font_color", Colors.White);
-			unlockButton.AddThemeFontSizeOverride("font_size", 38);
+
+			unlockButton.AddThemeColorOverride(
+				"font_color", Colors.White);
+
+			unlockButton.AddThemeFontSizeOverride(
+				"font_size", 38);
+
 			overlay.AddChild(unlockButton);
 		}
 
-		_musicLockedOverlay = workshop.GetNode<Control>("LockedOverlay");
-		_musicUnlockButton = workshop.GetNode<Button>("LockedOverlay/UnlockButton");
+		_musicLockedOverlay =
+			workshop.GetNode<Control>("LockedOverlay");
+
+		_musicUnlockButton =
+			workshop.GetNode<Button>(
+				"LockedOverlay/UnlockButton");
+	}
+
+	private void RefreshCraftLabels()
+	{
+		bool english = GameLocalization.Language == "en";
+
+		Label atelierHint = GetNode<Label>(
+			"World/Atelier/HintLabel");
+
+		Label musicHint = GetNode<Label>(
+			"World/MusicWorkshop/HintLabel");
+
+		Label atelierPrice = GetNode<Label>(
+			"World/Atelier/GetItemButton/PriceHint/Label");
+
+		Label musicPrice = GetNode<Label>(
+			"World/MusicWorkshop/GetItemButton/PriceHint/Label");
+
+		atelierHint.AutoTranslateMode =
+			Node.AutoTranslateModeEnum.Disabled;
+		musicHint.AutoTranslateMode =
+			Node.AutoTranslateModeEnum.Disabled;
+		atelierPrice.AutoTranslateMode =
+			Node.AutoTranslateModeEnum.Disabled;
+		musicPrice.AutoTranslateMode =
+			Node.AutoTranslateModeEnum.Disabled;
+
+		_atelierGetItemButton.AutoTranslateMode =
+			Node.AutoTranslateModeEnum.Disabled;
+		_musicGetItemButton.AutoTranslateMode =
+			Node.AutoTranslateModeEnum.Disabled;
+
+		atelierHint.Text = english
+			? "Clothing  •  1 for $90"
+			: "Одежда  •  90$ за 1";
+
+		musicHint.Text = english
+			? "Instruments  •  1 for $140"
+			: "Инструменты  •  140$ за 1";
+
+		atelierPrice.Text = english
+			? "1 item  •  $90"
+			: "1 предмет  •  90$";
+
+		musicPrice.Text = english
+			? "1 item  •  $140"
+			: "1 предмет  •  140$";
+
+		_atelierGetItemButton.Text = english
+			? "CREATE ITEM"
+			: "СОЗДАТЬ ПРЕДМЕТ";
+
+		_musicGetItemButton.Text = english
+			? "CREATE ITEM"
+			: "СОЗДАТЬ ПРЕДМЕТ";
+	}
+
+	private void EnsureExtraShowroomOverlay()
+	{
+		Node2D showroom =
+			GetNode<Node2D>("World/Showroom");
+
+		_rightShowroomOverlay =
+			showroom.GetNodeOrNull<ColorRect>("LockedOverlay");
+
+		if (_rightShowroomOverlay != null)
+			return;
+
+		_rightShowroomOverlay = new ColorRect
+		{
+			Name = "LockedOverlay",
+			Position = Vector2.Zero,
+			Size = new Vector2(1920, 1080),
+			Color = new Color(
+				0.015f, 0.015f, 0.015f, 0.90f),
+			MouseFilter = Control.MouseFilterEnum.Stop,
+			ZIndex = 100
+		};
+
+		showroom.AddChild(_rightShowroomOverlay);
+
+		Label title = new Label
+		{
+			Name = "LockTitle",
+			Position = new Vector2(320, 410),
+			Size = new Vector2(1280, 170),
+			Text = "ВИТРИНЫ ЗАКРЫТЫ",
+			HorizontalAlignment = HorizontalAlignment.Center,
+			VerticalAlignment = VerticalAlignment.Center,
+			MouseFilter = Control.MouseFilterEnum.Ignore
+		};
+
+		title.AddThemeFontSizeOverride(
+			"font_size", 48);
+
+		title.AddThemeColorOverride(
+			"font_color", Colors.White);
+
+		_rightShowroomOverlay.AddChild(title);
 	}
 
 	public override void _Process(double delta)
 	{
-		if (GetTree().Paused) return;
+		if (GetTree().Paused)
+			return;
+
 		_dayCycle.Tick(delta);
 		TickBuyers(delta);
 	}
 
 	public override void _Input(InputEvent @event)
 	{
-		if (GetTree().Paused) return;
-		if (@event is InputEventKey { Pressed: true, Echo: false } key)
+		if (GetTree().Paused)
+			return;
+
+		if (@event is InputEventKey
+			{ Pressed: true, Echo: false } key &&
+			key.Keycode == Key.F)
 		{
-			switch (key.Keycode)
-			{
-				case Key.F:
-					RerollCustomer();
-					GetViewport().SetInputAsHandled();
-					break;
-			}
+			RerollCustomer();
+			GetViewport().SetInputAsHandled();
 		}
 	}
 
-	public void GetItemFromAtelier() => _embroidery.Open();
+	public void GetItemFromAtelier()
+	{
+		_embroidery.Open();
+	}
 
 	public void GetItemFromMusicWorkshop()
 	{
-		if (!MusicWorkshopUnlocked) return;
+		if (!MusicWorkshopUnlocked)
+			return;
+
 		_polishing.Open();
 	}
 
 	public void TryUnlockMusicWorkshop()
 	{
-		if (MusicWorkshopUnlocked || Failed || Completed || Score < MusicUnlockCost) return;
+		if (MusicWorkshopUnlocked ||
+			Failed ||
+			Completed ||
+			Score < MusicUnlockCost)
+			return;
+
+		int availableEnergy = EnergyRemaining;
+
 		Score -= MusicUnlockCost;
 		MusicWorkshopUnlocked = true;
+
+		EnergyRemaining = availableEnergy +
+			EnergyAfterMusicUnlock -
+			EnergyBeforeMusicUnlock;
+
+		_dayCycle.SynchronizeRoomDuration();
+
 		StatusText = "Музыкальная мастерская открыта.";
+
+		_inventoryUI.UpdateUI(_storedItems);
+
 		RefreshScore();
 		RefreshProgress();
 		RefreshItemButtons();
@@ -338,46 +647,80 @@ public partial class TradeScene : Node2D
 
 	private void AcquireItem(string workshop, int cost)
 	{
-		if (Failed || Completed || EnergyRemaining <= 0 || Score < cost) return;
+		if (Failed ||
+			Completed ||
+			EnergyRemaining <= 0 ||
+			Score < cost)
+			return;
 
 		Score -= cost;
 		EnergyRemaining--;
-		for (int itemNumber = 0; itemNumber < ItemsPerSpin; itemNumber++)
+
+		for (int itemNumber = 0;
+			 itemNumber < ItemsPerSpin;
+			 itemNumber++)
 		{
-			int index = WorkshopItemCatalog.Roll(workshop, _rng.RandiRange(0, WorkshopItemCatalog.TotalWeight(workshop) - 1), DayUpgrades);
+			int index = WorkshopItemCatalog.Roll(
+				workshop,
+				_rng.RandiRange(
+					0,
+					WorkshopItemCatalog.TotalWeight(workshop) - 1),
+				DayUpgrades);
+
 			_storedItems.Add(index);
-			GD.Print($"{workshop}: получен предмет {Items[index].Name} (индекс {index}).");
+
+			GD.Print(
+				$"{workshop}: получен предмет {Items[index].Name} (индекс {index}).");
 		}
+
 		LogStoredItems();
 		RefreshScore();
 		RefreshProgress();
 		RefreshItemButtons();
-		
-		// --- ДОБАВЛЕНО: Обновляем визуал инвентаря, чтобы появилась иконка ---
 		_inventoryUI.UpdateUI(_storedItems);
-		// ---------------------------------------------------------------------
-		
 		SaveProgress();
 	}
 
 	private void LogStoredItems()
 	{
-		var entries = _storedItems.ConvertAll(index => $"{index}:{Items[index].Name}");
-		GD.Print($"Массив предметов: [{string.Join(", ", entries)}]");
+		var entries = _storedItems.ConvertAll(
+			index => $"{index}:{Items[index].Name}");
+
+		GD.Print(
+			$"Массив предметов: [{string.Join(", ", entries)}]");
 	}
 
 	public void PlaceItemInShowcase(int slotIndex)
 	{
-		if (Failed || Completed || slotIndex < 0 || slotIndex >= ShowcaseCapacity ||
-			_showcaseItems[slotIndex] != -1 || SelectedInventoryIndex < 0 ||
-			SelectedInventoryIndex >= _storedItems.Count) return;
+		if (Failed ||
+			Completed ||
+			slotIndex < 0 ||
+			slotIndex >= ShowcaseCapacity ||
+			(slotIndex >= InitialShowcaseCapacity &&
+			 !MusicWorkshopUnlocked) ||
+			_showcaseItems[slotIndex] != -1 ||
+			SelectedInventoryIndex < 0 ||
+			SelectedInventoryIndex >= _storedItems.Count)
+			return;
 
-		bool firstItem = Array.TrueForAll(_showcaseItems, item => item == -1);
-		_showcaseItems[slotIndex] = _storedItems[SelectedInventoryIndex];
+		bool firstItem = Array.TrueForAll(
+			_showcaseItems, item => item == -1);
+
+		_showcaseItems[slotIndex] =
+			_storedItems[SelectedInventoryIndex];
+
 		_storedItems.RemoveAt(SelectedInventoryIndex);
+
 		_inventoryUI.DeselectAll();
 		_inventoryUI.UpdateUI(_storedItems);
-		if (firstItem && !TradeActive && _dayCycle.CanReceiveBuyers) _buyerCountdown = NextBuyerDelay();
+
+		if (firstItem &&
+			!TradeActive &&
+			_dayCycle.CanReceiveBuyers)
+		{
+			_buyerCountdown = NextBuyerDelay();
+		}
+
 		RefreshItemButtons();
 		LogStoredItems();
 		SaveProgress();
@@ -396,17 +739,32 @@ public partial class TradeScene : Node2D
 
 	private void TickBuyers(double delta)
 	{
-		if (!_dayCycle.CanReceiveBuyers || TradeActive || Array.TrueForAll(_showcaseItems, item => item == -1)) return;
+		if (!_dayCycle.CanReceiveBuyers ||
+			TradeActive ||
+			Array.TrueForAll(
+				_showcaseItems, item => item == -1))
+			return;
+
 		_buyerCountdown -= delta;
-		if (_buyerCountdown > 0) return;
+
+		if (_buyerCountdown > 0)
+			return;
 
 		var occupied = new List<int>();
+
 		for (int i = 0; i < ShowcaseCapacity; i++)
-			if (_showcaseItems[i] >= 0) occupied.Add(i);
-		_activeShowcaseIndex = occupied[_rng.RandiRange(0, occupied.Count - 1)];
+		{
+			if (_showcaseItems[i] >= 0)
+				occupied.Add(i);
+		}
+
+		_activeShowcaseIndex = occupied[
+			_rng.RandiRange(0, occupied.Count - 1)];
+
 		ItemIndex = _showcaseItems[_activeShowcaseIndex];
 		_showcaseItems[_activeShowcaseIndex] = -1;
 		_buyerCountdown = 0;
+
 		RefreshShowcases();
 		StartBuyerOffer();
 	}
@@ -415,7 +773,10 @@ public partial class TradeScene : Node2D
 	{
 		Percentage = _rng.RandiRange(-30, 30);
 		RerollsRemaining = GetItemRerollLimit(ItemIndex);
-		CustomerIndex = _rng.RandiRange(0, _customer.GetAppearanceCount() - 1);
+
+		CustomerIndex = _rng.RandiRange(
+			0, _customer.GetAppearanceCount() - 1);
+
 		TradeActive = true;
 		ShowTrade();
 		SaveProgress();
@@ -425,11 +786,14 @@ public partial class TradeScene : Node2D
 	{
 		_world.ItemKind = Items[ItemIndex].Kind;
 		_world.ItemVisible = true;
+
 		_customer.SetAppearance(CustomerIndex);
 		_customer.Visible = true;
 		_tradePanel.Visible = true;
+
 		_acceptButton.Disabled = false;
 		_declineButton.Disabled = false;
+
 		RefreshOffer();
 		RefreshItemButtons();
 		RefreshProgress();
@@ -437,11 +801,26 @@ public partial class TradeScene : Node2D
 
 	public void RefreshItemButtons()
 	{
-		_atelierGetItemButton.Disabled = Failed || Completed || EnergyRemaining <= 0 || Score < AtelierSpinCost;
-		_musicGetItemButton.Disabled = !MusicWorkshopUnlocked || Failed || Completed ||
-			EnergyRemaining <= 0 || Score < MusicSpinCost;
+		_atelierGetItemButton.Disabled =
+			Failed ||
+			Completed ||
+			EnergyRemaining <= 0 ||
+			Score < AtelierSpinCost;
+
+		_musicGetItemButton.Disabled =
+			!MusicWorkshopUnlocked ||
+			Failed ||
+			Completed ||
+			EnergyRemaining <= 0 ||
+			Score < MusicSpinCost;
+
 		_musicLockedOverlay.Visible = !MusicWorkshopUnlocked;
-		_musicUnlockButton.Disabled = Failed || Completed || Score < MusicUnlockCost;
+
+		_musicUnlockButton.Disabled =
+			Failed ||
+			Completed ||
+			Score < MusicUnlockCost;
+
 		RefreshShowcases();
 	}
 
@@ -449,49 +828,165 @@ public partial class TradeScene : Node2D
 	{
 		for (int i = 0; i < ShowcaseCapacity; i++)
 		{
+			bool locked =
+				i >= InitialShowcaseCapacity &&
+				!MusicWorkshopUnlocked;
+
 			int itemIndex = _showcaseItems[i];
-			_showcaseIcons[i].Texture = itemIndex < 0 ? null :
-				GD.Load<Texture2D>(Items[itemIndex].ArtPath);
-			_showcaseLabels[i].Text = itemIndex < 0 ? "СВОБОДНО" : GetItemName(itemIndex).ToUpperInvariant();
-			_showcaseGlass[i].Color = new Color(0.77f, 0.9f, 0.88f, 0.58f);
-			_showcaseSlots[i].Disabled = Failed || Completed ||
-				(itemIndex < 0 && (SelectedInventoryIndex < 0 || SelectedInventoryIndex >= _storedItems.Count));
+
+			_showcaseIcons[i].Texture = itemIndex < 0
+				? null
+				: GD.Load<Texture2D>(
+					Items[itemIndex].ArtPath);
+
+			_showcaseLabels[i].Text = locked
+				? GameLocalization.Language == "en"
+					? "LOCKED"
+					: "ЗАКРЫТО"
+				: itemIndex < 0
+					? "СВОБОДНО"
+					: GetItemName(itemIndex).ToUpperInvariant();
+
+			_showcaseGlass[i].Color =
+				new Color(0.77f, 0.9f, 0.88f, 0.58f);
+
+			_showcaseSlots[i].Disabled =
+				locked ||
+				Failed ||
+				Completed ||
+				(itemIndex < 0 &&
+				 (SelectedInventoryIndex < 0 ||
+				  SelectedInventoryIndex >= _storedItems.Count));
+
+			_showcaseSlots[i].Modulate = locked
+				? new Color(0.45f, 0.45f, 0.45f, 1f)
+				: Colors.White;
+		}
+
+		_rightShowroomOverlay.Visible = !MusicWorkshopUnlocked;
+
+		if (_rightShowroomOverlay.GetNodeOrNull<Label>(
+			"LockTitle") is Label lockTitle)
+		{
+			lockTitle.Text =
+				GameLocalization.Language == "en"
+					? "DISPLAYS LOCKED"
+					: "ВИТРИНЫ ЗАКРЫТЫ";
+		}
+
+		_extraShowroomHint.Text = !MusicWorkshopUnlocked
+			? GameLocalization.Language == "en"
+				? "Unlock the music shop to use these displays"
+				: "Откройте музыкальный магазин, чтобы пользоваться витринами"
+			: GameLocalization.Language == "en"
+				? "Select an inventory item and an empty display"
+				: "Выберите предмет в инвентаре и свободную витрину";
+	}
+
+	private void MoveItemsOutOfLockedShowcases()
+	{
+		if (!MusicWorkshopUnlocked)
+		{
+			for (int i = InitialShowcaseCapacity;
+				 i < ShowcaseCapacity; i++)
+			{
+				if (_showcaseItems[i] < 0)
+					continue;
+
+				_storedItems.Add(_showcaseItems[i]);
+				_showcaseItems[i] = -1;
+			}
+		}
+
+		if (!CheckpointMusicWorkshopUnlocked)
+		{
+			for (int i = InitialShowcaseCapacity;
+				 i < ShowcaseCapacity; i++)
+			{
+				if (_checkpointShowcaseItems[i] < 0)
+					continue;
+
+				_checkpointItems.Add(
+					_checkpointShowcaseItems[i]);
+
+				_checkpointShowcaseItems[i] = -1;
+			}
 		}
 	}
 
 	private void RefreshOffer()
 	{
 		int basePrice = GetItemPrice(ItemIndex);
-		OfferedPrice = PriceForPercent(basePrice, Percentage);
-		_baseLabel.Text = GameLocalization.Format("Обычно: {0}$", basePrice);
-		_percentLabel.Text = GameLocalization.Format("К цене: {0}{1}%", Percentage >= 0 ? "+" : "", Percentage);
-		_offerLabel.Text = GameLocalization.Format("Получим: {0}$", OfferedPrice);
+
+		OfferedPrice = PriceForPercent(
+			basePrice, Percentage);
+
+		_baseLabel.Text = GameLocalization.Format(
+			"Обычно: {0}$", basePrice);
+
+		_percentLabel.Text = GameLocalization.Format(
+			"К цене: {0}{1}%",
+			Percentage >= 0 ? "+" : "",
+			Percentage);
+
+		_offerLabel.Text = GameLocalization.Format(
+			"Получим: {0}$", OfferedPrice);
+
 		_declineButton.Text = $"× ({RerollsRemaining})";
 		_declineButton.Disabled = RerollsRemaining <= 0;
 	}
 
-	public static int PriceForPercent(int basePrice, int value) =>
-		Mathf.Max(1, Mathf.RoundToInt(basePrice * (1f + value / 100f)));
+	public static int PriceForPercent(int basePrice, int value)
+	{
+		return Mathf.Max(
+			1,
+			Mathf.RoundToInt(
+				basePrice * (1f + value / 100f)));
+	}
 
 	public void RerollCustomer()
 	{
-		if (!TradeActive || RerollsRemaining <= 0) return;
+		if (!TradeActive || RerollsRemaining <= 0)
+			return;
+
 		RerollsRemaining--;
 		int basePrice = GetItemPrice(ItemIndex);
+
 		var higher = new List<int>();
 		var lower = new List<int>();
+
 		for (int value = -30; value <= 30; value++)
 		{
-			int newPrice = PriceForPercent(basePrice, value);
-			if (newPrice > OfferedPrice) higher.Add(value);
-			else if (newPrice < OfferedPrice) lower.Add(value);
+			int newPrice =
+				PriceForPercent(basePrice, value);
+
+			if (newPrice > OfferedPrice)
+				higher.Add(value);
+			else if (newPrice < OfferedPrice)
+				lower.Add(value);
 		}
-		List<int> pool = _rng.Randf() < 0.7f ? higher : lower;
-		if (pool.Count == 0) pool = lower.Count > 0 ? lower : higher;
-		if (pool.Count == 0) return;
-		Percentage = pool[_rng.RandiRange(0, pool.Count - 1)];
-		int appearanceCount = _customer.GetAppearanceCount();
-		CustomerIndex = (CustomerIndex + _rng.RandiRange(1, appearanceCount - 1)) % appearanceCount;
+
+		List<int> pool = _rng.Randf() < 0.7f
+			? higher
+			: lower;
+
+		if (pool.Count == 0)
+			pool = lower.Count > 0 ? lower : higher;
+
+		if (pool.Count == 0)
+			return;
+
+		Percentage = pool[
+			_rng.RandiRange(0, pool.Count - 1)];
+
+		int appearanceCount =
+			_customer.GetAppearanceCount();
+
+		CustomerIndex =
+			(CustomerIndex +
+			 _rng.RandiRange(1, appearanceCount - 1)) %
+			appearanceCount;
+
 		_customer.SetAppearance(CustomerIndex);
 		RefreshOffer();
 		SaveProgress();
@@ -499,16 +994,22 @@ public partial class TradeScene : Node2D
 
 	public void AcceptTrade()
 	{
-		if (!TradeActive) return;
+		if (!TradeActive)
+			return;
+
 		Score += OfferedPrice;
 		Accepted++;
+
 		RefreshScore();
 		FinishTrade();
 		RefreshProgress();
 		SaveProgress();
 	}
 
-	public void DeclineTrade() => RerollCustomer();
+	public void DeclineTrade()
+	{
+		RerollCustomer();
+	}
 
 	private void FinishTrade()
 	{
@@ -516,23 +1017,43 @@ public partial class TradeScene : Node2D
 		TradeActive = false;
 		ItemIndex = -1;
 		_activeShowcaseIndex = -1;
+
 		if (hadActiveTrade)
-			_buyerCountdown = _dayCycle.CanReceiveBuyers && Array.Exists(_showcaseItems, item => item >= 0) ? NextBuyerDelay() : 0;
+		{
+			_buyerCountdown =
+				_dayCycle.CanReceiveBuyers &&
+				Array.Exists(
+					_showcaseItems, item => item >= 0)
+					? NextBuyerDelay()
+					: 0;
+		}
+
 		_world.ItemVisible = false;
 		_customer.Visible = false;
 		_tradePanel.Visible = false;
 		_acceptButton.Disabled = true;
 		_declineButton.Disabled = true;
+
 		RefreshItemButtons();
 		RefreshProgress();
 	}
 
-	private void RefreshScore() => _scoreLabel.Text = GameLocalization.Format("Счёт: {0}$", Score);
+	private void RefreshScore()
+	{
+		_scoreLabel.Text = GameLocalization.Format(
+			"Счёт: {0}$", Score);
+	}
 
 	private void RefreshProgress()
 	{
-		_dayLabel.Text = GameLocalization.Format("День: {0} / {1}", CurrentDay, FinalDay);
-		_energyLabel.Text = GameLocalization.Format("Энергия: {0} / {1}", EnergyRemaining, _dayCycle.Upgrades.EnergyCapacity);
+		_dayLabel.Text = GameLocalization.Format(
+			"День: {0} / {1}",
+			CurrentDay, FinalDay);
+
+		_energyLabel.Text = GameLocalization.Format(
+			"Энергия: {0} / {1}",
+			EnergyRemaining, EnergyCapacity);
+
 		if (Completed)
 		{
 			_quotaLabel.Text = "Все квоты выплачены";
@@ -540,19 +1061,42 @@ public partial class TradeScene : Node2D
 		}
 		else
 		{
-			int target = QuotaStage == 0 ? FirstQuota : SecondQuota;
-			int deadline = QuotaStage == 0 ? FirstDeadline : FinalDay;
-			_quotaLabel.Text = GameLocalization.Format("Квота {0} / 2: {1}$", QuotaStage + 1, target);
-			_deadlineLabel.Text = GameLocalization.Format("Срок: конец дня {0}", deadline);
+			int target = QuotaStage == 0
+				? FirstQuota
+				: SecondQuota;
+
+			int deadline = QuotaStage == 0
+				? FirstDeadline
+				: FinalDay;
+
+			_quotaLabel.Text = GameLocalization.Format(
+				"Квота {0} / 2: {1}$",
+				QuotaStage + 1, target);
+
+			_deadlineLabel.Text = GameLocalization.Format(
+				"Срок: конец дня {0}", deadline);
 		}
-		_statusLabel.Text = _dayCycle.DisplayStatus(StatusText);
+
+		_statusLabel.Text =
+			_dayCycle.DisplayStatus(StatusText);
+
 		_dayCycle.UpdateEndButton(_endDayButton);
 	}
 
-	public void EndDay() => _dayCycle.EndDay();
-	public void TickCraftDay(double delta) => _dayCycle.Tick(delta);
+	public void EndDay()
+	{
+		_dayCycle.EndDay();
+	}
 
-	public void PersistProgress() => SaveProgress();
+	public void TickCraftDay(double delta)
+	{
+		_dayCycle.Tick(delta);
+	}
+
+	public void PersistProgress()
+	{
+		SaveProgress();
+	}
 
 	public void SynchronizeDayState()
 	{
@@ -569,19 +1113,28 @@ public partial class TradeScene : Node2D
 		SaveProgress();
 	}
 
-	// Calendar/quota transition used only after the day controller permits advancing.
 	public void AdvanceToNextDay()
 	{
-		if (Failed || Completed || TradeActive) return;
+		if (Failed || Completed || TradeActive)
+			return;
+
 		FinishTrade();
-		int deadline = QuotaStage == 0 ? FirstDeadline : FinalDay;
+
+		int deadline = QuotaStage == 0
+			? FirstDeadline
+			: FinalDay;
+
 		if (CurrentDay >= deadline)
 		{
-			int target = QuotaStage == 0 ? FirstQuota : SecondQuota;
+			int target = QuotaStage == 0
+				? FirstQuota
+				: SecondQuota;
+
 			if (Score < target)
 			{
 				Failed = true;
-				StatusText = $"Не хватает {target - Score}$ на квоту. Вернитесь к контрольной точке.";
+				StatusText =
+					$"Не хватает {target - Score}$ на квоту. Вернитесь к контрольной точке.";
 			}
 			else if (QuotaStage == 0)
 			{
@@ -592,13 +1145,22 @@ public partial class TradeScene : Node2D
 				CheckpointScore = Score;
 				CheckpointAccepted = Accepted;
 				CheckpointDeclined = Declined;
-				EnergyRemaining = EnergyPerDay;
+
+				EnergyRemaining = EnergyCapacity;
 				CheckpointEnergy = EnergyRemaining;
-				CheckpointMusicWorkshopUnlocked = MusicWorkshopUnlocked;
+				CheckpointMusicWorkshopUnlocked =
+					MusicWorkshopUnlocked;
+
 				_dayCycle.CaptureCheckpointUpgrades();
+
 				_checkpointItems.Clear();
 				_checkpointItems.AddRange(_storedItems);
-				Array.Copy(_showcaseItems, _checkpointShowcaseItems, ShowcaseCapacity);
+
+				Array.Copy(
+					_showcaseItems,
+					_checkpointShowcaseItems,
+					ShowcaseCapacity);
+
 				StatusText = "Первая квота выплачена.";
 			}
 			else
@@ -612,10 +1174,16 @@ public partial class TradeScene : Node2D
 		else
 		{
 			CurrentDay++;
-			EnergyRemaining = EnergyPerDay;
+			EnergyRemaining = EnergyCapacity;
 			StatusText = "Начался новый день.";
 		}
-		_buyerCountdown = Array.Exists(_showcaseItems, item => item >= 0) ? NextBuyerDelay() : 0;
+
+		_buyerCountdown = Array.Exists(
+			_showcaseItems,
+			item => item >= 0)
+			? NextBuyerDelay()
+			: 0;
+
 		RefreshScore();
 		RefreshProgress();
 		RefreshItemButtons();
@@ -626,32 +1194,47 @@ public partial class TradeScene : Node2D
 	{
 		_dayCycle.Reset();
 		FinishTrade();
+
 		_storedItems.Clear();
 		_storedItems.AddRange(_checkpointItems);
-		Array.Copy(_checkpointShowcaseItems, _showcaseItems, ShowcaseCapacity);
-		_buyerCountdown = Array.Exists(_showcaseItems, item => item >= 0) ? NextBuyerDelay() : 0;
+
+		Array.Copy(
+			_checkpointShowcaseItems,
+			_showcaseItems,
+			ShowcaseCapacity);
+
+		_buyerCountdown = Array.Exists(
+			_showcaseItems, item => item >= 0)
+			? NextBuyerDelay()
+			: 0;
+
 		_inventoryUI.DeselectAll();
 		CurrentDay = CheckpointDay;
 		_dayCycle.RestoreCheckpointUpgrades();
+
 		Score = CheckpointScore;
+		MusicWorkshopUnlocked =
+			CheckpointMusicWorkshopUnlocked;
+
+		MoveItemsOutOfLockedShowcases();
+		_dayCycle.SynchronizeRoomDuration();
+
 		EnergyRemaining = CheckpointEnergy;
-		MusicWorkshopUnlocked = CheckpointMusicWorkshopUnlocked;
 		Accepted = CheckpointAccepted;
 		Declined = CheckpointDeclined;
 		QuotaStage = CheckpointDay == 1 ? 0 : 1;
+
 		Failed = false;
 		Completed = false;
 		StatusText = "Возврат к контрольной точке.";
+
 		RefreshScore();
 		RefreshProgress();
 		RefreshItemButtons();
 		LogStoredItems();
-		
-		// --- ДОБАВЛЕНО: Обновляем инвентарь после отката ---
+
 		_inventoryUI.UpdateUI(_storedItems);
 		RefreshShowcases();
-		// --------------------------------------------------
-		
 		SaveProgress();
 	}
 
@@ -659,152 +1242,347 @@ public partial class TradeScene : Node2D
 	{
 		_dayCycle.Reset();
 		FinishTrade();
+
 		_storedItems.Clear();
 		_checkpointItems.Clear();
 		Array.Fill(_showcaseItems, -1);
 		Array.Fill(_checkpointShowcaseItems, -1);
 		_buyerCountdown = 0;
 		_inventoryUI.DeselectAll();
+
 		CurrentDay = 1;
 		Score = StartingMoney;
-		EnergyRemaining = EnergyPerDay;
+		MusicWorkshopUnlocked = false;
+		CheckpointMusicWorkshopUnlocked = false;
+
+		_dayCycle.SynchronizeRoomDuration();
+
+		EnergyRemaining = EnergyCapacity;
 		Accepted = 0;
 		Declined = 0;
 		QuotaStage = 0;
 		CheckpointDay = 1;
 		CheckpointScore = StartingMoney;
-		CheckpointEnergy = EnergyPerDay;
-		MusicWorkshopUnlocked = false;
-		CheckpointMusicWorkshopUnlocked = false;
+		CheckpointEnergy = EnergyCapacity;
 		CheckpointAccepted = 0;
 		CheckpointDeclined = 0;
+
 		Failed = false;
 		Completed = false;
 		StatusText = "Новая игра.";
+
 		RefreshScore();
 		RefreshProgress();
 		RefreshItemButtons();
 		LogStoredItems();
-		
-		// --- ДОБАВЛЕНО: Очищаем инвентарь визуально ---
+
 		_inventoryUI.UpdateUI(_storedItems);
 		RefreshShowcases();
-		// ----------------------------------------------
-		
 		SaveProgress();
 	}
 
 	private void SaveProgress()
 	{
-		if (string.IsNullOrEmpty(SavePath)) return;
-		using var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Write);
+		if (string.IsNullOrEmpty(SavePath))
+			return;
+
+		using var file = FileAccess.Open(
+			SavePath, FileAccess.ModeFlags.Write);
+
 		if (file == null)
 		{
-			GD.PushWarning($"Не удалось сохранить прогресс: {SavePath}");
+			GD.PushWarning(
+				$"Не удалось сохранить прогресс: {SavePath}");
 			return;
 		}
+
 		var data = new ProgressData
 		{
-			SaveVersion = 10, Day = CurrentDay, Score = Score, EnergyRemaining = EnergyRemaining,
-			UpgradePending = _dayCycle.Upgrades.Pending, SelectedUpgrade = (int)_dayCycle.Upgrades.Selected,
-			AtelierUpgradeLevel = _dayCycle.Upgrades.AtelierLevel, MusicUpgradeLevel = _dayCycle.Upgrades.MusicLevel,
-			CheckpointAtelierUpgradeLevel = _dayCycle.CheckpointAtelierLevel, CheckpointMusicUpgradeLevel = _dayCycle.CheckpointMusicLevel,
-			AtelierPriceLevel = DayUpgrades.AtelierPriceLevel, MusicPriceLevel = DayUpgrades.MusicPriceLevel,
-			CheckpointAtelierPriceLevel = _dayCycle.CheckpointAtelierPriceLevel, CheckpointMusicPriceLevel = _dayCycle.CheckpointMusicPriceLevel,
-			DayRemainingSeconds = DayRemainingSeconds, DayClosed = DayClosed,
+			SaveVersion = 12,
+			Day = CurrentDay,
+			Score = Score,
+			EnergyRemaining = EnergyRemaining,
+			UpgradePending = _dayCycle.Upgrades.Pending,
+			SelectedUpgrade = (int)_dayCycle.Upgrades.Selected,
+			AtelierUpgradeLevel = _dayCycle.Upgrades.AtelierLevel,
+			MusicUpgradeLevel = _dayCycle.Upgrades.MusicLevel,
+			CheckpointAtelierUpgradeLevel =
+				_dayCycle.CheckpointAtelierLevel,
+			CheckpointMusicUpgradeLevel =
+				_dayCycle.CheckpointMusicLevel,
+			AtelierPriceLevel =
+				DayUpgrades.AtelierPriceLevel,
+			MusicPriceLevel =
+				DayUpgrades.MusicPriceLevel,
+			CheckpointAtelierPriceLevel =
+				_dayCycle.CheckpointAtelierPriceLevel,
+			CheckpointMusicPriceLevel =
+				_dayCycle.CheckpointMusicPriceLevel,
+			DayRemainingSeconds = DayRemainingSeconds,
+			DayClosed = DayClosed,
 			Accepted = Accepted,
-			Declined = Declined, QuotaStage = QuotaStage, CheckpointDay = CheckpointDay,
-			CheckpointScore = CheckpointScore, CheckpointEnergy = CheckpointEnergy,
+			Declined = Declined,
+			QuotaStage = QuotaStage,
+			CheckpointDay = CheckpointDay,
+			CheckpointScore = CheckpointScore,
+			CheckpointEnergy = CheckpointEnergy,
 			MusicWorkshopUnlocked = MusicWorkshopUnlocked,
-			CheckpointMusicWorkshopUnlocked = CheckpointMusicWorkshopUnlocked,
+			CheckpointMusicWorkshopUnlocked =
+				CheckpointMusicWorkshopUnlocked,
 			CheckpointAccepted = CheckpointAccepted,
-			CheckpointDeclined = CheckpointDeclined, Failed = Failed, Completed = Completed,
-			Status = StatusText, TradeActive = TradeActive, ItemIndex = ItemIndex,
-			CustomerIndex = CustomerIndex, Percentage = Percentage, RerollsRemaining = RerollsRemaining,
-			StoredItems = _storedItems.ToArray(), CheckpointItems = _checkpointItems.ToArray(),
+			CheckpointDeclined = CheckpointDeclined,
+			Failed = Failed,
+			Completed = Completed,
+			Status = StatusText,
+			TradeActive = TradeActive,
+			ItemIndex = ItemIndex,
+			CustomerIndex = CustomerIndex,
+			Percentage = Percentage,
+			RerollsRemaining = RerollsRemaining,
+			StoredItems = _storedItems.ToArray(),
+			CheckpointItems = _checkpointItems.ToArray(),
 			ShowcaseItems = (int[])_showcaseItems.Clone(),
-			CheckpointShowcaseItems = (int[])_checkpointShowcaseItems.Clone(),
-			ActiveShowcaseIndex = _activeShowcaseIndex, BuyerCountdown = _buyerCountdown
+			CheckpointShowcaseItems =
+				(int[])_checkpointShowcaseItems.Clone(),
+			ActiveShowcaseIndex = _activeShowcaseIndex,
+			BuyerCountdown = _buyerCountdown
 		};
-		file.StoreString(JsonSerializer.Serialize(data, JsonOptions));
+
+		file.StoreString(
+			JsonSerializer.Serialize(data, JsonOptions));
 	}
 
 	private bool LoadProgress()
 	{
-		if (string.IsNullOrEmpty(SavePath) || !FileAccess.FileExists(SavePath)) return false;
+		if (string.IsNullOrEmpty(SavePath) ||
+			!FileAccess.FileExists(SavePath))
+			return false;
+
 		ProgressData data;
+
 		try
 		{
-			data = JsonSerializer.Deserialize<ProgressData>(FileAccess.GetFileAsString(SavePath), JsonOptions);
+			data = JsonSerializer.Deserialize<ProgressData>(
+				FileAccess.GetFileAsString(SavePath),
+				JsonOptions);
 		}
 		catch (JsonException)
 		{
 			return false;
 		}
-		if (data == null) return false;
-		_dayCycle.Restore(data.SaveVersion >= 8 ? data.DayRemainingSeconds : null, data.SaveVersion >= 8 && data.DayClosed,
+
+		if (data == null)
+			return false;
+
+		MusicWorkshopUnlocked =
+			data.SaveVersion >= 7 &&
+			data.MusicWorkshopUnlocked;
+
+		CheckpointMusicWorkshopUnlocked =
+			data.SaveVersion >= 7 &&
+			data.CheckpointMusicWorkshopUnlocked;
+
+		double? restoredRemaining = data.SaveVersion >= 8
+			? data.DayRemainingSeconds
+			: null;
+
+		if (data.SaveVersion < 11 &&
+			restoredRemaining is double oldRemaining &&
+			double.IsFinite(oldRemaining) &&
+			!data.DayClosed)
+		{
+			bool timeBonus =
+				data.SaveVersion >= 9 &&
+				data.SelectedUpgrade ==
+					(int)ChikagoShop.Domain.Days.DayUpgrade.Time;
+
+			double oldDuration =
+				120 + (timeBonus ? 30 : 0);
+
+			double newDuration =
+				(MusicWorkshopUnlocked ? 90 : 60) +
+				(timeBonus ? 30 : 0);
+
+			restoredRemaining = Mathf.Clamp(
+				oldRemaining / oldDuration * newDuration,
+				0,
+				newDuration);
+		}
+
+		_dayCycle.Restore(
+			restoredRemaining,
+			data.SaveVersion >= 8 && data.DayClosed,
 			data.SaveVersion >= 9 && data.UpgradePending,
-			data.SaveVersion >= 9 ? (ChikagoShop.Domain.Days.DayUpgrade)data.SelectedUpgrade : ChikagoShop.Domain.Days.DayUpgrade.None,
-			data.Day, data.AtelierUpgradeLevel, data.MusicUpgradeLevel, data.CheckpointAtelierUpgradeLevel, data.CheckpointMusicUpgradeLevel,
-			data.AtelierPriceLevel, data.MusicPriceLevel, data.CheckpointAtelierPriceLevel, data.CheckpointMusicPriceLevel);
+			data.SaveVersion >= 9
+				? (ChikagoShop.Domain.Days.DayUpgrade)
+					data.SelectedUpgrade
+				: ChikagoShop.Domain.Days.DayUpgrade.None,
+			data.Day,
+			data.AtelierUpgradeLevel,
+			data.MusicUpgradeLevel,
+			data.CheckpointAtelierUpgradeLevel,
+			data.CheckpointMusicUpgradeLevel,
+			data.AtelierPriceLevel,
+			data.MusicPriceLevel,
+			data.CheckpointAtelierPriceLevel,
+			data.CheckpointMusicPriceLevel);
+
 		_storedItems.Clear();
 		_checkpointItems.Clear();
+
 		foreach (int index in data.StoredItems ?? [])
-			if (index >= 0 && index < Items.Count) _storedItems.Add(index);
+		{
+			if (index >= 0 && index < Items.Count)
+				_storedItems.Add(index);
+		}
+
 		foreach (int index in data.CheckpointItems ?? [])
-			if (index >= 0 && index < Items.Count) _checkpointItems.Add(index);
-		for (int i = 0; i < Mathf.Min(ShowcaseCapacity, data.ShowcaseItems?.Length ?? 0); i++)
-			if (data.ShowcaseItems![i] >= 0 && data.ShowcaseItems[i] < Items.Count)
+		{
+			if (index >= 0 && index < Items.Count)
+				_checkpointItems.Add(index);
+		}
+
+		for (int i = 0;
+			 i < Mathf.Min(
+				 ShowcaseCapacity,
+				 data.ShowcaseItems?.Length ?? 0);
+			 i++)
+		{
+			if (data.ShowcaseItems![i] >= 0 &&
+				data.ShowcaseItems[i] < Items.Count)
+			{
 				_showcaseItems[i] = data.ShowcaseItems[i];
-		for (int i = 0; i < Mathf.Min(ShowcaseCapacity, data.CheckpointShowcaseItems?.Length ?? 0); i++)
-			if (data.CheckpointShowcaseItems![i] >= 0 && data.CheckpointShowcaseItems[i] < Items.Count)
-				_checkpointShowcaseItems[i] = data.CheckpointShowcaseItems[i];
-		_buyerCountdown = Array.Exists(_showcaseItems, item => item >= 0)
-			? double.IsFinite(data.BuyerCountdown) && data.BuyerCountdown > 0 && data.BuyerCountdown <= 2
-				? data.BuyerCountdown : NextBuyerDelay()
+			}
+		}
+
+		for (int i = 0;
+			 i < Mathf.Min(
+				 ShowcaseCapacity,
+				 data.CheckpointShowcaseItems?.Length ?? 0);
+			 i++)
+		{
+			if (data.CheckpointShowcaseItems![i] >= 0 &&
+				data.CheckpointShowcaseItems[i] < Items.Count)
+			{
+				_checkpointShowcaseItems[i] =
+					data.CheckpointShowcaseItems[i];
+			}
+		}
+
+		MoveItemsOutOfLockedShowcases();
+
+		_buyerCountdown = Array.Exists(
+			_showcaseItems, item => item >= 0)
+			? double.IsFinite(data.BuyerCountdown) &&
+			  data.BuyerCountdown > 0 &&
+			  data.BuyerCountdown <= 2
+				? data.BuyerCountdown
+				: NextBuyerDelay()
 			: 0;
-		_activeShowcaseIndex = data.ActiveShowcaseIndex >= 0 && data.ActiveShowcaseIndex < ShowcaseCapacity
-			? data.ActiveShowcaseIndex : -1;
+
+		_activeShowcaseIndex =
+			data.ActiveShowcaseIndex >= 0 &&
+			data.ActiveShowcaseIndex < ShowcaseCapacity
+				? data.ActiveShowcaseIndex
+				: -1;
+
 		CurrentDay = Mathf.Clamp(data.Day, 1, FinalDay);
 		Score = Mathf.Max(0, data.Score);
-		EnergyRemaining = data.SaveVersion < 6 ? EnergyPerDay : Mathf.Clamp(data.EnergyRemaining, 0, _dayCycle.Upgrades.EnergyCapacity);
+
+		EnergyRemaining = data.SaveVersion < 6
+			? EnergyCapacity
+			: data.SaveVersion < 12
+				? Mathf.Clamp(
+					EnergyCapacity - Math.Max(
+						0,
+						(MusicWorkshopUnlocked ? 2 : 1) -
+						data.EnergyRemaining),
+					0,
+					EnergyCapacity)
+				: data.EnergyRemaining;
+
 		Accepted = Mathf.Max(0, data.Accepted);
 		Declined = Mathf.Max(0, data.Declined);
 		QuotaStage = Mathf.Clamp(data.QuotaStage, 0, 2);
-		CheckpointDay = data.CheckpointDay > 1 ? FirstDeadline + 1 : 1;
-		CheckpointScore = Mathf.Max(0, data.CheckpointScore);
-		CheckpointEnergy = data.SaveVersion < 6 ? EnergyPerDay : Mathf.Clamp(data.CheckpointEnergy, 0, EnergyPerDay);
-		MusicWorkshopUnlocked = data.SaveVersion >= 7 && data.MusicWorkshopUnlocked;
-		CheckpointMusicWorkshopUnlocked = data.SaveVersion >= 7 && data.CheckpointMusicWorkshopUnlocked;
-		CheckpointAccepted = Mathf.Max(0, data.CheckpointAccepted);
-		CheckpointDeclined = Mathf.Max(0, data.CheckpointDeclined);
+
+		CheckpointDay = data.CheckpointDay > 1
+			? FirstDeadline + 1
+			: 1;
+
+		CheckpointScore =
+			Mathf.Max(0, data.CheckpointScore);
+
+		int checkpointEnergyCapacity =
+			CheckpointMusicWorkshopUnlocked
+				? EnergyAfterMusicUnlock
+				: EnergyBeforeMusicUnlock;
+
+		CheckpointEnergy = data.SaveVersion < 6
+			? checkpointEnergyCapacity
+			: data.SaveVersion < 12
+				? Mathf.Clamp(
+					checkpointEnergyCapacity - Math.Max(
+						0,
+						(CheckpointMusicWorkshopUnlocked ? 2 : 1) -
+						data.CheckpointEnergy),
+					0,
+					checkpointEnergyCapacity)
+				: Mathf.Clamp(
+					data.CheckpointEnergy,
+					0,
+					checkpointEnergyCapacity);
+
+		CheckpointAccepted =
+			Mathf.Max(0, data.CheckpointAccepted);
+
+		CheckpointDeclined =
+			Mathf.Max(0, data.CheckpointDeclined);
+
 		Failed = data.Failed;
 		Completed = data.Completed;
 		StatusText = data.Status;
 		ItemIndex = data.ItemIndex;
 		CustomerIndex = data.CustomerIndex;
-		if (data.SaveVersion < 3 && CustomerIndex == 1) CustomerIndex = 3;
-		Percentage = Mathf.Clamp(data.Percentage, -30, 30);
-		RerollsRemaining = Mathf.Clamp(data.RerollsRemaining, 0, 3);
-		if (data.SaveVersion < 2 && ItemIndex >= 0 && ItemIndex < Items.Count)
+
+		if (data.SaveVersion < 3 && CustomerIndex == 1)
+			CustomerIndex = 3;
+
+		Percentage =
+			Mathf.Clamp(data.Percentage, -30, 30);
+
+		RerollsRemaining =
+			Mathf.Clamp(data.RerollsRemaining, 0, 3);
+
+		if (data.SaveVersion < 2 &&
+			ItemIndex >= 0 &&
+			ItemIndex < Items.Count)
 		{
-			RerollsRemaining = GetItemRerollLimit(ItemIndex);
+			RerollsRemaining =
+				GetItemRerollLimit(ItemIndex);
 		}
+
 		TradeActive = data.TradeActive;
-		if (ItemIndex < 0 || ItemIndex >= Items.Count || CustomerIndex < 0 ||
-			CustomerIndex >= _customer.GetAppearanceCount() || Failed || Completed)
-			TradeActive = false;
-		if (!TradeActive) _activeShowcaseIndex = -1;
-		if (DayClosed) _buyerCountdown = 0;
-			
-		// --- ДОБАВЛЕНО: Загружаем визуал инвентаря при старте игры ---
-		if (_inventoryUI != null)
+
+		if (ItemIndex < 0 ||
+			ItemIndex >= Items.Count ||
+			CustomerIndex < 0 ||
+			CustomerIndex >= _customer.GetAppearanceCount() ||
+			Failed ||
+			Completed)
 		{
-			_inventoryUI.UpdateUI(_storedItems);
+			TradeActive = false;
 		}
+
+		if (!TradeActive)
+			_activeShowcaseIndex = -1;
+
+		if (DayClosed)
+			_buyerCountdown = 0;
+
+		if (_inventoryUI != null)
+			_inventoryUI.UpdateUI(_storedItems);
+
 		RefreshShowcases();
-		// -------------------------------------------------------------
-		
 		return true;
 	}
 
@@ -825,13 +1603,19 @@ public partial class TradeScene : Node2D
 		public bool DayClosed { get; set; }
 		public int Day { get; set; } = 1;
 		public int Score { get; set; }
-		public int EnergyRemaining { get; set; } = EnergyPerDay;
+
+		public int EnergyRemaining { get; set; } =
+			EnergyBeforeMusicUnlock;
+
 		public int Accepted { get; set; }
 		public int Declined { get; set; }
 		public int QuotaStage { get; set; }
 		public int CheckpointDay { get; set; } = 1;
 		public int CheckpointScore { get; set; }
-		public int CheckpointEnergy { get; set; } = EnergyPerDay;
+
+		public int CheckpointEnergy { get; set; } =
+			EnergyBeforeMusicUnlock;
+
 		public bool MusicWorkshopUnlocked { get; set; }
 		public bool CheckpointMusicWorkshopUnlocked { get; set; }
 		public int CheckpointAccepted { get; set; }

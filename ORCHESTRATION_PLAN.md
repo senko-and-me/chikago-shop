@@ -7,6 +7,81 @@
 
 ## Текущий фронт
 
+### HF-60 — публикация пользовательского обновления арта и UI
+
+Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; HF-59 DONE; READY 2026-11-07. Пользователь явно запросил push текущих изменений, исправления поведения не поручал.
+CP-HF-60: read-set — текущий фронт, tools/verify.ps1, git status/diff/log/branches/remotes, .vscode/settings.json, OS TEMP/chikago-hf60-verify.log. Write-set — ORCHESTRATION_PLAN.md, Git index/commit, main и origin/main; публикация точного набора файлов ниже без редактирования их содержимого. Единственный владелец плана/index `/root`; пересечений нет.
+Out of scope: source/, ignored/generated files, исправление пользовательского кода или тестов, force push, удаление веток.
+Приёмка: результат tools/verify.ps1 честно зафиксирован (не является требованием исправить тесты в задаче публикации), staged diff-check PASS; все текущие неигнорируемые изменения закоммичены и отправлены в origin/main без force; чистое дерево и main...origin/main=0/0. Известно до публикации: build PASS; dotnet test FAIL (14 failed,56 passed), runner останавливается до Godot integration. Пользователь уведомлён.
+Файлы для публикации:
+- art/minigames/EmbroideryHoop.PNG
+- art/minigames/EmbroideryHoop.PNG.import
+- art/minigames/PolishingCloth.PNG
+- art/minigames/PolishingCloth.PNG.import
+- art/minigames/RankEmpty.png
+- art/minigames/RankEmpty.png.import
+- art/minigames/RankFull.png
+- art/minigames/RankFull.png.import
+- art/minigames/Violin.PNG
+- art/minigames/Violin.PNG.import
+- art/rooms/DayTime.png
+- art/rooms/DayTime.png.import
+- art/rooms/music_room.jpg
+- art/rooms/music_room.jpg.import
+- art/rooms/NightTime.png
+- art/rooms/NightTime.png.import
+- art/ui/en/Back.png
+- art/ui/en/Back.png.import
+- art/ui/en/Continue.png
+- art/ui/en/Continue.png.import
+- art/ui/en/Exit.png
+- art/ui/en/Exit.png.import
+- art/ui/en/Fullscreen.png
+- art/ui/en/Fullscreen.png.import
+- art/ui/en/Fullscreen2.png
+- art/ui/en/Fullscreen2.png.import
+- art/ui/en/NewGame.png
+- art/ui/en/NewGame.png.import
+- art/ui/en/Play.png
+- art/ui/en/Play.png.import
+- art/ui/en/Settings.png
+- art/ui/en/Settings.png.import
+- art/ui/en/Skip.png
+- art/ui/en/Skip.png.import
+- art/ui/ru/button_back.png
+- art/ui/ru/button_back.png.import
+- art/ui/ru/button_play.png
+- art/ui/ru/button_play.png.import
+- art/ui/ru/button_quit.png
+- art/ui/ru/button_quit.png.import
+- art/ui/ru/button_settings.png
+- art/ui/ru/button_settings.png.import
+- art/ui/ru/ContinueRu.png
+- art/ui/ru/ContinueRu.png.import
+- art/ui/ru/FullScreenRu.png
+- art/ui/ru/FullScreenRu.png.import
+- art/ui/ru/FullScreenRu2.png
+- art/ui/ru/FullScreenRu2.png.import
+- art/ui/ru/NewGameRu.png
+- art/ui/ru/NewGameRu.png.import
+- art/ui/ru/SkipRu.png
+- art/ui/ru/SkipRu.png.import
+- art/ui/Slots3.png
+- art/ui/Slots3.png.import
+- art/ui/Slots6.png
+- art/ui/Slots6.png.import
+- scenes/main_menu.tscn
+- scenes/trade_scene.tscn
+- scripts/Days/DayCycleController.cs
+- scripts/Days/DayNightBackground.cs
+- scripts/Days/DayNightBackground.cs.uid
+- scripts/MainMenu.cs
+- scripts/TradeScene.cs
+- scripts/UI/EmbroideryGame.cs
+- scripts/UI/InventoryUI.cs
+- scripts/UI/PolishingSurface.cs
+- src/ChikagoShop.Domain/Days/DaySession.cs
+
 ### HF-59 — публикация карточек улучшений и исправлений диалога
 
 Статус: `DONE`; координатор/исполнитель `/root`; HF-54…HF-58 DONE; READY 2026-11-07. Пользователь явно поручил push на GitHub.
