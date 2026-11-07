@@ -9,7 +9,7 @@
 
 ### HF-60 — публикация пользовательского обновления арта и UI
 
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; HF-59 DONE; READY 2026-11-07. Пользователь явно запросил push текущих изменений, исправления поведения не поручал.
+Статус: `DONE`; координатор/исполнитель `/root`; HF-59 DONE; READY 2026-11-07. Пользователь явно запросил push текущих изменений, исправления поведения не поручал.
 CP-HF-60: read-set — текущий фронт, tools/verify.ps1, git status/diff/log/branches/remotes, .vscode/settings.json, OS TEMP/chikago-hf60-verify.log. Write-set — ORCHESTRATION_PLAN.md, Git index/commit, main и origin/main; публикация точного набора файлов ниже без редактирования их содержимого. Единственный владелец плана/index `/root`; пересечений нет.
 Out of scope: source/, ignored/generated files, исправление пользовательского кода или тестов, force push, удаление веток.
 Приёмка: результат tools/verify.ps1 честно зафиксирован (не является требованием исправить тесты в задаче публикации), staged diff-check PASS; все текущие неигнорируемые изменения закоммичены и отправлены в origin/main без force; чистое дерево и main...origin/main=0/0. Известно до публикации: build PASS; dotnet test FAIL (14 failed,56 passed), runner останавливается до Godot integration. Пользователь уведомлён.
@@ -82,6 +82,18 @@ Out of scope: source/, ignored/generated files, исправление поль�
 - scripts/UI/PolishingSurface.cs
 - src/ChikagoShop.Domain/Days/DaySession.cs
 
+```text
+Task: HF-60
+Recommended status: REVIEW
+Changed: commit74e59f7,68файлов: пользовательские арт/UI/мини-игры/фон дня-ночи/длительность дня и запись плана; содержимое продуктовых файлов при публикации не редактировалось.
+Checks: tools/verify.ps1 -> FAIL на dotnet test (14 failed,56 passed; build PASS; Godot import/integration runner не запускал); staged diff-check -> PASS; git push origin main -> PASS (eac88f0..74e59f7, без force); main...origin/main=0/0; рабочее дерево чистое. Evidence: OS TEMP/chikago-hf60-verify.log.
+Acceptance: текущие пользовательские изменения опубликованы по запросу; результат падающей проверки явно сообщён пользователю. DONE означает только завершённую публикацию, не исправление или подтверждение игрового поведения.
+Read-set exception: нет; source/ не читался. .vscode/settings.json отображался modified до add, фактического содержательного diff не было и в commit он не вошёл.
+Risks/blocker:14 доменных тестов падают, включая прежние ожидания120/150сек при изменённом таймере; полная проверка проекта не пройдена. Исправление не входило в запрос push.
+Next: отдельной задачей разобрать14 упавших тестов.
+```
+
+Координатор подтвердил HF-60 2026-11-07 как завершённую публикацию по фактическому push и чистому дереву; FAIL проверки сохранён без изменения статусов продуктовых задач. Эта запись публикуется отдельным документационным commit.
 ### HF-59 — публикация карточек улучшений и исправлений диалога
 
 Статус: `DONE`; координатор/исполнитель `/root`; HF-54…HF-58 DONE; READY 2026-11-07. Пользователь явно поручил push на GitHub.
