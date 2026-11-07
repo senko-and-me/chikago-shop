@@ -6,7 +6,7 @@ namespace ChikagoShop.Domain.Days;
 public enum EndDayAction { Closed, WaitForTrade, Advance }
 
 public sealed class DaySession {
-  public const double DurationSeconds = 60;
+  public const double DurationSeconds = 90;
   public const double TwoRoomDurationSeconds = 90;
   public const double MaxDurationSeconds = 120;
 
@@ -85,6 +85,13 @@ public sealed class DaySession {
 
     if (IsClosed)
       RemainingSeconds = 0;
+  }
+
+  public static double? MigrateRemaining(double? remaining, int saveVersion, bool musicUnlocked, bool timeBonus) {
+    if (saveVersion >= 13 || remaining is not double value || !double.IsFinite(value)) return remaining;
+    double bonus = timeBonus ? 30 : 0;
+    double oldDuration = (saveVersion < 11 ? 120 : musicUnlocked ? 90 : 60) + bonus;
+    return Math.Clamp(value / oldDuration * (DurationSeconds + bonus), 0, DurationSeconds + bonus);
   }
 
   private static double ValidDuration(double durationSeconds) {

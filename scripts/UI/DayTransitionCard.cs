@@ -14,6 +14,9 @@ public partial class DayTransitionCard : CanvasLayer
     private HBoxContainer _choices = null!;
     public IReadOnlyList<DayUpgrade> Options { get; private set; } = Array.Empty<DayUpgrade>();
     public event Action<DayUpgrade> Chosen;
+    public event Action Skipped;
+    private Button _skip = null!;
+    private int _balance;
     private bool _ownsPause;
     public bool IsOpen => _root?.Visible ?? false;
 
@@ -48,6 +51,9 @@ public partial class DayTransitionCard : CanvasLayer
         _choices = new HBoxContainer { Name = "Choices" };
         _choices.AddThemeConstantOverride("separation", 14);
         content.AddChild(_choices);
+        _skip = new Button { Name = "Skip", Text = "Пропустить", CustomMinimumSize = new Vector2(0, 36) };
+        content.AddChild(_skip);
+        _skip.Pressed += Skip;
         _root.Resized += Layout;
         Layout();
     }
@@ -70,7 +76,9 @@ public partial class DayTransitionCard : CanvasLayer
         AddLabel(content, "Title", title, 22, "fff1d8").CustomMinimumSize = new Vector2(0, 52);
         AddLabel(content, "Description", description, 18, "d5ccbb").CustomMinimumSize = new Vector2(0, 72);
         AddLabel(content, "Duration", duration, 14, "a88b58").CustomMinimumSize = new Vector2(0, 34);
-        var button = new Button { Name = "Choose", Text = "Выбрать", CustomMinimumSize = new Vector2(0, 44) };
+        int cost = DayUpgradeSession.Cost(upgrade);
+        var button = new Button { Name = "Choose", Text = GameLocalization.Format("Купить за {0}$", cost),
+            Disabled = _balance < cost, CustomMinimumSize = new Vector2(0, 44) };
         content.AddChild(button);
         button.Pressed += () => Choose(upgrade);
         return button;
@@ -88,27 +96,29 @@ public partial class DayTransitionCard : CanvasLayer
 
     private void Layout() => _panel.CustomMinimumSize = new Vector2(Mathf.Min(1080, Mathf.Max(280, _root.Size.X - 48)), 0);
 
-    public void Open(int previousDay, int nextDay, IReadOnlyList<DayUpgrade> options)
+    public void Open(int previousDay, int nextDay, IReadOnlyList<DayUpgrade> options, int balance)
     {
         if (IsOpen || previousDay is < 1 or > 6 || nextDay != previousDay + 1 || GetTree().Paused) return;
         Options = options.ToArray();
+        _balance = balance;
+        _firstChoice = _skip;
         foreach (Node child in _choices.GetChildren()) child.Free();
         foreach (var upgrade in Options)
         {
             var button = upgrade switch
             {
                 DayUpgrade.Cash => AddChoice(_choices, upgrade, "Оборотные средства", "+50$", "Получить 50$ сразу. Деньги остаются на счёте.", "СРАЗУ"),
-                DayUpgrade.Energy => AddChoice(_choices, upgrade, "Второе дыхание", "+1", "3 энергии вместо 2 на следующий день.", "ЭНЕРГИЯ · НА ОДИН ДЕНЬ"),
-                DayUpgrade.Time => AddChoice(_choices, upgrade, "Длинная смена", "+30с", "Следующий день длится 02:30 вместо 02:00.", "ВРЕМЯ · НА ОДИН ДЕНЬ"),
+                DayUpgrade.Energy => AddChoice(_choices, upgrade, "Второе дыхание", "+1", "Добавить 1 энергию к следующему дню.", "ЭНЕРГИЯ · НА ОДИН ДЕНЬ"),
+                DayUpgrade.Time => AddChoice(_choices, upgrade, "Длинная смена", "+30с", "Добавить 30 секунд к следующему дню.", "ВРЕМЯ · НА ОДИН ДЕНЬ"),
                 DayUpgrade.Atelier => AddChoice(_choices, upgrade, "Мастерство портного", "↑", "Больше редкой одежды до конца игры.", "ОДЕЖДА · ДО КОНЦА ИГРЫ"),
                 DayUpgrade.Music => AddChoice(_choices, upgrade, "Мастерство мастера", "↑", "Больше редких инструментов до конца игры.", "ИНСТРУМЕНТЫ · ДО КОНЦА ИГРЫ"),
                 DayUpgrade.AtelierPrice => AddChoice(_choices, upgrade, "Имя на этикетке", "+20%", "Ещё +20% к базовой стоимости всей одежды.", "ОДЕЖДА · ДО КОНЦА ИГРЫ"),
                 DayUpgrade.MusicPrice => AddChoice(_choices, upgrade, "Коллекционный звук", "+20%", "Ещё +20% к базовой стоимости всех инструментов.", "ИНСТРУМЕНТЫ · ДО КОНЦА ИГРЫ"),
                 _ => throw new ArgumentOutOfRangeException(nameof(options))
             };
-            if (upgrade == Options[0]) _firstChoice = button;
+            if (_firstChoice == _skip && !button.Disabled) _firstChoice = button;
         }
-        _route.Text = $"{previousDay:00}  →  {nextDay:00}";
+        _route.Text = $"{previousDay:00}  →  {nextDay:00}  ·  " + GameLocalization.Format("Средства: {0}$", balance);
         _ownsPause = true;
         GetTree().Paused = true;
         _root.Show();
@@ -117,7 +127,12 @@ public partial class DayTransitionCard : CanvasLayer
 
     public void Choose(DayUpgrade upgrade)
     {
-        if (IsOpen && Options.Contains(upgrade)) Chosen?.Invoke(upgrade);
+        if (IsOpen && Options.Contains(upgrade) && _balance >= DayUpgradeSession.Cost(upgrade)) Chosen?.Invoke(upgrade);
+    }
+
+    public void Skip()
+    {
+        if (IsOpen) Skipped?.Invoke();
     }
 
     public void Close()
@@ -141,7 +156,11 @@ public partial class DayTransitionCard : CanvasLayer
         if (upgrade != DayUpgrade.None || key.Keycode == Key.Escape)
         {
             GetViewport().SetInputAsHandled();
-            if (!key.Echo && upgrade != DayUpgrade.None) Choose(upgrade);
+            if (!key.Echo)
+            {
+                if (key.Keycode == Key.Escape) Skip();
+                else Choose(upgrade);
+            }
         }
     }
 

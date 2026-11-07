@@ -813,6 +813,15 @@ public partial class MainMenu : Control
 		if (_startingGame)
 			return;
 
+		// An empty Inspector override must not send a completed intro back to the menu.
+		GameScene ??= GD.Load<PackedScene>("res://scenes/trade_scene.tscn");
+		if (GameScene == null)
+		{
+			GD.PushError("Could not load res://scenes/trade_scene.tscn");
+			ShowGameChoice();
+			return;
+		}
+
 		if (newGame && HasSavedGame())
 		{
 			string path = ProjectSettings.GlobalizePath(

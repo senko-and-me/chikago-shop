@@ -14,6 +14,10 @@ public sealed class EconomyConfig
 
 public sealed class DayConfig
 {
+    public int DurationSeconds { get; init; } = (int)ChikagoShop.Domain.Days.DaySession.DurationSeconds;
+    public int EnergyBeforeMusicUnlock { get; init; } = 3;
+    public int EnergyAfterMusicUnlock { get; init; } = 6;
+    public int ItemsPerCraft { get; init; } = 1;
     public int TotalDays { get; init; }
     public int TutorialDay { get; init; }
 }

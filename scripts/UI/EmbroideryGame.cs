@@ -158,7 +158,7 @@ public partial class EmbroideryGame : CanvasLayer
 
 		if (IsOpen || GetTree().Paused || game.Failed || game.Completed ||
 			game.EnergyRemaining <= 0 ||
-			game.Score < (IsPolishing ? 140 : 90) ||
+			game.Score < WorkshopItemCatalog.CraftCost(IsPolishing ? "music" : "atelier") ||
 			(IsPolishing && !game.MusicWorkshopUnlocked))
 			return;
 

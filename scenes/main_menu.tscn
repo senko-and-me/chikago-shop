@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://4j1i60hag1el"]
 
 [ext_resource type="Script" uid="uid://bbdbrlsqvmgia" path="res://scripts/MainMenu.cs" id="1_script"]
+[ext_resource type="PackedScene" path="res://scenes/trade_scene.tscn" id="10_game"]
 [ext_resource type="Texture2D" uid="uid://byqyjwldbq35i" path="res://art/ui/button_settings.png" id="2_settings"]
 [ext_resource type="Texture2D" uid="uid://bda7bxwxwttqa" path="res://art/ui/button_quit.png" id="3_quit"]
 [ext_resource type="Texture2D" uid="uid://blr5mo3usryyx" path="res://art/ui/button_back.png" id="4_back"]
@@ -19,6 +20,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_script")
+GameScene = ExtResource("10_game")
 
 [node name="Background" type="TextureRect" parent="." unique_id=1737544570]
 layout_mode = 1

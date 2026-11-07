@@ -192,6 +192,8 @@ public partial class DialoguePlayer : Control
         if (_closed) return;
         if (@event is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } mouse)
         {
+            // Let the menu's Skip button receive the click instead of advancing text.
+            if (GetViewport().GuiGetHoveredControl() is BaseButton) return;
             var scrollbar = _text.GetVScrollBar();
             if (scrollbar.IsVisibleInTree() && scrollbar.GetGlobalRect().HasPoint(mouse.Position)) return;
             GetViewport().SetInputAsHandled();

@@ -5,7 +5,7 @@
     <EnableDynamicLoading>true</EnableDynamicLoading>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Remove="src\**\*.cs;tests\ChikagoShop.Domain.Tests\**\*.cs" />
+    <Compile Remove="src\**\*.cs;tests\ChikagoShop.Domain.Tests\**\*.cs;tools\ChikagoShop.Balance\**\*.cs" />
     <ProjectReference Include="src\ChikagoShop.Domain\ChikagoShop.Domain.csproj" />
   </ItemGroup>
 </Project>

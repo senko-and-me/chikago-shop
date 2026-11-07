@@ -4,6 +4,7 @@
 **/bin/
 **/obj/
 .vs/
+/builds/
 
 # Local design documents and original art sources
 /source/

@@ -13,11 +13,14 @@ public sealed class DayCycleController
 	public int CheckpointMusicPriceLevel { get; private set; }
 	private readonly TradeScene _game;
 	private readonly Label _timer;
+	private readonly TextureRect _clock;
+	private readonly Texture2D _clockActive;
+	private readonly Texture2D _clockExpired;
+	private readonly Control _inventoryStrip;
 	private int _displayedSeconds = -1;
 	private readonly DayTransitionCard _card;
 	private readonly DayNightBackground _dayNight;
-	private double ExpectedDuration => (_game.MusicWorkshopUnlocked
-		? DaySession.TwoRoomDurationSeconds : DaySession.DurationSeconds)
+	private double ExpectedDuration => WorkshopItemCatalog.DayDurationSeconds
 		+ (Upgrades.Selected == DayUpgrade.Time ? 30 : 0);
 	public bool TransitionOpen => _card.IsOpen;
 
@@ -26,22 +29,31 @@ public sealed class DayCycleController
 		_game = game;
 		_card = new DayTransitionCard();
 		_card.Chosen += ChooseUpgrade;
+		_card.Skipped += SkipUpgrade;
 		game.AddChild(_card);
 		_timer = new Label
 		{
 			Name = "DayTimer", HorizontalAlignment = HorizontalAlignment.Center,
 			VerticalAlignment = VerticalAlignment.Center, MouseFilter = Control.MouseFilterEnum.Ignore
 		};
-		_timer.AddThemeFontSizeOverride("font_size", 36);
-		_timer.AddThemeColorOverride("font_color", Colors.White);
-		_timer.AddThemeColorOverride("font_outline_color", Colors.Black);
-		_timer.AddThemeConstantOverride("outline_size", 8);
+		_timer.AddThemeColorOverride("font_color", Colors.Black);
+		_timer.AddThemeConstantOverride("outline_size", 0);
 		game.GetNode<Control>("HUD/Root").AddChild(_timer);
-		_timer.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.CenterTop);
-		_timer.OffsetLeft = -100;
-		_timer.OffsetRight = 100;
-		_timer.OffsetTop = 20;
-		_timer.OffsetBottom = 72;
+		_timer.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.BottomLeft);
+		_clockActive = GD.Load<Texture2D>("res://art/ui/day_timer_empty.png");
+		_clockExpired = GD.Load<Texture2D>("res://art/ui/day_timer_expired.png");
+		_clock = new TextureRect
+		{
+			Name = "Clock", Texture = _clockActive,
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+			MouseFilter = Control.MouseFilterEnum.Ignore, ShowBehindParent = true
+		};
+		_timer.AddChild(_clock);
+		_clock.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+		_inventoryStrip = game.GetNode<Control>("HUD/InventoryUI/ScrollContainer");
+		_timer.GetParent<Control>().Resized += LayoutTimer;
+		_inventoryStrip.Resized += LayoutTimer;
 		_dayNight = new DayNightBackground(game);
 		RefreshTimer();
 		UpdateDayNightBackground();
@@ -83,7 +95,7 @@ public sealed class DayCycleController
 					UpdateDayNightBackground();
 					_game.SynchronizeDayState();
 				}
-				else _card.Open(previousDay, _game.CurrentDay, Upgrades.Options);
+				else _card.Open(previousDay, _game.CurrentDay, Upgrades.Options, _game.Score);
 				break;
 		}
 	}
@@ -114,7 +126,7 @@ public sealed class DayCycleController
 	public void ResumeUpgradeChoice()
 	{
 		if (Upgrades.Pending && !_game.Failed && !_game.Completed && !Session.IsClosed && _game.CurrentDay is >= 2 and <= 7)
-			_card.Open(_game.CurrentDay - 1, _game.CurrentDay, Upgrades.Options);
+			_card.Open(_game.CurrentDay - 1, _game.CurrentDay, Upgrades.Options, _game.Score);
 	}
 
 	public void CaptureCheckpointUpgrades()
@@ -131,7 +143,8 @@ public sealed class DayCycleController
 
 	private void ChooseUpgrade(DayUpgrade upgrade)
 	{
-		if (!Upgrades.TryChoose(upgrade)) return;
+		if (!Upgrades.TryPurchase(upgrade, _game.Score, out int balance)) return;
+		_game.Score = balance;
 		switch (upgrade)
 		{
 			case DayUpgrade.Cash: _game.Score += Upgrades.CashReward; break;
@@ -140,6 +153,13 @@ public sealed class DayCycleController
 		}
 		RefreshTimer();
 		UpdateDayNightBackground();
+		_game.RefreshDayPresentation();
+		_card.Close();
+	}
+
+	private void SkipUpgrade()
+	{
+		if (!Upgrades.TrySkip()) return;
 		_game.RefreshDayPresentation();
 		_card.Close();
 	}
@@ -168,10 +188,24 @@ public sealed class DayCycleController
 
 	private bool RefreshTimer()
 	{
+		LayoutTimer();
 		int seconds = (int)Math.Ceiling(Session.RemainingSeconds);
 		if (seconds == _displayedSeconds) return false;
 		_displayedSeconds = seconds;
-		_timer.Text = FormattableString.Invariant($"{seconds / 60:00}:{seconds % 60:00}");
+		_timer.Text = seconds.ToString("00", System.Globalization.CultureInfo.InvariantCulture);
+		_clock.Texture = seconds == 0 ? _clockExpired : _clockActive;
 		return true;
+	}
+
+	private void LayoutTimer()
+	{
+		// Six inventory slots leave less room at narrow window sizes.
+		float size = Mathf.Clamp(_inventoryStrip.GetGlobalRect().Position.X - 24, 64, 180);
+		_timer.OffsetLeft = 12;
+		_timer.OffsetRight = 12 + size;
+		_timer.OffsetTop = -12 - size;
+		_timer.OffsetBottom = -12;
+		int fontSize = Math.Max(18, (int)(size * 0.22f));
+		if (_timer.GetThemeFontSize("font_size") != fontSize) _timer.AddThemeFontSizeOverride("font_size", fontSize);
 	}
 }

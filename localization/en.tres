@@ -126,5 +126,10 @@ messages = {
 &"Имя на этикетке": &"A name on the label",
 &"Коллекционный звук": &"Collector's sound",
 &"Ещё +20% к базовой стоимости всей одежды.": &"Another +20% of base value for all clothing.",
-&"Ещё +20% к базовой стоимости всех инструментов.": &"Another +20% of base value for all instruments."
+&"Ещё +20% к базовой стоимости всех инструментов.": &"Another +20% of base value for all instruments.",
+&"Купить за {0}$": &"Buy for ${0}",
+&"Средства: {0}$": &"Funds: ${0}",
+&"Пропустить": &"Skip",
+&"Добавить 30 секунд к следующему дню.": &"Add 30 seconds to the next day.",
+&"Добавить 1 энергию к следующему дню.": &"Add 1 energy for the next day."
 }

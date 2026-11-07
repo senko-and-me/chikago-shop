@@ -29,6 +29,8 @@ public static class WorkshopItemCatalog
             .Select(entry => (entry.index, Config.Rarities.Single(rarity => rarity.Id == entry.item.RarityId).Weight))));
 
     public static int TotalWeight(string workshop) => Tables[workshop].TotalWeight;
+    public static int CraftCost(string workshop) => Config.Workshops.Single(entry => entry.Id == workshop).SpinCost;
+    public static int DayDurationSeconds => Config.Days.DurationSeconds;
     public static int Roll(string workshop, int ticket, DayUpgradeSession upgrades = null) => upgrades == null
         ? Tables[workshop].Select(ticket)
         : new WeightedItemTable(Items.Select((item, index) => (item, index))

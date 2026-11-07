@@ -14,7 +14,8 @@ public sealed class DayUpgradeSession
     public int MusicPriceLevel { get; private set; }
     public IReadOnlyList<DayUpgrade> Options => Enumerable.Range(0, 3)
         .Select(offset => (DayUpgrade)(1 + (Day - 2 + offset) % 7)).ToArray();
-    public int EnergyCapacity => Selected == DayUpgrade.Energy ? 3 : 2;
+    public int EnergyCapacity => EnergyCapacityFor(2);
+    public int EnergyCapacityFor(int baseline) => baseline + (Selected == DayUpgrade.Energy ? 1 : 0);
     public double Duration => DaySession.DurationSeconds + (Selected == DayUpgrade.Time ? 30 : 0);
     public int CashReward => 50;
 
@@ -25,15 +26,36 @@ public sealed class DayUpgradeSession
         if (!preserveCategories) { AtelierLevel = 0; MusicLevel = 0; AtelierPriceLevel = 0; MusicPriceLevel = 0; }
     }
 
-    public bool TryChoose(DayUpgrade upgrade)
+    public static int Cost(DayUpgrade upgrade) => upgrade switch
     {
+        DayUpgrade.Cash => 20,
+        DayUpgrade.Energy or DayUpgrade.Time => 40,
+        DayUpgrade.Atelier or DayUpgrade.Music => 80,
+        DayUpgrade.AtelierPrice or DayUpgrade.MusicPrice => 100,
+        _ => throw new ArgumentOutOfRangeException(nameof(upgrade))
+    };
+
+    public bool TryPurchase(DayUpgrade upgrade, int balance, out int remainingBalance)
+    {
+        remainingBalance = balance;
         if (!Pending || !Options.Contains(upgrade)) return false;
+        int cost = Cost(upgrade);
+        if (balance < cost) return false;
+        remainingBalance = balance - cost;
         Selected = upgrade;
         Pending = false;
         if (upgrade == DayUpgrade.Atelier) AtelierLevel = Math.Min(6, AtelierLevel + 1);
         if (upgrade == DayUpgrade.Music) MusicLevel = Math.Min(6, MusicLevel + 1);
         if (upgrade == DayUpgrade.AtelierPrice) AtelierPriceLevel = Math.Min(6, AtelierPriceLevel + 1);
         if (upgrade == DayUpgrade.MusicPrice) MusicPriceLevel = Math.Min(6, MusicPriceLevel + 1);
+        return true;
+    }
+
+    public bool TrySkip()
+    {
+        if (!Pending) return false;
+        Pending = false;
+        Selected = DayUpgrade.None;
         return true;
     }
 

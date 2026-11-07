@@ -4,11 +4,15 @@
   "starting_money": 220,
   "days": {
     "total_days": 7,
-    "tutorial_day": 1
+    "tutorial_day": 1,
+    "duration_seconds": 90,
+    "energy_before_music_unlock": 3,
+    "energy_after_music_unlock": 6,
+    "items_per_craft": 1
   },
   "workshops": [
-    { "id": "atelier", "spin_cost": 90, "unlock_cost": 0 },
-    { "id": "music", "spin_cost": 140, "unlock_cost": 100 }
+    { "id": "atelier", "spin_cost": 25, "unlock_cost": 0 },
+    { "id": "music", "spin_cost": 50, "unlock_cost": 100 }
   ],
   "rarities": [
     { "id": "common", "name": "Ширпотреб", "weight": 60, "rerolls": 3, "base_prices": { "atelier": 30, "music": 45 } },
@@ -23,7 +27,7 @@
     { "min_percent": 11, "max_percent": 30, "chance_percent": 10 }
   ],
   "quotas": [
-    { "id": "first", "deadline_day": 3, "amount": 200 },
-    { "id": "final", "deadline_day": 7, "amount": 400 }
+    { "id": "first", "deadline_day": 4, "amount": 250 },
+    { "id": "final", "deadline_day": 7, "amount": 450 }
   ]
 }

@@ -5,29 +5,29 @@ namespace ChikagoShop.Domain.Tests;
 
 public sealed class DayUpgradeSessionTests
 {
-    [TestCase(DayUpgrade.Cash, 2, 120)]
-    [TestCase(DayUpgrade.Energy, 3, 120)]
-    [TestCase(DayUpgrade.Time, 2, 150)]
+    [TestCase(DayUpgrade.Cash, 2, 90)]
+    [TestCase(DayUpgrade.Energy, 3, 90)]
+    [TestCase(DayUpgrade.Time, 2, 120)]
     public void ChoiceIsExclusiveAndSurvivesRestore(DayUpgrade choice, int energy, double duration)
     {
         var upgrades = new DayUpgradeSession();
-        Assert.That(upgrades.TryChoose(choice), Is.False);
+        Assert.That(upgrades.TryPurchase(choice, 1000, out _), Is.False);
         upgrades.Offer();
-        Assert.That(upgrades.TryChoose(DayUpgrade.None), Is.False);
-        Assert.That(upgrades.TryChoose((DayUpgrade)99), Is.False);
+        Assert.That(upgrades.TryPurchase(DayUpgrade.None, 1000, out _), Is.False);
+        Assert.That(upgrades.TryPurchase((DayUpgrade)99, 1000, out _), Is.False);
         Assert.That(upgrades.Pending, Is.True);
-        Assert.That(upgrades.TryChoose(choice), Is.True);
+        Assert.That(upgrades.TryPurchase(choice, 1000, out _), Is.True);
         foreach (DayUpgrade other in new[] { DayUpgrade.Cash, DayUpgrade.Energy, DayUpgrade.Time })
-            Assert.That(upgrades.TryChoose(other), Is.False);
+            Assert.That(upgrades.TryPurchase(other, 1000, out _), Is.False);
         var restored = new DayUpgradeSession();
         restored.Restore(upgrades.Pending, upgrades.Selected);
-        Assert.That(restored.TryChoose(choice), Is.False);
+        Assert.That(restored.TryPurchase(choice, 1000, out _), Is.False);
         Assert.That(restored.EnergyCapacity, Is.EqualTo(energy));
         Assert.That(restored.Duration, Is.EqualTo(duration));
         Assert.That(restored.CashReward, Is.EqualTo(50));
         restored.Reset();
         Assert.That(restored.EnergyCapacity, Is.EqualTo(2));
-        Assert.That(restored.Duration, Is.EqualTo(120));
+        Assert.That(restored.Duration, Is.EqualTo(90));
         Assert.That(restored.Pending, Is.False);
     }
 
@@ -40,21 +40,21 @@ public sealed class DayUpgradeSessionTests
         Assert.That(upgrades.Selected, Is.EqualTo(DayUpgrade.None));
         upgrades.Restore(true, DayUpgrade.Cash);
         Assert.That(upgrades.Pending, Is.False);
-        Assert.That(upgrades.TryChoose(DayUpgrade.Cash), Is.False);
+        Assert.That(upgrades.TryPurchase(DayUpgrade.Cash, 1000, out _), Is.False);
     }
 
     [Test]
     public void ExtraTimeReloadRetainsFractionAndStillExpires()
     {
         var day = new DaySession();
-        day.Restore(149.75, false, 150);
-        Assert.That(day.RemainingSeconds, Is.EqualTo(149.75));
-        Assert.That(day.Tick(149.75), Is.True);
+        day.Restore(119.75, false, 120);
+        Assert.That(day.RemainingSeconds, Is.EqualTo(119.75));
+        Assert.That(day.Tick(119.75), Is.True);
         Assert.That(day.CanReceiveBuyers, Is.False);
         day.Reset();
+        Assert.That(day.RemainingSeconds, Is.EqualTo(90));
+        day.Restore(1000, false, 120);
         Assert.That(day.RemainingSeconds, Is.EqualTo(120));
-        day.Restore(1000, false, 150);
-        Assert.That(day.RemainingSeconds, Is.EqualTo(150));
     }
 
     [TestCase(DayUpgrade.Atelier, "atelier", "music")]
@@ -67,8 +67,8 @@ public sealed class DayUpgradeSessionTests
         for (int level = 1; level <= 6; level++)
         {
             upgrades.Offer(4);
-            Assert.That(upgrades.TryChoose(choice), Is.True);
-            Assert.That(upgrades.TryChoose(choice), Is.False);
+            Assert.That(upgrades.TryPurchase(choice, 1000, out _), Is.True);
+            Assert.That(upgrades.TryPurchase(choice, 1000, out _), Is.False);
             int[] weights = rarities.Select((rarity, i) => upgrades.Weight(workshop, rarity, baseline[i], 60)).ToArray();
             Assert.That(weights.Sum(), Is.EqualTo(100));
             Assert.That(weights.All(value => value > 0), Is.True);
@@ -92,7 +92,7 @@ public sealed class DayUpgradeSessionTests
             upgrades.Offer(day);
             Assert.That(upgrades.Options.Distinct().Count(), Is.EqualTo(3));
             var unshown = Enum.GetValues<DayUpgrade>().First(choice => choice != DayUpgrade.None && !upgrades.Options.Contains(choice));
-            Assert.That(upgrades.TryChoose(unshown), Is.False);
+            Assert.That(upgrades.TryPurchase(unshown, 1000, out _), Is.False);
             var restored = new DayUpgradeSession();
             restored.Restore(upgrades.Pending, upgrades.Selected, day);
             Assert.That(restored.Options, Is.EqualTo(upgrades.Options));
@@ -108,8 +108,8 @@ public sealed class DayUpgradeSessionTests
         for (int level = 1; level <= 6; level++)
         {
             upgrades.Offer(day);
-            Assert.That(upgrades.TryChoose(choice), Is.True);
-            Assert.That(upgrades.TryChoose(choice), Is.False);
+            Assert.That(upgrades.TryPurchase(choice, 1000, out _), Is.True);
+            Assert.That(upgrades.TryPurchase(choice, 1000, out _), Is.False);
             foreach (int price in new[] { 30, 45, 50, 75, 80, 120, 180, 200, 300 })
             {
                 Assert.That(upgrades.Price(workshop, price), Is.EqualTo((int)decimal.Round(price * (100m + level * 20) / 100, 0, MidpointRounding.AwayFromZero)));
@@ -119,7 +119,7 @@ public sealed class DayUpgradeSessionTests
             var restored = new DayUpgradeSession();
             restored.Restore(false, upgrades.Selected, day, atelierPriceLevel: upgrades.AtelierPriceLevel, musicPriceLevel: upgrades.MusicPriceLevel);
             Assert.That(restored.Price(workshop, 45), Is.EqualTo(upgrades.Price(workshop, 45)));
-            Assert.That(restored.TryChoose(choice), Is.False);
+            Assert.That(restored.TryPurchase(choice, 1000, out _), Is.False);
             upgrades.Reset(preserveCategories: true);
         }
         upgrades.Reset();

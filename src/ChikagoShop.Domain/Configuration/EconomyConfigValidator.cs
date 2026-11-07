@@ -10,6 +10,10 @@ public static class EconomyConfigValidator
             throw new EconomyConfigException("Starting money cannot be negative.");
         if (config.Days.TotalDays <= 0 || config.Days.TutorialDay < 1 || config.Days.TutorialDay > config.Days.TotalDays)
             throw new EconomyConfigException("Day configuration is invalid.");
+        if (config.Days.DurationSeconds != ChikagoShop.Domain.Days.DaySession.DurationSeconds ||
+            config.Days.EnergyBeforeMusicUnlock <= 0 || config.Days.EnergyAfterMusicUnlock < config.Days.EnergyBeforeMusicUnlock ||
+            config.Days.ItemsPerCraft != 1)
+            throw new EconomyConfigException("Day duration, energy and single-item crafting configuration are invalid.");
 
         RequireUniqueIds(config.Workshops.Select(value => value.Id), "workshop");
         RequireUniqueIds(config.Rarities.Select(value => value.Id), "rarity");

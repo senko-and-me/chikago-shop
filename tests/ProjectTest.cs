@@ -16,6 +16,36 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--intro-transition-checks"))
+            {
+                await TestIntroTransition();
+                GD.Print("INTRO_TRANSITION_SMOKE_PASS: finish, skip, null fallback and continue reached TradeScene");
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--balance-checks"))
+            {
+                await TestLiveEconomyBalance();
+                await TestClockHud();
+                await TestDayCardPurchases();
+                GD.Print("Live economy, clock and paid upgrade regression checks passed");
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--day-timer-checks"))
+            {
+                await TestClockHud();
+                GD.Print("Clock HUD seconds, assets, layout, expiry and reload checks passed");
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--upgrade-purchase-checks"))
+            {
+                await TestDayCardPurchases();
+                GD.Print("Paid upgrade and skip checks passed");
+                Quit();
+                return;
+            }
             TestEconomyConfig();
             await TestPlaceholderItems();
             TestPopupPlacement();
@@ -33,7 +63,9 @@ public partial class ProjectTest : SceneTree
             await TestShowcaseReuse();
             await TestProgress();
             await TestDayCycle();
+            await TestClockHud();
             await TestDayTransitionCards();
+            await TestDayCardPurchases();
             await TestCategoryPriceUpgrades();
             await TestLocalization();
             await TestLongSentenceScroll();
@@ -516,10 +548,10 @@ public partial class ProjectTest : SceneTree
             "The game must load the versioned provisional economy config");
         Check(config.Workshops.Count == 2 && config.Rarities.Count == 5 && config.OfferRanges.Count == 3,
             "The game and domain tests must share the complete economy v1 source");
-        Check(config.StartingMoney == 220 && config.Workshops[0].SpinCost == 90 &&
-              config.Workshops[1].SpinCost == 140 && config.Workshops[1].UnlockCost == 100 &&
-		      config.Quotas[0].Amount == 200 &&
-              config.Quotas[1].Amount == 400,
+        Check(config.StartingMoney == 220 && config.Workshops[0].SpinCost == 25 &&
+              config.Workshops[1].SpinCost == 50 && config.Workshops[1].UnlockCost == 100 &&
+		      config.Quotas[0].Amount == 250 &&
+              config.Quotas[1].Amount == 450,
             "The runtime must load the provisional paid-spin and raised-quota balance");
     }
 
@@ -2128,7 +2160,7 @@ public partial class ProjectTest : SceneTree
                     await ToSignal(this, SignalName.ProcessFrame);
                     var card = game.GetNode<DayTransitionCard>("DayTransitionCard");
                     Check(game.DayTransitionOpen && Paused && game.CurrentDay == day + 1 && game.DayRemainingSeconds == 120 &&
-                          game.GetNode<Label>(content + "Route").Text == $"{day:00}  →  {day + 1:00}",
+                          game.GetNode<Label>(content + "Route").Text.StartsWith($"{day:00}  →  {day + 1:00}"),
                         "Each of the six transitions must show its own card with the new day frozen at two minutes");
                     Check(card.Options.Count == 3 && card.Options.Distinct().Count() == 3 &&
                           game.GetNode(content + "Choices").GetChildCount() == 3, "Each transition must offer exactly three different upgrades");
@@ -2146,7 +2178,7 @@ public partial class ProjectTest : SceneTree
                             Check(Root.GetVisibleRect().Encloses(control.GetGlobalRect()), "Upgrade card content must fit both sizes and languages");
                         }
                         var button = game.GetNode<Button>(content + $"Choices/{option}/Content/Choose");
-                        Check(button.Tr(button.Text) == (locale == "en" ? "Choose" : "Выбрать"), "Upgrade buttons must translate");
+                        Check(button.Text == GameLocalization.Format("Купить за {0}$", DayUpgradeSession.Cost(option)), "Upgrade prices must translate");
                     }
                     double remaining = game.DayRemainingSeconds;
                     int cash = game.Score;
@@ -2164,14 +2196,13 @@ public partial class ProjectTest : SceneTree
                     if (day == 4) Check(game.QuotaStage == 1, "The 4-to-5 choice must follow ordinary quota settlement");
                     DayUpgrade choice = card.Options[0];
                     card._Input(new InputEventKey { Pressed = true, Echo = true, Keycode = Key.Key1 });
-                    card._Input(new InputEventKey { Pressed = true, Keycode = Key.Escape });
-                    Check(card.IsOpen, "Held keys and Escape must not bypass upgrade selection");
+                    Check(card.IsOpen, "Held keys must not purchase an upgrade");
                     if (day % 2 == 0) await ClickControl(game, content + $"Choices/{choice}/Content/Choose");
                     else card._Input(new InputEventKey { Pressed = true, Keycode = Key.Key1 });
                     card.Choose(card.Options[1]);
                     Check(!Paused && !game.DayTransitionOpen && game.CurrentDay == day + 1,
                         "Mouse/keyboard selection must apply only one upgrade without skipping a day");
-                    Check(game.DayUpgrades.Selected == choice && game.Score == cash + (choice == DayUpgrade.Cash ? 50 : 0) &&
+                    Check(game.DayUpgrades.Selected == choice && game.Score == cash - DayUpgradeSession.Cost(choice) + (choice == DayUpgrade.Cash ? 50 : 0) &&
                           game.EnergyRemaining == (choice == DayUpgrade.Energy ? 3 : 2) &&
                           game.DayRemainingSeconds == (choice == DayUpgrade.Time ? 150 : 120), "The chosen upgrade must change only its intended stat");
                 }
@@ -2262,6 +2293,353 @@ public partial class ProjectTest : SceneTree
         }
         await ToSignal(this, SignalName.ProcessFrame);
         GD.Print("All six day transition cards, localization, layout, input, quotas and reload checks passed");
+    }
+
+    private async Task TestIntroTransition()
+    {
+        Check(OS.GetUserDataDir().Contains("ChikagoShopStartupSmoke"),
+            "Startup smoke requires isolated userdata via a temporary override.cfg; refusing to touch player saves");
+        GD.Print("Startup smoke user directory: " + OS.GetUserDataDir());
+        Check(FileAccess.FileExists("res://config/economy.v1.json") && FileAccess.FileExists("res://dialogue/intro.ru.json"),
+            "The executable must contain both economy and dialogue JSON files");
+        var menuScene = GD.Load<PackedScene>("res://scenes/main_menu.tscn");
+        foreach (bool nullOverride in new[] { false, true })
+        foreach (bool skip in new[] { false, true })
+        {
+            var menu = menuScene.Instantiate<MainMenu>();
+            Check(menu.GameScene?.ResourcePath == "res://scenes/trade_scene.tscn",
+                "The serialized main menu must reference the actual game scene");
+            if (nullOverride) menu.GameScene = null;
+            Root.AddChild(menu);
+            CurrentScene = menu;
+            menu.OnPlayPressed();
+            menu.GetNode<TextureButton>("MainMenuContainer/Menu/NewGameButton").EmitSignal(BaseButton.SignalName.Pressed);
+            await ToSignal(this, SignalName.ProcessFrame);
+            await ToSignal(this, SignalName.ProcessFrame);
+            Check(menu.ActiveDialogue != null, "New game must open the intro");
+            if (skip) await ClickControl(menu, "IntroSkipLayer/SkipButton");
+            else
+            {
+                int steps = 0;
+                while (menu.ActiveDialogue != null && steps++ < 512) menu.ActiveDialogue.Advance();
+                Check(steps < 512, "The full intro must make progress and reach its finish event");
+            }
+            await ToSignal(this, SignalName.ProcessFrame);
+            await ToSignal(this, SignalName.ProcessFrame);
+            Check(CurrentScene is TradeScene && !Paused,
+                $"Intro must enter gameplay instead of returning to NewGame (null={nullOverride}, skip={skip})");
+            var game = (TradeScene)CurrentScene;
+            game.SetProcess(false);
+            Check(game.CurrentDay == 1 && game.Score == game.StartingMoney && game.DayRemainingSeconds > 88 &&
+                  game.GetNode<Label>("HUD/Root/DayTimer").Text == "90",
+                "The exported game must start a real new day with the current economy and clock");
+            game.Score = 321;
+            game.PersistProgress();
+            game.QueueFree();
+            CurrentScene = null;
+            await ToSignal(this, SignalName.ProcessFrame);
+        }
+        var continueMenu = menuScene.Instantiate<MainMenu>();
+        continueMenu.GameScene = null;
+        Root.AddChild(continueMenu);
+        CurrentScene = continueMenu;
+        continueMenu.OnPlayPressed();
+        continueMenu.GetNode<TextureButton>("MainMenuContainer/Menu/ContinueButton").EmitSignal(BaseButton.SignalName.Pressed);
+        await ToSignal(this, SignalName.ProcessFrame);
+        await ToSignal(this, SignalName.ProcessFrame);
+        Check(CurrentScene is TradeScene && ((TradeScene)CurrentScene).Score == 321,
+            "Continue must also resolve a missing scene without resetting saved progress");
+        CurrentScene.QueueFree();
+        CurrentScene = null;
+        await ToSignal(this, SignalName.ProcessFrame);
+    }
+
+    private async Task TestLiveEconomyBalance()
+    {
+        var scene = GD.Load<PackedScene>("res://scenes/trade_scene.tscn");
+        var config = EconomyConfigProvider.Load();
+        TradeScene game = null;
+        string locale = GameLocalization.Language;
+        try
+        {
+            if (FileAccess.FileExists(SavePath)) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(SavePath));
+            game = await CreateGame(scene);
+            Check(game.StartingMoney == config.StartingMoney && game.FirstQuota == 250 && game.SecondQuota == 450,
+                "The live game must read the same starting money and quotas as the simulator");
+            foreach (string language in new[] { "ru", "en" })
+            {
+                TranslationServer.SetLocale(language);
+                game.NewGame();
+                Check(game.DayRemainingSeconds == 90 && game.GetNode<Label>("HUD/Root/DayTimer").Text == "90",
+                    "The first day must start at ninety seconds before unlocking music");
+                foreach (string workshop in new[] { "atelier", "music" })
+                {
+                    string room = workshop == "atelier" ? "Atelier" : "MusicWorkshop";
+                    int cost = WorkshopItemCatalog.CraftCost(workshop);
+                    if (workshop == "music")
+                    {
+                        game.NewGame(); game.Score = 1000; game.TryUnlockMusicWorkshop();
+                        Check(game.DayRemainingSeconds == 90, "Unlocking music must not change the ninety-second baseline");
+                    }
+                    Check(game.GetNode<Label>($"World/{room}/HintLabel").Text.Contains(cost.ToString()) &&
+                          game.GetNode<Label>($"World/{room}/GetItemButton/PriceHint/Label").Text.Contains(cost.ToString()),
+                        "RU/EN crafting labels must show the configured single-item cost");
+                    game.Score = cost - 1; game.RefreshItemButtons();
+                    var button = game.GetNode<Button>($"World/{room}/GetItemButton");
+                    Check(button.Disabled, "Crafting must be unavailable one dollar below the real cost");
+                    if (workshop == "atelier") game.GetItemFromAtelier(); else game.GetItemFromMusicWorkshop();
+                    var mini = game.GetNode<EmbroideryGame>(workshop == "atelier" ? "EmbroideryGame" : "PolishingGame");
+                    Check(!mini.IsOpen, "The minigame must use the new affordability threshold too");
+                    game.Score = cost; game.RefreshItemButtons();
+                    Check(!button.Disabled, "Exact funds must enable single-item crafting");
+                    button.EmitSignal(Button.SignalName.Pressed);
+                    Check(mini.IsOpen, "The real craft button must open the minigame at the configured cost");
+                    int items = game.StoredItems.Length, energy = game.EnergyRemaining;
+                    mini.Activate(); mini.Activate();
+                    Check(game.Score == 0 && game.StoredItems.Length == items + 1 && game.EnergyRemaining == energy - 1,
+                        "Starting a craft must charge once for exactly one item and one energy");
+                    mini._Process(10); mini.Activate();
+                    Check(!Paused && !mini.IsOpen && game.DayRemainingSeconds == 80,
+                        "Crafting must consume its actual ten seconds within the ninety-second day");
+                }
+            }
+            game.NewGame(); game.CurrentDay = 4; game.Score = 250;
+            game.EndDay(); game.EndDay();
+            Check(game.CurrentDay == 5 && game.QuotaStage == 1 && game.Score == 0 && game.CheckpointDay == 5,
+                "The first quota must be exactly250 at the end of day four");
+            game.GetNode<DayTransitionCard>("DayTransitionCard").Skip();
+            game.CurrentDay = 7; game.Score = 450; game.EndDay(); game.EndDay();
+            Check(game.Completed && game.Score == 0 && !game.DayTransitionOpen,
+                "The final quota must be exactly450 at the end of day seven");
+            game.NewGame(); game.CurrentDay = 4; game.Score = 249; game.EndDay(); game.EndDay();
+            Check(game.Failed && !game.DayTransitionOpen, "One dollar below the first quota must remain a real loss");
+            game.QueueFree(); await ToSignal(this, SignalName.ProcessFrame); game = null;
+            using (var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Write))
+                file.StoreString("{\"save_version\":12,\"day\":1,\"score\":220,\"energy_remaining\":3,\"day_remaining_seconds\":30}");
+            game = await CreateGame(scene);
+            Check(game.DayRemainingSeconds == 45 && game.GetNode<Label>("HUD/Root/DayTimer").Text == "45",
+                "Half of a legacy sixty-second first day must restore as half of ninety seconds");
+        }
+        finally
+        {
+            if (game != null && GodotObject.IsInstanceValid(game)) game.QueueFree();
+            Paused = false;
+            TranslationServer.SetLocale(locale);
+            if (FileAccess.FileExists(SavePath)) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(SavePath));
+        }
+        await ToSignal(this, SignalName.ProcessFrame);
+    }
+
+    private async Task TestClockHud()
+    {
+        var scene = GD.Load<PackedScene>("res://scenes/trade_scene.tscn");
+        TradeScene game = null;
+        Vector2I originalSize = Root.Size;
+        try
+        {
+            if (FileAccess.FileExists(SavePath)) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(SavePath));
+            game = await CreateGame(scene);
+            game.NewGame();
+            var timer = game.GetNode<Label>("HUD/Root/DayTimer");
+            var clock = timer.GetNode<TextureRect>("Clock");
+            Check(timer.Text == "90" && clock.Texture.ResourcePath == "res://art/ui/day_timer_empty.png",
+                "The existing one-room duration must display plain seconds on the empty clock");
+            foreach (bool music in new[] { false, true })
+            {
+                if (music) { game.Score = 1000; game.TryUnlockMusicWorkshop(); }
+                foreach (var size in new[] { new Vector2I(960, 540), new Vector2I(1280, 720) })
+                foreach (float zoom in new[] { 0.25f, 1.8f })
+                {
+                    Root.Size = size;
+                    game.GetNode<Camera2D>("Camera2D").Zoom = Vector2.One * zoom;
+                    await ToSignal(this, SignalName.ProcessFrame);
+                    await ToSignal(this, SignalName.ProcessFrame);
+                    game._Process(0);
+                    Rect2 bounds = timer.GetGlobalRect();
+                    Rect2 inventory = game.GetNode<Control>("HUD/InventoryUI/ScrollContainer").GetGlobalRect();
+                    Check(Root.GetVisibleRect().Encloses(bounds) && bounds.Position.X == 12 &&
+                          Mathf.IsEqualApprox(bounds.End.Y, Root.GetVisibleRect().Size.Y - 12) && !bounds.Intersects(inventory),
+                        "The clock must remain bottom-left without overlapping three or six inventory slots at either size/zoom");
+                    Check(timer.MouseFilter == Control.MouseFilterEnum.Ignore && clock.MouseFilter == Control.MouseFilterEnum.Ignore &&
+                          clock.ShowBehindParent && timer.GetThemeFontSize("font_size") >= 18,
+                        "Clock art must sit behind readable digits and let mouse input reach the world");
+                }
+            }
+            Check(timer.Text == "90" && game.DayRemainingSeconds == 90, "Unlocking the music room must retain the existing ninety-second day");
+            game.GetNode<PauseMenu>("PauseMenu").Open();
+            game._Process(10);
+            Check(timer.Text == "90" && game.DayRemainingSeconds == 90, "Pause must freeze the seconds and clock state");
+            game.GetNode<PauseMenu>("PauseMenu").Close();
+            if (OS.GetCmdlineUserArgs().Contains("--clock-preview"))
+            {
+                await ToSignal(this, SignalName.ProcessFrame);
+                await ToSignal(this, SignalName.ProcessFrame);
+                Root.GetTexture().GetImage().SavePng(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "chikago-clock-active.png"));
+            }
+            game._Process(0.25);
+            Check(timer.Text == "90", "Fractional seconds must round up rather than show zero early");
+            game._Process(0.75);
+            Check(timer.Text == "89", "Seconds must count down without a minutes separator");
+            game._Process(88.99);
+            Check(timer.Text == "01" && clock.Texture.ResourcePath.EndsWith("day_timer_empty.png"), "The last partial second must show 01 on the empty face");
+            game._Process(0.02);
+            Check(timer.Text == "00" && game.DayClosed && clock.Texture.ResourcePath.EndsWith("day_timer_expired.png"),
+                "At timeout the clock must show 00 and switch to the supplied filled red face");
+            if (OS.GetCmdlineUserArgs().Contains("--clock-preview"))
+            {
+                await ToSignal(this, SignalName.ProcessFrame);
+                await ToSignal(this, SignalName.ProcessFrame);
+                Root.GetTexture().GetImage().SavePng(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "chikago-clock-expired.png"));
+            }
+            game.EndDay();
+            game.GetNode<DayTransitionCard>("DayTransitionCard").Skip();
+            Check(timer.Text == "90" && clock.Texture.ResourcePath.EndsWith("day_timer_empty.png"), "The next day must restore the empty clock");
+            game._Process(2.25);
+            double remaining = game.DayRemainingSeconds;
+            game.QueueFree();
+            await ToSignal(this, SignalName.ProcessFrame);
+            game = await CreateGame(scene);
+            timer = game.GetNode<Label>("HUD/Root/DayTimer");
+            clock = timer.GetNode<TextureRect>("Clock");
+            Check(game.DayRemainingSeconds == remaining && timer.Text == "88" && clock.Texture.ResourcePath.EndsWith("day_timer_empty.png"),
+                "Reload must restore fractional time with the matching seconds and art");
+            game.EndDay();
+            Check(timer.Text == "00" && clock.Texture.ResourcePath.EndsWith("day_timer_expired.png"), "Manual closure must also show the filled clock");
+            game.EndDay();
+            game.GetNode<DayTransitionCard>("DayTransitionCard").Choose(DayUpgrade.Time);
+            Check(timer.Text == "120" && game.DayRemainingSeconds == 120, "The timer must show all remaining seconds including a purchased time bonus");
+            game.GetItemFromAtelier();
+            var embroidery = game.GetNode<EmbroideryGame>("EmbroideryGame");
+            Check(embroidery.IsOpen && embroidery.GetNode<Label>("Surface/DayTimer").Text == timer.Text,
+                "The minigame clock copy must keep working with the new seconds format");
+            embroidery.GetNode<Button>("Surface/Cancel").EmitSignal(Button.SignalName.Pressed);
+        }
+        finally
+        {
+            if (game != null && GodotObject.IsInstanceValid(game)) game.QueueFree();
+            Paused = false;
+            Root.Size = originalSize;
+            if (FileAccess.FileExists(SavePath)) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(SavePath));
+        }
+        await ToSignal(this, SignalName.ProcessFrame);
+    }
+
+    private async Task TestDayCardPurchases()
+    {
+        var scene = GD.Load<PackedScene>("res://scenes/trade_scene.tscn");
+        TradeScene game = null;
+        string language = GameLocalization.Language;
+        Vector2I originalSize = Root.Size;
+        const string content = "DayTransitionCard/Root/Center/Card/Content/";
+        void Seed(int day, int cash)
+        {
+            using var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Write);
+            file.StoreString(System.Text.Json.JsonSerializer.Serialize(new
+            {
+                save_version = 10, day, score = cash, quota_stage = day >= 5 ? 1 : 0,
+                energy_remaining = 2, day_remaining_seconds = 60
+            }));
+        }
+        async Task Reload()
+        {
+            game.QueueFree();
+            await ToSignal(this, SignalName.ProcessFrame);
+            game = await CreateGame(scene);
+            await ToSignal(this, SignalName.ProcessFrame);
+        }
+        try
+        {
+            foreach (string locale in new[] { "ru", "en" })
+            foreach (var size in new[] { new Vector2I(960, 540), new Vector2I(1280, 720) })
+            {
+                TranslationServer.SetLocale(locale);
+                Root.Size = size;
+                Seed(1, 0);
+                game = await CreateGame(scene);
+                game.EndDay(); game.EndDay();
+                await ToSignal(this, SignalName.ProcessFrame);
+                await ToSignal(this, SignalName.ProcessFrame);
+                var card = game.GetNode<DayTransitionCard>("DayTransitionCard");
+                Check(card.IsOpen && Paused, "A zero balance must still allow viewing and skipping the shop");
+                foreach (var choice in card.Options)
+                {
+                    var button = game.GetNode<Button>(content + $"Choices/{choice}/Content/Choose");
+                    Check(button.Disabled && button.Text == GameLocalization.Format("Купить за {0}$", DayUpgradeSession.Cost(choice)),
+                        "Unaffordable cards must show their price and disable purchase in both languages");
+                    foreach (string name in new[] { "Amount", "Title", "Description", "Duration", "Choose" })
+                        Check(Root.GetVisibleRect().Encloses(game.GetNode<Control>(content + $"Choices/{choice}/Content/{name}").GetGlobalRect()),
+                            "All paid card content must fit the viewport");
+                    card.Choose(choice);
+                }
+                card._Input(new InputEventKey { Pressed = true, Keycode = Key.Key1 });
+                Check(card.IsOpen && game.Score == 0 && game.DayUpgrades.Selected == DayUpgrade.None,
+                    "Direct requests and hotkeys must not purchase cards without funds");
+                var skip = game.GetNode<Button>(content + "Skip");
+                Check(!skip.Disabled && Root.GetVisibleRect().Encloses(skip.GetGlobalRect()) &&
+                      skip.Tr(skip.Text) == (locale == "en" ? "Skip" : "Пропустить"), "Free skip must stay visible and localized");
+                if (size.X == 960) await ClickControl(game, content + "Skip");
+                else card._Input(new InputEventKey { Pressed = true, Keycode = Key.Escape });
+                card.Skip();
+                Check(!Paused && !card.IsOpen && game.Score == 0 && !game.DayUpgrades.Pending &&
+                      game.DayUpgrades.Selected == DayUpgrade.None, "Skipping must resume with no payment or effect");
+                await Reload();
+                Check(!Paused && !game.DayTransitionOpen && !game.DayUpgrades.Pending && game.Score == 0 && game.CurrentDay == 2,
+                    "Reload must not reopen or charge a skipped offer");
+                game.QueueFree();
+                await ToSignal(this, SignalName.ProcessFrame);
+                game = null;
+            }
+            Root.Size = new Vector2I(1280, 720);
+            foreach (var choice in Enum.GetValues<DayUpgrade>().Where(value => value != DayUpgrade.None))
+            {
+                int day = choice is DayUpgrade.AtelierPrice or DayUpgrade.MusicPrice ? 5 : choice is DayUpgrade.Atelier or DayUpgrade.Music ? 3 : 1;
+                Seed(day, DayUpgradeSession.Cost(choice));
+                game = await CreateGame(scene);
+                game.EndDay(); game.EndDay();
+                await Reload();
+                var card = game.GetNode<DayTransitionCard>("DayTransitionCard");
+                Check(card.IsOpen && game.DayUpgrades.Pending, "An unfinished purchase must reopen after reload");
+                int balance = game.Score;
+                double remaining = game.DayRemainingSeconds;
+                int energy = game.EnergyRemaining;
+                var button = game.GetNode<Button>(content + $"Choices/{choice}/Content/Choose");
+                Check(!button.Disabled, "Exact funds must allow buying the card");
+                if (choice == DayUpgrade.AtelierPrice && OS.GetCmdlineUserArgs().Contains("--day-card-preview"))
+                {
+                    await ToSignal(this, SignalName.ProcessFrame);
+                    Root.GetTexture().GetImage().SavePng(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "chikago-paid-cards-preview.png"));
+                }
+                await ClickControl(game, content + $"Choices/{choice}/Content/Choose");
+                int expected = balance - DayUpgradeSession.Cost(choice) + (choice == DayUpgrade.Cash ? game.DayUpgrades.CashReward : 0);
+                card.Choose(choice); card.Skip();
+                Check(game.Score == expected && !Paused && !card.IsOpen && game.DayUpgrades.Selected == choice,
+                    "A card must charge once, apply once and dismiss the shop");
+                Check(game.EnergyRemaining == energy + (choice == DayUpgrade.Energy ? 1 : 0) &&
+                      game.DayRemainingSeconds == remaining + (choice == DayUpgrade.Time ? 30 : 0), $"Paid energy/time effects must match their descriptions: {choice}, energy={game.EnergyRemaining}/{energy}, time={game.DayRemainingSeconds}/{remaining}");
+                int atelier = game.DayUpgrades.AtelierLevel, music = game.DayUpgrades.MusicLevel;
+                int atelierPrice = game.DayUpgrades.AtelierPriceLevel, musicPrice = game.DayUpgrades.MusicPriceLevel;
+                Check(atelier == (choice == DayUpgrade.Atelier ? 1 : 0) && music == (choice == DayUpgrade.Music ? 1 : 0) &&
+                      atelierPrice == (choice == DayUpgrade.AtelierPrice ? 1 : 0) && musicPrice == (choice == DayUpgrade.MusicPrice ? 1 : 0),
+                    "Paid category upgrades must apply exactly one level to the correct category");
+                await Reload();
+                Check(game.Score == expected && !Paused && !game.DayTransitionOpen && game.DayUpgrades.Selected == choice &&
+                      game.DayUpgrades.AtelierLevel == atelier && game.DayUpgrades.MusicLevel == music &&
+                      game.DayUpgrades.AtelierPriceLevel == atelierPrice && game.DayUpgrades.MusicPriceLevel == musicPrice,
+                    "Reload must preserve the payment and upgrade without charging or rewarding twice");
+                game.QueueFree();
+                await ToSignal(this, SignalName.ProcessFrame);
+                game = null;
+            }
+        }
+        finally
+        {
+            if (game != null && GodotObject.IsInstanceValid(game)) game.QueueFree();
+            Paused = false;
+            Root.Size = originalSize;
+            TranslationServer.SetLocale(language);
+            if (FileAccess.FileExists(SavePath)) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(SavePath));
+        }
+        await ToSignal(this, SignalName.ProcessFrame);
     }
 
     private async Task TestCategoryPriceUpgrades()
@@ -2859,8 +3237,7 @@ public partial class ProjectTest : SceneTree
         if (!game.DayClosed) game.EndDay();
         game.EndDay();
         var card = game.GetNode<DayTransitionCard>("DayTransitionCard");
-        if (card.IsOpen) card.Choose(card.Options.Contains(DayUpgrade.Atelier) ? DayUpgrade.Atelier :
-            card.Options.Contains(DayUpgrade.Music) ? DayUpgrade.Music : DayUpgrade.Cash);
+        if (card.IsOpen) card.Skip();
     }
 
     private async Task<TradeScene> CreateGame(PackedScene scene)

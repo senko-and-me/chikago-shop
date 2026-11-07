@@ -1,33 +1,36 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
+using ChikagoShop.Domain.Trading;
 using Godot;
 
 public partial class TradeScene : Node2D
 {
+	private static readonly ChikagoShop.Domain.Configuration.EconomyConfig Economy = EconomyConfigProvider.Load();
 	[Export(PropertyHint.Range, "1,9999,1")]
-	public int StartingMoney { get; set; } = 220;
+	public int StartingMoney { get; set; } = Economy.StartingMoney;
 
 	[Export(PropertyHint.Range, "1,9999,1")]
-	public int FirstQuota { get; set; } = 200;
+	public int FirstQuota { get; set; } = Economy.Quotas.Single(entry => entry.Id == "first").Amount;
 
 	[Export(PropertyHint.Range, "1,9999,1")]
-	public int SecondQuota { get; set; } = 400;
+	public int SecondQuota { get; set; } = Economy.Quotas.Single(entry => entry.Id == "final").Amount;
 
 	[Export]
 	public string SavePath { get; set; } = "user://trade_progress.json";
 
-	private const int FirstDeadline = 4;
-	private const int FinalDay = 7;
+	private static readonly int FirstDeadline = Economy.Quotas.Single(entry => entry.Id == "first").DeadlineDay;
+	private static readonly int FinalDay = Economy.Days.TotalDays;
 	private const int ShowcaseCapacity = 6;
 	private const int InitialShowcaseCapacity = 3;
-	private const int EnergyBeforeMusicUnlock = 3;
-	private const int EnergyAfterMusicUnlock = 6;
-	private const int AtelierSpinCost = 90;
-	private const int MusicSpinCost = 140;
-	private const int MusicUnlockCost = 100;
-	private const int ItemsPerSpin = 1;
+	private static readonly int EnergyBeforeMusicUnlock = Economy.Days.EnergyBeforeMusicUnlock;
+	private static readonly int EnergyAfterMusicUnlock = Economy.Days.EnergyAfterMusicUnlock;
+	private static readonly int AtelierSpinCost = WorkshopItemCatalog.CraftCost("atelier");
+	private static readonly int MusicSpinCost = WorkshopItemCatalog.CraftCost("music");
+	private static readonly int MusicUnlockCost = Economy.Workshops.Single(entry => entry.Id == "music").UnlockCost;
+	private static readonly int ItemsPerSpin = Economy.Days.ItemsPerCraft;
 
 	private static readonly IReadOnlyList<CraftItem> Items =
 		WorkshopItemCatalog.Items;
@@ -138,9 +141,9 @@ public partial class TradeScene : Node2D
 	public int CurrentDay { get; set; } = 1;
 
 	public int EnergyCapacity =>
-		MusicWorkshopUnlocked
+		_dayCycle?.Upgrades.EnergyCapacityFor(MusicWorkshopUnlocked
 			? EnergyAfterMusicUnlock
-			: EnergyBeforeMusicUnlock;
+			: EnergyBeforeMusicUnlock) ?? EnergyBeforeMusicUnlock;
 
 	public int InventorySlotCapacity =>
 		MusicWorkshopUnlocked ? 6 : 3;
@@ -512,20 +515,20 @@ public partial class TradeScene : Node2D
 			Node.AutoTranslateModeEnum.Disabled;
 
 		atelierHint.Text = english
-			? "Clothing  •  1 for $90"
-			: "Одежда  •  90$ за 1";
+			? $"Clothing  •  1 for ${AtelierSpinCost}"
+			: $"Одежда  •  {AtelierSpinCost}$ за 1";
 
 		musicHint.Text = english
-			? "Instruments  •  1 for $140"
-			: "Инструменты  •  140$ за 1";
+			? $"Instruments  •  1 for ${MusicSpinCost}"
+			: $"Инструменты  •  {MusicSpinCost}$ за 1";
 
 		atelierPrice.Text = english
-			? "1 item  •  $90"
-			: "1 предмет  •  90$";
+			? $"1 item  •  ${AtelierSpinCost}"
+			: $"1 предмет  •  {AtelierSpinCost}$";
 
 		musicPrice.Text = english
-			? "1 item  •  $140"
-			: "1 предмет  •  140$";
+			? $"1 item  •  ${MusicSpinCost}"
+			: $"1 предмет  •  {MusicSpinCost}$";
 
 		_atelierGetItemButton.Text = english
 			? "CREATE ITEM"
@@ -771,7 +774,7 @@ public partial class TradeScene : Node2D
 
 	private void StartBuyerOffer()
 	{
-		Percentage = _rng.RandiRange(-30, 30);
+		Percentage = TradeOfferRules.InitialPercent(_rng.RandiRange(0, 60));
 		RerollsRemaining = GetItemRerollLimit(ItemIndex);
 
 		CustomerIndex = _rng.RandiRange(
@@ -938,10 +941,7 @@ public partial class TradeScene : Node2D
 
 	public static int PriceForPercent(int basePrice, int value)
 	{
-		return Mathf.Max(
-			1,
-			Mathf.RoundToInt(
-				basePrice * (1f + value / 100f)));
+		return TradeOfferRules.Price(basePrice, value);
 	}
 
 	public void RerollCustomer()
@@ -952,32 +952,13 @@ public partial class TradeScene : Node2D
 		RerollsRemaining--;
 		int basePrice = GetItemPrice(ItemIndex);
 
-		var higher = new List<int>();
-		var lower = new List<int>();
-
-		for (int value = -30; value <= 30; value++)
-		{
-			int newPrice =
-				PriceForPercent(basePrice, value);
-
-			if (newPrice > OfferedPrice)
-				higher.Add(value);
-			else if (newPrice < OfferedPrice)
-				lower.Add(value);
-		}
-
-		List<int> pool = _rng.Randf() < 0.7f
-			? higher
-			: lower;
-
-		if (pool.Count == 0)
-			pool = lower.Count > 0 ? lower : higher;
-
-		if (pool.Count == 0)
+		int[] pool = TradeOfferRules.RerollOptions(basePrice, OfferedPrice,
+			_rng.Randf() < TradeOfferRules.HigherRerollChance);
+		if (pool.Length == 0)
 			return;
 
 		Percentage = pool[
-			_rng.RandiRange(0, pool.Count - 1)];
+			_rng.RandiRange(0, pool.Length - 1)];
 
 		int appearanceCount =
 			_customer.GetAppearanceCount();
@@ -1298,7 +1279,7 @@ public partial class TradeScene : Node2D
 
 		var data = new ProgressData
 		{
-			SaveVersion = 12,
+			SaveVersion = 13,
 			Day = CurrentDay,
 			Score = Score,
 			EnergyRemaining = EnergyRemaining,
@@ -1386,28 +1367,10 @@ public partial class TradeScene : Node2D
 			? data.DayRemainingSeconds
 			: null;
 
-		if (data.SaveVersion < 11 &&
-			restoredRemaining is double oldRemaining &&
-			double.IsFinite(oldRemaining) &&
-			!data.DayClosed)
-		{
-			bool timeBonus =
-				data.SaveVersion >= 9 &&
-				data.SelectedUpgrade ==
-					(int)ChikagoShop.Domain.Days.DayUpgrade.Time;
-
-			double oldDuration =
-				120 + (timeBonus ? 30 : 0);
-
-			double newDuration =
-				(MusicWorkshopUnlocked ? 90 : 60) +
-				(timeBonus ? 30 : 0);
-
-			restoredRemaining = Mathf.Clamp(
-				oldRemaining / oldDuration * newDuration,
-				0,
-				newDuration);
-		}
+		if (!data.DayClosed)
+			restoredRemaining = ChikagoShop.Domain.Days.DaySession.MigrateRemaining(
+				restoredRemaining, data.SaveVersion, MusicWorkshopUnlocked,
+				data.SaveVersion >= 9 && data.SelectedUpgrade == (int)ChikagoShop.Domain.Days.DayUpgrade.Time);
 
 		_dayCycle.Restore(
 			restoredRemaining,
