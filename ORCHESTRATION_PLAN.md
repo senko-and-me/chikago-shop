@@ -9,7 +9,7 @@
 
 ### HF-80 — verify and publish accumulated fixes
 
-Status: `IN_PROGRESS`; coordinator/executor `/root`; READY 2026-11-09; HF-79 DONE. User authorizes commit and push to GitHub after verification.
+Status: `DONE`; coordinator/executor `/root`; READY 2026-11-09; HF-79 DONE. User authorizes commit and push to GitHub after verification.
 CP-HF-80 read-set: current front and HF-68–79 evidence; git status/diff/log/remotes; tools/verify.ps1; tests/ProjectTest.cs; project/solution configuration; existing changed and untracked implementation/test files. Write-set: ORCHESTRATION_PLAN.md (verification/handoff); Git index/local commit and origin/main push for accumulated HF-68–79 changes. TEMP/chikago-hf80-* logs; isolated user directory and temporary override.cfg only if absent, removed after checks.
 Out of scope: source/, gameplay changes, unrelated fixes, player saves, force push. Acceptance: review accumulated diff, build/domain and targeted UI/gameplay regressions pass; record any existing full-run failures accurately; commit intended files and push current main normally; verify origin/main matches HEAD and worktree is clean. Checks: tools/verify.ps1; targeted Godot checks; git diff --check; post-push status and remote ref.
 
@@ -20,9 +20,11 @@ Changed: accumulated HF-68–79 implementation, tests, documentation and Godot U
 Checks: tools/verify.ps1 -> build PASS, domain125/125 PASS, import PASS; full ProjectTest FAIL at existing TestUiLayoutInvalidation assertion "Showing a tooltip must immediately activate its presentation updates" (also recorded before this publication). GPU targets new-game-funds, progress-toggle, closed-reroll, pause-hotkey, pause-localization, button-feedback, balance, presentation, resource, persistence -> all10 PASS. git diff --check -> PASS. Evidence TEMP/chikago-hf80-{full,new-game-funds,progress-toggle,closed-reroll,pause-hotkey,pause-localization,button-feedback,balance,presentation,resource,persistence}.log and target .err files.
 Acceptance: scoped fixes validated; remote fetched, main initially matched origin/main. Earlier player/editor changes preserved. No source/ files or player saves accessed; temporary override removed. Full suite is not claimed green.
 Read-set exception: none.
-Risks/blocker: existing full-run tooltip assertion remains outside this task. Publication verification pending.
-Next: commit and push reviewed files, then verify remote HEAD.
+Risks/blocker: existing full-run tooltip assertion remains outside this task. No publication blocker.
+Next: fix the existing tooltip lifecycle assertion in a separate task.
 ```
+
+Координатор подтвердил HF-80 2026-11-09: implementation commit89f4440999bad1ee40a7daff5ce04eecd2ade045 pushed normally to origin/main; ls-remote confirmed matching HEAD and worktree was clean. REVIEW → DONE. This closure record is published in a follow-up documentation commit.
 
 ### HF-79 — restore new-game configured funds after null scene overrides
 
