@@ -6,10 +6,10 @@ using Godot;
 public partial class PolishingSurface : Control
 {
 	private const string ViolinPath =
-		"res://art/minigames/Violin.png";
+		"res://art/minigames/violin.png";
 
 	private const string ClothPath =
-		"res://art/minigames/PolishingCloth.png";
+		"res://art/minigames/polishing_cloth.png";
 
 	public PolishingSession Session { get; private set; } = null!;
 	public string InstrumentKind { get; private set; } = "violin";

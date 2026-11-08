@@ -142,8 +142,8 @@ public partial class InventoryUI : Control
 		_slotBackground.OffsetBottom = -BottomMargin;
 
 		string path = _capacity == 6
-			? "res://art/ui/Slots6.png"
-			: "res://art/ui/Slots3.png";
+			? "res://art/ui/slots_6.png"
+			: "res://art/ui/slots_3.png";
 
 		if (ResourceLoader.Exists(path))
 		{

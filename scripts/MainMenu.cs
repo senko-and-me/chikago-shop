@@ -499,25 +499,25 @@ public partial class MainMenu : Control
 		SetButtonTexture(
 			_playButton,
 			_playRu,
-			"Play.png",
+			"play.png",
 			english);
 
 		SetButtonTexture(
 			_settingsButton,
 			_settingsRu,
-			"Settings.png",
+			"settings.png",
 			english);
 
 		SetButtonTexture(
 			_quitButton,
 			_quitRu,
-			"Exit.png",
+			"exit.png",
 			english);
 
 		SetButtonTexture(
 			_backButton,
 			_backRu,
-			"Back.png",
+			"back.png",
 			english);
 	}
 
@@ -579,18 +579,18 @@ public partial class MainMenu : Control
 
 		SetLocalizedTexture(
 			_newGameButton,
-			"res://art/ui/ru/NewGameRu.png",
-			"res://art/ui/en/NewGame.png");
+			"res://art/ui/ru/new_game.png",
+			"res://art/ui/en/new_game.png");
 
 		SetLocalizedTexture(
 			_continueButton,
-			"res://art/ui/ru/ContinueRu.png",
-			"res://art/ui/en/Continue.png");
+			"res://art/ui/ru/continue.png",
+			"res://art/ui/en/continue.png");
 
 		SetButtonTexture(
 			_choiceBackButton,
 			_backRu,
-			"Back.png",
+			"back.png",
 			GameLocalization.Language == "en");
 	}
 
@@ -601,8 +601,8 @@ public partial class MainMenu : Control
 
 		SetLocalizedTexture(
 			_skipButton,
-			"res://art/ui/ru/SkipRu.png",
-			"res://art/ui/en/Skip.png");
+			"res://art/ui/ru/skip.png",
+			"res://art/ui/en/skip.png");
 	}
 
 	private bool IsFullscreen()
@@ -629,14 +629,14 @@ public partial class MainMenu : Control
 		if (english)
 		{
 			path = enabled
-				? "res://art/ui/en/Fullscreen.png"
-				: "res://art/ui/en/Fullscreen2.png";
+				? "res://art/ui/en/fullscreen_on.png"
+				: "res://art/ui/en/fullscreen_off.png";
 		}
 		else
 		{
 			path = enabled
-				? "res://art/ui/ru/FullScreenRu.png"
-				: "res://art/ui/ru/FullScreenRu2.png";
+				? "res://art/ui/ru/fullscreen_on.png"
+				: "res://art/ui/ru/fullscreen_off.png";
 		}
 
 		if (ResourceLoader.Exists(path))

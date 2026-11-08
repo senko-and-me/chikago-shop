@@ -360,9 +360,9 @@ public partial class EmbroiderySurface : Control
 
 	public override void _Ready()
 	{
-		const string emptyPath = "res://art/minigames/RankEmpty.png";
-		const string filledPath = "res://art/minigames/RankFull.png";
-		const string hoopPath = "res://art/minigames/EmbroideryHoop.png";
+		const string emptyPath = "res://art/minigames/rank_empty.png";
+		const string filledPath = "res://art/minigames/rank_full.png";
+		const string hoopPath = "res://art/minigames/embroidery_hoop.png";
 
 		if (ResourceLoader.Exists(emptyPath))
 			_rankEmpty = GD.Load<Texture2D>(emptyPath);

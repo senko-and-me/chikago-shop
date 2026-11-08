@@ -4,8 +4,8 @@ using Godot;
 
 public sealed class DayNightBackground
 {
-	private const string DayTexturePath = "res://art/rooms/DayTime.png";
-	private const string NightTexturePath = "res://art/rooms/NightTime.png";
+	private const string DayTexturePath = "res://art/rooms/day_time.png";
+	private const string NightTexturePath = "res://art/rooms/night_time.png";
 
 	private readonly Sprite2D _dayLayer;
 
@@ -19,7 +19,7 @@ public sealed class DayNightBackground
 
 		if (dayTexture == null || nightTexture == null || layout.Texture == null)
 		{
-			GD.PushWarning("DayTime.png or NightTime.png is missing.");
+			GD.PushWarning("day_time.png or night_time.png is missing.");
 			return;
 		}
 

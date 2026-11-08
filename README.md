@@ -1,5 +1,16 @@
 # ChikagoShop
 
+## Структура проекта
+
+- `scripts/` и `scenes/` — Godot-код и сцены. `scripts/Persistence/` содержит файловый доступ к `user://` и адаптер состояния `TradeScene`.
+- `src/ChikagoShop.Domain/` — логика без зависимости от Godot. В `Persistence/` находятся DTO сохранения, JSON-контракт и миграции старых версий. Текущая версия сохранения — 13.
+- `tests/ChikagoShop.Domain.Tests/` — NUnit-проверки домена. `tests/Integration/` — проверки Godot по подсистемам; `tests/ProjectTest.cs` остаётся общей точкой запуска.
+- `art/characters/` — игровые слои покупателей; `art/reference/characters/` — референсы и эскизы, которые игровые сцены не используют. Имена ресурсов — ASCII `snake_case`, расширения в нижнем регистре.
+- `art/fonts/game.ttf` — единственный игровой шрифт; содержит английский и русский алфавиты, цифры и `Ё/ё`. Корневой `MyFont_Completed.ttf` был его побайтной копией и удалён.
+- `config/`, `dialogue/`, `localization/`, `themes/` — игровые данные, диалог, переводы и тема; `tools/` — проверки и симулятор баланса; `docs/` — отчёты.
+
+Для отдельных проверок используйте `--script res://tests/ProjectTest.cs -- --persistence-checks` или `--resource-checks` в аргументах Godot. Первая группа проверяет старые сохранения, повторную загрузку и checkpoint; вторая — загрузку ресурсов, символы внутри самого шрифта и локализованные картинки меню. Существующие флаги `--balance-checks`, `--day-timer-checks`, `--upgrade-purchase-checks`, `--intro-transition-checks` сохранены. Запускайте проверки в изолированном `user://`; `--intro-transition-checks` требует каталог `ChikagoShopStartupSmoke`. Общая команда проверки остаётся `tools/verify.ps1`.
+
 ## План разработки
 
 Канонические требования, стадии до MVP, статусы, зависимости и контекст-пакеты для агентов находятся в [`ORCHESTRATION_PLAN.md`](ORCHESTRATION_PLAN.md). Рабочий протокол агентов — в [`AGENTS.md`](AGENTS.md).
