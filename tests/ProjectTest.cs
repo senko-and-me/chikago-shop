@@ -16,6 +16,13 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--presentation-checks"))
+            {
+                await TestMonochromePresentation();
+                GD.Print("PRESENTATION_CHECKS_PASS: grayscale scenes, clock/table colors, modal masking and resize");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--resource-checks"))
             {
                 TestResourceOrganization();

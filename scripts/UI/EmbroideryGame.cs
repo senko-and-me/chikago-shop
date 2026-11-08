@@ -39,6 +39,7 @@ public partial class EmbroideryGame : CanvasLayer
 			Visible = false
 		};
 		AddChild(_surface);
+		MonochromePresentation.CoverExceptions(_surface);
 		_surface.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
 
 		if (IsPolishing)

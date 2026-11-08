@@ -20,7 +20,6 @@
 script = ExtResource("1_script")
 
 [node name="Male" type="Node2D" parent="." unique_id=2085880372]
-visible = false
 
 [node name="Body" type="Sprite2D" parent="Male" unique_id=1064261290]
 position = Vector2(-107, -548)
@@ -55,7 +54,6 @@ texture = ExtResource("6_male_hair_1")
 centered = false
 
 [node name="Style2" type="Sprite2D" parent="Male/Hair" unique_id=1674621107]
-visible = false
 position = Vector2(-57, -552)
 texture = ExtResource("7_male_hair_2")
 centered = false
@@ -67,6 +65,7 @@ texture = ExtResource("8_male_hair_3")
 centered = false
 
 [node name="Female" type="Node2D" parent="." unique_id=1694638953]
+visible = false
 
 [node name="Body" type="Sprite2D" parent="Female" unique_id=208230433]
 position = Vector2(-140, -509)

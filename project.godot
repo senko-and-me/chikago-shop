@@ -17,6 +17,7 @@ config/features=PackedStringArray("4.7", "C#", "Mobile")
 [autoload]
 
 GameLocalization="*res://scripts/Localization/GameLocalization.cs"
+MonochromePresentation="*res://scripts/Presentation/MonochromePresentation.cs"
 
 [display]
 

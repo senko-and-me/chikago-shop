@@ -50,6 +50,7 @@ public sealed class DayCycleController
 			MouseFilter = Control.MouseFilterEnum.Ignore, ShowBehindParent = true
 		};
 		_timer.AddChild(_clock);
+		MonochromePresentation.PreserveClock(_clock);
 		_clock.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
 		_inventoryStrip = game.GetNode<Control>("HUD/InventoryUI/ScrollContainer");
 		_timer.GetParent<Control>().Resized += LayoutTimer;

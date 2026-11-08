@@ -28,6 +28,7 @@ public partial class PauseMenu : CanvasLayer
 
 		_overlay = new Control { Name = "Overlay", Visible = false };
 		root.AddChild(_overlay);
+		MonochromePresentation.CoverExceptions(_overlay);
 		_overlay.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
 		var shade = new ColorRect
 		{

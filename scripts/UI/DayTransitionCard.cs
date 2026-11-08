@@ -27,6 +27,7 @@ public partial class DayTransitionCard : CanvasLayer
         ProcessMode = ProcessModeEnum.Always;
         _root = new Control { Name = "Root", Visible = false, Theme = GD.Load<Theme>("res://themes/game_theme.tres") };
         AddChild(_root);
+        MonochromePresentation.CoverExceptions(_root);
         _root.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         var shade = new ColorRect { Color = new Color("101516"), MouseFilter = Control.MouseFilterEnum.Stop };
         _root.AddChild(shade);
