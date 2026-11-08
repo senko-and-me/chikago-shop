@@ -5,6 +5,16 @@ namespace ChikagoShop.Domain.Tests;
 
 public sealed class TradeOfferRulesTests
 {
+    [TestCase(true, false, 3, true)]
+    [TestCase(true, false, 1, true)]
+    [TestCase(true, true, 3, false)]
+    [TestCase(true, true, 1, false)]
+    [TestCase(false, false, 3, false)]
+    [TestCase(true, false, 0, false)]
+    [TestCase(true, false, -1, false)]
+    public void RerollsRequireAnOpenDayAndActiveOffer(bool active, bool closed, int remaining, bool expected) =>
+        Assert.That(TradeOfferRules.CanReroll(active, closed, remaining), Is.EqualTo(expected));
+
     [Test]
     public void InitialOffersCoverEveryPercentAndRejectInvalidTickets()
     {

@@ -7,6 +7,13 @@ using ChikagoShop.Domain.Days;
 // Subsystem checks share the ProjectTest runner and fixture helpers.
 public partial class ProjectTest
 {
+    private async Task PressEscapeForTest()
+    {
+        Root.PushInput(new InputEventKey { Pressed = true, Keycode = Key.Escape }, true);
+        Root.PushInput(new InputEventKey { Pressed = false, Keycode = Key.Escape }, true);
+        await ToSignal(this, SignalName.ProcessFrame);
+    }
+
     private static string ExpectedItemTooltip(int index) =>
         $"{TradeScene.GetItemName(index)}\nРедкость: {TradeScene.GetItemRarity(index)}\nСтоимость: {TradeScene.GetItemBasePrice(index)}$";
 

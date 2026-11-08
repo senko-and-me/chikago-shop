@@ -110,11 +110,36 @@ public partial class ProjectTest
                 "Collapse must hide the entire panel and leave an accessible right arrow at the left edge");
             Check(game.CurrentDay == day && game.Score == score,
                 "Collapsing the panel must preserve gameplay state");
+            MoveButtonPointer(new Vector2(2, Root.GetVisibleRect().Size.Y / 2));
+            // Allow both the short click flash and its fade-out to finish.
+            await ToSignal(CreateTimer(0.2, true), SceneTreeTimer.SignalName.Timeout);
+            await SettleButtonFeedback();
+            Check(!toggle.HasFocus() && ButtonFeedbackController.Instance.GetVisualFrame().Bounds != ScreenBounds(toggle),
+                $"Mouse collapse must not leave a persistent outline after the pointer leaves (focus={toggle.HasFocus()}, frame={ButtonFeedbackController.Instance.GetVisualFrame()})");
+            MoveButtonPointer(ScreenBounds(toggle).GetCenter());
+            await SettleButtonFeedback();
+            Check(ButtonFeedbackController.Instance.GetVisualFrame().Bounds == ScreenBounds(toggle),
+                "The collapsed arrow must still highlight while hovered");
             await ClickControl(game, "HUD/Root/ProgressToggleButton");
             Check(panel.IsVisibleInTree() && toggle.Text == "<" &&
                   toggle.GetGlobalRect().Position.X > panel.GetGlobalRect().End.X,
                 "Expand must restore the panel with its arrow outside the frame");
+            MoveButtonPointer(new Vector2(2, Root.GetVisibleRect().Size.Y / 2));
+            await ToSignal(CreateTimer(0.2, true), SceneTreeTimer.SignalName.Timeout);
+            await SettleButtonFeedback();
+            Check(!toggle.HasFocus() && ButtonFeedbackController.Instance.GetVisualFrame().Bounds != ScreenBounds(toggle),
+                "Mouse expansion must not leave a persistent outline after the pointer leaves");
         }
+        toggle.GrabFocus();
+        foreach (bool expanded in new[] { false, true })
+        {
+            Root.PushInput(new InputEventKey { Pressed = true, Keycode = Key.Space }, true);
+            Root.PushInput(new InputEventKey { Pressed = false, Keycode = Key.Space }, true);
+            await ToSignal(this, SignalName.ProcessFrame);
+            Check(panel.Visible == expanded && toggle.HasFocus(),
+                "Keyboard activation must still toggle once and retain keyboard focus");
+        }
+        toggle.ReleaseFocus();
         var status = content.GetNode<Label>("StatusLabel");
         string shortStatus = status.Text;
         status.Text = "Не хватает 100$ на квоту. Вернитесь к контрольной точке через меню паузы, чтобы продолжить игру с сохранённого состояния.";

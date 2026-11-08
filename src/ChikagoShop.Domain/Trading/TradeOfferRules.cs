@@ -8,6 +8,8 @@ public static class TradeOfferRules
     public const int MinPercent = -30;
     public const int MaxPercent = 30;
     public const double HigherRerollChance = 0.7;
+    public static bool CanReroll(bool tradeActive, bool dayClosed, int remainingRerolls) =>
+        tradeActive && !dayClosed && remainingRerolls > 0;
     public static int InitialPercent(int ticket) => ticket is >= 0 and <= 60
         ? MinPercent + ticket : throw new ArgumentOutOfRangeException(nameof(ticket));
     public static int Price(int basePrice, int percent) => MoneyMath.ApplyPercentRoundHalfUp(basePrice, percent);

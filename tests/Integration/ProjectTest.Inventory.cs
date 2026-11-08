@@ -113,7 +113,7 @@ public partial class ProjectTest
         await ClickControl(game, "HUD/Root/ProgressPanel/Content/EndDayButton");
         Check(game.CurrentDay == 2 && !game.DayClosed, "The next day must start with a separate mouse click");
         await ClickControl(game, "DayTransitionCard/Root/Center/Card/Content/Choices/Cash/Content/Choose");
-        await ClickControl(game, "PauseMenu/Root/PauseButton");
+        await PressEscapeForTest();
         await ClickControl(game, "PauseMenu/Root/Overlay/Center/Panel/Content/Menu/CheckpointButton");
         Check(game.CurrentDay == 1 && game.Score == 220, "Checkpoint handler must be connected");
         await ClickControl(game, "World/MusicWorkshop/LockedOverlay/UnlockButton");
@@ -124,7 +124,7 @@ public partial class ProjectTest
         FinishMusic(game);
         Check(game.Score == 0 && game.StoredItems.Length == 3 && game.EnergyRemaining == 1,
             "The unlocked music workshop must accept mouse input and charge its spin price");
-        await ClickControl(game, "PauseMenu/Root/PauseButton");
+        await PressEscapeForTest();
         await ClickControl(game, "PauseMenu/Root/Overlay/Center/Panel/Content/Menu/NewGameButton");
         Check(!game.MusicWorkshopUnlocked && game.Score == 220 && game.StoredItems.Length == 0,
             "New game handler must reset the state");

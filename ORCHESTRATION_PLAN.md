@@ -7,6 +7,258 @@
 
 ## Текущий фронт
 
+### HF-80 — verify and publish accumulated fixes
+
+Status: `IN_PROGRESS`; coordinator/executor `/root`; READY 2026-11-09; HF-79 DONE. User authorizes commit and push to GitHub after verification.
+CP-HF-80 read-set: current front and HF-68–79 evidence; git status/diff/log/remotes; tools/verify.ps1; tests/ProjectTest.cs; project/solution configuration; existing changed and untracked implementation/test files. Write-set: ORCHESTRATION_PLAN.md (verification/handoff); Git index/local commit and origin/main push for accumulated HF-68–79 changes. TEMP/chikago-hf80-* logs; isolated user directory and temporary override.cfg only if absent, removed after checks.
+Out of scope: source/, gameplay changes, unrelated fixes, player saves, force push. Acceptance: review accumulated diff, build/domain and targeted UI/gameplay regressions pass; record any existing full-run failures accurately; commit intended files and push current main normally; verify origin/main matches HEAD and worktree is clean. Checks: tools/verify.ps1; targeted Godot checks; git diff --check; post-push status and remote ref.
+
+```text
+Task: HF-80
+Recommended status: REVIEW
+Changed: accumulated HF-68–79 implementation, tests, documentation and Godot UID files; no new gameplay changes in publication task.
+Checks: tools/verify.ps1 -> build PASS, domain125/125 PASS, import PASS; full ProjectTest FAIL at existing TestUiLayoutInvalidation assertion "Showing a tooltip must immediately activate its presentation updates" (also recorded before this publication). GPU targets new-game-funds, progress-toggle, closed-reroll, pause-hotkey, pause-localization, button-feedback, balance, presentation, resource, persistence -> all10 PASS. git diff --check -> PASS. Evidence TEMP/chikago-hf80-{full,new-game-funds,progress-toggle,closed-reroll,pause-hotkey,pause-localization,button-feedback,balance,presentation,resource,persistence}.log and target .err files.
+Acceptance: scoped fixes validated; remote fetched, main initially matched origin/main. Earlier player/editor changes preserved. No source/ files or player saves accessed; temporary override removed. Full suite is not claimed green.
+Read-set exception: none.
+Risks/blocker: existing full-run tooltip assertion remains outside this task. Publication verification pending.
+Next: commit and push reviewed files, then verify remote HEAD.
+```
+
+### HF-79 — restore new-game configured funds after null scene overrides
+
+Status: `DONE`; coordinator/executor `/root`; READY 2026-11-09; HF-78 DONE. User reports new game starts at0 instead of220. Earlier edits retained.
+CP-HF-79 read-set: current front; scenes/trade_scene.tscn; scripts/TradeScene.cs (exports/start/reset/availability), scripts/UI/RarityPanel.cs, scripts/MainMenu.cs (new-game routing), scripts/Persistence/TradeScene.Persistence.cs, ProgressSaveStore.cs; config/economy.v1.json; tests/ProjectTest.cs, tests/Integration/ProjectTest.Persistence.cs, Resources.cs; .vscode/settings.json; git status/diff. Write-set: ORCHESTRATION_PLAN.md; scenes/trade_scene.tscn (remove erroneous null exported-value overrides only); tests/ProjectTest.cs; tests/Integration/ProjectTest.Persistence.cs. TEMP/chikago-hf79-* logs; temporary override.cfg only if absent and removed afterward.
+Out of scope: source/, changes to domain/economy values, unrelated scene edits, player save migration/reset, commit/push. Acceptance: fresh packed-scene instance uses configured220 funds,250/450 quotas and valid save path; runtime new game restores220 and checkpoint220, persists/reloads correctly; rarity prices retain defaults. Checks: build; GPU --new-game-funds-checks (reproduce before fix then pass); --button-feedback-checks; git diff --check.
+
+```text
+Task: HF-79
+Recommended status: REVIEW
+Changed: scenes/trade_scene.tscn (remove14 erroneous null overrides); tests/ProjectTest.cs; tests/Integration/ProjectTest.Persistence.cs; ORCHESTRATION_PLAN.md.
+Checks: build -> PASS (0 warnings/errors); GPU --new-game-funds-checks -> FAIL before fix at packed-scene defaults assertion, PASS after fix; GPU --button-feedback-checks -> PASS; git diff --check -> PASS. Evidence TEMP/chikago-hf79-{new-game-funds,button-feedback}.log/.err.
+Acceptance: null exported-value overrides in the scene replaced C# defaults with0/null for starting money, both quotas, save path and price tables. Removing only these lines restores configured220 start/checkpoint,250/450 quotas, default save path and atelier prices30/50/80/120/200. Regression tests fresh instantiation, initial funds, runtime New Game from0, affordable craft availability, saved current/checkpoint funds and reload through a second instance. Domain/code defaults unchanged.
+Read-set exception: none; source/ not scanned.
+Risks/blocker: none for new-game startup/reset. Existing player saves deliberately untouched; previous unrelated edits retained. No commit/push; temporary override removed and isolated user directory used.
+Next: start New Game to receive220 dollars.
+```
+
+Координатор подтвердил HF-79 2026-11-09 по воспроизведению, build и двум GPU targets: REVIEW → DONE.
+
+### HF-78 — tighten showcase feedback to the display area
+
+Status: `DONE`; coordinator/executor `/root`; READY 2026-11-08; HF-77 DONE. User requests a smaller outline around the showcase. Previous edits retained.
+CP-HF-78 read-set: current front; scripts/Presentation/ButtonFeedbackController.cs; scripts/UI/SlotUI.cs, InventoryUI.cs; scripts/TradeScene.cs (showcase wiring only); scenes/UI/ShowcaseSlot.tscn, scenes/trade_scene.tscn; art/props/display_table.png; tests/ProjectTest.cs, tests/Integration/ProjectTest.ButtonFeedback.cs, Inventory.cs; .vscode/settings.json. Write-set: ORCHESTRATION_PLAN.md; scripts/Presentation/ButtonFeedbackController.cs (optional local feedback bounds); scenes/UI/ShowcaseSlot.tscn (visual feedback bounds and native focus style only); tests/ProjectTest.cs, tests/Integration/ProjectTest.ButtonFeedback.cs. TEMP/chikago-hf78-* logs; temporary override.cfg only if absent, removed afterward.
+Out of scope: source/, gameplay, hitboxes, layout/art changes, other feedback policy, commit/push. Acceptance: showcase outline is narrower and slightly shorter, aligned with the glass display; hover/click/keyboard feedback uses the same frame; hitbox/actions unchanged and other buttons preserved. Checks: build; GPU --button-feedback-checks (scaled showcase hover/click/focus regression); git diff --check.
+
+```text
+Task: HF-78
+Recommended status: REVIEW
+Changed: scripts/Presentation/ButtonFeedbackController.cs; scenes/UI/ShowcaseSlot.tscn; tests/ProjectTest.cs; tests/Integration/ProjectTest.ButtonFeedback.cs; ORCHESTRATION_PLAN.md.
+Checks: dotnet build ChikagoShop.csproj --no-restore -> PASS (0 warnings/errors); GPU --button-feedback-checks -> PASS; git diff --check -> PASS. Evidence TEMP/chikago-hf78-button-feedback.log/.err.
+Acceptance: showcase local feedback rectangle is (65,0,310,200), replacing the full440x230 outline; native focus uses the transparent showcase style to avoid a second wide border. Optional metadata affects only configured controls and preserves transforms/clipping. Hitbox, artwork and layout unchanged. Regression verifies compact hover/click/keyboard bounds at two scales and preserves activation and control size. Existing world-button fixture now refreshes availability after assigning funds, removing dependence on prior user settings.
+Read-set exception: necessary diagnostic reads of showcase wiring and inventory presentation are recorded in the package; source/ not scanned.
+Risks/blocker: none; earlier edits retained, no commit/push, temporary override removed and player saves unused.
+Next: hover a showcase to inspect the tighter frame.
+```
+
+Координатор подтвердил HF-78 2026-11-08 по build и GPU regressions: REVIEW → DONE.
+
+### HF-77 — do not retain mouse-click focus on the progress toggle
+
+Status: `DONE`; coordinator/executor `/root`; READY 2026-11-08; HF-76 DONE. User requests no persistent selection on the HUD >/< toggle. One executor, earlier uncommitted changes retained.
+CP-HF-77 read-set: current front; scripts/UI/ProgressPanel.cs, scripts/Presentation/ButtonFeedbackController.cs (focus behavior); scenes/trade_scene.tscn (toggle declaration); tests/ProjectTest.cs, tests/Integration/ProjectTest.Ui.cs, ButtonFeedback.cs, Helpers.cs; .vscode/settings.json, ChikagoShop.csproj; git status/diff. Write-set: ORCHESTRATION_PLAN.md; scripts/UI/ProgressPanel.cs (release mouse focus only); tests/ProjectTest.cs (target); tests/Integration/ProjectTest.Ui.cs (toggle regression). OS TEMP/chikago-hf77-* logs; temporary override.cfg only if absent, removed after checks.
+Out of scope: source/, global focus/pause-menu selection, geometry/art/gameplay/save changes, commit/push. Acceptance: after mouse collapse/expand and pointer departure, toggle has no retained native focus/feedback; hover/press still work, keyboard focus/Space remains functional, size/state behavior preserved. Checks: build; GPU --progress-toggle-checks/--button-feedback-checks; git diff --check.
+
+```text
+Task: HF-77
+Recommended status: REVIEW
+Changed: scripts/UI/ProgressPanel.cs; tests/ProjectTest.cs; tests/Integration/ProjectTest.Ui.cs; ORCHESTRATION_PLAN.md.
+Checks: dotnet build ChikagoShop.csproj --no-restore -> PASS (0 warnings/errors); GPU --progress-toggle-checks -> PASS; GPU --button-feedback-checks -> PASS; git diff --check -> PASS. Evidence OS TEMP/chikago-hf77-{progress-toggle,button-feedback}.log/.err.
+Acceptance: left mouse press schedules release of the toggle's native focus, so leaving the arrow removes its outline after the short click animation. Hover/press feedback remains active. Regression repeats collapse/expand three times with real mouse events and checks focus/feedback after departure, hover restoration, keyboard Space activation with retained keyboard focus, panel sizing, resizing and state updates.
+Read-set exception: none; source/ not scanned.
+Risks/blocker: none. Previous edits retained; no commit/push, temporary override.cfg removed and genuine saves unused.
+Next: click the HUD arrow and move the cursor away.
+```
+
+Координатор подтвердил HF-77 2026-11-08 по build и двум GPU targets: REVIEW → DONE.
+
+### HF-76 — explicit day-card arrow navigation across all available choices
+
+Status: `DONE`; coordinator/executor `/root`; READY 2026-11-08; HF-75 DONE. User reports arrows only alternate between the middle buy button and Skip. One executor, previous uncommitted work retained.
+CP-HF-76 read-set: current front; scripts/UI/DayTransitionCard.cs, scripts/Presentation/ButtonFeedbackController.cs; tests/ProjectTest.cs; tests/Integration/ProjectTest.ButtonFeedback.cs; .vscode/settings.json, ChikagoShop.csproj, README.md; git status/diff. Write-set: ORCHESTRATION_PLAN.md; scripts/UI/DayTransitionCard.cs (explicit focus traversal only); scripts/Presentation/ButtonFeedbackController.cs (notify keyboard modality for consumed card navigation only, coordinator expansion); tests/Integration/ProjectTest.ButtonFeedback.cs; README.md. OS TEMP/chikago-hf76-* logs; temporary override.cfg only if absent, removed after checks.
+Out of scope: source/, gameplay/purchases/skip effects, other screen navigation, art/layout, commit/push. Acceptance: first navigation reveals focus as before; right/down advance and left/up retreat through enabled purchases then Skip with wrapping; Tab/Shift-Tab use the same ordered choices; disabled purchases skipped; all-disabled selects Skip; navigation never buys/skips and cannot escape to background controls. Checks: build; GPU --button-feedback-checks (all4 directions/full cycle, disabled cases, Tab, no auto-focus/no actions), --balance-checks; git diff --check.
+
+```text
+Task: HF-76
+Recommended status: REVIEW
+Changed: scripts/UI/DayTransitionCard.cs; scripts/Presentation/ButtonFeedbackController.cs (explicit keyboard-mode notification for consumed modal navigation); tests/Integration/ProjectTest.ButtonFeedback.cs; README.md; ORCHESTRATION_PLAN.md.
+Checks: build -> PASS (0 warnings/errors); GPU --button-feedback-checks -> PASS; GPU --balance-checks -> PASS; git diff --check -> PASS. Evidence OS TEMP/chikago-hf76-{button-feedback,balance}.log/.err.
+Acceptance: explicit ordered focus traversal replaces Godot's geometric nearest-neighbor search for the day-card screen only. Right/down advance; left/up retreat; Tab/Shift-Tab follow the same circular order of enabled purchases then Skip. Opening still leaves no selection until navigation. All navigation keys are consumed so focus cannot escape to background UI. Card notifies feedback's keyboard mode because consumed input does not reach the global observer; this prevents a stationary mouse over another choice from overriding the keyboard highlight. Tests traverse every entry and wrap in all4 directions at balances1000/20/0, verify disabled entries skipped and Skip-only fallback, Tab/reverse Tab, no purchase/skip, reopen reset, and keyboard feedback priority over another hovered choice.
+Read-set exception: coordinator expanded read/write-set to ButtonFeedbackController for the necessary consumed-input modality notification; global navigation policy unchanged. source/ not scanned.
+Risks/blocker: none for this task. No commit/push, earlier edits retained and temporary override.cfg removed; genuine saves unused.
+Next: navigate all purchase buttons and Skip using either arrow pair.
+```
+
+Координатор подтвердил HF-76 2026-11-08 по build и targeted GPU regressions: REVIEW → DONE.
+
+### HF-75 — block buyer rerolls once the day is closed
+
+Status: `DONE`; coordinator/executor `/root`; READY 2026-11-08; HF-74 DONE. Direct user rule: no rerolling buyers after time expires. One executor, earlier uncommitted work retained.
+CP-HF-75 read-set: current front; scripts/TradeScene.cs (reroll/UI/day synchronization), scripts/Days/DayCycleController.cs, src/ChikagoShop.Domain/Trading/TradeOfferRules.cs; tests/ChikagoShop.Domain.Tests/TradeOfferRulesTests.cs; tests/ProjectTest.cs, tests/Integration/ProjectTest.Days.cs, Helpers.cs; README.md, .vscode/settings.json, ChikagoShop.csproj; git status/diff. Write-set: ORCHESTRATION_PLAN.md; src/ChikagoShop.Domain/Trading/TradeOfferRules.cs (availability rule); scripts/TradeScene.cs (use domain rule in handler and UI only); tests/ChikagoShop.Domain.Tests/TradeOfferRulesTests.cs; tests/ProjectTest.cs; tests/Integration/ProjectTest.Days.cs; README.md. OS TEMP/chikago-hf75-* logs; temporary override.cfg only when absent, removed after checks.
+Out of scope: source/, offer RNG/prices, sale after expiry, save schema, other gameplay/domain extraction, old timer/layout test failures, commit/push. No new domain logic in TradeScene.
+Acceptance: timeout/manual day close immediately disables reroll button; clicks, F, RerollCustomer and DeclineTrade do not change buyer/offer/remaining rerolls or save; reload and language changes keep it disabled. Current offer remains sellable once; new open day restores reroll availability. Checks: build/domain; GPU --closed-reroll-checks (before/at timeout, all routes, manual close, reload, locale, final sale); --balance-checks; git diff --check.
+
+```text
+Task: HF-75
+Recommended status: REVIEW
+Changed: src/ChikagoShop.Domain/Trading/TradeOfferRules.cs; scripts/TradeScene.cs (consume shared availability rule in reroll handler/UI/day presentation); tests/ChikagoShop.Domain.Tests/TradeOfferRulesTests.cs; tests/ProjectTest.cs; tests/Integration/ProjectTest.Days.cs; README.md; ORCHESTRATION_PLAN.md.
+Checks: build -> PASS (0 warnings/errors); domain tests -> PASS (125/125, including7 reroll availability cases); GPU --closed-reroll-checks -> PASS; GPU --balance-checks -> PASS; git diff --check -> PASS. Evidence OS TEMP/chikago-hf75-{closed-reroll,balance}.log/.err.
+Acceptance: domain CanReroll now requires active trade, open day and remaining rerolls. UI and handler use the same rule; closing refresh disables the button immediately, and reload/locale refresh cannot re-enable it. No new domain logic in TradeScene. Target verifies positive time still permits reroll, expiry/manual close block real disabled-button click, F and both public routes without changing buyer/offer/count/save; reload and RU/EN changes preserve the block. Last offer remains sellable exactly once, and new open game restores reroll. Legacy integration assertions expecting rerolls after closing were updated to the new rule; unrelated old timer/layout expectations left out of scope. README updated.
+Read-set exception: none; source/ not scanned.
+Risks/blocker: none for this task; no commit/push, earlier edits retained, temporary override.cfg removed and player saves unused.
+Next: let the clock reach00 during a deal and check the disabled reroll button and final sale.
+```
+
+Координатор подтвердил HF-75 2026-11-08 по domain и targeted GPU regressions: REVIEW → DONE.
+
+### HF-74 — remember last hovered choice in the pause main menu only
+
+Status: `DONE`; coordinator/executor `/root`; READY 2026-11-08; HF-73 DONE. User requests persistent selection on the last mouse-hovered button, limited to the pause menu shown. One executor, earlier uncommitted changes preserved.
+CP-HF-74 read-set: current front; scripts/UI/PauseMenu.cs; scripts/Presentation/ButtonFeedbackController.cs (focus fallback behavior); tests/Integration/ProjectTest.ButtonFeedback.cs, Helpers.cs; tests/ProjectTest.cs; .vscode/settings.json, ChikagoShop.csproj; git status/diff. Write-set: ORCHESTRATION_PLAN.md; scripts/UI/PauseMenu.cs; tests/Integration/ProjectTest.ButtonFeedback.cs. OS TEMP/chikago-hf74-* logs; temporary override.cfg only if absent, removed after checks.
+Out of scope: source/, global feedback rules, settings/other menus, gameplay/actions/saves, art/layout, commit/push. Acceptance: hovering an enabled pause-main button focuses/remembers it; moving to blank space retains its highlight; hovering another transfers selection without executing actions; returning from settings/reopening pause restores remembered selection; settings buttons keep existing hover behavior. Checks: build; GPU --button-feedback-checks (hover/leave/transfer/scope/reopen regression), --pause-hotkey-checks, --pause-localization-checks; git diff --check.
+
+```text
+Task: HF-74
+Recommended status: REVIEW
+Changed: scripts/UI/PauseMenu.cs; tests/Integration/ProjectTest.ButtonFeedback.cs; ORCHESTRATION_PLAN.md.
+Checks: build -> PASS (0 warnings/errors); GPU --button-feedback-checks -> PASS; GPU --pause-hotkey-checks -> PASS; GPU --pause-localization-checks -> PASS; git diff --check -> PASS. Evidence OS TEMP/chikago-hf74-{button-feedback,pause-hotkey,pause-localization}.log/.err.
+Acceptance: only direct pause-main buttons acquire focus and are remembered on MouseEntered. Focus retains their grayscale highlight after cursor departure; ShowMenu restores remembered enabled selection, falling back to Resume. No global feedback change, action activation, settings hover change or geometry change. Actual-input tests hover each main action then blank space, assert retained focus/feedback with no flash or gameplay mutation, verify reopening and settings-back restore selection, and confirm a hovered settings language button does not gain sticky focus.
+Read-set exception: none; source/ not scanned.
+Risks/blocker: none for this task. Earlier edits retained; no commit/push. Temporary override.cfg removed, genuine saves unused.
+Next: hover another pause-menu action and move the pointer away.
+```
+
+Координатор подтвердил HF-74 2026-11-08 по build и трём GPU targets: REVIEW → DONE.
+
+### HF-73 — fit image-button feedback to visible artwork
+
+Status: `DONE`; coordinator/executor `/root`; READY 2026-11-08; HF-72 DONE. User screenshot shows Back feedback border around a much wider control than its visible texture. One executor; previous uncommitted changes retained.
+CP-HF-73 read-set: current front; scripts/Presentation/ButtonFeedbackController.cs; scripts/MainMenu.cs (TextureButton configuration), scenes/main_menu.tscn (button resources); tests/ProjectTest.cs, tests/Integration/ProjectTest.ButtonFeedback.cs, Presentation.cs, Resources.cs; art/ui/en/back.png, art/ui/button_back.png (dimensions/alpha only); .vscode/settings.json, ChikagoShop.csproj; git status/diff. Write-set: ORCHESTRATION_PLAN.md; scripts/Presentation/ButtonFeedbackController.cs (texture-aware visual bounds only); tests/ProjectTest.cs (feedback target); tests/Integration/ProjectTest.ButtonFeedback.cs. OS TEMP/chikago-hf73-* logs/screenshots; temporary override.cfg only if absent, removed after checks.
+Out of scope: source/, art edits, control sizes/hitboxes, menu layout, action/economy/save changes, other feedback policy, commit/push. Acceptance: TextureButton outline follows fitted visible artwork/alpha bounds rather than empty control margins, including localized Back; normal Button behavior and clipping preserved. Checks: build; GPU --button-feedback-checks with RU/EN Back960x540/1280x720 and rendered margin assertions, --resource-checks/--presentation-checks; git diff --check.
+
+```text
+Task: HF-73
+Recommended status: REVIEW
+Changed: scripts/Presentation/ButtonFeedbackController.cs; tests/ProjectTest.cs; tests/Integration/ProjectTest.ButtonFeedback.cs; ORCHESTRATION_PLAN.md.
+Checks: build -> PASS (0 warnings/errors); GPU --button-feedback-checks -> PASS; GPU --resource-checks -> PASS; GPU --presentation-checks -> PASS; git diff --check -> PASS. Evidence OS TEMP/chikago-hf73-{button-feedback,resource,presentation}.log/.err and chikago-hf73-back-en.png.
+Acceptance: feedback bounds for image buttons now use the displayed texture's stretch/alignment and nontransparent pixel bounds, with flips and parent/viewport clipping. Texture alpha bounds cached through weak keys, avoiding per-frame readback and retaining no texture lifetime. Normal Button visual policy, hitboxes and control sizes unchanged. Regression checks exercise real Russian/English Back at960x540/1280x720, confirm the narrow English outline hugs artwork, empty side-margin pixels remain identical to idle, size stays unchanged and Back still responds. Screenshot inspected: oversized horizontal rectangle gone.
+Read-set exception: none; source/ not scanned.
+Risks/blocker: none for this change; no commit/push, earlier edits preserved and temporary override.cfg removed.
+Next: hover the English Back button in settings.
+```
+
+Координатор подтвердил HF-73 2026-11-08 по GPU tests, screenshot и build: REVIEW → DONE.
+
+### HF-72 — remove duplicate text over illustrated craft buttons
+
+Status: `DONE`; coordinator/executor `/root`; READY 2026-11-08; HF-71 DONE. User screenshot shows faint duplicate CREATE ITEM text over the lettering baked into the button image. One executor, earlier uncommitted work preserved.
+CP-HF-72 read-set: current front; scripts/TradeScene.cs (RefreshCraftLabels only), scenes/trade_scene.tscn (GetItemButton/style references); tests/Integration/ProjectTest.Economy.cs, Trading.cs (craft button assertions); tests/ProjectTest.cs; .vscode/settings.json, ChikagoShop.csproj; git status/diff. Write-set: ORCHESTRATION_PLAN.md; scripts/TradeScene.cs (clear the two button Text properties only); tests/Integration/ProjectTest.Economy.cs (RU/EN empty-text regression). OS TEMP/chikago-hf72-* logs; temporary override.cfg only if absent, removed after checks.
+Out of scope: source/, bitmap edits, translations of baked-in art, price/chance tooltips, geometry, gameplay/economy/saves, other buttons, commit/push. No domain logic added to TradeScene.
+Acceptance: both illustrated craft buttons draw only their existing image lettering, with no overlaid runtime text on initial load or language switch; price hints and craft actions remain functional. Checks: build; GPU --balance-checks (both workshops/languages including no duplicate text); git diff --check.
+
+```text
+Task: HF-72
+Recommended status: REVIEW
+Changed: scripts/TradeScene.cs (RefreshCraftLabels button Text assignments only); tests/Integration/ProjectTest.Economy.cs; ORCHESTRATION_PLAN.md.
+Checks: dotnet build ChikagoShop.sln --no-restore -> PASS (0 warnings/errors); GPU --balance-checks -> PASS (both workshops in RU/EN, blank button text, hints/payment/crafting); git diff --check -> PASS. Evidence OS TEMP/chikago-hf72-balance.log/.err.
+Acceptance: both craft button Text properties are cleared on initial UI setup and every language refresh; illustrated lettering stays unchanged. Regression asserts no duplicate runtime text in both languages while existing price hints, affordability and craft activation checks still pass.
+Read-set exception: none; source/ not scanned.
+Risks/blocker: none for this change. Earlier uncommitted work preserved; no commit/push; temporary override.cfg removed, genuine saves unused.
+Next: reopen either workshop and check the create-item button.
+```
+
+Координатор подтвердил HF-72 2026-11-08 по build и targeted GPU regression: REVIEW → DONE.
+
+### HF-71 — remove on-screen pause button, retain Escape
+
+Status: `DONE`; coordinator/executor `/root`; READY 2026-11-08; HF-70 DONE. Direct user request; one executor, no active overlapping writer. Earlier uncommitted changes preserved.
+CP-HF-71 read-set: current front; scripts/UI/PauseMenu.cs, RarityPanel.cs; tests/ProjectTest.cs; tests/Integration/ProjectTest.{Camera,Inventory,Menu,Helpers,ButtonFeedback,Localization,Presentation,Crafting}.cs; README.md, .vscode/settings.json, ChikagoShop.csproj; git status/diff. Write-set: ORCHESTRATION_PLAN.md; scripts/UI/PauseMenu.cs (remove button only), RarityPanel.cs (remove obsolete obstacle); tests/ProjectTest.cs; tests/Integration/ProjectTest.{Camera,Inventory,Menu,Helpers}.cs (Escape regression and replace obsolete clicks); README.md. OS TEMP/chikago-hf71-* logs; temporary override.cfg only if absent, removed after checks.
+Out of scope: source/, pause menu actions/localization, other shortcuts, gameplay/economy/saves, old unrelated test failures, commit/push. Acceptance: no visible/hidden PauseButton node; Esc opens pause and closes it, Esc from settings returns to pause menu, key-repeat does not toggle repeatedly; resume/clock behavior and popup placement work without button references. Checks: build; GPU --pause-hotkey-checks/--presentation-checks/--button-feedback-checks/--pause-localization-checks; stale-reference scan and git diff --check.
+
+```text
+Task: HF-71
+Recommended status: REVIEW
+Changed: scripts/UI/PauseMenu.cs; scripts/UI/RarityPanel.cs; tests/ProjectTest.cs; tests/Integration/ProjectTest.Camera.cs, Inventory.cs, Menu.cs, Helpers.cs; README.md; ORCHESTRATION_PLAN.md. Earlier uncommitted work retained.
+Checks: build -> PASS (0 warnings/errors); GPU --pause-hotkey-checks -> PASS; GPU --presentation-checks -> PASS; GPU --button-feedback-checks -> PASS; GPU --pause-localization-checks -> PASS; stale-reference scan -> PASS (PauseButton occurs only in the regression assertion of absence); git diff --check -> PASS. Evidence OS TEMP/chikago-hf71-{pause-hotkey,presentation,button-feedback,pause-localization}.log/.err.
+Acceptance: removed the screen button node, member, signal and show/hide/focus calls; pause remains available via existing Escape handling. Removed the obsolete button from rarity popup avoidance obstacles, and migrated integration clicks to actual Escape press/release input. GPU tests verify absence of the node, pause/open/resume/settings-back, key-repeat guard, frozen clock, Resume menu action, working popup placement, and Escape cancellation of crafting/cards without also opening pause. Existing palette, feedback and pause-language checks pass. README documents Escape only.
+Read-set exception: none; source/ not scanned.
+Risks/blocker: none for this task; unrelated known failures outside scope. Temporary override.cfg removed, genuine saves unused. No commit/push.
+Next: open and close pause with Escape in the running game.
+```
+
+Координатор подтвердил HF-71 2026-11-08 по build, четырём GPU targets и проверке ссылок: REVIEW → DONE.
+
+### HF-70 — language selection in in-game pause settings
+
+Status: `DONE`; coordinator/executor `/root`; READY 2026-11-08; HF-69 DONE. Direct user request. One executor, no active overlapping writer; previous uncommitted HF-68/HF-69 changes preserved.
+CP-HF-70 read-set: current front; scripts/UI/PauseMenu.cs, scripts/Localization/GameLocalization.cs, scripts/MainMenu.cs (language menu), tests/ProjectTest.cs, tests/Integration/ProjectTest.Localization.cs, Helpers.cs, Resources.cs; localization/en.tres (existing translation keys); .vscode/settings.json, ChikagoShop.csproj, README.md; git status/diff. Write-set: ORCHESTRATION_PLAN.md; scripts/UI/PauseMenu.cs; tests/ProjectTest.cs; tests/Integration/ProjectTest.Localization.cs; README.md. OS TEMP/chikago-hf70-* logs/screenshots; temporary override.cfg only when absent and removed after checks.
+Out of scope: source/, main menu redesign, translation catalog expansion, gameplay/save schema, pause semantics, existing tooltip/intro defects, commit/push. No new logic in TradeScene.
+Acceptance: pause Settings contains native-name Russian/English toggle buttons; current language selected on open/reopen; switching immediately translates pause/HUD and persists to the existing settings.cfg, preserving unrelated settings and gameplay state/save; main menu uses the same preference; layout fits960x540/1280x720 and both languages, pause remains active. Checks: build; GPU --pause-localization-checks (actual clicks, language/live labels, selected state, save invariance, reload/menu sync, layout); --button-feedback-checks/--resource-checks; git diff --check.
+
+```text
+Task: HF-70
+Recommended status: REVIEW
+Changed: scripts/UI/PauseMenu.cs; tests/ProjectTest.cs; tests/Integration/ProjectTest.Localization.cs; README.md; ORCHESTRATION_PLAN.md. Prior HF-68/HF-69 work preserved.
+Checks: dotnet build ChikagoShop.sln --no-restore -> PASS (0 warnings/errors); GPU --pause-localization-checks -> PASS; GPU --button-feedback-checks -> PASS; GPU --resource-checks -> PASS; git diff --check -> PASS. Evidence OS TEMP/chikago-hf70-{pause-localization,button-feedback,resource}.log/.err and chikago-hf70-pause-{en,ru}.png.
+Acceptance: added LanguageRow with mutually exclusive native-name Russian/English buttons in in-game pause settings. Selection uses existing GameLocalization.SelectLanguage/settings.cfg; translation notification updates selected state, existing Godot translations update pause controls and dynamic HUD immediately. Opening settings refreshes selection. Tests use actual clicks for both languages and960x540/1280x720, verify one selected button/native names/live label and HUD translation, no overlap/offscreen controls, pause remains active, cash/time and gameplay save bytes unchanged, unrelated audio setting preserved. Reloaded preferences/reopened pause and recreated main menu reflect the same selected language. English screenshot visually inspected.
+Read-set exception: initial listed pause/localization boundary inspection preceded CP creation; source/ never scanned.
+Risks/blocker: none for this change; existing broader tooltip/intro issues outside scope. Temporary override.cfg removed; genuine player settings/saves unused. No commit/push.
+Next: open Pause → Settings and switch language in the running game.
+```
+
+Координатор подтвердил HF-70 2026-11-08 по build, GPU actual-input regression и snapshot: REVIEW → DONE.
+
+### HF-69 — reveal day-card keyboard selection only after navigation
+
+Status: `DONE`; coordinator/executor `/root`; READY 2026-11-08; HF-68 DONE. User reports an immediate white selection border on opening day cards and wants it only after pressing arrow keys. Single executor, no parallel writers; prior uncommitted HF-68 changes preserved.
+CP-HF-69 read-set: current front/CP-HF-68; scripts/UI/DayTransitionCard.cs, scripts/Presentation/ButtonFeedbackController.cs; tests/ProjectTest.cs, tests/Integration/ProjectTest.ButtonFeedback.cs, Presentation.cs, Days.cs; .vscode/settings.json, ChikagoShop.csproj, README.md; git status/diff. Write-set: ORCHESTRATION_PLAN.md; scripts/UI/DayTransitionCard.cs; tests/Integration/ProjectTest.ButtonFeedback.cs; README.md. Logs/screenshots OS TEMP/chikago-hf69-*; temporary override.cfg only if absent, removed after isolated checks.
+Out of scope: source/, other screen focus policies, action/economy/save changes, geometry/art, shader redesign, old tooltip failures, commit/push. No domain changes.
+Acceptance: opening/reopening a day card with pointer away leaves no focused/outlined choice; first arrow (or Tab for keyboard accessibility) reveals initial enabled choice without buying; subsequent navigation uses standard focus behavior; mouse hover and press flashes remain; numeric purchase/Escape shortcuts unchanged. Checks: build; GPU --button-feedback-checks with open/reopen/no-focus, arrow navigation/no purchase and disabled-choice tests; GPU --balance-checks; git diff --check.
+
+```text
+Task: HF-69
+Recommended status: REVIEW
+Changed: scripts/UI/DayTransitionCard.cs; tests/Integration/ProjectTest.ButtonFeedback.cs; README.md; ORCHESTRATION_PLAN.md. Existing HF-68 work preserved.
+Checks: dotnet build ChikagoShop.sln --no-restore -> PASS (0 warnings/errors); GPU --button-feedback-checks -> PASS; GPU --balance-checks -> PASS; git diff --check -> PASS. Evidence: OS TEMP/chikago-hf69-{button-feedback,balance}.log/.err; screenshot chikago-hf68-card-no-selection.png (shared feedback suite screenshot prefix).
+Acceptance: removed unconditional first-choice GrabFocus on Open; Open releases prior focus, first arrow/Tab initializes an enabled choice and consumes only that initial navigation event, subsequent arrows use normal Godot navigation. Numeric shortcuts/Escape, hover and press feedback untouched. Regression checks confirm no focus/outline on first/repeated open even after keyboard use, first/right/down arrows reveal focus without any purchase, later right arrow changes selection without purchasing, unaffordable choices fall back to Skip. GPU screenshot inspected: all three buy buttons initially have no white selection border.
+Read-set exception: none; source/ not scanned.
+Risks/blocker: none for this change; broader known tooltip failure remains outside scope. No commit/push; temporary override.cfg removed and player saves unused.
+Next: reopen the upgrade screen and navigate with arrow keys.
+```
+
+Координатор подтвердил HF-69 2026-11-08 по GPU regression, screenshot и build: REVIEW → DONE.
+
+### HF-68 — button hover/press/focus feedback and brief action colors
+
+Status: `DONE`; coordinator/executor `/root`; READY 2026-11-08; HF-67 DONE. User clarified: hover/focus remain grayscale; color appears only as a short press flash. Green confirms/purchases, red refuses/exits, navigation neutral. One executor, no concurrent write-set owner.
+CP-HF-68 read-set: current front/CP-HF-67; AGENTS.md; project.godot, .vscode/settings.json, ChikagoShop.csproj, tools/verify.ps1, README.md; scripts/Presentation/MonochromePresentation.cs, shaders/monochrome.gdshader; scripts/MainMenu.cs, scripts/TradeScene.cs (button names/wiring only), scripts/UI/PauseMenu.cs, DayTransitionCard.cs, EmbroideryGame.cs, SlotUI.cs, InventoryUI.cs; scripts/Camera/WorldCamera.cs (input boundaries); scenes/main_menu.tscn, trade_scene.tscn (button styles only); tests/ProjectTest.cs, tests/Integration/ProjectTest.Presentation.cs, Helpers.cs, Resources.cs, Days.cs; new write-set files; git status/diff. No source/ access.
+Write-set: ORCHESTRATION_PLAN.md; project.godot (feedback autoload); scripts/Presentation/ButtonFeedbackController.cs[.uid], MonochromePresentation.cs; shaders/monochrome.gdshader; tests/ProjectTest.cs; tests/Integration/ProjectTest.ButtonFeedback.cs[.uid]; README.md. OS TEMP/chikago-hf68-* logs/screenshots; temporary override.cfg only if absent, removed after isolated checks. User changes preserved.
+Out of scope: scene geometry/art, gameplay/actions/economy/save schema, action confirmation dialogs, audio, old tooltip/intro failures, commit/push. No domain logic in TradeScene. Button feedback must never emit or replay gameplay actions.
+Acceptance: smooth grayscale hover and keyboard focus; visible grayscale depressed state; only brief semantic press flash, never persistent color while hovering/holding; disabled buttons neither flash nor behave as enabled; runtime-created Button/TextureButton/CheckButton and pause/crafting/card screens supported. No size/layout/input/hitbox changes or stale highlights after disable/hide/free/scene change. Existing clock/table exceptions preserved. Checks: build/domain/import; GPU --button-feedback-checks (rendered pixels + actual mouse/keyboard single-action/toggle/cancel tests, lifecycle/disabled/paused/zoom/resize); GPU --presentation-checks and --balance-checks/--resource-checks; full verify known failures recorded; git diff --check.
+
+```text
+Task: HF-68
+Recommended status: REVIEW
+Changed: project.godot (ButtonFeedback autoload); scripts/Presentation/ButtonFeedbackController.cs[.uid], MonochromePresentation.cs; shaders/monochrome.gdshader; tests/ProjectTest.cs; tests/Integration/ProjectTest.ButtonFeedback.cs[.uid]; README.md; ORCHESTRATION_PLAN.md.
+Checks: build -> PASS (0 warnings/errors); domain tests -> PASS (118/118 through verify); Godot import -> PASS; GPU --button-feedback-checks -> PASS; GPU --presentation-checks -> PASS; GPU --resource-checks -> PASS; GPU --balance-checks -> PASS; git diff --check -> PASS. Full tools/verify.ps1 -> FAIL at existing TestUiLayoutInvalidation tooltip assertion after successful build/domain/import. Evidence OS TEMP/chikago-hf68-{import,button-feedback,presentation,resource,balance,verify}.log/.err; screenshots chikago-hf68-{hover-gray,confirm-flash,refuse-flash,held-gray,disabled-gray,keyboard-focus,texture-button,craft-focus,pause-focus,card-focus,minigame-focus}.png.
+Acceptance: global feedback observes BaseButton signals and input modality, never emits or consumes gameplay input. Hover/focus fade in grayscale, held state darkens, semantic color pulses for0.18s after press/activation then fades even during a long hold. Green = confirm/buy/start/resume, red = refusal/exit/cancel/reset, neutral = other navigation. Button art/styles/layout and hitboxes remain untouched; final presentation shader draws the feedback after grayscale, so only the transient pulse gains color. Original clock/table exception policy remains intact. Buttons added dynamically are attached once, handlers removed on tree exit, hidden/disabled/paused-out controls lose feedback immediately. Screen bounds follow camera/resize and ancestor clipping. Pointer is a hand for available buttons and forbidden for disabled ones; keyboard focus takes priority after keyboard navigation.
+Acceptance tests: actual GPU pixel checks verify gray hover/focus/held/disabled states and green/red/TextureButton flashes; long hold expires pulse; mouse release and Space invoke original action once, dragged-out release invokes none; CheckButton toggles once; re-enable under stationary mouse restores gray hover; hidden/free controls leave no flash; real create buttons track960x540/1280x720 and zoom0.25/1.8; real pause/card/crafting focus works while paused. Synthetic and real-card/create screenshots visually inspected.
+Read-set exception: initial button/presentation boundary inspection before CP was needed to define exact implementation scope; source/ never scanned.
+Risks/blocker: existing tooltip FAIL and duplicate root/ru texture UID warnings remain outside scope. User explicitly chose short color flashes only; no permanent color hover was added. No commit/push. Temporary override.cfg removed, player saves unused.
+Next: try selling, rerolling, crafting and day-card purchases with the new button feedback.
+```
+
+Координатор подтвердил HF-68 2026-11-08 по GPU feedback/palette checks, input assertions, build/domain и existing targets: REVIEW → DONE. Прежний tooltip FAIL сохранён явно.
+
 ### HF-67 — monochrome presentation with clock/table exceptions
 
 Status: `DONE`; coordinator/executor `/root`; READY 2026-11-08. Direct user request after HF-66 DONE; no gate dependencies or concurrent implementation tasks. Plan owned by coordinator, HF-64 gameplay/export work remains outside scope.

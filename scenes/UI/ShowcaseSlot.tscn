@@ -15,6 +15,8 @@ theme_override_styles/pressed = SubResource("Stand")
 theme_override_styles/hover_pressed = SubResource("Stand")
 theme_override_styles/hover = SubResource("Stand")
 theme_override_styles/disabled = SubResource("Stand")
+theme_override_styles/focus = SubResource("Stand")
+metadata/feedback_bounds = Rect2(65, 0, 310, 200)
 
 [node name="DisplayTable" type="TextureRect" parent="." unique_id=625293810]
 custom_maximum_size = Vector2(500, -1)

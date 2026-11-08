@@ -7,6 +7,90 @@ using ChikagoShop.Domain.Days;
 // Subsystem checks share the ProjectTest runner and fixture helpers.
 public partial class ProjectTest
 {
+    private async Task TestClosedDayRerolls()
+    {
+        const string path = "user://closed_reroll_test.json";
+        const string actions = "World/TradingRoom/Item/TradePanel/Content/Buttons/";
+        var scene = GD.Load<PackedScene>("res://scenes/trade_scene.tscn");
+        TradeScene game = null;
+        string locale = TranslationServer.GetLocale();
+        async Task Reload()
+        {
+            if (game != null) { game.QueueFree(); await ToSignal(this, SignalName.ProcessFrame); }
+            game = scene.Instantiate<TradeScene>();
+            game.SavePath = path;
+            Root.AddChild(game);
+            game.SetProcess(false);
+            await ToSignal(this, SignalName.ProcessFrame);
+        }
+        try
+        {
+            foreach (bool manual in new[] { false, true })
+            {
+                using (var file = FileAccess.Open(path, FileAccess.ModeFlags.Write))
+                    file.StoreString("{\"save_version\":13,\"day\":1,\"score\":220,\"energy_remaining\":3,\"day_remaining_seconds\":90,\"trade_active\":true,\"item_index\":0,\"customer_index\":0,\"rerolls_remaining\":3}");
+                await Reload();
+                var reroll = game.GetNode<Button>(actions + "DeclineButton");
+                Check(!reroll.Disabled, "Reroll must be enabled during an open active trade");
+                int initialCustomer = game.CustomerIndex;
+                game.RerollCustomer();
+                Check(game.RerollsRemaining == 2 && game.CustomerIndex != initialCustomer,
+                    "The open-day reroll must still replace a buyer and spend one reroll");
+                if (manual) game.EndDay();
+                else
+                {
+                    game._Process(game.DayRemainingSeconds - 0.01);
+                    Check(!game.DayClosed && !reroll.Disabled, "Reroll stays available while positive time remains");
+                    game._Process(0.02);
+                }
+                Check(game.DayClosed && game.DayRemainingSeconds == 0 && reroll.Disabled,
+                    "Expiry and manual closing must immediately disable reroll");
+                int buyer = game.CustomerIndex, offer = game.OfferedPrice, remaining = game.RerollsRemaining;
+                int score = game.Score, item = game.ItemIndex;
+                string closedSave = FileAccess.GetFileAsString(path);
+                game.RerollCustomer();
+                game.DeclineTrade();
+                game._Input(new InputEventKey { Pressed = true, Keycode = Key.F });
+                await ClickControl(game, actions + "DeclineButton");
+                Check(game.CustomerIndex == buyer && game.OfferedPrice == offer && game.RerollsRemaining == remaining &&
+                    game.TradeActive && game.ItemIndex == item && FileAccess.GetFileAsString(path) == closedSave,
+                    "All closed-day reroll routes must leave buyer, offer, stock, count and save unchanged");
+                await Reload();
+                reroll = game.GetNode<Button>(actions + "DeclineButton");
+                foreach (string language in new[] { "en", "ru" })
+                {
+                    TranslationServer.SetLocale(language);
+                    await ToSignal(this, SignalName.ProcessFrame);
+                    game.RerollCustomer();
+                    Check(game.DayClosed && reroll.Disabled && game.RerollsRemaining == remaining &&
+                        game.CustomerIndex == buyer && game.OfferedPrice == offer,
+                        "Reload and language refresh must not restore expired rerolls");
+                }
+                Check(!game.GetNode<Button>(actions + "AcceptButton").Disabled,
+                    "The last offer remains sellable after time expires");
+                game.AcceptTrade();
+                game.AcceptTrade();
+                Check(game.Score == score + offer && !game.TradeActive && game.DayClosed,
+                    "The final sale must pay exactly once without reopening the day");
+                game.NewGame();
+                game.TradeActive = true; game.ItemIndex = 0; game.CustomerIndex = 0; game.RerollsRemaining = 3;
+                game.ShowTrade();
+                Check(!game.DayClosed && !game.GetNode<Button>(actions + "DeclineButton").Disabled,
+                    "Starting a new open day must restore normal reroll availability");
+                game.QueueFree(); game = null;
+                await ToSignal(this, SignalName.ProcessFrame);
+            }
+        }
+        finally
+        {
+            if (game != null && GodotObject.IsInstanceValid(game)) game.QueueFree();
+            Paused = false;
+            TranslationServer.SetLocale(locale);
+            if (FileAccess.FileExists(path)) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(path));
+        }
+        await ToSignal(this, SignalName.ProcessFrame);
+    }
+
     private async Task TestDayCycle()
     {
         var scene = GD.Load<PackedScene>("res://scenes/trade_scene.tscn");
@@ -69,8 +153,8 @@ public partial class ProjectTest
                 Check(game.GetNode<Button>("World/Atelier/GetItemButton").Disabled &&
                       game.GetNode<Button>("HUD/Root/ProgressPanel/Content/EndDayButton").Disabled &&
                       !game.GetNode<Button>("World/TradingRoom/Item/TradePanel/Content/Buttons/AcceptButton").Disabled &&
-                      !game.GetNode<Button>("World/TradingRoom/Item/TradePanel/Content/Buttons/DeclineButton").Disabled,
-                    "Closed-day controls must block production/advance and retain both trade actions");
+                      game.GetNode<Button>("World/TradingRoom/Item/TradePanel/Content/Buttons/DeclineButton").Disabled,
+                    "Closed-day controls must block production, advance and reroll while retaining sale");
                 int cash = game.Score;
                 CraftAtelier(game);
                 game.EndDay();
@@ -81,17 +165,17 @@ public partial class ProjectTest
                 int rerolls = game.RerollsRemaining;
                 int customer = game.CustomerIndex;
                 await ClickControl(game, "World/TradingRoom/Item/TradePanel/Content/Buttons/DeclineButton");
-                Check(game.TradeActive && game.RerollsRemaining == rerolls - 1 && game.CustomerIndex != customer,
-                    "A real reroll click must still replace the price and buyer after closing");
+                Check(game.TradeActive && game.RerollsRemaining == rerolls && game.CustomerIndex == customer,
+                    "A real reroll click must not replace the price or buyer after closing");
                 game.QueueFree();
                 await ToSignal(this, SignalName.ProcessFrame);
                 game = await CreateGame(scene);
                 Check(game.DayClosed && game.DayRemainingSeconds == 0 && game.EnergyRemaining == 0 &&
-                      game.TradeActive && game.ItemIndex == item && game.RerollsRemaining == rerolls - 1 &&
+                      game.TradeActive && game.ItemIndex == item && game.RerollsRemaining == rerolls &&
                       game.ShowcaseItems.SequenceEqual(showcases),
-                    "Reload must retain closed day, zero energy and the last trade with its consumed reroll");
+                    "Reload must retain closed day, zero energy and the unchanged last offer");
                 game._Input(new InputEventKey { Keycode = Key.F, Pressed = true });
-                Check(game.RerollsRemaining == Math.Max(0, rerolls - 2), "The reroll hotkey must remain available after closing and reload");
+                Check(game.RerollsRemaining == rerolls, "The reroll hotkey must remain blocked after closing and reload");
                 for (int count = game.RerollsRemaining; count > 0; count--) game.RerollCustomer();
                 int offer = game.OfferedPrice;
                 await ClickControl(game, "World/TradingRoom/Item/TradePanel/Content/Buttons/AcceptButton");

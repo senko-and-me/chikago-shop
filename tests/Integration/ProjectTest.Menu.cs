@@ -171,7 +171,7 @@ public partial class ProjectTest
         bool active = game.TradeActive;
         int activeItem = game.ItemIndex;
         game.SetProcess(false);
-        await ClickControl(game, "PauseMenu/Root/PauseButton");
+        await PressEscapeForTest();
         Check(Paused, "Returning to the menu must begin from pause");
         await ClickControl(game, "PauseMenu/Root/Overlay/Center/Panel/Content/Menu/MainMenuButton");
         Check(CurrentScene is MainMenu && !Paused && !GodotObject.IsInstanceValid(game),

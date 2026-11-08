@@ -7,6 +7,64 @@ using ChikagoShop.Domain.Days;
 // Subsystem checks share the ProjectTest runner and fixture helpers.
 public partial class ProjectTest
 {
+    private async Task TestPauseHotkey()
+    {
+        var game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
+        game.SavePath = "";
+        Root.AddChild(game);
+        game.SetProcess(false);
+        try
+        {
+            Check(!game.HasNode("PauseMenu/Root/PauseButton"), "The on-screen pause button must be removed entirely");
+            var overlay = game.GetNode<Control>("PauseMenu/Root/Overlay");
+            Check(!Paused && !overlay.Visible, "Gameplay must start unpaused");
+            await PressEscapeForTest();
+            Check(Paused && overlay.Visible, "Escape must open pause without a screen button");
+            double remaining = game.DayRemainingSeconds;
+            game._Process(5);
+            Check(game.DayRemainingSeconds == remaining, "The timer must remain frozen while paused");
+            Root.PushInput(new InputEventKey { Pressed = true, Echo = true, Keycode = Key.Escape }, true);
+            Check(Paused && overlay.Visible, "Holding Escape must not repeatedly toggle pause");
+            const string content = "PauseMenu/Root/Overlay/Center/Panel/Content/";
+            await ClickControl(game, content + "Menu/SettingsButton");
+            Check(Paused && game.GetNode<Control>(content + "Settings").Visible, "Settings must remain in pause");
+            await PressEscapeForTest();
+            Check(Paused && game.GetNode<Control>(content + "Menu").Visible,
+                "Escape from settings must return to the pause menu");
+            await PressEscapeForTest();
+            Check(!Paused && !overlay.Visible, "Escape from the pause menu must resume gameplay");
+            await PressEscapeForTest();
+            await ClickControl(game, content + "Menu/ResumeButton");
+            Check(!Paused && !overlay.Visible, "The Resume menu action must still work");
+
+            var rarity = game.GetNode<RarityPanel>("World/Atelier/RarityPanel");
+            rarity.Show();
+            await ToSignal(this, SignalName.ProcessFrame);
+            await ToSignal(this, SignalName.ProcessFrame);
+            Check(rarity.Popup.IsVisibleInTree() && Root.GetVisibleRect().Encloses(ScreenBounds(rarity.Popup)),
+                "Rarity popup placement must work after removing the pause-button obstacle");
+            rarity.Hide();
+            var crafting = game.GetNode<EmbroideryGame>("EmbroideryGame");
+            crafting.Open();
+            Check(crafting.IsOpen, "Crafting fixture must open");
+            await PressEscapeForTest();
+            Check(!crafting.IsOpen && !Paused && !overlay.Visible,
+                "Escape cancelling crafting must not also open pause");
+            game.DayUpgrades.Offer(2);
+            var card = game.GetNode<DayTransitionCard>("DayTransitionCard");
+            card.Open(1, 2, game.DayUpgrades.Options, game.Score);
+            await PressEscapeForTest();
+            Check(!card.IsOpen && !Paused && !overlay.Visible,
+                "Escape skipping day cards must not also open pause");
+        }
+        finally
+        {
+            game.QueueFree();
+            Paused = false;
+        }
+        await ToSignal(this, SignalName.ProcessFrame);
+    }
+
     private async Task TestStandaloneCamera()
     {
         // Deliberately contains no TradeScene: navigation must work with just bounds and a viewport.
@@ -181,13 +239,13 @@ public partial class ProjectTest
         game._Process(countdown + 0.001);
         Check(game.TradeActive, "Buyer time must continue after resuming");
         int rerolls = game.RerollsRemaining;
-        await ClickControl(game, "PauseMenu/Root/PauseButton");
-        Check(Paused, "The visible pause button must open the menu with mouse input");
+        await PressEscapeForTest();
+        Check(Paused, "Escape must open the pause menu during an active trade");
         Root.PushInput(new InputEventKey { Keycode = Key.F, Pressed = true }, true);
         Check(game.RerollsRemaining == rerolls, "Pause must block reroll hotkeys during an active trade");
         await ClickControl(game, content + "Menu/ResumeButton");
         Check(!Paused, "Continue must resume the game");
-        await ClickControl(game, "PauseMenu/Root/PauseButton");
+        await PressEscapeForTest();
         game.QueueFree();
         await ToSignal(this, SignalName.ProcessFrame);
         Check(!Paused, "Removing a paused game must release its pause");

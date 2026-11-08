@@ -8,6 +8,51 @@ using ChikagoShop.Domain.Persistence;
 // Subsystem checks share the ProjectTest runner and fixture helpers.
 public partial class ProjectTest
 {
+    private async Task TestNewGameFunds()
+    {
+        var scene = GD.Load<PackedScene>("res://scenes/trade_scene.tscn");
+        var game = scene.Instantiate<TradeScene>();
+        try
+        {
+            Check(game.StartingMoney == 220 && game.FirstQuota == 250 && game.SecondQuota == 450 &&
+                game.SavePath == "user://trade_progress.json",
+                "Packed scene must preserve configured starting funds, quotas and save path instead of overriding them with null");
+            game.SavePath = "user://new_game_funds_test.json";
+            if (FileAccess.FileExists(game.SavePath)) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(game.SavePath));
+            Root.AddChild(game);
+            await ToSignal(this, SignalName.ProcessFrame);
+            Check(game.Score == 220 && game.CheckpointScore == 220 && game.CurrentDay == 1,
+                "A fresh game must start with exactly220 dollars and a matching checkpoint");
+            var rarity = game.GetNode<RarityPanel>("World/Atelier/RarityPanel");
+            Check(new[] { rarity.Price0, rarity.Price1, rarity.Price2, rarity.Price3, rarity.Price4 }
+                .SequenceEqual(new[] { 30, 50, 80, 120, 200 }),
+                "Scene null overrides must not zero the atelier price table");
+            game.Score = 0;
+            game.NewGame();
+            Check(game.Score == 220 && game.CheckpointScore == 220 && game.CurrentDay == 1 &&
+                !game.GetNode<Button>("World/Atelier/GetItemButton").Disabled,
+                "New Game must restore220 and enable affordable crafting after a depleted balance");
+            var saved = ProgressSaveStore.Load(game.SavePath, 3);
+            Check(saved != null && saved.Score == 220 && saved.CheckpointScore == 220,
+                "New Game must persist220 for both current funds and the checkpoint");
+            game.QueueFree();
+            await ToSignal(this, SignalName.ProcessFrame);
+            game = scene.Instantiate<TradeScene>();
+            game.SavePath = "user://new_game_funds_test.json";
+            Root.AddChild(game);
+            await ToSignal(this, SignalName.ProcessFrame);
+            Check(game.Score == 220 && game.CheckpointScore == 220,
+                "Reloading the new game must retain220 dollars");
+        }
+        finally
+        {
+            const string path = "user://new_game_funds_test.json";
+            if (FileAccess.FileExists(path)) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(path));
+            game.QueueFree();
+        }
+        await ToSignal(this, SignalName.ProcessFrame);
+    }
+
     private async Task TestSaveCompatibility()
     {
         var scene = GD.Load<PackedScene>("res://scenes/trade_scene.tscn");

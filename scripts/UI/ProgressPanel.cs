@@ -9,6 +9,12 @@ public partial class ProgressPanel : PanelContainer
     {
         _toggle = GetNode<Button>("../ProgressToggleButton");
         _toggle.Pressed += Toggle;
+        _toggle.GuiInput += input =>
+        {
+            // Mouse clicks must not leave keyboard focus behind; keep keyboard activation intact.
+            if (input is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true })
+                _toggle.CallDeferred(Control.MethodName.ReleaseFocus);
+        };
         GetNode<Control>("Content").MinimumSizeChanged += QueueResize;
         Resized += PositionToggle;
         SetExpanded(true);

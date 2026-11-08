@@ -144,6 +144,8 @@ public partial class ProjectTest
                         "RU/EN crafting labels must show the configured single-item cost");
                     game.Score = cost - 1; game.RefreshItemButtons();
                     var button = game.GetNode<Button>($"World/{room}/GetItemButton");
+                    Check(button.Text == string.Empty,
+                        "Illustrated craft buttons must not duplicate their image lettering after RU/EN changes");
                     Check(button.Disabled, "Crafting must be unavailable one dollar below the real cost");
                     if (workshop == "atelier") game.GetItemFromAtelier(); else game.GetItemFromMusicWorkshop();
                     var mini = game.GetNode<EmbroideryGame>(workshop == "atelier" ? "EmbroideryGame" : "PolishingGame");

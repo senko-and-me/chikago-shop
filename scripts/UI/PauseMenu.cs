@@ -6,8 +6,9 @@ public partial class PauseMenu : CanvasLayer
 	private VBoxContainer _menu = null!;
 	private VBoxContainer _settings = null!;
 	private Button _resume = null!;
-	private Button _openButton = null!;
+	private Button _lastHoveredMenuButton;
 	private CheckButton _fullscreen = null!;
+	private Button _russian = null!, _english = null!;
 	private bool _ownsPause;
 
 	public override void _Ready()
@@ -17,14 +18,6 @@ public partial class PauseMenu : CanvasLayer
 		var root = new Control { Name = "Root", MouseFilter = Control.MouseFilterEnum.Ignore };
 		AddChild(root);
 		root.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-		_openButton = new Button { Name = "PauseButton", Text = "Пауза  [Esc]" };
-		root.AddChild(_openButton);
-		_openButton.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.TopRight);
-		_openButton.OffsetLeft = -204;
-		_openButton.OffsetRight = -24;
-		_openButton.OffsetTop = 176;
-		_openButton.OffsetBottom = 220;
-		_openButton.Pressed += Open;
 
 		_overlay = new Control { Name = "Overlay", Visible = false };
 		root.AddChild(_overlay);
@@ -94,7 +87,51 @@ public partial class PauseMenu : CanvasLayer
 		_settings.AddChild(_fullscreen);
 		_fullscreen.Toggled += enabled => DisplayServer.WindowSetMode(enabled
 			? DisplayServer.WindowMode.Fullscreen : DisplayServer.WindowMode.Windowed);
+		var languages = new HBoxContainer { Name = "LanguageRow" };
+		languages.AddThemeConstantOverride("separation", 12);
+		_settings.AddChild(languages);
+		var languageLabel = new Label
+		{
+			Name = "LanguageLabel", Text = "Язык",
+			SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+			VerticalAlignment = VerticalAlignment.Center
+		};
+		languageLabel.AddThemeColorOverride("font_color", new Color(0.23f, 0.19f, 0.17f));
+		languages.AddChild(languageLabel);
+		var languageGroup = new ButtonGroup();
+		_russian = AddLanguageButton(languages, languageGroup, "RussianButton", "Русский", "ru");
+		_english = AddLanguageButton(languages, languageGroup, "EnglishButton", "English", "en");
+		RefreshLanguageSelection();
 		AddButton(_settings, "BackButton", "Назад", ShowMenu);
+	}
+
+	private static Button AddLanguageButton(HBoxContainer row, ButtonGroup group, string name, string text, string language)
+	{
+		var button = new Button
+		{
+			Name = name, Text = text, ToggleMode = true, ButtonGroup = group,
+			CustomMinimumSize = new Vector2(120, 44),
+			AutoTranslateMode = Control.AutoTranslateModeEnum.Disabled
+		};
+		row.AddChild(button);
+		button.Pressed += () =>
+		{
+			Error error = GameLocalization.SelectLanguage(language);
+			if (error != Error.Ok) GD.PushWarning($"Language preference could not be saved: {error}");
+		};
+		return button;
+	}
+
+	private void RefreshLanguageSelection()
+	{
+		if (_russian == null || _english == null) return;
+		_russian.SetPressedNoSignal(GameLocalization.Language == "ru");
+		_english.SetPressedNoSignal(GameLocalization.Language == "en");
+	}
+
+	public override void _Notification(int what)
+	{
+		if (what == NotificationTranslationChanged) RefreshLanguageSelection();
 	}
 
 	private static void AddTitle(VBoxContainer parent, string text)
@@ -105,11 +142,18 @@ public partial class PauseMenu : CanvasLayer
 		parent.AddChild(title);
 	}
 
-	private static Button AddButton(VBoxContainer parent, string name, string text, System.Action action)
+	private Button AddButton(VBoxContainer parent, string name, string text, System.Action action)
 	{
 		var button = new Button { Name = name, Text = text, CustomMinimumSize = new Vector2(0, 48) };
 		parent.AddChild(button);
 		button.Pressed += action;
+		if (parent == _menu)
+			button.MouseEntered += () =>
+			{
+				if (button.Disabled || !button.IsVisibleInTree()) return;
+				_lastHoveredMenuButton = button;
+				button.GrabFocus();
+			};
 		return button;
 	}
 
@@ -119,7 +163,6 @@ public partial class PauseMenu : CanvasLayer
 		GetParent<TradeScene>().PersistProgress();
 		_ownsPause = true;
 		GetTree().Paused = true;
-		_openButton.Hide();
 		_overlay.Show();
 		ShowMenu();
 	}
@@ -129,12 +172,11 @@ public partial class PauseMenu : CanvasLayer
 		_ownsPause = false;
 		GetTree().Paused = false;
 		_overlay.Hide();
-		_openButton.Show();
-		_openButton.GrabFocus();
 	}
 
 	private void ShowSettings()
 	{
+		RefreshLanguageSelection();
 		_fullscreen.SetPressedNoSignal(DisplayServer.WindowGetMode() is
 			DisplayServer.WindowMode.Fullscreen or DisplayServer.WindowMode.ExclusiveFullscreen);
 		_menu.Hide();
@@ -146,7 +188,9 @@ public partial class PauseMenu : CanvasLayer
 	{
 		_settings.Hide();
 		_menu.Show();
-		_resume.GrabFocus();
+		var selected = _lastHoveredMenuButton;
+		if (selected == null || !GodotObject.IsInstanceValid(selected) || selected.Disabled) selected = _resume;
+		selected.GrabFocus();
 	}
 
 	public override void _Input(InputEvent @event)

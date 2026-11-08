@@ -7,6 +7,112 @@ using ChikagoShop.Domain.Days;
 // Subsystem checks share the ProjectTest runner and fixture helpers.
 public partial class ProjectTest
 {
+    private async Task TestPauseLocalization()
+    {
+        const string testSave = "user://pause_localization_test.json";
+        const string menuPath = "PauseMenu/Root/Overlay/Center/Panel/Content/Menu/";
+        const string settingsPath = "PauseMenu/Root/Overlay/Center/Panel/Content/Settings/";
+        bool hadSettings = FileAccess.FileExists(GameLocalization.SettingsPath);
+        byte[] settingsBackup = hadSettings ? FileAccess.GetFileAsBytes(GameLocalization.SettingsPath) : null;
+        Vector2I originalSize = Root.Size;
+        string originalLanguage = GameLocalization.Language;
+        TradeScene game = null;
+        MainMenu mainMenu = null;
+        try
+        {
+            var preserved = new ConfigFile();
+            preserved.Load(GameLocalization.SettingsPath);
+            preserved.SetValue("audio", "volume", 0.375);
+            preserved.Save(GameLocalization.SettingsPath);
+            GameLocalization.SelectLanguage("ru");
+            if (FileAccess.FileExists(testSave)) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(testSave));
+            game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
+            game.SavePath = testSave;
+            Root.AddChild(game);
+            game.SetProcess(false);
+            var pause = game.GetNode<PauseMenu>("PauseMenu");
+            pause.Open();
+            await ClickControl(game, menuPath + "SettingsButton");
+            string saveBefore = FileAccess.GetFileAsString(testSave);
+            int scoreBefore = game.Score;
+            double timeBefore = game.DayRemainingSeconds;
+
+            foreach (Vector2I size in new[] { new Vector2I(960, 540), new Vector2I(1280, 720) })
+            foreach (string language in new[] { "en", "ru" })
+            {
+                Root.Size = size;
+                string name = language == "en" ? "EnglishButton" : "RussianButton";
+                await ClickControl(game, settingsPath + "LanguageRow/" + name);
+                var russian = game.GetNode<Button>(settingsPath + "LanguageRow/RussianButton");
+                var english = game.GetNode<Button>(settingsPath + "LanguageRow/EnglishButton");
+                Check(Paused && GameLocalization.Language == language &&
+                    russian.ButtonPressed == (language == "ru") && english.ButtonPressed == (language == "en"),
+                    "Pause language buttons must switch immediately and select exactly the current language");
+                Check(russian.Text == "Русский" && english.Text == "English",
+                    "Language names must remain recognizable in their own languages");
+                var label = game.GetNode<Label>(settingsPath + "LanguageRow/LanguageLabel");
+                var back = game.GetNode<Button>(settingsPath + "BackButton");
+                Check(label.Tr(label.Text) == (language == "en" ? "Language" : "Язык") &&
+                    back.Tr(back.Text) == (language == "en" ? "Back" : "Назад"),
+                    "Pause settings must translate while they remain open");
+                Check(game.GetNode<Label>("HUD/Root/ScorePanel/ScoreLabel").Text ==
+                    (language == "en" ? $"Cash: ${game.Score}" : $"Счёт: {game.Score}$"),
+                    "The paused game's dynamic HUD must update to the chosen language");
+                foreach (string path in new[] { "FullscreenButton", "LanguageRow/LanguageLabel", "LanguageRow/RussianButton",
+                    "LanguageRow/EnglishButton", "BackButton" })
+                    Check(Root.GetVisibleRect().Encloses(game.GetNode<Control>(settingsPath + path).GetGlobalRect()),
+                        "Pause language controls must fit both supported viewport sizes");
+                Check(!russian.GetGlobalRect().Intersects(english.GetGlobalRect()), "Language buttons must not overlap");
+                Check(game.Score == scoreBefore && game.DayRemainingSeconds == timeBefore &&
+                    FileAccess.GetFileAsString(testSave) == saveBefore,
+                    "Language selection must not change the game state or rewrite gameplay progress");
+                var stored = new ConfigFile();
+                Check(stored.Load(GameLocalization.SettingsPath) == Error.Ok &&
+                    stored.GetValue("interface", "language").AsString() == language &&
+                    stored.GetValue("audio", "volume").AsDouble() == 0.375,
+                    "Language preference must persist while preserving other settings");
+                if (size.X == 1280)
+                {
+                    using var image = await CapturePresentation();
+                    image.SavePng(System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"chikago-hf70-pause-{language}.png"));
+                }
+            }
+            await ClickControl(game, settingsPath + "LanguageRow/EnglishButton");
+            pause.Close();
+            TranslationServer.SetLocale("ru");
+            GameLocalization.LoadPreference();
+            pause.Open();
+            await ClickControl(game, menuPath + "SettingsButton");
+            Check(game.GetNode<Button>(settingsPath + "LanguageRow/EnglishButton").ButtonPressed,
+                "Reopened pause settings must reflect the saved language");
+            pause.Close();
+            game.QueueFree();
+            game = null;
+            await ToSignal(this, SignalName.ProcessFrame);
+            mainMenu = GD.Load<PackedScene>("res://scenes/main_menu.tscn").Instantiate<MainMenu>();
+            Root.AddChild(mainMenu);
+            Check(mainMenu.GetNode<Button>("SettingsMenuContainer/Settings/LanguageRow/EnglishButton").ButtonPressed,
+                "The main menu must share the preference selected in pause settings");
+        }
+        finally
+        {
+            Paused = false;
+            if (game != null && GodotObject.IsInstanceValid(game)) game.QueueFree();
+            if (mainMenu != null && GodotObject.IsInstanceValid(mainMenu)) mainMenu.QueueFree();
+            if (hadSettings)
+            {
+                using var settings = FileAccess.Open(GameLocalization.SettingsPath, FileAccess.ModeFlags.Write);
+                settings.StoreBuffer(settingsBackup);
+            }
+            else if (FileAccess.FileExists(GameLocalization.SettingsPath))
+                DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(GameLocalization.SettingsPath));
+            if (FileAccess.FileExists(testSave)) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(testSave));
+            TranslationServer.SetLocale(originalLanguage);
+            Root.Size = originalSize;
+        }
+        await ToSignal(this, SignalName.ProcessFrame);
+    }
+
     private async Task TestLocalization()
     {
         const string preferenceTest = "user://language_preference_test.cfg";

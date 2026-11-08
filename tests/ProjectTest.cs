@@ -16,6 +16,51 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--new-game-funds-checks"))
+            {
+                await TestNewGameFunds();
+                GD.Print("NEW_GAME_FUNDS_CHECKS_PASS: fresh start, reset, checkpoint, save/reload and scene defaults");
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--progress-toggle-checks"))
+            {
+                await TestCollapsibleProgress();
+                GD.Print("PROGRESS_TOGGLE_CHECKS_PASS: no sticky mouse selection, hover and keyboard preserved");
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--closed-reroll-checks"))
+            {
+                await TestClosedDayRerolls();
+                GD.Print("CLOSED_REROLL_CHECKS_PASS: timeout/manual close block buyer changes, final sale preserved");
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--pause-hotkey-checks"))
+            {
+                await TestPauseHotkey();
+                GD.Print("PAUSE_HOTKEY_CHECKS_PASS: no screen button, Escape pause/settings/resume and repeat guard");
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--pause-localization-checks"))
+            {
+                await TestPauseLocalization();
+                GD.Print("PAUSE_LOCALIZATION_CHECKS_PASS: live language, persistence, layout and gameplay invariance");
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--button-feedback-checks"))
+            {
+                await TestButtonFeedback();
+                await TestButtonFeedbackInGame();
+                await TestTextureButtonFeedbackBounds();
+                await TestShowcaseFeedbackBounds();
+                GD.Print("BUTTON_FEEDBACK_CHECKS_PASS: grayscale hover/focus, brief action colors, input and lifecycle");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--presentation-checks"))
             {
                 await TestMonochromePresentation();

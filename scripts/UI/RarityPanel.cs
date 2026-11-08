@@ -123,8 +123,7 @@ public partial class RarityPanel : Control
 			_game.GetNode<Control>("HUD/Root/ProgressToggleButton"),
 			_game.GetNode<Control>("HUD/Root/ScorePanel"),
 			_game.GetNode<Control>("HUD/Root/EnergyPanel"),
-			_game.GetNode<Control>("HUD/InventoryUI/ScrollContainer"),
-			_game.GetNode<Control>("PauseMenu/Root/PauseButton")
+			_game.GetNode<Control>("HUD/InventoryUI/ScrollContainer")
 		];
 		Span<Rect2> obstacles = stackalloc Rect2[_hudControls.Length];
 		int count = 0;

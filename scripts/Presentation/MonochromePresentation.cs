@@ -33,6 +33,12 @@ public partial class MonochromePresentation : CanvasLayer
 
     private void UpdateExceptions()
     {
+        var feedback = ButtonFeedbackController.Instance?.GetVisualFrame() ?? default;
+        _material.SetShaderParameter("button_rect", Normalize(feedback.Bounds));
+        _material.SetShaderParameter("button_accent", feedback.Accent);
+        _material.SetShaderParameter("button_strength", feedback.Strength);
+        _material.SetShaderParameter("button_pressed", feedback.Pressed);
+        _material.SetShaderParameter("button_flash", feedback.Flash);
         _material.SetShaderParameter("clock_rect", Vector4.Zero);
         _material.SetShaderParameter("table_rect_0", Vector4.Zero);
         _material.SetShaderParameter("table_rect_1", Vector4.Zero);

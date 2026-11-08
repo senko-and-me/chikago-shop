@@ -10,7 +10,7 @@ public partial class DayTransitionCard : CanvasLayer
     private Control _root = null!;
     private PanelContainer _panel = null!;
     private Label _route = null!;
-    private Button _firstChoice = null!;
+    private readonly List<Button> _navigationButtons = new();
     private HBoxContainer _choices = null!;
     public IReadOnlyList<DayUpgrade> Options { get; private set; } = Array.Empty<DayUpgrade>();
     public event Action<DayUpgrade> Chosen;
@@ -102,7 +102,7 @@ public partial class DayTransitionCard : CanvasLayer
         if (IsOpen || previousDay is < 1 or > 6 || nextDay != previousDay + 1 || GetTree().Paused) return;
         Options = options.ToArray();
         _balance = balance;
-        _firstChoice = _skip;
+        _navigationButtons.Clear();
         foreach (Node child in _choices.GetChildren()) child.Free();
         foreach (var upgrade in Options)
         {
@@ -117,13 +117,15 @@ public partial class DayTransitionCard : CanvasLayer
                 DayUpgrade.MusicPrice => AddChoice(_choices, upgrade, "Коллекционный звук", "+20%", "Ещё +20% к базовой стоимости всех инструментов.", "ИНСТРУМЕНТЫ · ДО КОНЦА ИГРЫ"),
                 _ => throw new ArgumentOutOfRangeException(nameof(options))
             };
-            if (_firstChoice == _skip && !button.Disabled) _firstChoice = button;
+            _navigationButtons.Add(button);
         }
+        _navigationButtons.Add(_skip);
         _route.Text = $"{previousDay:00}  →  {nextDay:00}  ·  " + GameLocalization.Format("Средства: {0}$", balance);
         _ownsPause = true;
         GetTree().Paused = true;
         _root.Show();
-        _firstChoice.GrabFocus();
+        // Opening the screen with the mouse must not preselect a purchase.
+        GetViewport().GuiReleaseFocus();
     }
 
     public void Choose(DayUpgrade upgrade)
@@ -147,6 +149,18 @@ public partial class DayTransitionCard : CanvasLayer
     public override void _Input(InputEvent @event)
     {
         if (!IsOpen || @event is not InputEventKey { Pressed: true } key) return;
+        if (key.Keycode is Key.Left or Key.Right or Key.Up or Key.Down or Key.Tab)
+        {
+            ButtonFeedbackController.Instance?.UseKeyboardNavigation();
+            var focused = GetViewport().GuiGetFocusOwner();
+            var available = _navigationButtons.Where(button => !button.Disabled && button.IsVisibleInTree()).ToArray();
+            int current = Array.IndexOf(available, focused);
+            bool previous = key.Keycode is Key.Left or Key.Up || (key.Keycode == Key.Tab && key.ShiftPressed);
+            if (available.Length > 0 && (current >= 0 || !key.Echo))
+                available[current < 0 ? 0 : (current + (previous ? -1 : 1) + available.Length) % available.Length].GrabFocus();
+            GetViewport().SetInputAsHandled();
+            return;
+        }
         DayUpgrade upgrade = key.Keycode switch
         {
             Key.Key1 or Key.Kp1 => Options[0],

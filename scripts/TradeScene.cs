@@ -523,13 +523,9 @@ public partial class TradeScene : Node2D
 			? $"1 item  •  ${MusicSpinCost}"
 			: $"1 предмет  •  {MusicSpinCost}$";
 
-		_atelierGetItemButton.Text = english
-			? "CREATE ITEM"
-			: "СОЗДАТЬ ПРЕДМЕТ";
-
-		_musicGetItemButton.Text = english
-			? "CREATE ITEM"
-			: "СОЗДАТЬ ПРЕДМЕТ";
+		// The illustrated button already contains its lettering.
+		_atelierGetItemButton.Text = string.Empty;
+		_musicGetItemButton.Text = string.Empty;
 	}
 
 	private void EnsureExtraShowroomOverlay()
@@ -929,7 +925,7 @@ public partial class TradeScene : Node2D
 			"Получим: {0}$", OfferedPrice);
 
 		_declineButton.Text = $"× ({RerollsRemaining})";
-		_declineButton.Disabled = RerollsRemaining <= 0;
+		_declineButton.Disabled = !TradeOfferRules.CanReroll(TradeActive, DayClosed, RerollsRemaining);
 	}
 
 	public static int PriceForPercent(int basePrice, int value)
@@ -939,7 +935,7 @@ public partial class TradeScene : Node2D
 
 	public void RerollCustomer()
 	{
-		if (!TradeActive || RerollsRemaining <= 0)
+		if (!TradeOfferRules.CanReroll(TradeActive, DayClosed, RerollsRemaining))
 			return;
 
 		RerollsRemaining--;
@@ -1080,6 +1076,7 @@ public partial class TradeScene : Node2D
 
 	public void RefreshDayPresentation()
 	{
+		_declineButton.Disabled = !TradeOfferRules.CanReroll(TradeActive, DayClosed, RerollsRemaining);
 		_inventoryUI.UpdateUI(_storedItems);
 		RefreshScore();
 		RefreshProgress();
