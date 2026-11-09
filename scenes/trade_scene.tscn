@@ -12,8 +12,8 @@
 [ext_resource type="Texture2D" uid="uid://bdnt1wjejacqf" path="res://art/items/trumpet.svg" id="9_trumpet"]
 [ext_resource type="PackedScene" uid="uid://wj2ymug80tk2" path="res://scenes/UI/ShowcaseSlot.tscn" id="10_showcase"]
 [ext_resource type="Texture2D" uid="uid://cq6tis3xjvmup" path="res://art/rooms/atelier.jpg" id="11_atelier"]
-[ext_resource type="Texture2D" uid="uid://c6u3gbuawwrg0" path="res://art/rooms/cashier.jpg" id="12_cashier"]
-[ext_resource type="Texture2D" uid="uid://dwyb3yys1n6da" path="res://art/rooms/upper_corridor.jpg" id="13_58qc8"]
+[ext_resource type="Texture2D" path="res://art/rooms/cashier_closed.jpg" id="12_cashier"]
+[ext_resource type="Texture2D" path="res://art/rooms/upper_corridor_closed.jpg" id="13_58qc8"]
 [ext_resource type="Texture2D" uid="uid://dcj7da0lpr1fq" path="res://art/rooms/room_layout.jpg" id="14_layout"]
 [ext_resource type="Texture2D" uid="uid://dfxl3bik7r087" path="res://art/ui/panel_large.png" id="16_panel_large"]
 [ext_resource type="Texture2D" uid="uid://bf1y5qehuwoj" path="res://art/ui/panel_small.png" id="17_panel_small"]
@@ -24,6 +24,7 @@
 [ext_resource type="Script" uid="uid://bdswgixl6srw1" path="res://scripts/UI/ZoomResponsiveUi.cs" id="21_zoom_ui"]
 [ext_resource type="Script" uid="uid://dqhunfpycjxyp" path="res://scripts/UI/ProgressPanel.cs" id="22_progress"]
 [ext_resource type="Script" uid="uid://cnnctojfahevu" path="res://scripts/Camera/WorldCamera.cs" id="23_world_camera"]
+[ext_resource type="Script" path="res://scripts/Presentation/RoomDoorwayPresentation.cs" id="24_doorways"]
 
 [sub_resource type="StyleBoxTexture" id="CreateButtonNormal"]
 texture = ExtResource("18_create_button")
@@ -675,3 +676,6 @@ script = ExtResource("20_pause")
 
 [node name="ZoomResponsiveUi" type="Node" parent="." unique_id=1770471945]
 script = ExtResource("21_zoom_ui")
+
+[node name="RoomDoorways" type="Node" parent="."]
+script = ExtResource("24_doorways")

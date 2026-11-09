@@ -7,6 +7,44 @@
 
 ## Текущий фронт
 
+### HF-82 — hide doorways leading to locked rooms
+
+Status: `DONE`; coordinator/executor `/root`; READY 2026-11-09; HF-81 DONE. User requests no-opening sprites in open rooms while neighboring rooms remain locked. One executor; HF-81 assets retained.
+CP-HF-82 read-set: current front; scripts/TradeScene.cs (existing music/right-showroom unlock and presentation refresh), scripts/Persistence/TradeScene.Persistence.cs; scenes/trade_scene.tscn; scripts/Presentation/; tests/ProjectTest.cs, tests/Integration/ProjectTest.Resources.cs, Persistence.cs; config/economy.v1.json; exact input новые спрайты комнаты/верх центр без проема.jpg and касса без проема.jpg plus doorway variants previously inspected; art/rooms/; .vscode/settings.json; git status/diff. Write-set: ORCHESTRATION_PLAN.md; art/rooms/{upper_corridor_closed,cashier_closed}.jpg and .import; scripts/Presentation/RoomDoorwayPresentation.cs and .uid; scenes/trade_scene.tscn (initial closed textures/presentation node); scripts/TradeScene.cs (presentation refresh call only); tests/ProjectTest.cs; tests/Integration/ProjectTest.Resources.cs. TEMP/chikago-hf82-* diagnostics/logs; temporary override.cfg only if absent, removed after checks.
+Out of scope: source/, gameplay/unlock costs/save schema, new room state rules, other art editing, commit/push. Acceptance: initially corridor and cashier hide right exits to music/right-showroom; successful existing unlock reveals both immediately; failed unlock keeps them hidden; save/reload, checkpoint restoration and new game reproduce current lock state; scene defaults reflect closed state in editor; geometry/left doors and availability rules unchanged. Presentation consumes existing MusicWorkshopUnlocked without new domain logic in TradeScene. Checks: build; GPU --room-doorway-checks (state transitions/scene defaults/geometry), --persistence-checks, --balance-checks, --presentation-checks, --resource-checks; git diff --check.
+
+```text
+Task: HF-82
+Recommended status: REVIEW
+Changed: art/rooms/{upper_corridor_closed,cashier_closed}.jpg and .import; scripts/Presentation/RoomDoorwayPresentation.cs and .uid; scenes/trade_scene.tscn; scripts/TradeScene.cs (one presentation-refresh call); tests/ProjectTest.cs; tests/Integration/ProjectTest.Resources.cs; ORCHESTRATION_PLAN.md.
+Checks: build -> PASS (0 warnings/errors); Godot import -> PASS; GPU --room-doorway-checks -> PASS; --persistence-checks -> PASS; --balance-checks -> PASS; --presentation-checks -> PASS; --resource-checks -> PASS; both supplied closed images SHA256 -> MATCH; git diff --check -> PASS. Evidence TEMP/chikago-hf82-{import,room-doorway,persistence,balance,presentation,resource}.log/.err.
+Acceptance: scene defaults now show the supplied closed-right-door cashier/corridor artwork. A presentation-only node consumes the existing MusicWorkshopUnlocked state shared by music/right showroom and selects cached open/closed textures through the established showcase refresh path. No domain logic added to TradeScene and no new state persisted. Regression checks initial packed scene before Ready, fresh game, insufficient-funds unlock, successful100-dollar unlock, save/reload open, initial-checkpoint rollback closed, reload closed, unlock and new-game reset. Each transition checks exact texture paths,1398x1080 dimensions and unchanged sprite transforms.
+Read-set exception: none; source/ and PSD files untouched.
+Risks/blocker: none. Earlier background changes retained, temporary override removed, player saves unused. No commit/push.
+Next: unlock the music workshop to see both right-hand doorways appear.
+```
+
+Координатор подтвердил HF-82 2026-11-09 по build и пяти GPU targets: REVIEW → DONE.
+
+### HF-81 — replace room backgrounds with supplied artwork
+
+Status: `DONE`; coordinator/executor `/root`; READY 2026-11-09; HF-80 DONE. User supplies new room images in the explicitly named local folder and requests scene replacement. One executor.
+CP-HF-81 read-set: current front; exact input files новые спрайты комнаты/ателье.jpg, муз комната.jpg, нижняя.jpg, касса.jpg, касса без проема.jpg, верх центр.jpg, верх центр без проема.jpg (visual comparison/dimensions); art/rooms/{atelier,music_room,showroom,cashier,upper_corridor,room_layout,room_bg}.jpg and existing import descriptors; scenes/trade_scene.tscn; scripts/CounterWorld.cs; tests/ProjectTest.cs, tests/Integration/ProjectTest.Resources.cs, Presentation.cs, Camera.cs; .vscode/settings.json; git status/diff. Write-set: ORCHESTRATION_PLAN.md; art/rooms/{atelier,music_room,showroom,cashier,upper_corridor}.jpg (exact supplied image bytes) and their import descriptors only if Godot changes them. TEMP/chikago-hf81-* diagnostics/logs; temporary override.cfg only if absent and removed afterward.
+Out of scope: source/, PSD inspection, supplied originals modification/deletion, no-opening alternate variants, overall room layout, transforms/hitboxes/gameplay, commit/push. Acceptance: scene's existing five texture resources use new supplied images (both showcase rooms share showroom), all sizes preserved1920x1080 or1398x1080; doorway variants match existing connectivity; scene resources import/load, monochrome presentation works, visual inspection confirms replacements. Checks: source/destination SHA256 and image dimensions; Godot import; GPU --resource-checks/--presentation-checks; git diff --check. Artwork-only replacement adds no behavior or code.
+
+```text
+Task: HF-81
+Recommended status: REVIEW
+Changed: art/rooms/{atelier,cashier,showroom,upper_corridor}.jpg; ORCHESTRATION_PLAN.md. Supplied music-room bytes already match art/rooms/music_room.jpg, so no diff for that file.
+Checks: all5 source/destination SHA256 pairs -> MATCH; source/current dimensions -> preserved1920x1080 or1398x1080; Godot import -> PASS; GPU --resource-checks -> PASS; GPU --presentation-checks -> PASS; temporary scene smoke -> PASS for six background nodes' texture paths, dimensions and transforms; git diff --check -> PASS. Evidence TEMP/chikago-hf81-{import,resource,presentation,scene}.log/.err and scene-contact.png.
+Acceptance: existing scene texture paths now resolve to new supplied artwork, including both shared showcase backgrounds. Chose corridor/cashier doorway variants to preserve existing door connectivity. Canonical art paths/UIDs retained, no scene/script/hitbox/scale changes needed. Rendered scene montage inspected; replacements align with existing room rectangles. Supplied originals and PSDs untouched; no source/ access or image edits/generation. Artwork-only change; no new behavior introduced.
+Read-set exception: rg --files scripts used only to locate CounterWorld.cs after initial guessed World/ path did not exist; no source/ traversal.
+Risks/blocker: none for replacement. Existing overall-layout background, lock overlays and UI positions retained. Temporary override removed, isolated user directory used; no commit/push.
+Next: open trade_scene.tscn in Godot to inspect the updated room backgrounds.
+```
+
+Координатор подтвердил HF-81 2026-11-09 по hashes, GPU regressions и rendered inspection: REVIEW → DONE.
+
 ### HF-80 — verify and publish accumulated fixes
 
 Status: `DONE`; coordinator/executor `/root`; READY 2026-11-09; HF-79 DONE. User authorizes commit and push to GitHub after verification.

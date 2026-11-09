@@ -5,6 +5,74 @@ using Godot;
 
 public partial class ProjectTest
 {
+    private async Task TestRoomDoorways()
+    {
+        const string save = "user://room_doorway_test.json";
+        var scene = GD.Load<PackedScene>("res://scenes/trade_scene.tscn");
+        TradeScene game = scene.Instantiate<TradeScene>();
+        void CheckDoors(bool open)
+        {
+            string suffix = open ? ".jpg" : "_closed.jpg";
+            foreach (var entry in new[] { ("Corridor/CorridorBackground", "upper_corridor"),
+                ("TradingRoom/TradingRoomBackground", "cashier") })
+            {
+                var sprite = game.GetNode<Sprite2D>("World/" + entry.Item1);
+                Check(sprite.Texture.ResourcePath == "res://art/rooms/" + entry.Item2 + suffix &&
+                    sprite.Texture.GetSize() == new Vector2(1398, 1080) && sprite.Position == new Vector2(3, 4) &&
+                    sprite.Scale == Vector2.One && !sprite.Centered,
+                    $"{entry.Item2} must show the {(open ? "open" : "closed")} doorway without changing room geometry");
+            }
+        }
+        async Task Reload()
+        {
+            game.QueueFree();
+            await ToSignal(this, SignalName.ProcessFrame);
+            game = scene.Instantiate<TradeScene>();
+            game.SavePath = save;
+            Root.AddChild(game);
+            game.SetProcess(false);
+            await ToSignal(this, SignalName.ProcessFrame);
+        }
+        try
+        {
+            if (FileAccess.FileExists(save)) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(save));
+            CheckDoors(false); // The editor and the initial runtime frame must agree.
+            game.SavePath = save;
+            Root.AddChild(game);
+            game.SetProcess(false);
+            await ToSignal(this, SignalName.ProcessFrame);
+            CheckDoors(false);
+            game.Score = 0;
+            game.TryUnlockMusicWorkshop();
+            Check(!game.MusicWorkshopUnlocked, "An unaffordable unlock must keep neighboring rooms closed");
+            CheckDoors(false);
+            game.Score = 220;
+            game.TryUnlockMusicWorkshop();
+            Check(game.MusicWorkshopUnlocked && game.Score == 120,
+                "Existing unlock action and cost must remain unchanged");
+            CheckDoors(true);
+            await Reload();
+            Check(game.MusicWorkshopUnlocked, "Reload must restore the open-room state");
+            CheckDoors(true);
+            game.ReturnToCheckpoint();
+            Check(!game.MusicWorkshopUnlocked, "The initial checkpoint must close the added rooms again");
+            CheckDoors(false);
+            await Reload();
+            CheckDoors(false);
+            game.TryUnlockMusicWorkshop();
+            CheckDoors(true);
+            game.NewGame();
+            Check(!game.MusicWorkshopUnlocked && game.Score == 220, "New Game must restore the original locked state");
+            CheckDoors(false);
+        }
+        finally
+        {
+            game.QueueFree();
+            if (FileAccess.FileExists(save)) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(save));
+        }
+        await ToSignal(this, SignalName.ProcessFrame);
+    }
+
     private async Task TestLocalizedMenuAssets()
     {
         string locale = TranslationServer.GetLocale();

@@ -818,6 +818,7 @@ public partial class TradeScene : Node2D
 
 	private void RefreshShowcases()
 	{
+		GetNode<RoomDoorwayPresentation>("RoomDoorways").Refresh(MusicWorkshopUnlocked);
 		for (int i = 0; i < ShowcaseCapacity; i++)
 		{
 			bool locked =

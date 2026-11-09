@@ -16,6 +16,13 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--room-doorway-checks"))
+            {
+                await TestRoomDoorways();
+                GD.Print("ROOM_DOORWAY_CHECKS_PASS: initial, failed/successful unlock, reload, checkpoint and new game");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--new-game-funds-checks"))
             {
                 await TestNewGameFunds();
