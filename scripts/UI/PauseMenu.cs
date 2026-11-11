@@ -99,8 +99,8 @@ public partial class PauseMenu : CanvasLayer
 		languageLabel.AddThemeColorOverride("font_color", new Color(0.23f, 0.19f, 0.17f));
 		languages.AddChild(languageLabel);
 		var languageGroup = new ButtonGroup();
-		_russian = AddLanguageButton(languages, languageGroup, "RussianButton", "Русский", "ru");
 		_english = AddLanguageButton(languages, languageGroup, "EnglishButton", "English", "en");
+		_russian = AddLanguageButton(languages, languageGroup, "RussianButton", "Русский", "ru");
 		RefreshLanguageSelection();
 		AddButton(_settings, "BackButton", "Назад", ShowMenu);
 	}

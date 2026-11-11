@@ -209,18 +209,18 @@ public partial class MainMenu : Control
 
 		var group = new ButtonGroup();
 
-		_russian = AddLanguageButton(
-			row,
-			"RussianButton",
-			"Русский",
-			"ru",
-			group);
-
 		_english = AddLanguageButton(
 			row,
 			"EnglishButton",
 			"English",
 			"en",
+			group);
+
+		_russian = AddLanguageButton(
+			row,
+			"RussianButton",
+			"Русский",
+			"ru",
 			group);
 
 		var backSpacer = new Control
