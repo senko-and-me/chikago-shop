@@ -207,6 +207,15 @@ public partial class EmbroideryGame : CanvasLayer
 		Refresh();
 	}
 
+	public void FinishForTesting(bool successful)
+	{
+		if (!OS.IsDebugBuild() || !IsOpen || ActiveSession.State == EmbroideryState.Finished) return;
+		if (ActiveSession.State == EmbroideryState.Ready) Activate();
+		if (!IsOpen) return;
+		ActiveSession.FinishForTesting(successful);
+		Refresh();
+	}
+
 	private void Close()
 	{
 		if (!IsOpen)

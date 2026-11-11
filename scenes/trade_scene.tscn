@@ -26,6 +26,13 @@
 [ext_resource type="Script" uid="uid://cnnctojfahevu" path="res://scripts/Camera/WorldCamera.cs" id="23_world_camera"]
 [ext_resource type="Script" path="res://scripts/Presentation/RoomDoorwayPresentation.cs" id="24_doorways"]
 
+[ext_resource type="Texture2D" path="res://art/ui/panel_inverted.png" id="25_inverted"]
+
+[sub_resource type="AtlasTexture" id="InvertedHeaderTexture"]
+atlas = ExtResource("25_inverted")
+region = Rect2(440, 440, 1168, 1168)
+filter_clip = true
+
 [sub_resource type="StyleBoxTexture" id="CreateButtonNormal"]
 texture = ExtResource("18_create_button")
 
@@ -286,20 +293,24 @@ offset_bottom = 734.0
 [node name="Showroom" type="Node2D" parent="World" unique_id=1166953855]
 position = Vector2(3622, 1629)
 
-[node name="ShowroomHeader" type="ColorRect" parent="World/Showroom" unique_id=1324160784]
+[node name="ShowroomHeader" type="NinePatchRect" parent="World/Showroom" unique_id=1324160784]
 offset_left = 289.0
-offset_top = 126.0
+offset_top = 116.0
 offset_right = 1629.0
-offset_bottom = 256.0
+offset_bottom = 271.0
 mouse_filter = 2
-color = Color(0.36, 0.21, 0.17, 0.94)
+texture = SubResource("InvertedHeaderTexture")
+patch_margin_left = 48
+patch_margin_top = 48
+patch_margin_right = 48
+patch_margin_bottom = 48
 
 [node name="ShowroomLabel" type="Label" parent="World/Showroom" unique_id=829535363]
 offset_left = 339.0
 offset_top = 136.0
 offset_right = 1579.0
 offset_bottom = 216.0
-theme_override_colors/font_color = Color(1, 0.96, 0.89, 1)
+theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 48
 text = "ВИТРИНЫ"
 horizontal_alignment = 1
@@ -314,7 +325,7 @@ offset_left = 339.0
 offset_top = 201.0
 offset_right = 1579.0
 offset_bottom = 251.0
-theme_override_colors/font_color = Color(1, 0.9, 0.79, 1)
+theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 23
 text = "Выберите предмет в инвентаре и свободную витрину"
 horizontal_alignment = 1
@@ -343,20 +354,24 @@ offset_bottom = 890.0
 [node name="ShowroomLeft" type="Node2D" parent="World" unique_id=975797514]
 position = Vector2(304, 1629)
 
-[node name="ShowroomHeader" type="ColorRect" parent="World/ShowroomLeft" unique_id=1817932225]
+[node name="ShowroomHeader" type="NinePatchRect" parent="World/ShowroomLeft" unique_id=1817932225]
 offset_left = 289.0
-offset_top = 126.0
+offset_top = 116.0
 offset_right = 1629.0
-offset_bottom = 256.0
+offset_bottom = 271.0
 mouse_filter = 2
-color = Color(0.36, 0.21, 0.17, 0.94)
+texture = SubResource("InvertedHeaderTexture")
+patch_margin_left = 48
+patch_margin_top = 48
+patch_margin_right = 48
+patch_margin_bottom = 48
 
 [node name="ShowroomLabel" type="Label" parent="World/ShowroomLeft" unique_id=1358958244]
 offset_left = 339.0
 offset_top = 136.0
 offset_right = 1579.0
 offset_bottom = 216.0
-theme_override_colors/font_color = Color(1, 0.96, 0.89, 1)
+theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 48
 text = "ВИТРИНЫ"
 horizontal_alignment = 1
@@ -371,7 +386,7 @@ offset_left = 339.0
 offset_top = 201.0
 offset_right = 1579.0
 offset_bottom = 251.0
-theme_override_colors/font_color = Color(1, 0.9, 0.79, 1)
+theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 23
 text = "Выберите предмет в инвентаре и свободную витрину"
 horizontal_alignment = 1

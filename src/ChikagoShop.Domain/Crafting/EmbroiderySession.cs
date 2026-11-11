@@ -34,6 +34,15 @@ public sealed class EmbroiderySession : ICraftSession
         if (State == EmbroideryState.Ready) State = EmbroideryState.Playing;
     }
 
+    public void FinishForTesting(bool successful)
+    {
+        if (State != EmbroideryState.Playing) return;
+        Stitches = successful ? Points.Count : 0;
+        Misses = successful ? 0 : 10;
+        RemainingSeconds = successful ? 10 : 0;
+        State = EmbroideryState.Finished;
+    }
+
     public void Tick(double delta)
     {
         if (State != EmbroideryState.Playing || !double.IsFinite(delta) || delta <= 0) return;

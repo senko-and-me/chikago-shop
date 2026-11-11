@@ -3,6 +3,8 @@
 [resource]
 locale = "en"
 messages = {
+&"Магазин открыт": &"Shop is open",
+&"Середина дня": &"Midday",
 &"НАСТРОЙКИ": &"SETTINGS",
 &"Полный экран": &"Fullscreen",
 &"Язык": &"Language",

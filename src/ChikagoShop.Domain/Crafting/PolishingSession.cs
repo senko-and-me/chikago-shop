@@ -55,6 +55,20 @@ public sealed class PolishingSession : ICraftSession
     }
 
     public void Start() { if (State == EmbroideryState.Ready) State = EmbroideryState.Playing; }
+    public void FinishForTesting(bool successful)
+    {
+        if (State != EmbroideryState.Playing) return;
+        EndRub();
+        foreach (var cell in _cells)
+        {
+            cell.Dirt = successful ? 0 : 1;
+            cell.Film = successful ? 0 : 1;
+        }
+        Progress = DirtProgress = successful ? 1 : 0;
+        Misses = 0;
+        RemainingSeconds = successful ? 10 : 0;
+        State = EmbroideryState.Finished;
+    }
     public void Tick(double delta)
     {
         if (State != EmbroideryState.Playing || !double.IsFinite(delta) || delta <= 0) return;

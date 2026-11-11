@@ -7,6 +7,63 @@
 
 ## Текущий фронт
 
+### HF-87 — full-screen opening and midday announcements
+
+Status: `DONE`; coordinator/executor `/root`; READY 2026-11-12; HF-86 DONE. User requests large UI messages "Магазин открыт" and "Середина дня" with slow smooth disappearance.
+CP-HF-87 read-set: current front; scripts/Days/DayCycleController.cs, DayNightBackground.cs; scripts/TradeScene.cs (start/reset/restore adapters); scripts/Persistence/TradeScene.Persistence.cs (day restoration); scripts/UI/DayTransitionCard.cs, PauseMenu.cs (layers); scripts/Localization/GameLocalization.cs; localization/en.tres; tests/ProjectTest.cs, tests/Integration/ProjectTest.Days.cs; art/fonts/game.ttf; .vscode/settings.json; git status/diff. Write-set: ORCHESTRATION_PLAN.md; scripts/UI/DayAnnouncementOverlay.cs and .uid; scripts/Days/DayCycleController.cs (announcement lifecycle); localization/en.tres (two translations); tests/ProjectTest.cs; tests/Integration/ProjectTest.DayAnnouncements.cs and .uid; README.md. TEMP/chikago-hf87-* logs/screenshots; temporary override.cfg only if absent, removed afterward.
+Out of scope: source/, gameplay/timer/save schema changes, null-export repair or other editor scene edits, previous debug/header work, commit/push. Acceptance: new game/new day shows localized opening message once after day-card choice; midpoint message once at50% of actual day duration; large centered white text on subtle fullscreen dim overlay smoothly fades in then slowly out over about5 seconds; no input interception or pause; pause stops animation, modal menus remain above; continuing a save does not replay passed milestones, F7 time grants do not repeat midday; new game/checkpoint reset lifecycle; expiry cancels overlay. Checks: build; GPU --day-announcement-checks (timing/reset/restore/day upgrade/pause/input/RU-EN/layout/opacity); --debug-hotkey-checks and --presentation-checks; git diff --check. No domain logic added to TradeScene.
+
+```text
+Task: HF-87
+Recommended status: REVIEW
+Changed: scripts/UI/DayAnnouncementOverlay.cs and .uid; scripts/Days/DayCycleController.cs; localization/en.tres; tests/ProjectTest.cs; tests/Integration/ProjectTest.DayAnnouncements.cs and .uid; README.md; ORCHESTRATION_PLAN.md.
+Checks: build -> PASS (0 warnings/errors); Godot import -> PASS; GPU --day-announcement-checks -> PASS; --debug-hotkey-checks -> PASS; --presentation-checks -> PASS; git diff --check -> PASS. Evidence TEMP/chikago-hf87-{import,day-announcement,debug-hotkey,presentation}.log/.err and opening.png/midday.png.
+Acceptance: screen-space overlay with adaptive centered game font, white text/black outline and subtle28% black dim covers the viewport without consuming input. Smoothstep opacity envelope fades in0.45s, holds0.8s and fades out3.75s, then hides/stops processing. Layer90 remains below pause/crafting/day-choice and Pausable processing freezes animation with pause. Opening waits for the first active day tick after card choice; midpoint follows actual duration and emits once. Restore suppresses opening and already-passed midpoint; expiry cancels message; reset/checkpoint renew lifecycle. RU/EN translation entries added. Actual-input/clock tests cover opacity sequence, Escape pause, all mouse-ignore controls, viewport/language changes, debug-time threshold recross, saved restore,120-second upgrade, day-card delay, expiry and checkpoint reset. Opening GPU screenshot inspected for readable centered typography. Existing gameplay/domain/save schema unchanged.
+Read-set exception: located DayNightBackground under scripts/Days after guessed Presentation path did not exist; no source/ traversal.
+Risks/blocker: none for announcement feature. Prior editor scene changes, inverted header and debug feature retained. Temporary override removed; isolated save cleaned up; no commit/push.
+Next: start a new day and reach half the timer to see both announcements.
+```
+
+Координатор подтвердил HF-87 2026-11-12 по build, трём GPU checks и screenshot inspection: REVIEW → DONE.
+
+### HF-86 — manual-test hotkeys for funds, clock and craft outcomes
+
+Status: `DONE`; coordinator/executor `/root`; READY 2026-11-12; HF-85 DONE. User requests debug money/time grants and poor/good minigame skips. F6 +100 dollars, F7 +30 seconds, F8 poor craft finish, F9 good craft finish.
+CP-HF-86 read-set: current front; scripts/TradeScene.cs (day/craft wiring, presentation), scripts/Days/DayCycleController.cs; scripts/UI/EmbroideryGame.cs; src/ChikagoShop.Domain/Days/DaySession.cs; src/ChikagoShop.Domain/Crafting/{ICraftSession,EmbroiderySession,PolishingSession}.cs; scripts/Persistence/TradeScene.Persistence.cs, src/ChikagoShop.Domain/Persistence/ProgressMigration.cs; tests/ProjectTest.cs, tests/Integration/ProjectTest.{Days,Helpers}.cs; tests/ChikagoShop.Domain.Tests/DaySessionTests.cs; README.md, config/economy.v1.json, .vscode/settings.json; git status/diff. Write-set: ORCHESTRATION_PLAN.md; scripts/Debug/DebugHotkeysController.cs and .uid; scripts/TradeScene.cs (attach debug controller only); scripts/Days/DayCycleController.cs (debug timer adapter); scripts/UI/EmbroideryGame.cs (debug finish adapter); src/ChikagoShop.Domain/Days/DaySession.cs (explicit test-time grant); src/ChikagoShop.Domain/Crafting/{ICraftSession,EmbroiderySession,PolishingSession}.cs (explicit test completion); tests/ChikagoShop.Domain.Tests/DebugSupportTests.cs; tests/ProjectTest.cs; tests/Integration/ProjectTest.Debug.cs and .uid; README.md. TEMP/chikago-hf86-* logs; temporary override.cfg only if absent, removed afterward.
+Out of scope: source/, normal craft outcomes/rewards/prices, save schema, user/editor scene changes or null-export repair, commit/push. Acceptance: shortcuts debug-build only, no autorepeat/modifier grants; normal play and active crafting accept F6/F7, pause menu/day card block them. F7 adds30 even after expiry and reopens the same unfinished day; debug surplus above normal day duration is session-only and existing save load clamps remain unchanged. F8/F9 affect only open unfinished embroidery/polishing sessions, display0%/100% finished result, charge/start a ready craft exactly once, never double-grant items or affect already finished sessions. Production scene has no debug controller. Checks: build/domain tests; GPU --debug-hotkey-checks (input/routes/guards/states/costs/results), --balance-checks, --closed-reroll-checks; git diff --check.
+
+```text
+Task: HF-86
+Recommended status: REVIEW
+Changed: scripts/Debug/DebugHotkeysController.cs and .uid; scripts/TradeScene.cs (attach call only); scripts/Days/DayCycleController.cs; scripts/UI/EmbroideryGame.cs; src/ChikagoShop.Domain/Days/DaySession.cs; src/ChikagoShop.Domain/Crafting/{ICraftSession,EmbroiderySession,PolishingSession}.cs; tests/ChikagoShop.Domain.Tests/DebugSupportTests.cs; tests/ProjectTest.cs; tests/Integration/ProjectTest.Debug.cs and .uid; README.md; ORCHESTRATION_PLAN.md.
+Checks: solution build -> PASS (0 warnings/errors); domain tests -> PASS130/130; Godot import -> PASS; GPU --debug-hotkey-checks -> PASS; --closed-reroll-checks -> PASS; --balance-checks -> FAIL at initial live configured-money/quotas assertion because preexisting editor null-export overrides remain in scenes/trade_scene.tscn. git diff --check -> PASS. Evidence TEMP/chikago-hf86-{import,debug-hotkey,balance,closed-reroll}.log/.err.
+Acceptance: debug Godot builds alone attach the Always-processing input observer. F6 adds100 with overflow saturation and normal HUD/availability/save refresh. F7 stacks30-second grants and can reopen the same expired unfinished day; normal reset/restore limits remain unchanged, documented surplus lifetime. Pause/day-card grants blocked; active crafting permits grants. Unmodified nonrepeat key presses only. F8/F9 start Ready crafts normally or finish Playing crafts with deterministic0%/100% result; finished results are immutable and item/payment/energy happen once. Both minigames retain normal Collect behavior. Domain tests cover forced outcomes and time reset/reopening; actual-input integration covers HUD, save, paused/modal guards, four minigame/result combinations, duplicate/idle skip, resources inside crafting and funds overflow. Existing item rarity selection is unchanged and documented.
+Read-set exception: targeted scene export search was necessary to diagnose the unrelated balance failure. Existing null-export/editor edits and previous inverted-frame changes preserved; source/ not scanned.
+Risks/blocker: debug features validated; balance suite remains blocked by previously present StartingMoney/FirstQuota/SecondQuota null scene overrides, outside this task. Temporary override removed; isolated test save cleaned up; no commit/push.
+Next: use F6/F7 for resources and F8/F9 inside a minigame during a debug playtest.
+```
+
+Координатор подтвердил HF-86 2026-11-12 по130 domain tests и focused GPU checks; unrelated balance failure recorded: REVIEW → DONE.
+
+### HF-85 — use supplied inverted frame for showcase headings
+
+Status: `DONE`; coordinator/executor `/root`; READY 2026-11-12; HF-84 DONE. User supplies РамкаИнверсия.png and requests an inverted textured showcase heading. Apply to both showcase rooms.
+CP-HF-85 read-set: current front; РамкаИнверсия.png (visual inspection/pixel geometry); scenes/trade_scene.tscn (showcase headers/labels); art/ui/; tests/ProjectTest.cs, tests/Integration/ProjectTest.Presentation.cs, Resources.cs; .vscode/settings.json; git status/diff. Write-set: ORCHESTRATION_PLAN.md; art/ui/panel_inverted.png and .import (unchanged source bytes); scenes/trade_scene.tscn (two showcase headers and their label colors only). TEMP/chikago-hf85-* diagnostics/screenshots/logs; temporary override.cfg only if absent and removed afterward.
+Out of scope: source/, bitmap editing/generation, other room headings, gameplay/hitboxes, null-export repair or other existing editor changes, commit/push. Acceptance: both showcase headings replace flat tinted ColorRect with supplied black/white hand-drawn frame; white title/hint remain readable in RU/EN, border is not flattened by extreme stretching, existing node paths/input behavior retained. Godot AtlasTexture crops unused canvas and NinePatchRect preserves border thickness without altering bitmap. Checks: source/canonical SHA256; Godot import; GPU --resource-checks/--presentation-checks; targeted RU/EN screenshots and header geometry inspection; git diff --check. Visual-only change uses existing checks and temporary diagnostic, no new permanent tests.
+
+```text
+Task: HF-85
+Recommended status: REVIEW
+Changed: art/ui/panel_inverted.png and .import; scenes/trade_scene.tscn (shared AtlasTexture, two showcase NinePatchRect headers and white label colors); ORCHESTRATION_PLAN.md.
+Checks: supplied/canonical SHA256 -> MATCH; Godot import -> PASS; GPU --resource-checks -> PASS; --presentation-checks -> PASS; temporary targeted diagnostic -> PASS for both rooms/RU/EN, header texture, label bounds and mouse-ignore; git diff --check -> PASS. Evidence TEMP/chikago-hf85-{import,resource,presentation,header}.log/.err and {ShowroomLeft,Showroom}-{ru,en}.png.
+Acceptance: supplied texture is used without bitmap edits. AtlasTexture selects central1168x1168 region, excluding empty outer canvas, and NinePatchRect preserves48-pixel edge regions while extending the black center. Both headers retain existing node paths and width, with extra vertical padding for readable white title/hint. RU/EN rendered screenshots inspected: textured black center and hand-drawn white edge replace the flat tinted bars. Input passes through; no gameplay or script changes. Existing user/editor scene changes retained.
+Read-set exception: none; source/ not scanned.
+Risks/blocker: none for heading presentation. Original root image retained; temporary override removed and isolated user directory used. No commit/push.
+Next: inspect the inverted showcase heading in the game/editor.
+```
+
+Координатор подтвердил HF-85 2026-11-12 по GPU checks и RU/EN screenshot inspection: REVIEW → DONE.
+
 ### HF-84 — swap language choices in all settings
 
 Status: `DONE`; coordinator/executor `/root`; READY 2026-11-12; HF-83 DONE. User requests English and Russian swap positions in all settings: English left, Russian right.

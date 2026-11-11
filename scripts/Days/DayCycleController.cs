@@ -20,6 +20,7 @@ public sealed class DayCycleController
 	private int _displayedSeconds = -1;
 	private readonly DayTransitionCard _card;
 	private readonly DayNightBackground _dayNight;
+	private readonly DayAnnouncementOverlay _announcements;
 	private double ExpectedDuration => WorkshopItemCatalog.DayDurationSeconds
 		+ (Upgrades.Selected == DayUpgrade.Time ? 30 : 0);
 	public bool TransitionOpen => _card.IsOpen;
@@ -56,17 +57,29 @@ public sealed class DayCycleController
 		_timer.GetParent<Control>().Resized += LayoutTimer;
 		_inventoryStrip.Resized += LayoutTimer;
 		_dayNight = new DayNightBackground(game);
+		_announcements = new DayAnnouncementOverlay();
+		game.AddChild(_announcements);
 		RefreshTimer();
 		UpdateDayNightBackground();
 	}
 
 	public bool CanReceiveBuyers => Session.CanReceiveBuyers && !_game.Failed && !_game.Completed;
 
+	public void AddDebugTime()
+	{
+		if (!OS.IsDebugBuild() || _game.Failed || _game.Completed || Upgrades.Pending) return;
+		Session.AddTimeForTesting(30);
+		RefreshTimer();
+		UpdateDayNightBackground();
+		_game.SynchronizeDayState();
+	}
+
 	public void Tick(double delta)
 	{
 		bool crafting = _game.CraftMiniGameOpen;
 		if (Upgrades.Pending || (_game.GetTree().Paused && !crafting) || _game.Failed || _game.Completed) return;
 		bool closed = Session.Tick(delta);
+		_announcements.Observe(Session.RemainingSeconds, Session.Duration, Session.IsClosed);
 		UpdateDayNightBackground();
 		bool secondChanged = RefreshTimer();
 		if (closed) _game.SynchronizeDayState();
@@ -79,6 +92,7 @@ public sealed class DayCycleController
 		switch (Session.RequestEnd(_game.TradeActive))
 		{
 			case EndDayAction.Closed:
+				_announcements.Dismiss();
 				RefreshTimer();
 				UpdateDayNightBackground();
 				_game.SynchronizeDayState();
@@ -106,6 +120,7 @@ public sealed class DayCycleController
 		_card.Close();
 		Upgrades.Reset(preserveCategories);
 		Session.Reset(ExpectedDuration);
+		_announcements.BeginDay();
 		RefreshTimer();
 		UpdateDayNightBackground();
 	}
@@ -120,6 +135,7 @@ public sealed class DayCycleController
 		CheckpointAtelierPriceLevel = Math.Clamp(checkpointAtelierPriceLevel, 0, 6);
 		CheckpointMusicPriceLevel = Math.Clamp(checkpointMusicPriceLevel, 0, 6);
 		Session.Restore(remaining, closed, ExpectedDuration);
+		_announcements.Restore(Session.RemainingSeconds, Session.Duration);
 		RefreshTimer();
 		UpdateDayNightBackground();
 	}

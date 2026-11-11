@@ -18,6 +18,13 @@ public sealed class DaySession {
 
   public bool CanReceiveBuyers => !IsClosed;
 
+  // Test-session override only; normal restore/configuration limits remain unchanged.
+  public void AddTimeForTesting(double seconds) {
+    if (!double.IsFinite(seconds) || seconds <= 0 || !double.IsFinite(RemainingSeconds + seconds)) return;
+    RemainingSeconds += seconds;
+    IsClosed = false;
+  }
+
   public int AvailableEnergy(int storedEnergy) {
     return IsClosed ? 0 : storedEnergy;
   }

@@ -341,6 +341,7 @@ public partial class TradeScene : Node2D
 			polishing: true);
 
 		AddChild(_polishing);
+		DebugHotkeysController.Attach(this, _dayCycle);
 
 		bool restored = LoadProgress();
 

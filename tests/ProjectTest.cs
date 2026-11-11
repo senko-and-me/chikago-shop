@@ -16,6 +16,20 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--day-announcement-checks"))
+            {
+                await TestDayAnnouncements();
+                GD.Print("DAY_ANNOUNCEMENT_CHECKS_PASS: lifecycle, smooth fade, midpoint, restore, localization and input");
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--debug-hotkey-checks"))
+            {
+                await TestDebugHotkeys();
+                GD.Print("DEBUG_HOTKEY_CHECKS_PASS: funds, time, craft outcomes and input guards");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--room-doorway-checks"))
             {
                 await TestRoomDoorways();
