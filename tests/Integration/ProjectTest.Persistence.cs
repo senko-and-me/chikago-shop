@@ -43,6 +43,35 @@ public partial class ProjectTest
             await ToSignal(this, SignalName.ProcessFrame);
             Check(game.Score == 220 && game.CheckpointScore == 220,
                 "Reloading the new game must retain220 dollars");
+            game.QueueFree();
+            await ToSignal(this, SignalName.ProcessFrame);
+            game = scene.Instantiate<TradeScene>();
+            game.StartingMoney = 0; game.FirstQuota = 0; game.SecondQuota = 0; game.SavePath = null;
+            // Simulate the values Godot produces when the editor serializes exported defaults as null.
+            SceneConfigurationDefaults.Apply(game, EconomyConfigProvider.Load());
+            Check(game.StartingMoney == 220 && game.FirstQuota == 250 && game.SecondQuota == 450 &&
+                game.SavePath == "user://trade_progress.json",
+                "Missing scene defaults must recover configured values including the default save path");
+            // Never initialize a test scene with the player's real save path.
+            game.SavePath = "";
+            game.StartingMoney = 0; game.FirstQuota = 0; game.SecondQuota = 0;
+            Root.AddChild(game);
+            game.SetProcess(false);
+            Check(game.StartingMoney == 220 && game.FirstQuota == 250 && game.SecondQuota == 450,
+                "The Ready adapter must recover zero defaults before game initialization");
+            game.NewGame();
+            Check(game.Score == 220 && game.CheckpointScore == 220,
+                "A scene with corrupted exported defaults must still reset to220 dollars");
+            game.QueueFree();
+            await ToSignal(this, SignalName.ProcessFrame);
+            game = scene.Instantiate<TradeScene>();
+            game.StartingMoney = 333; game.FirstQuota = 111; game.SecondQuota = 222; game.SavePath = "";
+            Root.AddChild(game);
+            game.SetProcess(false);
+            game.NewGame();
+            Check(game.Score == 333 && game.CheckpointScore == 333 && game.FirstQuota == 111 &&
+                game.SecondQuota == 222 && game.SavePath == "",
+                "Valid custom scene values and intentionally disabled save paths must be preserved");
         }
         finally
         {

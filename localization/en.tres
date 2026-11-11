@@ -4,6 +4,7 @@
 locale = "en"
 messages = {
 &"Магазин открыт": &"Shop is open",
+&"Магазин закрыт": &"Shop is closed",
 &"Середина дня": &"Midday",
 &"НАСТРОЙКИ": &"SETTINGS",
 &"Полный экран": &"Fullscreen",

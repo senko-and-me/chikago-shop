@@ -7,6 +7,17 @@ using ChikagoShop.Domain.Days;
 // Subsystem checks share the ProjectTest runner and fixture helpers.
 public partial class ProjectTest
 {
+    private async Task WaitForDayCardAnimation(Node game)
+    {
+        var card = game is DayTransitionCard direct ? direct : game.GetNodeOrNull<DayTransitionCard>("DayTransitionCard");
+        double deadline = Time.GetTicksMsec() + 5000;
+        while (card != null && GodotObject.IsInstanceValid(card) && card.IsAnimating)
+        {
+            Check(Time.GetTicksMsec() < deadline, "Day-card animation must finish while gameplay is paused");
+            await ToSignal(this, SignalName.ProcessFrame);
+        }
+    }
+
     private async Task PressEscapeForTest()
     {
         Root.PushInput(new InputEventKey { Pressed = true, Keycode = Key.Escape }, true);
@@ -19,6 +30,7 @@ public partial class ProjectTest
 
     private async Task ClickControl(Node game, string path)
     {
+        if (path.StartsWith("DayTransitionCard/", StringComparison.Ordinal)) await WaitForDayCardAnimation(game);
         var control = game.GetNode<Control>(path);
         if (path.StartsWith("World/", StringComparison.Ordinal))
         {
@@ -47,6 +59,7 @@ public partial class ProjectTest
             Position = point, GlobalPosition = point, ButtonIndex = MouseButton.Left, Pressed = false
         }, true);
         await ToSignal(this, SignalName.ProcessFrame);
+        if (path.StartsWith("DayTransitionCard/", StringComparison.Ordinal)) await WaitForDayCardAnimation(game);
     }
 
     private static void AdvanceDayForTest(TradeScene game)
@@ -54,7 +67,13 @@ public partial class ProjectTest
         if (!game.DayClosed) game.EndDay();
         game.EndDay();
         var card = game.GetNode<DayTransitionCard>("DayTransitionCard");
-        if (card.IsOpen) card.Skip();
+        if (card.IsOpen)
+        {
+            // Gameplay fixture setup skips presentation; dealing has its own actual-input tests.
+            game.DayUpgrades.TrySkip();
+            game.RefreshDayPresentation();
+            card.Close();
+        }
     }
 
     private async Task<TradeScene> CreateGame(PackedScene scene)
@@ -65,6 +84,7 @@ public partial class ProjectTest
         game.SetProcess(false);
         game.GetNode<WorldCamera>("Camera2D").SetProcess(false);
         await ToSignal(this, SignalName.ProcessFrame);
+        await WaitForDayCardAnimation(game);
         return game;
     }
 

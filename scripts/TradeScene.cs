@@ -172,6 +172,7 @@ public partial class TradeScene : Node2D
 
 	public override void _Ready()
 	{
+		SceneConfigurationDefaults.Apply(this, Economy);
 		_world = GetNode<CounterWorld>("World");
 		_customer = GetNode<ModularCustomer>(
 			"World/TradingRoom/Customer");
@@ -509,20 +510,20 @@ public partial class TradeScene : Node2D
 			Node.AutoTranslateModeEnum.Disabled;
 
 		atelierHint.Text = english
-			? $"Clothing  •  1 for ${AtelierSpinCost}"
-			: $"Одежда  •  {AtelierSpinCost}$ за 1";
+			? $"Clothing  •  ${AtelierSpinCost} + 1 energy per item"
+			: $"Одежда  •  {AtelierSpinCost}$ + 1 энергия за предмет";
 
 		musicHint.Text = english
-			? $"Instruments  •  1 for ${MusicSpinCost}"
-			: $"Инструменты  •  {MusicSpinCost}$ за 1";
+			? $"Instruments  •  ${MusicSpinCost} + 1 energy per item"
+			: $"Инструменты  •  {MusicSpinCost}$ + 1 энергия за предмет";
 
 		atelierPrice.Text = english
-			? $"1 item  •  ${AtelierSpinCost}"
-			: $"1 предмет  •  {AtelierSpinCost}$";
+			? $"1 item  •  ${AtelierSpinCost} + 1 energy"
+			: $"1 предмет  •  {AtelierSpinCost}$ + 1 энергия";
 
 		musicPrice.Text = english
-			? $"1 item  •  ${MusicSpinCost}"
-			: $"1 предмет  •  {MusicSpinCost}$";
+			? $"1 item  •  ${MusicSpinCost} + 1 energy"
+			: $"1 предмет  •  {MusicSpinCost}$ + 1 энергия";
 
 		// The illustrated button already contains its lettering.
 		_atelierGetItemButton.Text = string.Empty;

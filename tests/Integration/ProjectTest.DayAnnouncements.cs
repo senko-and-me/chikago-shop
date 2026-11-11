@@ -87,11 +87,20 @@ public partial class ProjectTest
             Check(!overlay.IsShowing, "Continuing after halfway must not replay opening or midday");
             game.NewGame();
             game.EndDay();
+            Check(overlay.IsShowing && overlay.GetNode<Label>("Root/Title").Text == "Магазин закрыт",
+                "Manual day closure must show the shop-closed announcement");
+            Root.PushInput(new InputEventKey { Pressed = true, Keycode = Key.F7 }, true);
+            Root.PushInput(new InputEventKey { Pressed = false, Keycode = Key.F7 }, true);
+            Check(!game.DayClosed && !overlay.IsShowing,
+                "Debug reopening must immediately clear the stale shop-closed notice");
+            game.EndDay();
             game.EndDay();
             game._Process(0);
             Check(game.DayTransitionOpen && !overlay.IsShowing,
                 "Next-day announcement must wait until the upgrade card closes");
+            await WaitForDayCardAnimation(game);
             game.GetNode<DayTransitionCard>("DayTransitionCard").Choose(DayUpgrade.Time);
+            await WaitForDayCardAnimation(game);
             game._Process(0);
             overlay.Dismiss();
             Check(game.DayRemainingSeconds == 120, "Time-upgrade fixture must have120 seconds");
@@ -100,7 +109,30 @@ public partial class ProjectTest
             game._Process(0.2);
             Check(overlay.IsShowing, "Extended-day midday must follow the actual120-second duration");
             game._Process(1000);
-            Check(!overlay.IsShowing && game.DayClosed, "Day expiry must cancel the announcement");
+            title = overlay.GetNode<Label>("Root/Title");
+            overlay.SetProcess(false);
+            Check(overlay.IsShowing && game.DayClosed && title.Text == "Магазин закрыт",
+                "Day expiry must replace midday with the shop-closed announcement");
+            TranslationServer.SetLocale("en");
+            Check(title.Tr(title.Text) == "Shop is closed", "Closing announcement must support English");
+            overlay._Process(0.6);
+            game._Process(1);
+            Check(overlay.Opacity == 1, "Repeated closed-day ticks must not restart the fade");
+            overlay._Process(5);
+            game._Process(1);
+            Check(!overlay.IsShowing, "Closing announcement must fade away and stay dismissed on closed ticks");
+            game.PersistProgress();
+            game.QueueFree();
+            await ToSignal(this, SignalName.ProcessFrame);
+            game = Create();
+            game._Process(0);
+            overlay = game.GetNode<DayAnnouncementOverlay>("DayAnnouncements");
+            Check(game.DayClosed && !overlay.IsShowing, "Continuing a closed save must not replay the closing notice");
+            Root.PushInput(new InputEventKey { Pressed = true, Keycode = Key.F7 }, true);
+            Root.PushInput(new InputEventKey { Pressed = false, Keycode = Key.F7 }, true);
+            game._Process(30);
+            Check(overlay.IsShowing && overlay.GetNode<Label>("Root/Title").Text == "Магазин закрыт",
+                "A debug-reopened day must allow a fresh closing announcement");
             game.ReturnToCheckpoint();
             game._Process(0);
             Check(overlay.IsShowing && overlay.GetNode<Label>("Root/Title").Text == "Магазин открыт",

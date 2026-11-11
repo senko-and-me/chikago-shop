@@ -5,7 +5,7 @@ public partial class DayAnnouncementOverlay : CanvasLayer
     private const double FadeIn = 0.45, Hold = 0.8, FadeOut = 3.75;
     private Control _root = null!;
     private Label _title = null!;
-    private bool _openingPending = true, _midpointShown;
+    private bool _openingPending = true, _midpointShown, _closedShown;
     private double _elapsed;
     public bool IsShowing => _root.Visible;
     public float Opacity => _root.Modulate.A;
@@ -52,6 +52,7 @@ public partial class DayAnnouncementOverlay : CanvasLayer
         Dismiss();
         _openingPending = true;
         _midpointShown = false;
+        _closedShown = false;
     }
 
     public void Restore(double remaining, double duration)
@@ -59,11 +60,24 @@ public partial class DayAnnouncementOverlay : CanvasLayer
         Dismiss();
         _openingPending = false;
         _midpointShown = remaining <= duration / 2;
+        _closedShown = remaining <= 0;
     }
 
     public void Observe(double remaining, double duration, bool closed)
     {
-        if (closed) { Dismiss(); return; }
+        if (closed)
+        {
+            if (!_closedShown)
+            {
+                _closedShown = true;
+                _openingPending = false;
+                _midpointShown = true;
+                ShowMessage("Магазин закрыт");
+            }
+            return;
+        }
+        if (_closedShown) Dismiss();
+        _closedShown = false;
         if (_openingPending)
         {
             _openingPending = false;

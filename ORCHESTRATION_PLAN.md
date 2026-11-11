@@ -7,6 +7,103 @@
 
 ## Текущий фронт
 
+### HF-92 — restore starting capital and tolerate null scene defaults
+
+Status: `DONE`; coordinator/executor `/root`; READY 2026-11-12; HF-91 DONE. User reports missing starting capital; the scene again contains null overrides for starting money, quotas, save path and rarity prices.
+CP-HF-92 read-set: current front; scenes/trade_scene.tscn (export overrides); scripts/TradeScene.cs (exports/Ready/NewGame); scripts/Configuration/EconomyConfigProvider.cs; config/economy.v1.json; tests/ProjectTest.cs, tests/Integration/ProjectTest.Persistence.cs; .vscode/settings.json; git status/diff. Write-set: ORCHESTRATION_PLAN.md; scenes/trade_scene.tscn (remove14 null overrides only); scripts/Configuration/SceneConfigurationDefaults.cs and .uid (deserialization fallback); scripts/TradeScene.cs (one Ready adapter call only); tests/Integration/ProjectTest.Persistence.cs (extend existing funds regression). TEMP/chikago-hf92-* logs; temporary override.cfg only if absent, removed afterward.
+Out of scope: source/, altering valid player saves/balances, domain/economy values, other existing scene changes or previous card work, commit/push. Acceptance: fresh/new game starts220 with matching checkpoint and valid250/450 quotas/save path; null/zero deserialized startup overrides recover config before initialization; valid positive custom overrides and explicit empty test save paths preserved; existing save load/reset works. No new domain logic in TradeScene. Checks: build; GPU --new-game-funds-checks (fresh/reset/save, corrupt overrides and valid custom overrides); --balance-checks; git diff --check.
+
+Coordinator scope extension for HF-92: tests/Integration/ProjectTest.Economy.cs read/write allowed for two animation waits in the quota fixture, revealed after startup values were repaired; no assertions or domain logic changed there.
+
+```text
+Task: HF-92
+Recommended status: REVIEW
+Changed: scenes/trade_scene.tscn (remove14 null exported overrides); scripts/Configuration/SceneConfigurationDefaults.cs and .uid; scripts/TradeScene.cs (one initialization-adapter call); tests/Integration/ProjectTest.Persistence.cs; tests/Integration/ProjectTest.Economy.cs (await existing animated card skip); ORCHESTRATION_PLAN.md.
+Checks: build -> PASS (0 warnings/errors); Godot import -> PASS; GPU --new-game-funds-checks -> PASS including corrupt/default/custom cases; --balance-checks -> PASS (live economy, clock, all paid upgrades); git diff --check -> PASS; scene export-null search -> no matches. Evidence TEMP/chikago-hf92-{import,new-game-funds,balance}.log/.err.
+Acceptance: restored configured220-dollar startup/checkpoint,250/450 quotas, normal save path and rarity table defaults by removing corrupt scene serialization. New configuration adapter repairs missing/zero money/quotas and null path before Ready initializes state, so recurrence does not erase startup funds. Existing static Economy config passed into adapter; no new domain logic in TradeScene. Valid positive overrides and explicit empty save paths retained. Existing player saves are not modified/reset. Integration checks exercise fresh startup, New Game from0, current/checkpoint save roundtrip, effective zero/null default repair, actual Ready fallback and valid custom333/111/222 values. Null-path mapping tested before attaching the scene, then empty fixture path set to avoid reading player saves. Balance fixture updated to await the already introduced dealing/exit animation before advancing to its next quota assertion.
+Read-set exception: targeted Economy.cs diagnostic was needed when the balance suite progressed past the original startup failure and exposed the stale synchronous skip fixture; coordinator expanded that test-only write scope.
+Risks/blocker: none for funds. Existing card/header/notification and unrelated editor layout changes retained; temporary override removed and isolated test saves cleaned up; no commit/push.
+Next: start New Game to receive220 dollars.
+```
+
+Координатор подтвердил HF-92 2026-11-12 по guarded-startup regression и полному targeted balance suite: REVIEW → DONE.
+
+### HF-91 — add shop-closed announcement
+
+Status: `DONE`; coordinator/executor `/root`; READY 2026-11-12; HF-90 DONE. User requests "Магазин закрыт" in the existing announcement system.
+CP-HF-91 read-set: current front; scripts/UI/DayAnnouncementOverlay.cs; scripts/Days/DayCycleController.cs; localization/en.tres; tests/Integration/ProjectTest.DayAnnouncements.cs; tests/ProjectTest.cs; README.md; .vscode/settings.json; git status/diff. Write-set: ORCHESTRATION_PLAN.md; scripts/UI/DayAnnouncementOverlay.cs (once-per-closure milestone); scripts/Days/DayCycleController.cs (manual-close notification only); localization/en.tres (translation); tests/Integration/ProjectTest.DayAnnouncements.cs; README.md. TEMP/chikago-hf91-* logs; temporary override.cfg only if absent, removed afterward.
+Out of scope: source/, gameplay/day rules/save schema, previous uncommitted card/layout changes, editor null overrides, commit/push. Acceptance: timeout/manual closure shows localized Shop closed with existing fade, exactly once per closing event; closed ticks do not restart it, continuing a closed save does not replay it; new-day card/reset dismisses it, debug reopening permits a later new closing notice. Checks: build; GPU --day-announcement-checks/--closed-reroll-checks/--card-dealing-checks; git diff --check.
+
+```text
+Task: HF-91
+Recommended status: REVIEW
+Changed: scripts/UI/DayAnnouncementOverlay.cs; scripts/Days/DayCycleController.cs (manual closure plus debug-reopening presentation sync); localization/en.tres; tests/Integration/ProjectTest.DayAnnouncements.cs; README.md; ORCHESTRATION_PLAN.md.
+Checks: build -> PASS (0 warnings/errors); GPU --day-announcement-checks -> PASS (rerun after stale-notice clearing); --closed-reroll-checks -> PASS; --card-dealing-checks -> PASS; git diff --check -> PASS. Evidence TEMP/chikago-hf91-{day-announcement,closed-reroll,card-dealing}.log/.err.
+Acceptance: timeout replaces current announcement with "Магазин закрыт"/"Shop is closed" and uses the existing5-second smooth opacity envelope. Manual closure invokes the same observer. A per-closure flag prevents repeated closed ticks from restarting or re-showing a faded notice. Restored closed saves suppress it; new day/reset dismisses it. Debug F7 reopening clears a still-visible closed notice immediately and permits a subsequent closing notice even if the next tick expires all added time. Integration checks cover both close routes, fade stability, persistence, localization, new-day card flow and debug reopening. Normal day rules unchanged.
+Read-set exception: coordinator extended the existing day-controller write scope to sync the new closing presentation on debug reopening; no new gameplay rule. source/ not scanned.
+Risks/blocker: none for closing notice; earlier uncommitted work and editor scene changes retained. Temporary override removed and isolated saves cleaned up; no commit/push.
+Next: let the timer expire or manually finish a day to see the closing message.
+```
+
+Координатор подтвердил HF-91 2026-11-12 по build и трём GPU targets: REVIEW → DONE.
+
+### HF-90 — poker-style upgrade dealing over paused gameplay
+
+Status: `DONE`; coordinator/executor `/root`; READY 2026-11-12; HF-89 DONE. User requests upgrades dealt like poker cards above the normal game, screen dimming, and new-day resume after purchase/skip. Preserve existing one-upgrade-per-transition rule/prices.
+CP-HF-90 read-set: current front; scripts/UI/DayTransitionCard.cs; scripts/Days/DayCycleController.cs; scripts/Presentation/{ButtonFeedbackController,MonochromePresentation}.cs; themes/game_theme.tres; tests/ProjectTest.cs; tests/Integration/ProjectTest.{Days,ButtonFeedback,DayAnnouncements,Debug,Presentation,Helpers}.cs; .vscode/settings.json; git status/diff. Write-set: ORCHESTRATION_PLAN.md; scripts/UI/DayTransitionCard.cs; scripts/Presentation/DayCardDealAnimator.cs and .uid; scripts/UI/PokerCardBack.cs and .uid; tests/ProjectTest.cs; tests/Integration/ProjectTest.{Days,ButtonFeedback,DayAnnouncements,Helpers}.cs (await real animations); tests/Integration/ProjectTest.CardDealing.cs and .uid; README.md. TEMP/chikago-hf90-* logs/screenshots; temporary override.cfg only if absent, removed afterward.
+Out of scope: source/, gameplay effects/prices/save schema, new purchases per day, existing null-export repair or editor scene changes, commit/push. Acceptance: translucent dim retains visible live-game scene; three portrait cards fly in from visible patterned deck with stagger/rotation/flip; layout fits960x540/1280x720 RU/EN and resize; native Godot Tween animates while game paused. Controls activate only after dealing, keyboard order/disabled-state rules retained; choose/skip exits before domain callback/new-day resume, duplicate/early input blocked. Immediate Close/reset/removal cancels animations/callback and releases owned pause. Mid-animation saves/reload keep pending choice. Checks: build; GPU --card-dealing-checks (real entry/exit/timing/input/cancellation/resize/screenshots); --upgrade-purchase-checks/--button-feedback-checks/--day-announcement-checks/--debug-hotkey-checks/--presentation-checks; git diff --check.
+
+```text
+Task: HF-90
+Recommended status: REVIEW
+Changed: scripts/UI/DayTransitionCard.cs; scripts/Presentation/DayCardDealAnimator.cs and .uid; scripts/UI/PokerCardBack.cs and .uid; tests/ProjectTest.cs; tests/Integration/ProjectTest.{Days,ButtonFeedback,DayAnnouncements,Helpers}.cs; tests/Integration/ProjectTest.CardDealing.cs and .uid; README.md; ORCHESTRATION_PLAN.md.
+Checks: build -> PASS (0 warnings/errors); Godot import -> PASS; GPU --card-dealing-checks -> PASS (rerun after final cancellation safety/layout changes); --upgrade-purchase-checks -> PASS; --button-feedback-checks -> PASS; --day-announcement-checks -> PASS; --debug-hotkey-checks -> PASS; --presentation-checks -> PASS; git diff --check -> PASS. Evidence TEMP/chikago-hf90-{import,card-dealing,upgrade-purchase,button-feedback,day-announcement,debug-hotkey,presentation}.log/.err plus dealing.png and ready-{ru,en}-{960,1280}.png.
+Acceptance: opaque full-screen upgrade page replaced by64% black shade over gameplay and a transparent tray. Native Godot Tween, explicitly processing while paused, deals portrait cards from a visible Canvas-drawn diamond/hatch deck with staggered flight, rotation, scale and back-to-face flip. Card layout is free of parent Container position sorting; content stays on original node paths and adapts to viewport height. Entry lasts about1.1s; chosen card exits upward and other cards return toward deck, then0.55s exit completes before the domain callback/resume. Entry/exit disable focus/actions and consume input; arrow/Tab order and affordability preserved. Close/reset/removal cancel generation-bound deferred layout and all tweens without delayed charges or stuck pause. Existing effects, one-purchase rule, prices and pending-choice saves unchanged. Prior tests now await real animation; shared gameplay-only advance fixture skips visual presentation explicitly. Actual-input tests cover RU/EN/viewport geometry, face/back staging, no early/duplicate action, delayed commit, skip, reset during exit, reload during exit, deletion during entrance and resize. RU1280 and EN960 screenshots inspected; readable cards/buttons remain over the actual game.
+Read-set exception: none; source/ not scanned. No image-generation skill needed because deck/back visuals are native Canvas drawing.
+Risks/blocker: none for animated day transition. Existing editor scene null overrides and earlier rough-frame/energy-caption edits preserved. Temporary override removed; isolated saves cleaned up; no commit/push.
+Next: finish a day to see the deck deal upgrades, then buy one or skip to resume.
+```
+
+Координатор подтвердил HF-90 2026-11-12 по build, шести GPU targets и rendered inspection: REVIEW → DONE.
+
+### HF-89 — show energy cost in workshop descriptions
+
+Status: `DONE`; coordinator/executor `/root`; READY 2026-11-12; HF-88 DONE. User requests mentioning1 energy per craft in shop captions.
+CP-HF-89 read-set: current front; scripts/TradeScene.cs (RefreshCraftLabels only); scenes/trade_scene.tscn (two HintLabel texts); tests/Integration/ProjectTest.Economy.cs and Localization.cs (caption-check search); localization/en.tres (existing strings search); .vscode/settings.json; git status/diff. Write-set: ORCHESTRATION_PLAN.md; scripts/TradeScene.cs (four caption/price-hint strings in RU/EN only); scenes/trade_scene.tscn (two workshop HintLabel preview texts only). TEMP/chikago-hf89-* logs/screenshots; temporary override.cfg only if absent, removed afterward.
+Out of scope: source/, craft costs/energy behavior, unrelated scene/editor changes, commit/push. Acceptance: both workshop headings and hover price hints explicitly state dollar cost plus1 energy per item, RU/EN switch correctly, captions remain inside header width. Editor preview text matches current25/50-dollar craft prices and energy cost. Checks: build; temporary GPU RU/EN text/width diagnostic; git diff --check. Text-only change uses existing flow without new permanent tests.
+
+```text
+Task: HF-89
+Recommended status: REVIEW
+Changed: scripts/TradeScene.cs (RU/EN caption and price-hint strings only); scenes/trade_scene.tscn (two editor-preview HintLabel texts); ORCHESTRATION_PLAN.md.
+Checks: build -> PASS (0 warnings/errors); GPU caption diagnostic -> PASS in both languages and workshops, all four text locations show1 energy, measured heading text384–502px fits820px available, balance/energy unchanged; git diff --check -> PASS. Evidence TEMP/chikago-hf89-captions.log/.err.
+Acceptance: headings now show clothing/instruments, configured dollar craft cost and1 energy per item. Both hover price hints show the same energy charge; RU/EN updates preserved. Scene preview captions updated from outdated3-item prices to25/50 dollars plus1 energy. No costs/domain/action changes or permanent tests for a text-only edit; existing user/editor scene changes preserved.
+Read-set exception: none; source/ not scanned.
+Risks/blocker: none for caption text. Temporary override removed; isolated user directory used; no commit/push.
+Next: inspect workshop captions or hover a craft button for the full cost.
+```
+
+Координатор подтвердил HF-89 2026-11-12 по build и GPU RU/EN text-fit diagnostic: REVIEW → DONE.
+
+### HF-88 — preserve rough frame silhouette and extend it upstairs
+
+Status: `DONE`; coordinator/executor `/root`; READY 2026-11-12; HF-87 DONE. User rejects the flat clipped frame edge and requests original rough texture on upper-room headings too.
+CP-HF-88 read-set: current front; scenes/trade_scene.tscn (four headings/labels); art/ui/panel_inverted.png and .import; РамкаИнверсия.png (comparison only); tests/ProjectTest.cs, tests/Integration/ProjectTest.Presentation.cs, Resources.cs; .vscode/settings.json; git status/diff. Write-set: ORCHESTRATION_PLAN.md; scenes/trade_scene.tscn (shared AtlasTexture crop and four heading nodes/label colors). TEMP/chikago-hf88-* diagnostics/screenshots/logs; temporary override.cfg only if absent, removed afterward.
+Out of scope: source/, bitmap generation/editing, gameplay/hitboxes, existing user/editor scene modifications or null-export repair, commit/push. Acceptance: shared frame retains full original alpha silhouette including faint exterior brush strokes, no clipped rectangular white plate; corners/brush marks remain proportional instead of flattened; white title/hint fit in both showroom headers, atelier and music; RU/EN readable; mouse ignored. Use actual source alpha bounds with transparent padding, half-scale NinePatch border and tiled edge regions. Checks: Godot alpha-bound inspection; GPU --resource-checks/--presentation-checks; temporary four-room RU/EN geometry/alpha diagnostic and screenshot inspection; git diff --check.
+
+```text
+Task: HF-88
+Recommended status: REVIEW
+Changed: scenes/trade_scene.tscn (shared frame region, four heading NinePatchRects, upper title/hint colors); ORCHESTRATION_PLAN.md.
+Checks: source alpha bounds -> (400,400,1249,1249); selected region (392,392,1265,1265) encloses complete silhouette with8-pixel padding; temporary GPU four-room RU/EN checks -> PASS (full alpha bounds, tile mode, scale, label fit and mouse-ignore); GPU --resource-checks -> PASS; --presentation-checks -> PASS; git diff --check -> PASS. Evidence TEMP/chikago-hf88-{probe,header,resource,presentation}.log/.err and {Atelier,MusicWorkshop,ShowroomLeft,Showroom}-{ru,en}.png.
+Acceptance: removed the destructive tight crop that cut off exterior brush marks. Shared texture now includes the original transparent exterior/white rim and rough inner edge. Half-scale NinePatch corners with160-source-pixel margins retain proportional detail, tiled edge sections avoid flattening brush marks along wide headings. Both showroom headers retain their visible width with additional vertical padding. Atelier/music headers now use the same texture and white labels. Rendered RU showroom and EN atelier screenshots inspected: flat rectangular plate gone, exterior scuffs visible, text readable. Source bitmap unchanged, no AI/raster editing needed.
+Read-set exception: none; source/ not scanned.
+Risks/blocker: none for frame presentation. Existing editor scene changes preserved; temporary override removed; no commit/push.
+Next: inspect rough frames in all four rooms in the game/editor.
+```
+
+Координатор подтвердил HF-88 2026-11-12 по alpha preservation, GPU checks и screenshot inspection: REVIEW → DONE.
+
 ### HF-87 — full-screen opening and midday announcements
 
 Status: `DONE`; coordinator/executor `/root`; READY 2026-11-12; HF-86 DONE. User requests large UI messages "Магазин открыт" and "Середина дня" with slow smooth disappearance.

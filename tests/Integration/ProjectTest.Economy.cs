@@ -167,7 +167,9 @@ public partial class ProjectTest
             game.EndDay(); game.EndDay();
             Check(game.CurrentDay == 5 && game.QuotaStage == 1 && game.Score == 0 && game.CheckpointDay == 5,
                 "The first quota must be exactly250 at the end of day four");
+            await WaitForDayCardAnimation(game);
             game.GetNode<DayTransitionCard>("DayTransitionCard").Skip();
+            await WaitForDayCardAnimation(game);
             game.CurrentDay = 7; game.Score = 450; game.EndDay(); game.EndDay();
             Check(game.Completed && game.Score == 0 && !game.DayTransitionOpen,
                 "The final quota must be exactly450 at the end of day seven");

@@ -360,6 +360,7 @@ public partial class ProjectTest
             var card = game.GetNode<DayTransitionCard>("DayTransitionCard");
             card.Open(1, 2, new[] { ChikagoShop.Domain.Days.DayUpgrade.Cash,
                 ChikagoShop.Domain.Days.DayUpgrade.Energy, ChikagoShop.Domain.Days.DayUpgrade.Time }, 1000);
+            await WaitForDayCardAnimation(card);
             await SettleButtonFeedback();
             Check(Root.GuiGetFocusOwner() == null && controller.GetVisualFrame().Strength == 0,
                 "Opening day cards must not automatically focus or outline a purchase");
@@ -395,6 +396,7 @@ public partial class ProjectTest
             {
                 card.Open(1, 2, new[] { ChikagoShop.Domain.Days.DayUpgrade.Cash,
                     ChikagoShop.Domain.Days.DayUpgrade.Energy, ChikagoShop.Domain.Days.DayUpgrade.Time }, balance);
+                await WaitForDayCardAnimation(card);
                 await SettleButtonFeedback();
                 Check(Root.GuiGetFocusOwner() == null && controller.GetVisualFrame().Strength == 0,
                     "Reopening cards must reset selection even after earlier keyboard use");

@@ -69,6 +69,7 @@ public sealed class DayCycleController
 	{
 		if (!OS.IsDebugBuild() || _game.Failed || _game.Completed || Upgrades.Pending) return;
 		Session.AddTimeForTesting(30);
+		_announcements.Observe(Session.RemainingSeconds, Session.Duration, Session.IsClosed);
 		RefreshTimer();
 		UpdateDayNightBackground();
 		_game.SynchronizeDayState();
@@ -92,7 +93,7 @@ public sealed class DayCycleController
 		switch (Session.RequestEnd(_game.TradeActive))
 		{
 			case EndDayAction.Closed:
-				_announcements.Dismiss();
+				_announcements.Observe(Session.RemainingSeconds, Session.Duration, Session.IsClosed);
 				RefreshTimer();
 				UpdateDayNightBackground();
 				_game.SynchronizeDayState();

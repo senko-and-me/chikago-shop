@@ -25,12 +25,11 @@
 [ext_resource type="Script" uid="uid://dqhunfpycjxyp" path="res://scripts/UI/ProgressPanel.cs" id="22_progress"]
 [ext_resource type="Script" uid="uid://cnnctojfahevu" path="res://scripts/Camera/WorldCamera.cs" id="23_world_camera"]
 [ext_resource type="Script" path="res://scripts/Presentation/RoomDoorwayPresentation.cs" id="24_doorways"]
-
 [ext_resource type="Texture2D" path="res://art/ui/panel_inverted.png" id="25_inverted"]
 
 [sub_resource type="AtlasTexture" id="InvertedHeaderTexture"]
 atlas = ExtResource("25_inverted")
-region = Rect2(440, 440, 1168, 1168)
+region = Rect2(392, 392, 1265, 1265)
 filter_clip = true
 
 [sub_resource type="StyleBoxTexture" id="CreateButtonNormal"]
@@ -133,20 +132,27 @@ position = Vector2(304, 535)
 texture = ExtResource("11_atelier")
 centered = false
 
-[node name="Header" type="ColorRect" parent="World/Atelier" unique_id=2009831738]
+[node name="Header" type="NinePatchRect" parent="World/Atelier" unique_id=2009831738]
 offset_left = 480.0
-offset_top = 187.0
-offset_right = 1440.0
-offset_bottom = 355.0
+offset_top = 165.0
+offset_right = 2400.0
+offset_bottom = 605.0
+scale = Vector2(0.5, 0.5)
 mouse_filter = 2
-color = Color(0.36, 0.21, 0.17, 0.94)
+texture = SubResource("InvertedHeaderTexture")
+patch_margin_left = 160
+patch_margin_top = 160
+patch_margin_right = 160
+patch_margin_bottom = 160
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
 
 [node name="NameLabel" type="Label" parent="World/Atelier" unique_id=641788103]
 offset_left = 550.0
 offset_top = 207.0
 offset_right = 1370.0
 offset_bottom = 285.0
-theme_override_colors/font_color = Color(1, 0.96, 0.89, 1)
+theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 52
 text = "АТЕЛЬЕ"
 horizontal_alignment = 1
@@ -156,9 +162,9 @@ offset_left = 550.0
 offset_top = 285.0
 offset_right = 1370.0
 offset_bottom = 335.0
-theme_override_colors/font_color = Color(1, 0.9, 0.79, 1)
+theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 24
-text = "Шляпа или перчатки  •  90$ за 3"
+text = "Одежда  •  25$ + 1 энергия за предмет"
 horizontal_alignment = 1
 
 [node name="GetItemButton" type="Button" parent="World/Atelier" unique_id=1127177850]
@@ -215,20 +221,27 @@ position = Vector2(3622, 535)
 texture = ExtResource("4_pi35y")
 centered = false
 
-[node name="Header" type="ColorRect" parent="World/MusicWorkshop" unique_id=2056955034]
+[node name="Header" type="NinePatchRect" parent="World/MusicWorkshop" unique_id=2056955034]
 offset_left = 480.0
-offset_top = 181.0
-offset_right = 1440.0
-offset_bottom = 349.0
+offset_top = 159.0
+offset_right = 2400.0
+offset_bottom = 599.0
+scale = Vector2(0.5, 0.5)
 mouse_filter = 2
-color = Color(0.36078432, 0.21176471, 0.16862746, 0.9411765)
+texture = SubResource("InvertedHeaderTexture")
+patch_margin_left = 160
+patch_margin_top = 160
+patch_margin_right = 160
+patch_margin_bottom = 160
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
 
 [node name="NameLabel" type="Label" parent="World/MusicWorkshop" unique_id=596996175]
 offset_left = 550.0
 offset_top = 201.0
 offset_right = 1370.0
 offset_bottom = 279.0
-theme_override_colors/font_color = Color(0.91, 0.96, 1, 1)
+theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 52
 text = "МУЗ. ШТУКИ"
 horizontal_alignment = 1
@@ -238,9 +251,9 @@ offset_left = 550.0
 offset_top = 279.0
 offset_right = 1370.0
 offset_bottom = 329.0
-theme_override_colors/font_color = Color(0.77, 0.89, 1, 1)
+theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 24
-text = "Гитара или труба  •  110$ за 3"
+text = "Инструменты  •  50$ + 1 энергия за предмет"
 horizontal_alignment = 1
 
 [node name="GetItemButton" type="Button" parent="World/MusicWorkshop" unique_id=2006804839]
@@ -295,15 +308,18 @@ position = Vector2(3622, 1629)
 
 [node name="ShowroomHeader" type="NinePatchRect" parent="World/Showroom" unique_id=1324160784]
 offset_left = 289.0
-offset_top = 116.0
-offset_right = 1629.0
-offset_bottom = 271.0
+offset_top = 80.0
+offset_right = 2969.0
+offset_bottom = 520.0
+scale = Vector2(0.5, 0.5)
 mouse_filter = 2
 texture = SubResource("InvertedHeaderTexture")
-patch_margin_left = 48
-patch_margin_top = 48
-patch_margin_right = 48
-patch_margin_bottom = 48
+patch_margin_left = 160
+patch_margin_top = 160
+patch_margin_right = 160
+patch_margin_bottom = 160
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
 
 [node name="ShowroomLabel" type="Label" parent="World/Showroom" unique_id=829535363]
 offset_left = 339.0
@@ -356,15 +372,18 @@ position = Vector2(304, 1629)
 
 [node name="ShowroomHeader" type="NinePatchRect" parent="World/ShowroomLeft" unique_id=1817932225]
 offset_left = 289.0
-offset_top = 116.0
-offset_right = 1629.0
-offset_bottom = 271.0
+offset_top = 80.0
+offset_right = 2969.0
+offset_bottom = 520.0
+scale = Vector2(0.5, 0.5)
 mouse_filter = 2
 texture = SubResource("InvertedHeaderTexture")
-patch_margin_left = 48
-patch_margin_top = 48
-patch_margin_right = 48
-patch_margin_bottom = 48
+patch_margin_left = 160
+patch_margin_top = 160
+patch_margin_right = 160
+patch_margin_bottom = 160
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
 
 [node name="ShowroomLabel" type="Label" parent="World/ShowroomLeft" unique_id=1358958244]
 offset_left = 339.0

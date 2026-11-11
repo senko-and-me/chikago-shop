@@ -158,6 +158,7 @@ public partial class ProjectTest
                 int cash = game.Score;
                 CraftAtelier(game);
                 game.EndDay();
+                await WaitForDayCardAnimation(game);
                 game._Process(120);
                 Check(game.DayClosed && game.TradeActive && game.ItemIndex == item && game.Score == cash &&
                       game.StoredItems.SequenceEqual(inventory) && game.CurrentDay == 4,
@@ -255,8 +256,10 @@ public partial class ProjectTest
                 for (int day = 1; day <= 6; day++)
                 {
                     game.EndDay();
+                    await WaitForDayCardAnimation(game);
                     Check(game.DayClosed && !game.DayTransitionOpen, "Closing alone must not show a new-day card");
                     game.EndDay();
+                    await WaitForDayCardAnimation(game);
                     await ToSignal(this, SignalName.ProcessFrame);
                     await ToSignal(this, SignalName.ProcessFrame);
                     var card = game.GetNode<DayTransitionCard>("DayTransitionCard");
@@ -286,6 +289,7 @@ public partial class ProjectTest
                     var camera = game.GetNode<Camera2D>("Camera2D");
                     Vector2 position = camera.Position;
                     game.EndDay();
+                    await WaitForDayCardAnimation(game);
                     game._Process(60);
                     game.TickCraftDay(60);
                     game.GetNode<PauseMenu>("PauseMenu").Open();
@@ -301,6 +305,7 @@ public partial class ProjectTest
                     if (day % 2 == 0) await ClickControl(game, content + $"Choices/{choice}/Content/Choose");
                     else card._Input(new InputEventKey { Pressed = true, Keycode = Key.Key1 });
                     card.Choose(card.Options[1]);
+                    await WaitForDayCardAnimation(game);
                     Check(!Paused && !game.DayTransitionOpen && game.CurrentDay == day + 1,
                         "Mouse/keyboard selection must apply only one upgrade without skipping a day");
                     Check(game.DayUpgrades.Selected == choice && game.Score == cash - DayUpgradeSession.Cost(choice) + (choice == DayUpgrade.Cash ? 50 : 0) &&
@@ -308,26 +313,36 @@ public partial class ProjectTest
                           game.DayRemainingSeconds == (choice == DayUpgrade.Time ? 150 : 120), "The chosen upgrade must change only its intended stat");
                 }
                 game.EndDay();
+                await WaitForDayCardAnimation(game);
                 game.EndDay();
+                await WaitForDayCardAnimation(game);
                 Check(game.Completed && !game.DayTransitionOpen && !Paused, "Winning after day seven must not show a day-eight card");
             }
             game.NewGame();
             game.CurrentDay = 4;
             game.Score = 0;
             game.EndDay();
+            await WaitForDayCardAnimation(game);
             game.EndDay();
+            await WaitForDayCardAnimation(game);
             Check(game.Failed && !game.DayTransitionOpen && !Paused, "An unpaid quota must not show a successful transition");
             game.NewGame();
             game.EndDay();
+            await WaitForDayCardAnimation(game);
             game.EndDay();
+            await WaitForDayCardAnimation(game);
             game.ReturnToCheckpoint();
             Check(!Paused && !game.DayTransitionOpen && game.CurrentDay == 1, "Checkpoint restore must release the card pause");
             game.EndDay();
+            await WaitForDayCardAnimation(game);
             game.EndDay();
+            await WaitForDayCardAnimation(game);
             game.NewGame();
             Check(!Paused && !game.DayTransitionOpen && game.CurrentDay == 1, "New game must release the card pause");
             game.EndDay();
+            await WaitForDayCardAnimation(game);
             game.EndDay();
+            await WaitForDayCardAnimation(game);
             game.QueueFree();
             await ToSignal(this, SignalName.ProcessFrame);
             Check(!Paused, "Freeing an open card must release its pause");
@@ -340,9 +355,12 @@ public partial class ProjectTest
                 game.Score = 1000;
                 game.CurrentDay = choice is DayUpgrade.Atelier or DayUpgrade.Music ? 3 : 1;
                 game.EndDay();
+                await WaitForDayCardAnimation(game);
                 game.EndDay();
+                await WaitForDayCardAnimation(game);
                 var card = game.GetNode<DayTransitionCard>("DayTransitionCard");
                 card.Choose(choice);
+                await WaitForDayCardAnimation(game);
                 int cash = game.Score;
                 int energy = game.EnergyRemaining;
                 double time = game.DayRemainingSeconds;
@@ -355,6 +373,7 @@ public partial class ProjectTest
                       game.DayRemainingSeconds == time && game.DayUpgrades.AtelierLevel == atelierLevel && game.DayUpgrades.MusicLevel == musicLevel,
                     "Every upgrade must survive reload with no repeated reward, lost energy or clamped bonus time");
                 game.GetNode<DayTransitionCard>("DayTransitionCard").Choose(choice);
+                await WaitForDayCardAnimation(game);
                 Check(game.Score == cash && game.EnergyRemaining == energy && game.DayRemainingSeconds == time, "Reload must not reapply a reward");
                 if (choice is DayUpgrade.Atelier or DayUpgrade.Music)
                 {
@@ -376,7 +395,9 @@ public partial class ProjectTest
                         Check(counts[item.index] == WorkshopItemCatalog.RarityWeight(workshop, item.item.RarityId, game.DayUpgrades), "All 100 tickets must match the displayed category chances");
                 }
                 game.EndDay();
+                await WaitForDayCardAnimation(game);
                 game.EndDay();
+                await WaitForDayCardAnimation(game);
                 Check(game.DayUpgrades.AtelierLevel == atelierLevel && game.DayUpgrades.MusicLevel == musicLevel &&
                       game.DayRemainingSeconds == 120 && game.EnergyRemaining == 2, "Category upgrades must persist across days while daily energy/time expire");
                 game.ReturnToCheckpoint();
@@ -458,7 +479,9 @@ public partial class ProjectTest
                 Root.GetTexture().GetImage().SavePng(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "chikago-clock-expired.png"));
             }
             game.EndDay();
+            await WaitForDayCardAnimation(game);
             game.GetNode<DayTransitionCard>("DayTransitionCard").Skip();
+            await WaitForDayCardAnimation(game);
             Check(timer.Text == "90" && clock.Texture.ResourcePath.EndsWith("day_timer_empty.png"), "The next day must restore the empty clock");
             game._Process(2.25);
             double remaining = game.DayRemainingSeconds;
@@ -470,9 +493,12 @@ public partial class ProjectTest
             Check(game.DayRemainingSeconds == remaining && timer.Text == "88" && clock.Texture.ResourcePath.EndsWith("day_timer_empty.png"),
                 "Reload must restore fractional time with the matching seconds and art");
             game.EndDay();
+            await WaitForDayCardAnimation(game);
             Check(timer.Text == "00" && clock.Texture.ResourcePath.EndsWith("day_timer_expired.png"), "Manual closure must also show the filled clock");
             game.EndDay();
+            await WaitForDayCardAnimation(game);
             game.GetNode<DayTransitionCard>("DayTransitionCard").Choose(DayUpgrade.Time);
+            await WaitForDayCardAnimation(game);
             Check(timer.Text == "120" && game.DayRemainingSeconds == 120, "The timer must show all remaining seconds including a purchased time bonus");
             game.GetItemFromAtelier();
             var embroidery = game.GetNode<EmbroideryGame>("EmbroideryGame");
@@ -522,7 +548,10 @@ public partial class ProjectTest
                 Root.Size = size;
                 Seed(1, 0);
                 game = await CreateGame(scene);
-                game.EndDay(); game.EndDay();
+                game.EndDay();
+                await WaitForDayCardAnimation(game);
+                game.EndDay();
+                await WaitForDayCardAnimation(game);
                 await ToSignal(this, SignalName.ProcessFrame);
                 await ToSignal(this, SignalName.ProcessFrame);
                 var card = game.GetNode<DayTransitionCard>("DayTransitionCard");
@@ -536,6 +565,7 @@ public partial class ProjectTest
                         Check(Root.GetVisibleRect().Encloses(game.GetNode<Control>(content + $"Choices/{choice}/Content/{name}").GetGlobalRect()),
                             "All paid card content must fit the viewport");
                     card.Choose(choice);
+                    await WaitForDayCardAnimation(game);
                 }
                 card._Input(new InputEventKey { Pressed = true, Keycode = Key.Key1 });
                 Check(card.IsOpen && game.Score == 0 && game.DayUpgrades.Selected == DayUpgrade.None,
@@ -546,6 +576,7 @@ public partial class ProjectTest
                 if (size.X == 960) await ClickControl(game, content + "Skip");
                 else card._Input(new InputEventKey { Pressed = true, Keycode = Key.Escape });
                 card.Skip();
+                await WaitForDayCardAnimation(game);
                 Check(!Paused && !card.IsOpen && game.Score == 0 && !game.DayUpgrades.Pending &&
                       game.DayUpgrades.Selected == DayUpgrade.None, "Skipping must resume with no payment or effect");
                 await Reload();
@@ -561,7 +592,10 @@ public partial class ProjectTest
                 int day = choice is DayUpgrade.AtelierPrice or DayUpgrade.MusicPrice ? 5 : choice is DayUpgrade.Atelier or DayUpgrade.Music ? 3 : 1;
                 Seed(day, DayUpgradeSession.Cost(choice));
                 game = await CreateGame(scene);
-                game.EndDay(); game.EndDay();
+                game.EndDay();
+                await WaitForDayCardAnimation(game);
+                game.EndDay();
+                await WaitForDayCardAnimation(game);
                 await Reload();
                 var card = game.GetNode<DayTransitionCard>("DayTransitionCard");
                 Check(card.IsOpen && game.DayUpgrades.Pending, "An unfinished purchase must reopen after reload");
@@ -577,7 +611,10 @@ public partial class ProjectTest
                 }
                 await ClickControl(game, content + $"Choices/{choice}/Content/Choose");
                 int expected = balance - DayUpgradeSession.Cost(choice) + (choice == DayUpgrade.Cash ? game.DayUpgrades.CashReward : 0);
-                card.Choose(choice); card.Skip();
+                card.Choose(choice);
+                await WaitForDayCardAnimation(game);
+                card.Skip();
+                await WaitForDayCardAnimation(game);
                 Check(game.Score == expected && !Paused && !card.IsOpen && game.DayUpgrades.Selected == choice,
                     "A card must charge once, apply once and dismiss the shop");
                 Check(game.EnergyRemaining == energy + (choice == DayUpgrade.Energy ? 1 : 0) &&
@@ -631,7 +668,9 @@ public partial class ProjectTest
                     }));
                 game = await CreateGame(scene);
                 game.EndDay();
+                await WaitForDayCardAnimation(game);
                 game.EndDay();
+                await WaitForDayCardAnimation(game);
                 await ToSignal(this, SignalName.ProcessFrame);
                 await ToSignal(this, SignalName.ProcessFrame);
                 var card = game.GetNode<DayTransitionCard>("DayTransitionCard");
@@ -692,9 +731,12 @@ public partial class ProjectTest
                 foreach (int index in game.StoredItems.TakeLast(3))
                     Check(game.GetItemPrice(index) == (int)(TradeScene.GetItemBasePrice(index) * 1.2m), "Newly crafted goods must receive the category price too");
                 game.EndDay();
+                await WaitForDayCardAnimation(game);
                 game.EndDay();
+                await WaitForDayCardAnimation(game);
                 card = game.GetNode<DayTransitionCard>("DayTransitionCard");
                 card.Choose(choice);
+                await WaitForDayCardAnimation(game);
                 Check(game.GetItemPrice(item) == (int)(TradeScene.GetItemBasePrice(item) * 1.4m), "Repeated price cards must add twenty percentage points rather than compound");
                 game.QueueFree();
                 await ToSignal(this, SignalName.ProcessFrame);
@@ -711,8 +753,12 @@ public partial class ProjectTest
             using (var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Write))
                 file.StoreString("{\"save_version\":10,\"day\":4,\"score\":1000,\"atelier_price_level\":1,\"music_price_level\":1}");
             game = await CreateGame(scene);
-            game.EndDay(); game.EndDay();
+            game.EndDay();
+            await WaitForDayCardAnimation(game);
+            game.EndDay();
+            await WaitForDayCardAnimation(game);
             game.GetNode<DayTransitionCard>("DayTransitionCard").Choose(DayUpgrade.AtelierPrice);
+            await WaitForDayCardAnimation(game);
             game.ReturnToCheckpoint();
             Check(game.DayUpgrades.AtelierPriceLevel == 1 && game.DayUpgrades.MusicPriceLevel == 1,
                 "The day-five checkpoint must capture both price bonus levels before the next selection");

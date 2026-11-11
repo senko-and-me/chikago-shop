@@ -16,6 +16,13 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--card-dealing-checks"))
+            {
+                await TestCardDealing();
+                GD.Print("CARD_DEALING_CHECKS_PASS: deck, stagger, flip, dimmed gameplay, purchase/skip, cancellation and resize");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--day-announcement-checks"))
             {
                 await TestDayAnnouncements();
