@@ -16,6 +16,12 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--dialogue-localization-checks"))
+            {
+                await TestDialogueLocalization();
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--game-music-checks"))
             {
                 await TestGameMusic();

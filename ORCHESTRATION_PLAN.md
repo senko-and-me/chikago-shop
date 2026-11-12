@@ -7,6 +7,25 @@
 
 ## Текущий фронт
 
+### HF-97 — английская локализация вступительного диалога
+
+Статус: `DONE`; координатор/исполнитель `/root`; HF-96 DONE; READY 2026-11-12. Единственный владелец write-set `/root`, пересечений нет.
+CP-HF-97 read-set: текущий фронт, scripts/Dialogue/DialoguePlayer.cs, scripts/Localization/GameLocalization.cs, scripts/MainMenu.cs (language buttons), dialogue/intro.ru.json, localization/en.tres, src/ChikagoShop.Domain/Dialogue/{DialogueSession,SentencePages}.cs; tests/ProjectTest.cs, tests/Integration/ProjectTest.{Localization,IntroMusic,Menu}.cs; README.md; .vscode/settings.json. Write-set: ORCHESTRATION_PLAN.md, localization/en.tres, scripts/Dialogue/DialoguePlayer.cs, tests/ProjectTest.cs, tests/Integration/ProjectTest.DialogueLocalization.cs[.uid], README.md.
+Out of scope: source/, изменение русского сценария/сюжета/музыкальных cues, домен/save/экономика, остальные переводы/арт, пользовательские изменения, commit/push. Приёмка: существующий English в настройках переводит все24 записи вступления (22 реплики и2 действия), имена/титр, сдержанный разговорный английский в стилистике Chicago/mob; пагинация выполняется после перевода, без потери текста. Смена языка открытого диалога сохраняет исходную реплику и не переигрывает музыкальный cue; RU возвращается без изменения исходника. Проверки: полнота каталога/отсутствие кириллицы EN, все страницы двух языков/размеров, фактическая кнопка English и сохранение предпочтения, live switch/cues/long-scroll, build/domain, music regression, diff-check. TEMP/chikago-hf97-* логи, override.cfg только при исходном отсутствии с удалением в finally.
+
+```text
+Task: HF-97
+Recommended status: REVIEW
+Changed: localization/en.tres (28 entries: 24 complete speeches/actions, 3 character names, prologue title); scripts/Dialogue/DialoguePlayer.cs; tests/ProjectTest.cs; tests/Integration/ProjectTest.DialogueLocalization.cs[.uid]; README.md; ORCHESTRATION_PLAN.md.
+Checks: dotnet build ChikagoShop.sln --no-restore -> PASS (0 warnings/errors); domain --no-build with DOTNET_ROLL_FORWARD=Major -> PASS (131 tests); Godot .NET import -> PASS; --dialogue-localization-checks -> PASS; --menu-music-checks и --intro-music-checks -> PASS (all clean logs/exit0); git diff --check -> PASS. Evidence: TEMP/chikago-hf97-{build,domain,import,dialogue-localization,menu-music,intro-music}.log. Temporary override removed in finally.
+Acceptance: все 22 реплики и 2 отдельные ремарки переведены на естественный английский с сохранением смысла, итальянских обращений, дружеских подколов и последующего жёсткого тона Кастелло. Frankie's/Frankie согласованы с существующими narrative-переводами игры. Имена Customer/Frankie/Castello и двухстрочный титр локализованы. Перевод берётся из существующего GameLocalization.Text до SentencePages; original Session/JSON и музыкальные cues не изменены. Стандартный NotificationTranslationChanged обновляет текущую реплику с начала на новом языке, сохраняя Session.Index и не вызывая MusicCueRequested повторно. RU восстанавливается по стабильным исходным ключам. Реальная мышь нажимает English/Russian в меню, выбор сохраняется и перечитывается из settings; New Game открывает английский диалог с правильными музыкой/титром. Проверены все страницы RU/EN при 1280×720/960×540, отсутствие кириллицы EN, точная конкатенация всего перевода без потерь/дубликатов, отступы/шрифт/scroll, отсутствие заголовков у действий, обе музыкальные метки и одно завершение. Live switch после перехода на следующую страницу сохраняет исходную реплику и не переигрывает музыку. Настройки тестового userdir восстанавливаются, реальные пользовательские saves/settings не затронуты.
+Read-set exception: нет; source/ не читался.
+Risks/blocker: ручной visual smoke не выполнялся; перевод художественный/контекстный, без изменения событий сценария. Пользовательские файлы сохранены; commit/push не выполнялись.
+Next: выбрать English в настройках и запустить New Game для чтения перевода.
+```
+
+Координатор подтвердил HF-97 2026-11-12 по полной RU/EN проверке диалога и music regression: REVIEW → DONE.
+
 ### HF-96 — публикация музыкальной системы в feature/music и main
 
 Статус: `DONE`; координатор/исполнитель `/root`; HF-93…HF-95 DONE; READY 2026-11-12. Пользователь явно запросил создание feature/music, подробный коммит, push этой ветки и затем push main в подтверждённый origin senko-and-me/chikago-shop.

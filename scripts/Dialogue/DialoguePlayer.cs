@@ -11,6 +11,8 @@ public partial class DialoguePlayer : Control
     public string DialoguePath { get; set; } = "res://dialogue/intro.ru.json";
     private RichTextLabel _text;
     private Label _speaker;
+    private Label _heading;
+    private string _localizedText = "";
     private int _pageStart;
     private int _pageEnd;
     private double _characters;
@@ -42,7 +44,8 @@ public partial class DialoguePlayer : Control
         var shade = new ColorRect { Color = new Color(0.06f, 0.045f, 0.035f, 0.78f), MouseFilter = MouseFilterEnum.Ignore };
         AddChild(shade);
         shade.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        var heading = new Label { Text = "П Р О Л О Г\nДом моды Френки", HorizontalAlignment = HorizontalAlignment.Center };
+        var heading = new Label { Name = "Heading", HorizontalAlignment = HorizontalAlignment.Center };
+        _heading = heading;
         AddChild(heading);
         heading.SetAnchorsAndOffsetsPreset(LayoutPreset.TopWide);
         heading.OffsetTop = 32;
@@ -136,12 +139,26 @@ public partial class DialoguePlayer : Control
 
     private void DisplayLine()
     {
-        _speaker.Text = Session.Current.Speaker;
-        _speaker.Visible = !string.IsNullOrWhiteSpace(Session.Current.Speaker);
-        _pageStart = 0;
-        DisplayPage();
+        RefreshLocalizedLine();
         if (!string.IsNullOrWhiteSpace(Session.Current.MusicCue))
             MusicCueRequested?.Invoke(Session.Current.MusicCue);
+    }
+
+    private void RefreshLocalizedLine()
+    {
+        _heading.Text = GameLocalization.Text("П Р О Л О Г\nДом моды Френки");
+        if (Session.Current == null) return;
+        _speaker.Text = GameLocalization.Text(Session.Current.Speaker);
+        _speaker.Visible = !string.IsNullOrWhiteSpace(Session.Current.Speaker);
+        _localizedText = GameLocalization.Text(Session.Current.Text);
+        _pageStart = 0;
+        DisplayPage();
+    }
+
+    public override void _Notification(int what)
+    {
+        if (what == NotificationTranslationChanged && _text != null && _heading != null && Session != null)
+            RefreshLocalizedLine();
     }
 
     private void DisplayPage()
@@ -150,7 +167,7 @@ public partial class DialoguePlayer : Control
         _text.VisibleCharacters = -1;
         _text.AddThemeFontSizeOverride("normal_font_size", 20);
         _text.ScrollActive = false;
-        string source = Session.Current.Text;
+        string source = _localizedText;
         // Measure with the actual shaped label, including its font, wrapping and
         // line spacing. The whole page is laid out before typewriter reveal.
         _pageEnd = SentencePages.End(source, _pageStart, candidate =>
@@ -182,7 +199,7 @@ public partial class DialoguePlayer : Control
     {
         if (_closed) return;
         if (IsRevealing) { Reveal(); return; }
-        if (_pageEnd < Session.Current.Text.Length)
+        if (_pageEnd < _localizedText.Length)
         {
             _pageStart = _pageEnd;
             DisplayPage();
