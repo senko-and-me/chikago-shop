@@ -7,6 +7,50 @@
 
 ## Текущий фронт
 
+### HF-98 — публикация локальных изменений
+
+Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-12. Пользователь явно запросил commit и push.
+CP-HF-98 read-set: Git status/diff/remotes/refs; результаты HF-97; .godot/cleanup-check-dir.txt; tests/Integration/ProjectTest.EmbroideryTarget.cs. Write-set: ORCHESTRATION_PLAN.md; Git index/commit/main и origin/main для текущих изменений README/docs/audio, сцены, вышивки и её теста. Out of scope: source/, новые продуктовые изменения, force push. Приёмка: один коммит с текущими изменениями отправлен в подтверждённый origin/main, дерево чистое. Проверки: fetch (main актуален); diff-check PASS; предыдущие build/resource/link/audio-hash PASS; повторная GPU embroidery-target проверка в изолированной копии PASS (код 0, .godot/publish-embroidery.log). Публикация обычным push без переписывания истории.
+
+### HF-97 — порядок в документации и ресурсах
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-12. Запрос пользователя: привести README в порядок и прибраться в папках.
+CP-HF-97 read-set: текущий фронт; AGENTS.md; README.md; .gitignore; export_presets.cfg; project.godot; список каталогов кроме source/; docs/BALANCE_REPORT.md (ссылка); audio/music/intro_loops.json и import-sidecars; корневая РамкаИнверсия.png и art/ui/panel_inverted.png (сравнение SHA256); ссылки ресурсов в scenes/scripts/tests; Git status/diff.
+Write-set: README.md; docs/{MUSIC,GAMEPLAY,DEVELOPMENT,TESTING}.md; docs/audio/intro_loops.json; audio/music/{menu_theme.ogg,thoughtful_source.mp3,sinister_source.mp3} с import-sidecars (перенос в originals/); корневые РамкаИнверсия.png[.import] (удаление подтверждённого неиспользуемого дубликата); ORCHESTRATION_PLAN.md. Godot может обновить import-sidecars перемещённых ресурсов.
+Out of scope: source/, игровой код/поведение, баланс, сохранения, пользовательские правки сцен и вышивки, commit/push. Приёмка: короткий README со ссылками на подробности; исходная документация распределена по темам; оригиналы аудио отделены от runtime-циклов; корневой дубликат удалён только после проверки равенства и отсутствия ссылок. Проверки: build; Godot import; resource-checks; ссылки Markdown и ресурсы, git diff --check. Локальные предыдущие изменения сохраняются.
+
+```text
+Task: HF-97
+Recommended status: REVIEW
+Changed: README.md переписан как точка входа; подробности разнесены по docs/GAMEPLAY.md, DEVELOPMENT.md, MUSIC.md, TESTING.md. Исходные Ogg/MP3 вместе с sidecars перенесены в audio/music/originals/; intro_loops.json — в docs/audio/. Godot переимпортировал новые пути. Корневая РамкаИнверсия.png и sidecar удалены после подтверждения SHA256-равенства art/ui/panel_inverted.png и отсутствия внешних ссылок.
+Checks: dotnet build ChikagoShop.sln -> PASS (0 warnings/errors); Godot import -> exit 0; resource-checks в TEMP/chikago-cleanup-45y24_fa с изолированным userdata -> RESOURCE_CHECKS_PASS, exit 0; Markdown local links -> PASS; byte hashes оригинального аудио против HEAD -> PASS; git diff --check -> PASS. Evidence: .godot/cleanup-{import,resource-check,resource-errors}.log.
+Acceptance: запуск и управление находятся в начале README; ссылки ведут к тематической документации; runtime WAV-циклы остались на прежних путях, оригиналы сохранены без изменения байтов; пользовательские предыдущие изменения сцен, вышивки и тестов сохранены. commit/push не выполнялись.
+Read-set exception: нет; source/ не читался, в изолированную проверку не копировался.
+Risks/blocker: импорт сообщает о повторяющихся UID четырёх прежних кнопок root/ru. Resource-checks проходят, но при shutdown Godot сообщает о 2 ObjectDB instances и 1 resource still in use; cleanup не менял lifecycle кода. Эти диагностики не исправлялись в задаче по документации/структуре.
+Next: проверить документацию в IDE и включить изменения в следующий общий коммит.
+```
+
+Координатор подтвердил HF-97 после сборки, импорта, resource-checks и проверки ссылок: REVIEW → DONE.
+
+### HF-93 — make the embroidery target visible on white fabric
+
+Status: `DONE`; coordinator/executor `/root`; READY 2026-11-12; HF-92 DONE.
+CP-HF-93 read-set: current front; scripts/UI/EmbroideryGame.cs; scripts/Presentation/MonochromePresentation.cs; tests/ProjectTest.cs; tests/Integration/ProjectTest.Crafting.cs and ProjectTest.Presentation.cs; project.godot; .vscode/settings.json; git status/diff. Write-set: ORCHESTRATION_PLAN.md; scripts/UI/EmbroideryGame.cs (target drawing only); tests/ProjectTest.cs (targeted runner); tests/Integration/ProjectTest.EmbroideryTarget.cs and .uid. TEMP/chikago-hf93-* evidence.
+Out of scope: source/, hit radius, timing, crafting rules/costs, TradeScene.cs, scene/user changes, commit/push. Acceptance: active point has opaque dark center, white separator and dark pulsing ring, rendered above other points; visible in actual monochrome output at1280x720 and960x540; real clicks advance target without misses. Checks: dotnet build; GPU --embroidery-target-checks (rendered contrast and target movement); git diff --check.
+
+```text
+Task: HF-93
+Recommended status: REVIEW
+Changed: scripts/UI/EmbroideryGame.cs (target drawing); tests/ProjectTest.cs; tests/Integration/ProjectTest.EmbroideryTarget.cs; ORCHESTRATION_PLAN.md.
+Checks: dotnet build ChikagoShop.csproj -> PASS (0 warnings/errors); GPU --embroidery-target-checks -> PASS; git diff --check -> PASS. Evidence TEMP/chikago-hf93-target.log/.err and target-{1280,960}.png.
+Acceptance: active target drawn last with10px black body, white center/separator and black3px pulsing ring over white backing; readable through monochrome filter. Pixel checks cover every target in two full patterns at1280x720/960x540, including real input advancing exactly one stitch with zero misses and full completion.1280 screenshot visually inspected. Hit rules unchanged.
+Read-set exception: initial targeted filename search included scripts/Crafting and README test references to locate the drawing/test seam; no source/ access.
+Risks/blocker: none; existing TradeScene.cs, scene and untracked art preserved. No commit/push.
+Next: inspect the active target during embroidery.
+```
+
+Координатор подтвердил HF-93 2026-11-12 по build, GPU pixel/input regression и screenshot inspection: REVIEW → DONE.
+
 ### HF-96 — публикация музыкальной системы в feature/music и main
 
 Статус: `DONE`; координатор/исполнитель `/root`; HF-93…HF-95 DONE; READY 2026-11-12. Пользователь явно запросил создание feature/music, подробный коммит, push этой ветки и затем push main в подтверждённый origin senko-and-me/chikago-shop.

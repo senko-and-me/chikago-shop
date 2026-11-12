@@ -527,29 +527,23 @@ public partial class EmbroiderySurface : Control
 			for (int i = 0; i < session.Points.Count; i++)
 			{
 				Vector2 point = ScreenPoint(i) - GlobalPosition;
-				bool active =
-					i == session.Stitches &&
-					session.State == EmbroideryState.Playing;
-
 				DrawCircle(
 					point,
-					active ? 10 : 4,
-					new Color(active
-						? "ffedab"
-						: i < session.Stitches ? "a12f43" : "977d5b"));
+					4,
+					new Color(i < session.Stitches ? "a12f43" : "977d5b"));
+			}
 
-				if (active)
-				{
-					DrawArc(
-						point,
-						18 + Mathf.Sin(Time.GetTicksMsec() / 150f) * 2,
-						0,
-						Mathf.Tau,
-						40,
-						new Color("fff7d8"),
-						2,
-						true);
-				}
+			// Draw the target last so nearby points and stitches cannot cover it.
+			// Black/white contrast survives the final monochrome presentation pass.
+			if (session.State == EmbroideryState.Playing && session.Stitches < session.Points.Count)
+			{
+				Vector2 point = ScreenPoint(session.Stitches) - GlobalPosition;
+				float radius = 19 + Mathf.Sin(Time.GetTicksMsec() / 150f) * 2;
+				DrawArc(point, radius, 0, Mathf.Tau, 64, Colors.White, 7, true);
+				DrawArc(point, radius, 0, Mathf.Tau, 64, Colors.Black, 3, true);
+				DrawCircle(point, 13, Colors.White);
+				DrawCircle(point, 10, Colors.Black);
+				DrawCircle(point, 3, Colors.White);
 			}
 		}
 

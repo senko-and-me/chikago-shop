@@ -34,6 +34,13 @@ public partial class ProjectTest : SceneTree
                 Quit();
                 return;
             }
+            if (OS.GetCmdlineUserArgs().Contains("--embroidery-target-checks"))
+            {
+                await TestEmbroideryTarget();
+                GD.Print("EMBROIDERY_TARGET_CHECKS_PASS: rendered contrast, sizes, target movement and real clicks");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--card-dealing-checks"))
             {
                 await TestCardDealing();
