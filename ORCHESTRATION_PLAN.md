@@ -9,9 +9,22 @@
 
 ### HF-96 — публикация музыкальной системы в feature/music и main
 
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; HF-93…HF-95 DONE; READY 2026-11-12. Пользователь явно запросил создание feature/music, подробный коммит, push этой ветки и затем push main в подтверждённый origin senko-and-me/chikago-shop.
+Статус: `DONE`; координатор/исполнитель `/root`; HF-93…HF-95 DONE; READY 2026-11-12. Пользователь явно запросил создание feature/music, подробный коммит, push этой ветки и затем push main в подтверждённый origin senko-and-me/chikago-shop.
 CP-HF-96 read-set: текущий фронт; git status/diff/log/remotes/refs; файлы и evidence HF-93…HF-95; tools/verify.ps1; .vscode/settings.json. Write-set: ORCHESTRATION_PLAN.md; Git index/commit/refs только для набора HF-93…HF-95: README.md, dialogue/intro.ru.json, scenes/{main_menu,trade_scene}.tscn, scripts/MainMenu.cs, scripts/Dialogue/DialoguePlayer.cs, scripts/Audio/{IntroMusicDirector,GameplayMusicDirector}.cs[.uid], src/ChikagoShop.Domain/Dialogue/DialogueSession.cs, tests/ChikagoShop.Domain.Tests/DialogueSessionTests.cs, tests/ProjectTest.cs, tests/Integration/ProjectTest.{Menu,MenuMusic,IntroMusic,GameMusic}.cs и uid новых тестов; точные13 файлов audio/music/ из текущего status (3 source аудио,3 loop WAV,6 import sidecars,intro_loops.json). Временная изолированная копия точного staged tree и логи/commit-body в TEMP/chikago-hf96-*; её временный override.cfg. Единственный владелец плана/index `/root`.
 Out of scope: source/, новые продуктовые изменения, пользовательские файлы вне указанного набора, force push/перезапись истории. Приёмка: точный staged набор проверен независимо от рабочего дерева; подробный музыкальный commit в feature/music; push origin/feature/music; включение того же проверенного изменения в актуальный main без force и push origin/main; проверены итоговые ref hashes и чистота дерева. Проверки: staged diff-check, build/domain, targeted music suites в изолированной копии, git remote/ref comparison.
+
+```text
+Task: HF-96
+Recommended status: REVIEW
+Changed: commit 9009209b9b74b978c1b785defccd9b801e77eef4 включает 34 файла HF-93…HF-95 и текущий контекст публикации. Подробное русское commit body описывает аудиофайлы/90 BPM/тактовые циклы/стыки, menu и intro music director, cue-реплики/громкости/fade, дневную тему/карточки/equal-power, Inspector-настройки и тесты. Текущая документационная запись фиксирует результаты после успешной публикации продукта.
+Checks: exact staged tree экспортирован через git write-tree/git archive в отдельную TEMP-копию -> PASS; dotnet build solution -> PASS (0 warnings/errors); dotnet test --no-build -> PASS (131 tests); Godot .NET import -> PASS; --menu-music-checks/--intro-music-checks/--game-music-checks -> PASS; staged diff-check -> PASS. Commit tree hash равен проверенному staged tree. git fetch origin -> PASS, main до публикации совпадал с origin/main=e0e9efa; push feature/music -> PASS; main fast-forward до 9009209 и обычный push main -> PASS; git ls-remote подтвердил обе опубликованные refs на 9009209. Рабочее дерево чистое.
+Acceptance: создана и опубликована feature/music; все музыкальные изменения содержатся в самостоятельном описанном и проверенном коммите; тот же commit вошёл в main без merge conflicts/force/rebase. GitHub origin остаётся https://github.com/senko-and-me/chikago-shop.git. После публикации фиксируется отдельный документационный checkpoint; он не меняет runtime и затем одинаково включается в обе ветки.
+Read-set exception: нет, source/ не читался. Изолированная проверка использовала временный override.cfg только внутри TEMP-копии и удалила его в finally; реальные пользовательские сохранения не затронуты.
+Risks/blocker: нет для публикации. Ручное прослушивание не входило в Git-задачу; ограничения аудиопроверки задокументированы в HF-93…HF-95.
+Next: продолжить работу от актуального main.
+```
+
+Координатор подтвердил HF-96 2026-11-12 по изолированным проверкам точного коммита и успешным push обеих веток: REVIEW → DONE.
 
 ### HF-95 — тихая игровая музыка и задумчивые улучшения
 
