@@ -40,6 +40,8 @@ public partial class MainMenu : Control
 	private Texture2D _backRu = null!;
 
 	private bool _startingGame;
+	private bool _endingIntro;
+	private IntroMusicDirector Music => GetNode<IntroMusicDirector>("MusicDirector");
 	private bool _showingGameChoice;
 	private bool _skipMouseWasDown;
 
@@ -682,8 +684,14 @@ public partial class MainMenu : Control
 		_choiceBackButton.Visible = visible;
 	}
 
+	private void ResumeMenuMusic()
+	{
+		Music.PlayMenu();
+	}
+
 	private void ShowMainMenu()
 	{
+		ResumeMenuMusic();
 		_showingGameChoice = false;
 
 		_settingsMenu.Hide();
@@ -698,6 +706,7 @@ public partial class MainMenu : Control
 
 	private void ShowGameChoice()
 	{
+		ResumeMenuMusic();
 		_showingGameChoice = true;
 
 		_settingsMenu.Hide();
@@ -717,7 +726,7 @@ public partial class MainMenu : Control
 
 	public void OnPlayPressed()
 	{
-		if (_startingGame || ActiveDialogue != null)
+		if (_startingGame || _endingIntro || ActiveDialogue != null)
 			return;
 
 		ShowGameChoice();
@@ -733,7 +742,7 @@ public partial class MainMenu : Control
 
 	private void OnNewGamePressed()
 	{
-		if (_startingGame || ActiveDialogue != null)
+		if (_startingGame || _endingIntro || ActiveDialogue != null)
 			return;
 
 		_mainMenu.Hide();
@@ -746,10 +755,12 @@ public partial class MainMenu : Control
 
 	private void StartIntroDialogue()
 	{
+		Music.BeginIntro();
 		ActiveDialogue = new DialoguePlayer();
 
 		ActiveDialogue.Finished += OnIntroFinished;
 		ActiveDialogue.Cancelled += CloseDialogue;
+		ActiveDialogue.MusicCueRequested += Music.ApplyIntroCue;
 
 		AddChild(ActiveDialogue);
 
@@ -782,12 +793,20 @@ public partial class MainMenu : Control
 		FinishIntroAndStartGame();
 	}
 
-	private void FinishIntroAndStartGame()
+	private async void FinishIntroAndStartGame()
 	{
-		if (_startingGame)
+		if (_startingGame || _endingIntro)
 			return;
 
+		_endingIntro = true;
 		_skipLayer.Hide();
+		ActiveDialogue?.StopInteraction();
+		bool silent = await Music.FadeToSilence();
+		if (!silent || !IsInsideTree())
+		{
+			_endingIntro = false;
+			return;
+		}
 
 		if (ActiveDialogue != null)
 		{
@@ -797,12 +816,13 @@ public partial class MainMenu : Control
 			dialogue.QueueFree();
 		}
 
+		_endingIntro = false;
 		EnterGame(true);
 	}
 
 	private void OnContinuePressed()
 	{
-		if (_startingGame || !HasSavedGame())
+		if (_startingGame || _endingIntro || !HasSavedGame())
 			return;
 
 		EnterGame(false);
@@ -841,6 +861,7 @@ public partial class MainMenu : Control
 		}
 
 		_startingGame = true;
+		GetNode<AudioStreamPlayer>("MenuMusic").Stop();
 
 		_skipLayer.Hide();
 		_mainMenu.Hide();
@@ -864,7 +885,7 @@ public partial class MainMenu : Control
 
 	private void CloseDialogue()
 	{
-		if (ActiveDialogue == null)
+		if (_endingIntro || ActiveDialogue == null)
 			return;
 
 		var dialogue = ActiveDialogue;
@@ -944,6 +965,11 @@ public partial class MainMenu : Control
 
 	public override void _Input(InputEvent @event)
 	{
+		if (_endingIntro)
+		{
+			GetViewport().SetInputAsHandled();
+			return;
+		}
 		if (ActiveDialogue != null)
 		{
 			if (_skipLayer.Visible &&

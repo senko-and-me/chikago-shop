@@ -10,6 +10,10 @@
 [ext_resource type="FontFile" uid="uid://q8nuqkeci347" path="res://art/fonts/game.ttf" id="8_font"]
 [ext_resource type="Texture2D" uid="uid://j27bt53frben" path="res://art/ui/ru/fullscreen_off.png" id="9_5dd4i"]
 [ext_resource type="Texture2D" uid="uid://ti6uump1r481" path="res://art/ui/settings_panel.png" id="9_settings_panel"]
+[ext_resource type="AudioStream" path="res://audio/music/menu_theme_loop.wav" id="10_menu_music"]
+[ext_resource type="Script" path="res://scripts/Audio/IntroMusicDirector.cs" id="11_music_director"]
+[ext_resource type="AudioStream" path="res://audio/music/thoughtful_loop.wav" id="12_thoughtful_music"]
+[ext_resource type="AudioStream" path="res://audio/music/sinister_loop.wav" id="13_sinister_music"]
 
 [node name="MainMenu" type="Control" unique_id=1262597174]
 layout_mode = 3
@@ -20,6 +24,16 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_script")
 GameScene = null
+
+[node name="MenuMusic" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("10_menu_music")
+volume_db = -6.0
+autoplay = true
+
+[node name="MusicDirector" type="Node" parent="."]
+script = ExtResource("11_music_director")
+ThoughtfulStream = ExtResource("12_thoughtful_music")
+SinisterStream = ExtResource("13_sinister_music")
 
 [node name="Background" type="TextureRect" parent="." unique_id=1737544570]
 layout_mode = 1

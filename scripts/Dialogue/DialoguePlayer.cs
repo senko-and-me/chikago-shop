@@ -6,6 +6,7 @@ public partial class DialoguePlayer : Control
 {
     public event Action Finished;
     public event Action Cancelled;
+    public event Action<string> MusicCueRequested;
     public DialogueSession Session { get; private set; }
     public string DialoguePath { get; set; } = "res://dialogue/intro.ru.json";
     private RichTextLabel _text;
@@ -15,6 +16,12 @@ public partial class DialoguePlayer : Control
     private double _characters;
     private bool _closed;
     public bool IsRevealing => _text.VisibleCharacters >= 0;
+
+    public void StopInteraction()
+    {
+        _closed = true;
+        SetProcess(false);
+    }
 
     public override void _Ready()
     {
@@ -133,6 +140,8 @@ public partial class DialoguePlayer : Control
         _speaker.Visible = !string.IsNullOrWhiteSpace(Session.Current.Speaker);
         _pageStart = 0;
         DisplayPage();
+        if (!string.IsNullOrWhiteSpace(Session.Current.MusicCue))
+            MusicCueRequested?.Invoke(Session.Current.MusicCue);
     }
 
     private void DisplayPage()

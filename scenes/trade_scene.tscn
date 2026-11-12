@@ -26,6 +26,9 @@
 [ext_resource type="Script" uid="uid://cnnctojfahevu" path="res://scripts/Camera/WorldCamera.cs" id="23_world_camera"]
 [ext_resource type="Script" path="res://scripts/Presentation/RoomDoorwayPresentation.cs" id="24_doorways"]
 [ext_resource type="Texture2D" path="res://art/ui/panel_inverted.png" id="25_inverted"]
+[ext_resource type="Script" path="res://scripts/Audio/GameplayMusicDirector.cs" id="26_game_music"]
+[ext_resource type="AudioStream" path="res://audio/music/menu_theme_loop.wav" id="27_day_music"]
+[ext_resource type="AudioStream" path="res://audio/music/thoughtful_loop.wav" id="28_upgrade_music"]
 
 [sub_resource type="AtlasTexture" id="InvertedHeaderTexture"]
 atlas = ExtResource("25_inverted")
@@ -108,6 +111,11 @@ bg_color = Color(0.56, 0.48, 0.38, 1)
 
 [node name="TradeScene" type="Node2D" unique_id=620028237]
 script = ExtResource("1_main")
+
+[node name="GameplayMusicDirector" type="Node" parent="."]
+script = ExtResource("26_game_music")
+DayStream = ExtResource("27_day_music")
+UpgradeStream = ExtResource("28_upgrade_music")
 
 [node name="World" type="Node2D" parent="." unique_id=2108014430]
 script = ExtResource("2_world")

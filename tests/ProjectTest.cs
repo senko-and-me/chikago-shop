@@ -16,6 +16,24 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--game-music-checks"))
+            {
+                await TestGameMusic();
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--intro-music-checks"))
+            {
+                await TestIntroMusic();
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--menu-music-checks"))
+            {
+                await TestMenuMusic();
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--card-dealing-checks"))
             {
                 await TestCardDealing();
@@ -165,6 +183,7 @@ public partial class ProjectTest : SceneTree
             await TestDayTransitionCards();
             await TestDayCardPurchases();
             await TestCategoryPriceUpgrades();
+            await TestGameMusic();
             await TestLocalization();
             await TestLongSentenceScroll();
             await TestMainMenu();

@@ -1,0 +1,31 @@
+{
+  "reference_rms": 0.12736923358439253,
+  "tracks": [
+    {
+      "id": "thoughtful",
+      "bpm": 90,
+      "beats": 16,
+      "bars": 4,
+      "sample_rate": 44100,
+      "frames": 470400,
+      "source_start_frame": 1105,
+      "splice_frames": 220,
+      "rms": 0.04561532238817228,
+      "peak": 0.34724804759025574,
+      "gain_compensation": 2.7922467038711196
+    },
+    {
+      "id": "sinister",
+      "bpm": 90,
+      "beats": 16,
+      "bars": 4,
+      "sample_rate": 44100,
+      "frames": 470400,
+      "source_start_frame": 1105,
+      "splice_frames": 220,
+      "rms": 0.08847984324724202,
+      "peak": 0.6140732169151306,
+      "gain_compensation": 1.4395282463202457
+    }
+  ]
+}

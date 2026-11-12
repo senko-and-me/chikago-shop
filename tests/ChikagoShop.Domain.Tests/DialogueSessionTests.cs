@@ -33,4 +33,15 @@ public sealed class DialogueSessionTests
     public void NarrationCanHaveNoSpeaker() =>
         Assert.That(DialogueSession.FromJson("""[{"speaker":"","text":"Френки оборачивается"}]""").Current!.Speaker,
             Is.Empty);
+
+    [Test]
+    public void OptionalMusicCuesFollowLinesAndOldContentStaysCompatible()
+    {
+        var session = DialogueSession.FromJson("""[{"speaker":"Френки","text":"Привет"},{"speaker":"Кастелло","text":"По делу.","musicCue":"thoughtful"},{"speaker":"Кастелло","text":"Не хочу слышать.","musicCue":"sinister"}]""");
+        Assert.That(session.Current!.MusicCue, Is.Null);
+        session.Advance();
+        Assert.That(session.Current!.MusicCue, Is.EqualTo("thoughtful"));
+        session.Advance();
+        Assert.That(session.Current!.MusicCue, Is.EqualTo("sinister"));
+    }
 }

@@ -33,9 +33,11 @@ public partial class ProjectTest
             else
             {
                 int steps = 0;
-                while (menu.ActiveDialogue != null && steps++ < 512) menu.ActiveDialogue.Advance();
+                while (menu.ActiveDialogue != null && !menu.ActiveDialogue.Session.IsComplete && steps++ < 512)
+                    menu.ActiveDialogue.Advance();
                 Check(steps < 512, "The full intro must make progress and reach its finish event");
             }
+            await WaitForIntroMusicExit(menu);
             await ToSignal(this, SignalName.ProcessFrame);
             await ToSignal(this, SignalName.ProcessFrame);
             Check(CurrentScene is TradeScene && !Paused,
@@ -248,6 +250,14 @@ public partial class ProjectTest
             Check(reconstructed == original, "All pages must reproduce the entire original speech without loss or duplication");
         }
         dialogue.Advance(); // Completed sessions must not start the game twice.
+        await WaitForIntroMusicExit(menu);
+        await ToSignal(this, SignalName.ProcessFrame);
+    }
+
+    private async Task WaitForIntroMusicExit(MainMenu menu)
+    {
+        var music = menu.GetNode<IntroMusicDirector>("MusicDirector");
+        if (music.CurrentCue == "silence") music._Process(music.ExitFadeSeconds);
         await ToSignal(this, SignalName.ProcessFrame);
     }
 
