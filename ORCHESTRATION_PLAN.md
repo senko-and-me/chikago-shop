@@ -9,8 +9,10 @@
 
 ### HF-98 — публикация локальных изменений
 
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-12. Пользователь явно запросил commit и push.
-CP-HF-98 read-set: Git status/diff/remotes/refs; результаты HF-97; .godot/cleanup-check-dir.txt; tests/Integration/ProjectTest.EmbroideryTarget.cs. Write-set: ORCHESTRATION_PLAN.md; Git index/commit/main и origin/main для текущих изменений README/docs/audio, сцены, вышивки и её теста. Out of scope: source/, новые продуктовые изменения, force push. Приёмка: один коммит с текущими изменениями отправлен в подтверждённый origin/main, дерево чистое. Проверки: fetch (main актуален); diff-check PASS; предыдущие build/resource/link/audio-hash PASS; повторная GPU embroidery-target проверка в изолированной копии PASS (код 0, .godot/publish-embroidery.log). Публикация обычным push без переписывания истории.
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-12. Пользователь явно запросил commit и push.
+CP-HF-98 read-set: Git status/diff/remotes/refs; результаты HF-97; .godot/cleanup-check-dir.txt; tests/Integration/ProjectTest.EmbroideryTarget.cs. Write-set: ORCHESTRATION_PLAN.md; Git index/commit/main и origin/main для текущих изменений README/docs/audio, сцены, вышивки и её теста. Out of scope: source/, новые продуктовые изменения, force push. Приёмка: коммит с текущими изменениями отправлен в подтверждённый origin/main, дерево чистое. Проверки: fetch (main актуален); diff-check PASS; предыдущие build/resource/link/audio-hash PASS; повторная GPU embroidery-target проверка в изолированной копии PASS (код 0, .godot/publish-embroidery.log). Публикация обычным push без переписывания истории.
+
+Публикация: c018bf2 отправлен обычным push в origin/main; обновление a35e98c..c018bf2 подтверждено сервером. Текущая документационная запись фиксирует завершение HF-98 отдельным checkpoint-коммитом. Предыдущая резервная stash-копия сохранена.
 
 ### HF-97 — порядок в документации и ресурсах
 
