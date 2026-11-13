@@ -10,6 +10,28 @@
 
 ## Текущий фронт
 
+### HF-127 — публикация обучения первой продаже
+
+Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-14; HF-126 DONE, пользователь разрешил commit/push.
+CP-HF-127 read-set: текущий фронт, Git status/diff/refs/remotes, evidence .local/checks/hf126. Write-set: ORCHESTRATION_PLAN.md; Git index/commits/main и origin/main для docs/GAMEPLAY.md, localization/en.tres, scenes/trade_scene.tscn, scenes/UI/FirstTradeTutorial.tscn, scripts/UI/FirstTradeTutorial.cs/.uid, tests/ProjectTest.cs, tests/Integration/ProjectTest.Tutorial.cs/.uid. Out of scope: .local/, source/, builds/, новые игровые правки, force push. Приёмка: обычный push main, remote SHA совпадает с HEAD, дерево чистое. Проверки: fetch/divergence, diff-check, сохранённые build/import и rendered tutorial/day-start/card-dealing checks HF-126, ls-remote.
+
+### HF-126 — обучение первому торговому циклу
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-14; HF-122…HF-124 DONE, активных пересечений нет.
+CP-HF-126 read-set: текущий фронт, scripts/TradeScene.cs (публичное состояние/ready/торговля), scripts/UI/{InventoryUI,EmbroideryGame,PauseMenu}.cs, scripts/Days/DayCycleController.cs (Started), scripts/Camera/WorldCamera.cs, scripts/Presentation/DayCardSceneTransition.cs, scripts/Localization/GameLocalization.cs, scenes/trade_scene.tscn, scenes/UI/SlotUI.tscn, tests/ProjectTest.cs, tests/Integration/ProjectTest.Helpers.cs, docs/GAMEPLAY.md, localization/en.tres. Write-set: ORCHESTRATION_PLAN.md, новые scenes/UI/FirstTradeTutorial.tscn, scripts/UI/FirstTradeTutorial.cs/.uid, tests/Integration/ProjectTest.Tutorial.cs/.uid; scenes/trade_scene.tscn (инстанс обучения), tests/ProjectTest.cs (группа), localization/en.tres, docs/GAMEPLAY.md. Evidence: .local/checks/hf126 и изолированная копия. Out of scope: TradeScene/домен/экономика/таймер, существующая save schema, source/, bitmap, commit/push. Приёмка: первое прохождение последовательно объясняет Start, производство/энергию, выбор предмета, витрину/ожидание покупателя, оффер/рероллы, продажу и квоты; подсветка следует цели при pan/zoom/resize; пропуск в любой момент, повтор из паузы; completion/skip сохраняется отдельно от игрового save, незавершённый шаг восстанавливается по текущему состоянию. Подсказки не блокируют игру/покупки, скрыты в модальных окнах/паузе; разметка в .tscn. Проверки: build/import, rendered --tutorial-checks (реальные клики/lifecycle/reload/skip/RU/EN/resize), day-start/card-dealing, diff-check.
+
+```text
+Task: HF-126
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: новая FirstTradeTutorial.tscn содержит панель, подсветку, текст навигации, Skip/Done и готовую Replay-кнопку; инстанс включён в trade_scene.tscn. FirstTradeTutorial наблюдает публичное состояние без изменений TradeScene/домена: Start → Craft → Select → Place → WaitBuyer → Offer → Summary. Пояснения энергии/рероллов/квоты, ✓/× вместо зависимости от цвета. Подсветка преобразует фактическую геометрию цели в экранные координаты, обрезается viewport и пропускает input. Панель адаптируется/уходит от цели. При pause/craft/cards/endstate подсказки скрыты. Готовая кнопка Replay переносится в существующее меню паузы без создания UI в коде и запускает обучение без сброса игры. Отдельный <SavePath>.tutorial.cfg хранит завершение/пропуск и базовый счётчик продаж; незавершённый шаг выводится из game state, продажа перед reload не теряется. Пустой SavePath не автозапускает обучение в transient preview, ручной Restart доступен. Добавлены 14 EN-строк, GPU regression и docs.
+Checks: local/isolated build PASS (0 warnings/errors), import PASS (exit 0, прежние duplicate UI UID warnings); rendered --tutorial-checks PASS (реальные Start/craft/select/place/sale/Done, reload после craft и sale, pause/skip/replay/reset, сохранность денег/предметов, screen-space highlight при pan/zoom, RU/EN live switch и 960×540/1280×720); --day-start-checks и --card-dealing-checks PASS (exit 0). Preview просмотрен, diff-check PASS.
+Acceptance: первое прохождение получает обучение одному полному торговому циклу с одним следующим действием за раз, без автоматической выдачи/покупок/паузы таймера. Обучение можно пропустить и повторить из паузы. Разметка доступна в редакторе, completion хранится отдельно от игровой save schema.
+Read-set exception: .local/checks/hf104/hf104-check-dir.txt для изолированной копии. Пользовательские сохранения/настройки не затронуты.
+Risks/blocker: новых нет; прежние import UID warnings и baseline tooltip FAIL полного integration suite вне задачи. Обучение намеренно не даёт дополнительного времени и не меняет баланс.
+Next: пользовательская приёмка первого запуска; основной фронт S1-04. Commit/push не выполнялись.
+```
+
+Evidence: .local/checks/hf126/{build,local-build,import,tutorial,day-start,card-dealing}*.log и preview.png.
 ### HF-125 — публикация сцен, анимаций и уведомлений
 
 Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-14; HF-122…HF-124 DONE, пользователь разрешил commit/push.

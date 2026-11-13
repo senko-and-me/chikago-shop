@@ -1,0 +1,105 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/UI/FirstTradeTutorial.cs" id="1_tutorial"]
+[ext_resource type="Theme" path="res://themes/game_theme.tres" id="2_theme"]
+
+[sub_resource type="StyleBoxFlat" id="Paper"]
+content_margin_left = 16.0
+content_margin_top = 12.0
+content_margin_right = 16.0
+content_margin_bottom = 12.0
+bg_color = Color(0.96, 0.96, 0.94, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.08, 0.08, 0.08, 1)
+
+[sub_resource type="StyleBoxFlat" id="Outline"]
+draw_center = false
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.9, 0.9, 0.9, 1)
+shadow_color = Color(0, 0, 0, 1)
+shadow_size = 2
+
+[node name="FirstTradeTutorial" type="CanvasLayer"]
+process_mode = 3
+layer = 95
+script = ExtResource("1_tutorial")
+
+[node name="Root" type="Control" parent="."]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme = ExtResource("2_theme")
+
+[node name="Highlight" type="Panel" parent="Root"]
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Outline")
+
+[node name="Panel" type="PanelContainer" parent="Root"]
+layout_mode = 0
+offset_left = 430.0
+offset_top = 14.0
+offset_right = 850.0
+offset_bottom = 230.0
+theme_override_styles/panel = SubResource("Paper")
+
+[node name="Content" type="VBoxContainer" parent="Root/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="Root/Panel/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.08, 0.08, 0.08, 1)
+theme_override_font_sizes/font_size = 23
+text = "Первая продажа"
+autowrap_mode = 3
+
+[node name="Body" type="Label" parent="Root/Panel/Content"]
+custom_minimum_size = Vector2(0, 70)
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.13, 0.13, 0.13, 1)
+theme_override_font_sizes/font_size = 19
+autowrap_mode = 3
+
+[node name="Navigation" type="Label" parent="Root/Panel/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.35, 0.35, 0.35, 1)
+theme_override_font_sizes/font_size = 14
+text = "Колесо — масштаб. Зажмите ЛКМ на фоне, чтобы двигать камеру."
+autowrap_mode = 3
+
+[node name="Actions" type="HBoxContainer" parent="Root/Panel/Content"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Skip" type="Button" parent="Root/Panel/Content/Actions"]
+layout_mode = 2
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 34)
+text = "Пропустить обучение"
+
+[node name="Done" type="Button" parent="Root/Panel/Content/Actions"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 34)
+text = "Понятно"
+
+[node name="Replay" type="Button" parent="."]
+visible = false
+custom_minimum_size = Vector2(0, 48)
+theme = ExtResource("2_theme")
+text = "Повторить обучение"

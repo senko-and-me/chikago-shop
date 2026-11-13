@@ -32,6 +32,7 @@
 [ext_resource type="Texture2D" uid="uid://dcpdw0kad8qlu" path="res://art/rooms/day_time.png" id="background_2_31fg5"]
 [ext_resource type="Texture2D" uid="uid://bj3pbvpqnrv7g" path="res://art/ui/camera_frame.png" id="background_4_00ccd"]
 [ext_resource type="Texture2D" uid="uid://deul0bfifm5rg" path="res://art/rooms/locked_curtain.png" id="background_6_2e12l"]
+[ext_resource type="PackedScene" path="res://scenes/UI/FirstTradeTutorial.tscn" id="30_tutorial"]
 
 [sub_resource type="AtlasTexture" id="InvertedHeaderTexture"]
 atlas = ExtResource("25_inverted")
@@ -1021,3 +1022,5 @@ script = ExtResource("21_zoom_ui")
 
 [node name="RoomDoorways" type="Node" parent="." unique_id=1292616752]
 script = ExtResource("24_doorways")
+
+[node name="FirstTradeTutorial" parent="." instance=ExtResource("30_tutorial")]

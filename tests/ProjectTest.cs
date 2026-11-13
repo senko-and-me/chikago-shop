@@ -16,6 +16,13 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--tutorial-checks"))
+            {
+                await TestFirstTradeTutorial();
+                GD.Print("TUTORIAL_CHECKS_PASS: first sale, real clicks, highlights, pause, localization, skip, replay and reload");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--inventory-expansion-checks"))
             {
                 await TestInventoryExpansion();

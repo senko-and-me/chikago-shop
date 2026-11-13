@@ -3,6 +3,20 @@
 [resource]
 locale = "en"
 messages = {
+&"Первая продажа": &"Your first sale",
+&"Пропустить обучение": &"Skip tutorial",
+&"Повторить обучение": &"Replay tutorial",
+&"Понятно": &"Got it",
+&"Колесо — масштаб. Зажмите ЛКМ на фоне, чтобы двигать камеру.": &"Scroll to zoom. Hold the left mouse button on the background to move the camera.",
+&"Первая продажа готова! Следите за энергией и суммой квоты в панели дня. К сроку на счёте должна быть нужная сумма.": &"Your first sale is done! Watch your energy and the quota in the day panel. Have the required cash ready by the deadline.",
+&"Покупатель предлагает цену. Кнопка «✓» продаёт товар. Кнопка «×» меняет покупателя и тратит попытку: новая цена может стать ниже. Продайте первый предмет.": &"The customer offers a price. The checkmark button sells the item. The cross spends a reroll to find another buyer: the new price may be lower. Make your first sale.",
+&"Магазин закрыт. Продайте оставшийся товар, если покупатель уже у кассы, затем перейдите к следующему дню через панель слева.": &"The shop is closed. Finish the sale if a customer is at the counter, then advance to the next day using the left panel.",
+&"Нажмите «Начать» на часах. Пока день не начат, время не идёт. После запуска на торговлю отведена короткая смена.": &"Press Start on the clock. Time stays still until you start the day. Then you have a short shift to trade.",
+&"Товар уже на витрине. Покупатель подойдёт сам через несколько секунд. Его предложение появится у кассы.": &"Your item is on display. A customer will arrive in a few seconds. Their offer will appear at the counter.",
+&"Предмет готов. Нажмите на него в нижней панели инвентаря. Наведение покажет его редкость и стоимость.": &"Your item is ready. Click it in the inventory at the bottom. Hover over it to see its rarity and value.",
+&"Нажмите на свободную витрину в левой торговой комнате. Можно также перетащить предмет из инвентаря на витрину.": &"Click an empty display in the left showroom. You can also drag the item from your inventory onto a display.",
+&"Энергия закончилась. Завершите день в панели слева, затем перейдите к следующему. Непроданные вещи сохраняются.": &"You are out of energy. Close the day using the left panel, then advance to the next one. Unsold items are kept.",
+&"Нажмите «Создать предметы» в ателье и выполните мини-игру. Производство стоит денег и энергии; цена указана у кнопки.": &"Press Create items in the atelier and play the minigame. Crafting costs cash and energy; the cost is shown by the button.",
 &"Магазин открыт": &"Shop is open",
 &"Остался {0} день": &"{0} day left",
 &"Осталось {0} дня": &"{0} days left",
