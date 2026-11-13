@@ -12,8 +12,8 @@
 [ext_resource type="Texture2D" uid="uid://bdnt1wjejacqf" path="res://art/items/trumpet.svg" id="9_trumpet"]
 [ext_resource type="PackedScene" uid="uid://wj2ymug80tk2" path="res://scenes/UI/ShowcaseSlot.tscn" id="10_showcase"]
 [ext_resource type="Texture2D" uid="uid://cq6tis3xjvmup" path="res://art/rooms/atelier.jpg" id="11_atelier"]
-[ext_resource type="Texture2D" path="res://art/rooms/cashier_closed.jpg" id="12_cashier"]
-[ext_resource type="Texture2D" path="res://art/rooms/upper_corridor_closed.jpg" id="13_58qc8"]
+[ext_resource type="Texture2D" uid="uid://d21j3cp04fmi5" path="res://art/rooms/cashier_closed.jpg" id="12_cashier"]
+[ext_resource type="Texture2D" uid="uid://7i21ur522dc7" path="res://art/rooms/upper_corridor_closed.jpg" id="13_58qc8"]
 [ext_resource type="Texture2D" uid="uid://dcj7da0lpr1fq" path="res://art/rooms/room_layout.jpg" id="14_layout"]
 [ext_resource type="Texture2D" uid="uid://dfxl3bik7r087" path="res://art/ui/panel_large.png" id="16_panel_large"]
 [ext_resource type="Texture2D" uid="uid://bf1y5qehuwoj" path="res://art/ui/panel_small.png" id="17_panel_small"]
@@ -24,8 +24,8 @@
 [ext_resource type="Script" uid="uid://bdswgixl6srw1" path="res://scripts/UI/ZoomResponsiveUi.cs" id="21_zoom_ui"]
 [ext_resource type="Script" uid="uid://dqhunfpycjxyp" path="res://scripts/UI/ProgressPanel.cs" id="22_progress"]
 [ext_resource type="Script" uid="uid://cnnctojfahevu" path="res://scripts/Camera/WorldCamera.cs" id="23_world_camera"]
-[ext_resource type="Script" path="res://scripts/Presentation/RoomDoorwayPresentation.cs" id="24_doorways"]
-[ext_resource type="Texture2D" path="res://art/ui/panel_inverted.png" id="25_inverted"]
+[ext_resource type="Script" uid="uid://moiorwdg8bcp" path="res://scripts/Presentation/RoomDoorwayPresentation.cs" id="24_doorways"]
+[ext_resource type="Texture2D" uid="uid://cog2ypvb6uqtj" path="res://art/ui/panel_inverted.png" id="25_inverted"]
 [ext_resource type="Script" path="res://scripts/Audio/GameplayMusicDirector.cs" id="26_game_music"]
 [ext_resource type="AudioStream" path="res://audio/music/menu_theme_loop.wav" id="27_day_music"]
 [ext_resource type="AudioStream" path="res://audio/music/thoughtful_loop.wav" id="28_upgrade_music"]
@@ -111,6 +111,7 @@ bg_color = Color(0.56, 0.48, 0.38, 1)
 
 [node name="TradeScene" type="Node2D" unique_id=620028237]
 script = ExtResource("1_main")
+metadata/_edit_horizontal_guides_ = [-1162.0]
 
 [node name="GameplayMusicDirector" type="Node" parent="."]
 script = ExtResource("26_game_music")
@@ -146,7 +147,6 @@ offset_top = 165.0
 offset_right = 2400.0
 offset_bottom = 605.0
 scale = Vector2(0.5, 0.5)
-mouse_filter = 2
 texture = SubResource("InvertedHeaderTexture")
 patch_margin_left = 160
 patch_margin_top = 160
@@ -177,9 +177,9 @@ horizontal_alignment = 1
 
 [node name="GetItemButton" type="Button" parent="World/Atelier" unique_id=1127177850]
 offset_left = 735.0
-offset_top = 780.0
+offset_top = 849.0
 offset_right = 1185.0
-offset_bottom = 970.0
+offset_bottom = 1039.0
 mouse_default_cursor_shape = 2
 theme_override_styles/normal = SubResource("CreateButtonNormal")
 theme_override_styles/pressed = SubResource("CreateButtonPressed")
@@ -235,7 +235,6 @@ offset_top = 159.0
 offset_right = 2400.0
 offset_bottom = 599.0
 scale = Vector2(0.5, 0.5)
-mouse_filter = 2
 texture = SubResource("InvertedHeaderTexture")
 patch_margin_left = 160
 patch_margin_top = 160
@@ -266,9 +265,9 @@ horizontal_alignment = 1
 
 [node name="GetItemButton" type="Button" parent="World/MusicWorkshop" unique_id=2006804839]
 offset_left = 735.0
-offset_top = 480.0
+offset_top = 849.0
 offset_right = 1185.0
-offset_bottom = 670.0
+offset_bottom = 1039.0
 mouse_default_cursor_shape = 2
 theme_override_styles/normal = SubResource("CreateButtonNormal")
 theme_override_styles/pressed = SubResource("CreateButtonPressed")
@@ -320,7 +319,6 @@ offset_top = 80.0
 offset_right = 2969.0
 offset_bottom = 520.0
 scale = Vector2(0.5, 0.5)
-mouse_filter = 2
 texture = SubResource("InvertedHeaderTexture")
 patch_margin_left = 160
 patch_margin_top = 160
@@ -384,7 +382,6 @@ offset_top = 80.0
 offset_right = 2969.0
 offset_bottom = 520.0
 scale = Vector2(0.5, 0.5)
-mouse_filter = 2
 texture = SubResource("InvertedHeaderTexture")
 patch_margin_left = 160
 patch_margin_top = 160
@@ -719,5 +716,5 @@ script = ExtResource("20_pause")
 [node name="ZoomResponsiveUi" type="Node" parent="." unique_id=1770471945]
 script = ExtResource("21_zoom_ui")
 
-[node name="RoomDoorways" type="Node" parent="."]
+[node name="RoomDoorways" type="Node" parent="." unique_id=1292616752]
 script = ExtResource("24_doorways")
