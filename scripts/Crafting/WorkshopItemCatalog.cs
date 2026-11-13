@@ -14,13 +14,13 @@ public static class WorkshopItemCatalog
     {
         Item("atelier", "common", "hat", "шляпка-клош", "hat_cloche.png"),
         Item("atelier", "ordinary", "gloves", "перчатки", "gloves.png"),
-        Item("music", "common", "guitar", "гитара", "guitar.svg"),
+        Item("music", "common", "guitar", "гитара", "guitar.png"),
         Item("music", "ordinary", "trumpet", "труба", "trumpet.svg"),
         Item("atelier", "first_class", "clothing_first", "первоклассная одежда", "placeholder_clothing_first.svg"),
         Item("atelier", "exclusive", "clothing_exclusive", "эксклюзивная одежда", "placeholder_clothing_exclusive.svg"),
         Item("atelier", "unique", "clothing_unique", "неповторимая одежда", "placeholder_clothing_unique.svg"),
-        Item("music", "first_class", "music_first", "первоклассный инструмент", "placeholder_music_first.svg"),
-        Item("music", "exclusive", "music_exclusive", "эксклюзивный инструмент", "placeholder_music_exclusive.svg"),
+        Item("music", "first_class", "music_first", "первоклассный инструмент", "violin.png"),
+        Item("music", "exclusive", "music_exclusive", "эксклюзивный инструмент", "drums.png"),
         Item("music", "unique", "music_unique", "неповторимый инструмент", "placeholder_music_unique.svg")
     });
     private static readonly IReadOnlyDictionary<string, WeightedItemTable> Tables = Config.Workshops.ToDictionary(

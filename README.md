@@ -50,6 +50,7 @@ Godot хранит сохранения в `user://trade_progress.json`, выб�
 - [Игровые механики и баланс](docs/GAMEPLAY.md)
 - [Устройство проекта и редактирование сцен](docs/DEVELOPMENT.md)
 - [Музыка и её настройки](docs/MUSIC.md)
+- [Аудит ассетов и подключённая графика](docs/ASSET_AUDIT.md)
 - [Сборка и проверки](docs/TESTING.md)
 - [Отчёт симуляции баланса](docs/BALANCE_REPORT.md)
 - [План разработки](ORCHESTRATION_PLAN.md) и [правила работы агентов](AGENTS.md)

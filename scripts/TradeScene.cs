@@ -430,6 +430,7 @@ public partial class TradeScene : Node2D
 			};
 
 			workshop.AddChild(overlay);
+			RoomDoorwayPresentation.AddLockedCurtain(overlay);
 
 			Label title = new()
 			{
@@ -553,6 +554,7 @@ public partial class TradeScene : Node2D
 		};
 
 		showroom.AddChild(_rightShowroomOverlay);
+		RoomDoorwayPresentation.AddLockedCurtain(_rightShowroomOverlay);
 
 		Label title = new Label
 		{

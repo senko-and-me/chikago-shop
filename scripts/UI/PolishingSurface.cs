@@ -5,8 +5,13 @@ using Godot;
 
 public partial class PolishingSurface : Control
 {
+	// Artist artwork replaces the old sax variant; the minigame still has four choices.
+	public static System.Collections.Generic.IReadOnlyList<string> InstrumentKinds { get; } =
+		Array.AsReadOnly(new[] { "violin", "trumpet", "drums", "guitar" });
 	private const string ViolinPath =
 		"res://art/minigames/violin.png";
+
+	private const string GuitarPath = "res://art/items/guitar.png";
 
 	private const string ClothPath =
 		"res://art/minigames/polishing_cloth.png";
@@ -66,9 +71,17 @@ void fragment() {
 
 		Texture2D mask;
 
-		if (kind == "violin" && ResourceLoader.Exists(ViolinPath))
+		string rasterPath = kind switch
 		{
-			Texture2D original = GD.Load<Texture2D>(ViolinPath);
+			"violin" => ViolinPath,
+			"guitar" => GuitarPath,
+			"drums" => "res://art/items/drums.png",
+			_ => null
+		};
+		if (rasterPath != null && ResourceLoader.Exists(rasterPath))
+		{
+			// Use the same fitted pixels for both artwork and the playable silhouette.
+			Texture2D original = GD.Load<Texture2D>(rasterPath);
 			Image source = original.GetImage();
 			source.Convert(Image.Format.Rgba8);
 

@@ -127,6 +127,13 @@ public partial class ProjectTest : SceneTree
                 Quit();
                 return;
             }
+            if (OS.GetCmdlineUserArgs().Contains("--asset-replacement-checks"))
+            {
+                await TestDriveAssetReplacements();
+                GD.Print("ASSET_REPLACEMENT_CHECKS_PASS: identities, sprite counts, fitted art, polishing, trade and reload");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--resource-checks"))
             {
                 TestResourceOrganization();

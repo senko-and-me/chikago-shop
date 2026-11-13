@@ -1,7 +1,7 @@
 # Оркестровый план: «Бакалея для гангстеров»
 
 Версия плана: 1.2
-Обновлено: 2026-11-12
+Обновлено: 2026-11-13
 Стадия по реестру: `S1 — домен, конфигурация и воспроизводимость`
 
 Этот файл хранит требования, решения, стадии и текущий фронт. Рабочий протокол — в [AGENTS.md](AGENTS.md), подробные завершённые отчёты — в [архиве](docs/archive/ORCHESTRATION_HISTORY_2026-11-12.md). `source/` остаётся локальным архивом и не входит в Git.
@@ -10,53 +10,36 @@
 
 ## Текущий фронт
 
-### HF-100 — объединить и опубликовать английский перевод
+### HF-104 — уборка и публикация ассетов и занавеса
 
-Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-13. Пользователь явно разрешил push перевода в main. Локальный перевод bf74adf объединяется с origin/main=68973e4 обычным merge без force/rebase.
-CP-HF-100: read-set — текущий фронт и git status/diff/log; файлы HF-97 (английская локализация), новые README/docs/архив origin/main, tests/ProjectTest.cs, локальные test/toolchain evidence. Write-set — разрешение документальных конфликтов в ORCHESTRATION_PLAN.md/README.md; docs/DEVELOPMENT.md и docs/TESTING.md (перенос описания перевода); docs/archive/ORCHESTRATION_HISTORY_2026-11-12.md (сохранение исходного отчёта перевода); Git index/merge commit и origin/main. Out of scope: source/, удаление новых удалённых изменений, новые продуктовые изменения, force push. Приёмка: код перевода и все три новых удалённых коммита сохранены; новая структура документации сохранена, сведения о переводе перенесены в профильные разделы; build/domain и targeted localization/music suites проходят, обычный push main и remote ref comparison успешны.
+Статус: `REVIEW`; координатор/исполнитель `/root`; READY 2026-11-13. Зависимости HF-100 (ассеты), HF-101…HF-103 DONE; активных пересекающихся задач нет. Пользователь разрешил уборку, commit и push.
+CP-HF-104 read-set: AGENTS.md, план, Git status/diff/refs; текущий набор изменённых scripts/scenes/tests/art, IMG_2363.PNG и .import, .gitignore, README.md, docs/ASSET_AUDIT.md, docs/TESTING.md, docs/archive/ORCHESTRATION_HISTORY_2026-11-12.md, tools/verify.ps1, project.godot, .vscode/settings.json. Write-set: ORCHESTRATION_PLAN.md, docs/archive/ORCHESTRATION_HISTORY_2026-11-13.md, README.md, docs/TESTING.md, docs/ASSET_AUDIT.md; перемещение только корневых IMG_2363.PNG и .import в .godot/hf104-original; Git index/commit/main и origin/main для проверенных изменений HF-100…HF-103. Изолированная проверочная копия в системном TEMP. Для baseline-диагностики дополнительно прочитаны tests/Integration/ProjectTest.Ui.cs и ProjectTest.Helpers.cs; их изменение не входит в задачу. Out of scope: source/, сохранения игрока, удаление сборок, новый gameplay, force push. Приёмка: один runtime-занавес в art/rooms, завершённые отчёты в архиве, актуальные ссылки и фронт; build/domain и targeted asset/room/resource/dialogue checks PASS; полный integration прогон проверен сравнением с baseline, прежнее падение явно задокументировано; обычный push, remote SHA совпадает с HEAD, рабочее дерево чистое.
 
 ```text
-Task: HF-100
+Task: HF-104
 Recommended status: REVIEW
-Changed: merge 71a72da объединяет локальный перевод bf74adf и origin/main=68973e4; README/план разрешены с сохранением новой структуры, описание перевода перенесено в docs/DEVELOPMENT.md и docs/TESTING.md, исходный отчёт локализации сохранён в архиве.
-Checks: build -> PASS (0 warnings/errors); domain -> PASS (131 tests); --dialogue-localization-checks, --menu-music-checks, --intro-music-checks, --game-music-checks -> PASS; staged diff-check -> PASS. Runtime/scene remote changes match origin/main, translation runtime/catalog/tests match bf74adf. git push origin main -> PASS (68973e4..71a72da); git ls-remote confirmed 71a72da; working tree clean. Evidence: TEMP/chikago-hf100-{build,domain,import,dialogue-localization,menu-music,intro-music,game-music}.log.
-Acceptance: перевод опубликован в main без перезаписи истории, все новые удалённые коммиты сохранены. Временные настройки и тестовые сохранения изолированы; override.cfg удалён.
-Read-set exception: архив и профильные docs прочитаны для необходимого разрешения конфликтов после удалённой реорганизации; source/ не читался.
-Risks/blocker: только ранее задокументированные import-предупреждения о дублях UID четырёх пар кнопок; музыкальные/языковые тесты завершились чисто. Новых блокеров публикации нет.
-Next: продолжить от синхронизированного main.
+Changed: завершённые отчёты перенесены в docs/archive/ORCHESTRATION_HISTORY_2026-11-13.md, основной фронт сокращён без изменения требований/ворот; README и docs/TESTING содержат ссылки на аудит и новые группы. Корневые IMG_2363.PNG/.import перемещены в .godot/hf104-original, runtime art/rooms/locked_curtain.png сохранён с тем же SHA256. Подготовлены к публикации прежние изменения HF-100 «ассеты» и HF-101…HF-103.
+Checks: build PASS (0 warnings/errors); domain PASS (131/131); import PASS (exit 0; первичный импорт без кэша сообщил о ещё не импортированном шрифте); rendered --asset-replacement-checks, --room-doorway-checks, --resource-checks, --dialogue-localization-checks PASS (exit 0). Общий ProjectTest FAIL на TestUiLayoutInvalidation:61, Showing a tooltip must immediately activate its presentation updates. Тот же FAIL воспроизведён на исходных runtime/scenes/tests из HEAD=86f0019 в той же изолированной копии, при headless и rendered запуске текущих изменений. Полный suite не объявляется зелёным. Diff-check, локальные Markdown-ссылки и сохранность основной спецификации проверяются перед commit.
+Acceptance: единственный runtime-занавес без затемнения, готовые музыкальные PNG и прежние игровые identities; источники/сохранения игрока не читались и не менялись. Публикация ожидает обычного push.
+Read-set exception: ProjectTest.Ui.cs/Helpers.cs прочитаны для необходимой диагностики существующего падения; для baseline в проверочной копии временно использованы версии изменённых scripts/scenes/tests из HEAD, затем восстановлены рабочие файлы.
+Risks/blocker: существующее падение tooltip suite, прежние duplicate UI UID и shutdown resource warnings. Это не release gate; новые целевые проверки проходят.
+Next: commit и push main, сверить remote SHA, затем закрыть HF-104.
 ```
 
-Координатор подтвердил HF-100 2026-11-13 после успешного push и проверки удалённой ref: REVIEW → DONE.
-Полный отчёт «HF-97 — английская локализация вступительного диалога» сохранён в [архиве](docs/archive/ORCHESTRATION_HISTORY_2026-11-12.md). Эта историческая HF-97 отличается от одноимённой задачи уборки проекта; её номер не изменён.
-
-Основная стадия по реестру: **S1 — домен, конфигурация и воспроизводимость**. Ворота `G-S0 = PASSED`, `G-S1 = OPEN`. Выполненные внеочередные задачи не закрывают ворота стадий автоматически.
+Evidence: .godot/hf104-verify.log, hf104-{full,assets,rooms,resources,dialogue,baseline}*.log; путь изолированной копии — .godot/hf104-check-dir.txt. Исходное фото сохранено в .godot/hf104-original/.
+Основная стадия: **S1 — домен, конфигурация и воспроизводимость**. `G-S0 = PASSED`, `G-S1 = OPEN`.
 
 | Состояние | Задача | Следующее действие |
 | --- | --- | --- |
-| `DONE` | `S1-01`, `S1-02`, `S1-03` | Приёмка и контекст-пакеты сохранены ниже. |
-| `NEXT` | `S1-04` — именованные потоки RNG | Перед назначением подготовить `CP-S1-04` по актуальному коду. |
-| Требует сверки | `HF-64` — переход после диалога и Windows-билд | В старой записи остался `IN_PROGRESS`; проверить evidence перед сменой статуса. |
-| Требует сверки | `VF-02…VF-05` — visual pass | В журнале остались `IN_PROGRESS`; сопоставить приёмку с более поздними HF-задачами. |
+| `DONE` | `S1-01`, `S1-02`, `S1-03` | Контекст-пакеты сохранены ниже. |
+| `NEXT` | `S1-04` — именованные потоки RNG | Подготовить CP по актуальному коду перед назначением. |
+| Требует сверки | `HF-64`, `VF-02…VF-05` | Сопоставить старые незакрытые статусы с evidence поздних задач. |
 
-Новая продуктовая задача этим редактированием не назначена. Последняя опубликованная работа: `c018bf2` — документация, ресурсы и вышивка; `9b47b57` — checkpoint публикации. HF-97 и HF-98 завершены.
+Последний подтверждённый remote: `86f0019` — публикация английского перевода. Локально завершены сверка ассетов, замена музыкальных заглушек и занавес закрытых комнат без затемнения (HF-100 «ассеты», HF-101…HF-103); их публикация входит в HF-104.
 
-Полные отчёты, контекст-пакеты и первоначальная таблица visual pass: [архив задач до 12.11.2026](docs/archive/ORCHESTRATION_HISTORY_2026-11-12.md). Исторические номера задач не перенумерованы; два HF-93 различаются названиями «мишень вышивки» и «музыка меню».
+Отчёты и контекст-пакеты: [до 12 ноября](docs/archive/ORCHESTRATION_HISTORY_2026-11-12.md), [за 13 ноября](docs/archive/ORCHESTRATION_HISTORY_2026-11-13.md). Два HF-100 различаются названиями; номера не менялись. Внеочередные задачи не закрывают ворота стадий автоматически.
 
-### Что проверить перед следующим релизом
-
-- При импорте обнаружены повторяющиеся UID четырёх пар кнопок `art/ui/` и `art/ui/ru/`.
-- `resource-checks` завершается с кодом 0, но Godot сообщает о незакрытых объектах/ресурсе при shutdown.
-- Эти диагностики не были устранены уборкой документации и не означают прохождение полного release gate.
-
-### HF-99 — упорядочить оркестровый план
-
-Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-12.
-
-CP-HF-99: read-set — AGENTS.md, исходный ORCHESTRATION_PLAN.md, Git status, ссылки на план в README.md и docs/DEVELOPMENT.md. Write-set — ORCHESTRATION_PLAN.md и docs/archive/ORCHESTRATION_HISTORY_2026-11-12.md. Out of scope — игровой код, переоценка статусов задач/ворот, source/, commit/push.
-
-Приёмка: основной план начинается с краткого фронта и навигации; прежний фронт сохранён целиком в архиве; незакрытые записи явно видны; требования, решения, таблицы стадий и CP сохранены. Проверки: сравнение исходного журнала, сохранность спецификации, Markdown-ссылки, git diff --check. Изменений поведения игры нет.
-
-Проверено 2026-11-12: исходный журнал сохранён дословно; спецификация, таблицы стадий/ворот, решения и CP совпадают с исходными после двух переименований заголовков и пояснения к старым пакетам. Локальные ссылки и якоря Markdown проверены. Игровой код не менялся, тесты игры не перезапускались. Основной файл сокращён с 2 785 до примерно 650 строк. Публикация уборки плана разрешена последующим явным запросом пользователя; изменения входят в отдельный документационный коммит.
+Перед релизом остаются прежние диагностики: duplicate UID четырёх пар кнопок art/ui и art/ui/ru; resource/ObjectDB warning при завершении отдельных Godot-проверок. Их наличие не означает прохождение release gate.
 
 ## Навигация
 
@@ -69,7 +52,8 @@ CP-HF-99: read-set — AGENTS.md, исходный ORCHESTRATION_PLAN.md, Git st
 - [Контекст-пакеты выполненных задач](#контекст-пакеты-выполненных-задач)
 - [Definition of Done MVP](#definition-of-done-mvp)
 - [Журнал решений](#журнал-решений)
-- [История HF и visual pass](docs/archive/ORCHESTRATION_HISTORY_2026-11-12.md)
+- [История HF и visual pass до 12 ноября](docs/archive/ORCHESTRATION_HISTORY_2026-11-12.md)
+- [История задач за 13 ноября](docs/archive/ORCHESTRATION_HISTORY_2026-11-13.md)
 
 ## Как пользоваться планом
 

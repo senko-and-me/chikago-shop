@@ -12,6 +12,20 @@ public partial class ProjectTest
         TradeScene game = scene.Instantiate<TradeScene>();
         void CheckDoors(bool open)
         {
+            if (game.IsInsideTree())
+            {
+                Check(game.GetNode<Node2D>("World/Showroom/Showcases").Visible == open,
+                    "Locked displays must not protrude in front of the curtain at distant camera zoom");
+                foreach (string room in new[] { "MusicWorkshop", "Showroom" })
+                {
+                    var overlay = game.GetNode<ColorRect>($"World/{room}/LockedOverlay");
+                    var curtain = overlay.GetNode<TextureRect>("LockedCurtain");
+                    Check(overlay.Visible == !open && curtain.Texture.ResourcePath == "res://art/rooms/locked_curtain.png" &&
+                        curtain.Size == overlay.Size && curtain.MouseFilter == Control.MouseFilterEnum.Ignore &&
+                        curtain.GetIndex() == 0 && curtain.Modulate == Colors.White,
+                        "Curtains must cover both locked rooms, keep labels above them and leave input to the existing overlay");
+                }
+            }
             string suffix = open ? ".jpg" : "_closed.jpg";
             foreach (var entry in new[] { ("Corridor/CorridorBackground", "upper_corridor"),
                 ("TradingRoom/TradingRoomBackground", "cashier") })
@@ -104,6 +118,100 @@ public partial class ProjectTest
             TranslationServer.SetLocale(locale);
         }
         await ToSignal(this, SignalName.ProcessFrame);
+    }
+
+    // Asset replacement must preserve all saved catalogue identities and the trading lifecycle.
+    private async Task TestDriveAssetReplacements()
+    {
+        string[] kinds = { "hat", "gloves", "guitar", "trumpet", "clothing_first", "clothing_exclusive",
+            "clothing_unique", "music_first", "music_exclusive", "music_unique" };
+        Check(WorkshopItemCatalog.Items.Count == kinds.Length &&
+              WorkshopItemCatalog.Items.Select(item => item.Kind).SequenceEqual(kinds),
+            "Replacing artwork must not add, reorder or rename saved item identities");
+        foreach (var entry in new[] { (2, "guitar.png"), (7, "violin.png"), (8, "drums.png") })
+        {
+            Check(TradeScene.GetItemArtPath(entry.Item1) == "res://art/items/" + entry.Item2,
+                "Existing items must resolve to the approved artist PNGs");
+            var image = GD.Load<Texture2D>(TradeScene.GetItemArtPath(entry.Item1)).GetImage();
+            Check(image.GetFormat() == Image.Format.Rgba8 && image.GetPixel(0, 0).A == 0,
+                "Artist images must preserve a transparent background");
+        }
+        var game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
+        game.SavePath = "";
+        Root.AddChild(game);
+        await ToSignal(this, SignalName.ProcessFrame);
+        try
+        {
+            var variants = game.GetNode<Node2D>("World/TradingRoom/Item").GetChildren().OfType<Sprite2D>().ToArray();
+            Check(variants.Length == kinds.Length && variants.Select(sprite => sprite.Name.ToString().ToLowerInvariant()).Distinct().Count() == kinds.Length,
+                "Trading must retain exactly one sprite for each existing item kind");
+            foreach (int index in new[] { 2, 7, 8 })
+            {
+                var sprite = variants.Single(value => value.Name.ToString().ToLowerInvariant() == kinds[index]);
+                Vector2 size = sprite.Texture.GetSize() * sprite.Scale;
+                Check(sprite.Texture.ResourcePath == TradeScene.GetItemArtPath(index) && size.X <= 150.01f && size.Y <= 150.01f,
+                    "Trading sprites must use matching catalogue art and fit their existing display area");
+            }
+            var surface = game.GetNode<PolishingSurface>("PolishingGame/Surface/Polishing");
+            Check(PolishingSurface.InstrumentKinds.Count == 4 && PolishingSurface.InstrumentKinds.Contains("drums") &&
+                  !PolishingSurface.InstrumentKinds.Contains("sax"),
+                "Artist drums must replace the sax choice rather than add another minigame variant");
+            foreach (string kind in PolishingSurface.InstrumentKinds.Concat(new[] { "sax" }))
+            {
+                var session = surface.Begin(kind);
+                Check(session.Cells.Any(cell => cell.Inside) && !session.Inside(0, 0),
+                    "Polishing silhouettes must remain playable with transparent margins");
+                session.Start();
+                var cell = session.Cells.First(value => value.Inside && session.Inside(value.X + 14, value.Y));
+                session.BeginRub(cell.X, cell.Y);
+                for (int i = 0; i < 30; i++) session.MoveRub(cell.X + (i % 2 == 0 ? 14 : 0), cell.Y, 20);
+                Check(session.Progress > 0, "Rubbing inside each instrument silhouette must remove its coating");
+            }
+            // Open the actual paid mini-game on the drum variant and use viewport mouse events.
+            game.Score = 1000;
+            game.TryUnlockMusicWorkshop();
+            int drumIndex = PolishingSurface.InstrumentKinds.ToList().IndexOf("drums");
+            for (ulong seed = 0; ; seed++)
+            {
+                GD.Seed(seed);
+                if (GD.Randi() % 4 == (uint)drumIndex) { GD.Seed(seed); break; }
+                Check(seed < 100, "A deterministic drum fixture seed must be found");
+            }
+            var miniGame = game.GetNode<EmbroideryGame>("PolishingGame");
+            miniGame.SetProcess(false);
+            game.GetItemFromMusicWorkshop();
+            Check(miniGame.IsOpen && surface.InstrumentKind == "drums", "Opening polishing must select the ready drum artwork");
+            int cashBefore = game.Score, energyBefore = game.EnergyRemaining;
+            miniGame.Activate();
+            Check(game.Score == cashBefore - WorkshopItemCatalog.CraftCost("music") && game.EnergyRemaining == energyBefore - 1,
+                "The new drum presentation must retain the existing craft payment");
+            await ToSignal(this, SignalName.ProcessFrame);
+            await ToSignal(this, SignalName.ProcessFrame);
+            var target = miniGame.Polishing.Cells.First(cell => cell.Inside && miniGame.Polishing.Inside(cell.X + 14, cell.Y));
+            Vector2 left = surface.LogicalToScreen(new Vector2((float)target.X, (float)target.Y));
+            Vector2 right = surface.LogicalToScreen(new Vector2((float)target.X + 14, (float)target.Y));
+            Root.PushInput(new InputEventMouseMotion { Position = left, GlobalPosition = left }, true);
+            Root.PushInput(new InputEventMouseButton { Position = left, GlobalPosition = left, ButtonIndex = MouseButton.Left,
+                Pressed = true, ButtonMask = MouseButtonMask.Left }, true);
+            for (int i = 0; i < 30; i++)
+            {
+                Vector2 position = i % 2 == 0 ? right : left;
+                Root.PushInput(new InputEventMouseMotion { Position = position, GlobalPosition = position,
+                    ButtonMask = MouseButtonMask.Left }, true);
+            }
+            Root.PushInput(new InputEventMouseButton { Position = right, GlobalPosition = right,
+                ButtonIndex = MouseButton.Left, Pressed = false }, true);
+            Check(miniGame.Polishing.Progress > 0, "Real viewport mouse strokes must clean the artist drum silhouette");
+            if (OS.GetCmdlineUserArgs().Contains("--asset-preview"))
+            {
+                await ToSignal(this, SignalName.ProcessFrame);
+                await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+                Root.GetTexture().GetImage().SavePng(System.IO.Path.Combine(OS.GetUserDataDir(), "drum-polishing.png"));
+            }
+        }
+        finally { game.QueueFree(); }
+        await ToSignal(this, SignalName.ProcessFrame);
+        await TestPlaceholderItems();
     }
 
     private static void TestResourceOrganization()

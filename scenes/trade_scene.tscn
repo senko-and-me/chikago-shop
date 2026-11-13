@@ -6,7 +6,7 @@
 [ext_resource type="PackedScene" uid="uid://u2ve41t8yhqn" path="res://scenes/customer.tscn" id="5_customer"]
 [ext_resource type="Texture2D" uid="uid://cbtl6isdq4h6k" path="res://art/items/hat_cloche.png" id="6_hat"]
 [ext_resource type="Texture2D" uid="uid://bw57e18b5g53h" path="res://art/items/gloves.png" id="7_gloves"]
-[ext_resource type="Texture2D" uid="uid://bjrlsjkjtn8cb" path="res://art/items/guitar.svg" id="8_guitar"]
+[ext_resource type="Texture2D" path="res://art/items/guitar.png" id="8_guitar"]
 [ext_resource type="Texture2D" uid="uid://opqiutt7np6v" path="res://art/rooms/showroom.jpg" id="9_bkxpd"]
 [ext_resource type="PackedScene" uid="uid://4wqv2sl2gvaw" path="res://scenes/UI/InventoryUI.tscn" id="9_cppqn"]
 [ext_resource type="Texture2D" uid="uid://bdnt1wjejacqf" path="res://art/items/trumpet.svg" id="9_trumpet"]
@@ -479,7 +479,7 @@ centered = false
 [node name="Guitar" type="Sprite2D" parent="World/TradingRoom/Item" unique_id=1529809276]
 visible = false
 position = Vector2(-14, -119)
-scale = Vector2(1.56, 1.56)
+scale = Vector2(0.06355932, 0.06355932)
 texture = ExtResource("8_guitar")
 centered = false
 

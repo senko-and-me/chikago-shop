@@ -48,11 +48,15 @@ public partial class ProjectTest
             {
                 var texture = GD.Load<Texture2D>(TradeScene.GetItemArtPath(index));
                 var image = texture.GetImage();
-                Check(image.GetWidth() == 128 && image.GetHeight() == 128 && image.GetPixel(0,0).A == 0,
-                    "Placeholder icons must be square with transparent padding");
-                colors.Add(image.GetPixel(64,64));
+                Check(image.GetPixel(0,0).A == 0, "Item artwork must retain transparent padding");
+                if (TradeScene.GetItemArtPath(index).Contains("placeholder_"))
+                {
+                    Check(image.GetWidth() == 128 && image.GetHeight() == 128,
+                        "Remaining placeholder icons must retain their square size");
+                    colors.Add(image.GetPixel(64,64));
+                }
             }
-            Check(colors.Count == 6, "Every new placeholder must have a distinct color");
+            Check(colors.Count == 4, "The four remaining placeholders must retain distinct colors");
             using (var file = FileAccess.Open(path, FileAccess.ModeFlags.Write))
                 file.StoreString("{\"save_version\":8,\"day_remaining_seconds\":120,\"score\":1000,\"energy_remaining\":2,\"stored_items\":[4,5,6,7,8,9]}");
             game = await Load();
@@ -67,13 +71,13 @@ public partial class ProjectTest
                 SelectInventorySlot(game,0);
                 game.PlaceItemInShowcase(0);
                 Check(game.GetNode<TextureRect>("World/ShowroomLeft/Showcases/Slot1/Icon").Texture.ResourcePath == art,
-                    "Showcases must display the matching colored square");
+                    "Showcases must display matching catalogue artwork");
                 game._Process(game.BuyerCountdown+0.001);
                 var visible = game.GetNode<Node2D>("World/TradingRoom/Item").GetChildren().OfType<Sprite2D>()
                     .Where(sprite => sprite.Visible).ToArray();
                 Check(game.ItemIndex == index && visible.Length == 1 && visible[0].Texture.ResourcePath == art &&
                       game.RerollsRemaining == TradeScene.GetItemRerollLimit(index),
-                    "Each colored square must have its own visible trading sprite and rarity rerolls");
+                    "Each high-rarity item must have its own visible trading sprite and rarity rerolls");
                 game.RerollCustomer();
                 int remaining = game.RerollsRemaining;
                 game.QueueFree();
@@ -95,7 +99,7 @@ public partial class ProjectTest
             if(FileAccess.FileExists(path)) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(path));
         }
         await ToSignal(this, SignalName.ProcessFrame);
-        GD.Print("All six colored placeholder items, configured rarity odds, trading and reload checks passed");
+        GD.Print("All six high-rarity items, configured rarity odds, trading and reload checks passed");
     }
 
     private static void TestEconomyConfig()

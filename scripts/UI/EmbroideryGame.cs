@@ -167,8 +167,8 @@ public partial class EmbroideryGame : CanvasLayer
 
 		if (IsPolishing)
 		{
-			string[] instruments = ["violin", "trumpet", "sax", "guitar"];
-			Polishing = _polishingSurface.Begin(instruments[GD.Randi() % 4]);
+			var instruments = PolishingSurface.InstrumentKinds;
+			Polishing = _polishingSurface.Begin(instruments[(int)(GD.Randi() % (uint)instruments.Count)]);
 		}
 		else
 		{
