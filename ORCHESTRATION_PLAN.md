@@ -12,18 +12,18 @@
 
 ### HF-104 — уборка и публикация ассетов и занавеса
 
-Статус: `REVIEW`; координатор/исполнитель `/root`; READY 2026-11-13. Зависимости HF-100 (ассеты), HF-101…HF-103 DONE; активных пересекающихся задач нет. Пользователь разрешил уборку, commit и push.
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-13. Зависимости HF-100 (ассеты), HF-101…HF-103 DONE; активных пересекающихся задач нет. Пользователь разрешил уборку, commit и push.
 CP-HF-104 read-set: AGENTS.md, план, Git status/diff/refs; текущий набор изменённых scripts/scenes/tests/art, IMG_2363.PNG и .import, .gitignore, README.md, docs/ASSET_AUDIT.md, docs/TESTING.md, docs/archive/ORCHESTRATION_HISTORY_2026-11-12.md, tools/verify.ps1, project.godot, .vscode/settings.json. Write-set: ORCHESTRATION_PLAN.md, docs/archive/ORCHESTRATION_HISTORY_2026-11-13.md, README.md, docs/TESTING.md, docs/ASSET_AUDIT.md; перемещение только корневых IMG_2363.PNG и .import в .godot/hf104-original; Git index/commit/main и origin/main для проверенных изменений HF-100…HF-103. Изолированная проверочная копия в системном TEMP. Для baseline-диагностики дополнительно прочитаны tests/Integration/ProjectTest.Ui.cs и ProjectTest.Helpers.cs; их изменение не входит в задачу. Out of scope: source/, сохранения игрока, удаление сборок, новый gameplay, force push. Приёмка: один runtime-занавес в art/rooms, завершённые отчёты в архиве, актуальные ссылки и фронт; build/domain и targeted asset/room/resource/dialogue checks PASS; полный integration прогон проверен сравнением с baseline, прежнее падение явно задокументировано; обычный push, remote SHA совпадает с HEAD, рабочее дерево чистое.
 
 ```text
 Task: HF-104
-Recommended status: REVIEW
+Recommended status: REVIEW (принято координатором → DONE после push)
 Changed: завершённые отчёты перенесены в docs/archive/ORCHESTRATION_HISTORY_2026-11-13.md, основной фронт сокращён без изменения требований/ворот; README и docs/TESTING содержат ссылки на аудит и новые группы. Корневые IMG_2363.PNG/.import перемещены в .godot/hf104-original, runtime art/rooms/locked_curtain.png сохранён с тем же SHA256. Подготовлены к публикации прежние изменения HF-100 «ассеты» и HF-101…HF-103.
-Checks: build PASS (0 warnings/errors); domain PASS (131/131); import PASS (exit 0; первичный импорт без кэша сообщил о ещё не импортированном шрифте); rendered --asset-replacement-checks, --room-doorway-checks, --resource-checks, --dialogue-localization-checks PASS (exit 0). Общий ProjectTest FAIL на TestUiLayoutInvalidation:61, Showing a tooltip must immediately activate its presentation updates. Тот же FAIL воспроизведён на исходных runtime/scenes/tests из HEAD=86f0019 в той же изолированной копии, при headless и rendered запуске текущих изменений. Полный suite не объявляется зелёным. Diff-check, локальные Markdown-ссылки и сохранность основной спецификации проверяются перед commit.
-Acceptance: единственный runtime-занавес без затемнения, готовые музыкальные PNG и прежние игровые identities; источники/сохранения игрока не читались и не менялись. Публикация ожидает обычного push.
+Checks: build PASS (0 warnings/errors); domain PASS (131/131); import PASS (exit 0; первичный импорт без кэша сообщил о ещё не импортированном шрифте); rendered --asset-replacement-checks, --room-doorway-checks, --resource-checks, --dialogue-localization-checks PASS (exit 0). Общий ProjectTest FAIL на TestUiLayoutInvalidation:61, Showing a tooltip must immediately activate its presentation updates. Тот же FAIL воспроизведён на исходных runtime/scenes/tests из HEAD=86f0019 в той же изолированной копии, при headless и rendered запуске текущих изменений. Полный suite не объявляется зелёным. Diff-check, локальные Markdown-ссылки и сохранность основной спецификации PASS. git push origin main PASS (86f0019..1353677); ls-remote подтвердил SHA 135367799d66c77b83120234a66dbeb5b7acc94a; рабочее дерево чистое после публикации.
+Acceptance: единственный runtime-занавес без затемнения, готовые музыкальные PNG и прежние игровые identities; источники/сохранения игрока не читались и не менялись. Изменения опубликованы обычным push без переписывания истории.
 Read-set exception: ProjectTest.Ui.cs/Helpers.cs прочитаны для необходимой диагностики существующего падения; для baseline в проверочной копии временно использованы версии изменённых scripts/scenes/tests из HEAD, затем восстановлены рабочие файлы.
 Risks/blocker: существующее падение tooltip suite, прежние duplicate UI UID и shutdown resource warnings. Это не release gate; новые целевые проверки проходят.
-Next: commit и push main, сверить remote SHA, затем закрыть HF-104.
+Next: основной фронт S1-04; исправление прежнего tooltip FAIL требует отдельной задачи.
 ```
 
 Evidence: .godot/hf104-verify.log, hf104-{full,assets,rooms,resources,dialogue,baseline}*.log; путь изолированной копии — .godot/hf104-check-dir.txt. Исходное фото сохранено в .godot/hf104-original/.
@@ -35,7 +35,7 @@ Evidence: .godot/hf104-verify.log, hf104-{full,assets,rooms,resources,dialogue,b
 | `NEXT` | `S1-04` — именованные потоки RNG | Подготовить CP по актуальному коду перед назначением. |
 | Требует сверки | `HF-64`, `VF-02…VF-05` | Сопоставить старые незакрытые статусы с evidence поздних задач. |
 
-Последний подтверждённый remote: `86f0019` — публикация английского перевода. Локально завершены сверка ассетов, замена музыкальных заглушек и занавес закрытых комнат без затемнения (HF-100 «ассеты», HF-101…HF-103); их публикация входит в HF-104.
+Последняя публикация изменений: `1353677` — музыкальные PNG, занавес закрытых комнат без затемнения и уборка документации. HF-100 «ассеты» и HF-101…HF-104 завершены и опубликованы; последующая запись закрывает отчёт публикации.
 
 Отчёты и контекст-пакеты: [до 12 ноября](docs/archive/ORCHESTRATION_HISTORY_2026-11-12.md), [за 13 ноября](docs/archive/ORCHESTRATION_HISTORY_2026-11-13.md). Два HF-100 различаются названиями; номера не менялись. Внеочередные задачи не закрывают ворота стадий автоматически.
 
