@@ -12,9 +12,10 @@
 
 ### HF-121 — публикация перегородок и удаления заголовков
 
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-14; HF-120 DONE, пользователь разрешил commit/push.
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-14; HF-120 DONE, пользователь разрешил commit/push.
 CP-HF-121 read-set: текущий фронт, Git status/diff/refs/remotes, evidence .local/checks/hf120. Write-set: ORCHESTRATION_PLAN.md; Git index/commits/main и origin/main для scripts/Presentation/{RoomFramePresentation,RoomDoorwayPresentation}.cs, scripts/TradeScene.cs, tests/Integration/ProjectTest.{RoomFrames,Resources}.cs; текущая пользовательская правка отступа scripts/Days/DayCycleController.cs включается без изменения содержимого. Out of scope: .local/, source/, builds/, новые игровые изменения, force push. Приёмка: push main, remote SHA совпадает с HEAD, дерево чистое. Проверки: fetch/divergence, diff-check, сохранённые local/isolated build и rendered room-frame/room-doorway checks HF-120, ls-remote.
 
+Handoff HF-121: REVIEW → DONE после приёмки координатором. Changed: HF-120 и пользовательский отступ DayCycleController опубликованы коммитом e9e75ca. Checks: fetch/divergence PASS (0/0), diff-check PASS; сохранённые local/isolated build (0 warnings/errors) и rendered room-frame/room-doorway checks HF-120 PASS; push origin main PASS (2aa7b29..e9e75ca); ls-remote подтвердил SHA e9e75cae5ddce5b133be02cc8da13bde10f6f644; дерево перед фиксацией отчёта чистое. Acceptance: обычная публикация main выполнена. Read-set exception: нет. Risks/blocker: новых нет; прежний tooltip baseline вне задачи. Next: основной фронт S1-04; отчёт фиксируется отдельным commit/push.
 ### HF-120 — тонкие светлые перегородки и занавесы без заголовков
 
 Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-14; HF-117 DONE, активных пересечений нет.
