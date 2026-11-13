@@ -12,9 +12,10 @@
 
 ### HF-127 — публикация обучения первой продаже
 
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-14; HF-126 DONE, пользователь разрешил commit/push.
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-14; HF-126 DONE, пользователь разрешил commit/push.
 CP-HF-127 read-set: текущий фронт, Git status/diff/refs/remotes, evidence .local/checks/hf126. Write-set: ORCHESTRATION_PLAN.md; Git index/commits/main и origin/main для docs/GAMEPLAY.md, localization/en.tres, scenes/trade_scene.tscn, scenes/UI/FirstTradeTutorial.tscn, scripts/UI/FirstTradeTutorial.cs/.uid, tests/ProjectTest.cs, tests/Integration/ProjectTest.Tutorial.cs/.uid. Out of scope: .local/, source/, builds/, новые игровые правки, force push. Приёмка: обычный push main, remote SHA совпадает с HEAD, дерево чистое. Проверки: fetch/divergence, diff-check, сохранённые build/import и rendered tutorial/day-start/card-dealing checks HF-126, ls-remote.
 
+Handoff HF-127: REVIEW → DONE после приёмки координатором. Changed: обучение HF-126 опубликовано коммитом 847b0ff. Checks: fetch/divergence PASS (0/0), diff-check PASS; сохранённые local/isolated build PASS (0 warnings/errors), import PASS с прежними UID warnings; rendered tutorial/day-start/card-dealing checks PASS из HF-126; push origin main PASS (ad9067b..847b0ff); ls-remote подтвердил SHA 847b0ff1eebc02e923b80017c8f0ceb01331611d; дерево перед фиксацией отчёта чистое. Acceptance: обычная публикация main выполнена. Read-set exception: нет. Risks/blocker: прежний tooltip baseline полного suite вне задачи; новых нет. Next: основной фронт S1-04; отчёт фиксируется отдельным commit/push.
 ### HF-126 — обучение первому торговому циклу
 
 Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-14; HF-122…HF-124 DONE, активных пересечений нет.
