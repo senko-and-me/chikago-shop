@@ -12,9 +12,21 @@
 
 ### HF-100 — объединить и опубликовать английский перевод
 
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-13. Пользователь явно разрешил push перевода в main. Локальный перевод bf74adf объединяется с origin/main=68973e4 обычным merge без force/rebase.
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-13. Пользователь явно разрешил push перевода в main. Локальный перевод bf74adf объединяется с origin/main=68973e4 обычным merge без force/rebase.
 CP-HF-100: read-set — текущий фронт и git status/diff/log; файлы HF-97 (английская локализация), новые README/docs/архив origin/main, tests/ProjectTest.cs, локальные test/toolchain evidence. Write-set — разрешение документальных конфликтов в ORCHESTRATION_PLAN.md/README.md; docs/DEVELOPMENT.md и docs/TESTING.md (перенос описания перевода); docs/archive/ORCHESTRATION_HISTORY_2026-11-12.md (сохранение исходного отчёта перевода); Git index/merge commit и origin/main. Out of scope: source/, удаление новых удалённых изменений, новые продуктовые изменения, force push. Приёмка: код перевода и все три новых удалённых коммита сохранены; новая структура документации сохранена, сведения о переводе перенесены в профильные разделы; build/domain и targeted localization/music suites проходят, обычный push main и remote ref comparison успешны.
 
+```text
+Task: HF-100
+Recommended status: REVIEW
+Changed: merge 71a72da объединяет локальный перевод bf74adf и origin/main=68973e4; README/план разрешены с сохранением новой структуры, описание перевода перенесено в docs/DEVELOPMENT.md и docs/TESTING.md, исходный отчёт локализации сохранён в архиве.
+Checks: build -> PASS (0 warnings/errors); domain -> PASS (131 tests); --dialogue-localization-checks, --menu-music-checks, --intro-music-checks, --game-music-checks -> PASS; staged diff-check -> PASS. Runtime/scene remote changes match origin/main, translation runtime/catalog/tests match bf74adf. git push origin main -> PASS (68973e4..71a72da); git ls-remote confirmed 71a72da; working tree clean. Evidence: TEMP/chikago-hf100-{build,domain,import,dialogue-localization,menu-music,intro-music,game-music}.log.
+Acceptance: перевод опубликован в main без перезаписи истории, все новые удалённые коммиты сохранены. Временные настройки и тестовые сохранения изолированы; override.cfg удалён.
+Read-set exception: архив и профильные docs прочитаны для необходимого разрешения конфликтов после удалённой реорганизации; source/ не читался.
+Risks/blocker: только ранее задокументированные import-предупреждения о дублях UID четырёх пар кнопок; музыкальные/языковые тесты завершились чисто. Новых блокеров публикации нет.
+Next: продолжить от синхронизированного main.
+```
+
+Координатор подтвердил HF-100 2026-11-13 после успешного push и проверки удалённой ref: REVIEW → DONE.
 Полный отчёт «HF-97 — английская локализация вступительного диалога» сохранён в [архиве](docs/archive/ORCHESTRATION_HISTORY_2026-11-12.md). Эта историческая HF-97 отличается от одноимённой задачи уборки проекта; её номер не изменён.
 
 Основная стадия по реестру: **S1 — домен, конфигурация и воспроизводимость**. Ворота `G-S0 = PASSED`, `G-S1 = OPEN`. Выполненные внеочередные задачи не закрывают ворота стадий автоматически.
