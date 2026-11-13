@@ -12,9 +12,10 @@
 
 ### HF-119 — публикация интерфейса и стартового вида
 
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-13; HF-112…HF-118 DONE, пользователь разрешил commit/push.
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-13; HF-112…HF-118 DONE, пользователь разрешил commit/push.
 CP-HF-119 read-set: текущий фронт, Git status/diff/refs/remotes, evidence .local/checks/hf112…hf118, изменённые файлы HF-112…HF-118. Write-set: ORCHESTRATION_PLAN.md; Git index/commits/main и origin/main для текущих docs/{ASSET_AUDIT,GAMEPLAY}.md, localization/en.tres, scripts/Camera/WorldCamera.cs, scripts/Days/DayCycleController.cs, scripts/Presentation/{ButtonFeedbackController,RoomDoorwayPresentation,RoomFramePresentation,CraftButtonPresentation}.cs и CraftButtonPresentation.cs.uid, scripts/TradeScene.cs, scripts/UI/DayAnnouncementOverlay.cs, tests/Integration/ProjectTest.{CameraLimits,DayAnnouncements,DayStart,Resources,RoomFrames}.cs, tests/ProjectTest.cs. Out of scope: .local/, source/, builds/, новые игровые правки, force push. Приёмка: обычный push main, remote SHA совпадает с HEAD, дерево чистое. Проверки: fetch/divergence, diff-check, сохранённые build и профильные rendered tests HF-112…HF-118, проверка удалённой ветки после публикации.
 
+Handoff HF-119: REVIEW → DONE после приёмки координатором. Changed: проверенные изменения HF-112…HF-118 опубликованы коммитом a372bd6 (рамки/стыки и контраст надписей, hover часов, английская кнопка крафта, расширенное объявление дня, старт камеры). Checks: fetch PASS (HEAD и origin/main до публикации совпадали, 0/0); diff-check PASS; local/isolated build PASS (0 warnings/errors), профильные rendered tests из HF-112…HF-118 PASS; push origin main PASS (8b1ac1d..a372bd6); ls-remote подтвердил SHA a372bd62905d20154b81e7fd45b6c5bca058974b. Acceptance: обычный push main выполнен, рабочее дерево перед фиксацией этого отчёта чистое. Read-set exception: нет. Risks/blocker: общий integration baseline tooltip FAIL остаётся вне публикации, полная suite не объявляется зелёной. Next: основной фронт S1-04; отчёт фиксируется отдельным commit/push.
 ### HF-118 — старт камеры с максимального отдаления по центру сцены
 
 Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-13; зависимости HF-109 DONE, активных пересечений нет.
