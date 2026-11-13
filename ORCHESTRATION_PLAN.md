@@ -12,10 +12,10 @@
 
 ### HF-111 — публикация изменений интерфейса и камеры
 
-Статус: `REVIEW`; координатор/исполнитель `/root`; READY 2026-11-13. HF-105…HF-110 DONE; пользователь явно разрешил commit и push.
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-13. HF-105…HF-110 DONE; пользователь явно разрешил commit и push.
 CP-HF-111 read-set: текущий фронт, Git status/diff/refs/remotes, evidence HF-110 в .local/checks/hf110/. Write-set: ORCHESTRATION_PLAN.md; Git index/commit/main и origin/main для текущего проверенного набора .gitignore/README/docs, art/ui/camera_frame.png/.import, scenes/trade_scene.tscn, scripts/Camera/WorldCamera.cs, scripts/Days/DayCycleController.cs, scripts/Persistence/TradeScene.Persistence.cs, scripts/TradeScene.cs, scripts/Presentation/RoomFramePresentation.cs/.uid, src/ChikagoShop.Domain/Persistence/ProgressData.cs, tests/ChikagoShop.Domain.Tests/ProgressMigrationTests.cs, tests/ProjectTest.cs, tests/Integration/ProjectTest.{CameraLimits,DayStart,RoomFrames}.cs/.uid. Out of scope: .local/, source/, builds/, новые игровые изменения, force push. Приёмка: обычный push main, remote SHA совпадает с HEAD, рабочее дерево чистое.
 
-Handoff HF-111: REVIEW; изменения HF-105…HF-110 готовы к публикации. Checks: fetch PASS (HEAD и origin/main = 6f0e8e4, 0/0); diff-check PASS; сохранены build PASS (0 warnings/errors), domain PASS (132/132), rendered room-frame/camera-limits/day-start PASS из HF-110; импорт PASS. Полный integration suite не объявляется зелёным: прежнее baseline tooltip-падение задокументировано. Read-set exception: нет. Risks/blocker: прежние диагностические предупреждения вне задачи. Next: commit, push и проверка remote SHA.
+Handoff HF-111: REVIEW → DONE после приёмки координатором; изменения HF-105…HF-110 опубликованы коммитом 55da86b. git push origin main PASS (6f0e8e4..55da86b), ls-remote подтвердил SHA 55da86b3f5f3cda6fa1b25751f916e6070cc6144, дерево чистое после публикации. Checks: fetch PASS (HEAD и origin/main = 6f0e8e4, 0/0); diff-check PASS; сохранены build PASS (0 warnings/errors), domain PASS (132/132), rendered room-frame/camera-limits/day-start PASS из HF-110; импорт PASS. Полный integration suite не объявляется зелёным: прежнее baseline tooltip-падение задокументировано. Read-set exception: нет. Risks/blocker: прежние диагностические предупреждения вне задачи. Next: основной фронт S1-04.
 ### HF-110 — порядок в папках проекта
 
 Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-13; HF-105…HF-109 DONE, активных пересечений нет.
@@ -41,7 +41,7 @@ Evidence: .local/checks/hf110/{build,domain,isolated-build,import,room-frame,cam
 | `NEXT` | `S1-04` — именованные потоки RNG | Подготовить CP по актуальному коду перед назначением. |
 | Требует сверки | `HF-64`, `VF-02…VF-05` | Сопоставить старые незакрытые статусы с evidence поздних задач. |
 
-Последний опубликованный коммит: `6f0e8e4` — отчёт публикации ассетов и уборки. Локально завершены HF-105…HF-109: рамки только у комнат, часы +15% и ручной старт дня, привязка комнат к day/night-схемам и ограничения камеры. Эти изменения и текущая уборка ещё не закоммичены.
+Последняя публикация изменений: `55da86b` — рамки только у комнат, часы +15% и ручной старт дня, привязка комнат к day/night-схемам, ограничения камеры и порядок в папках. HF-105…HF-111 завершены и опубликованы; последующая запись закрывает отчёт публикации.
 
 Отчёты и контекст-пакеты: [до 12 ноября](docs/archive/ORCHESTRATION_HISTORY_2026-11-12.md), [за 13 ноября](docs/archive/ORCHESTRATION_HISTORY_2026-11-13.md). Два HF-100 различаются названиями; номера не менялись. Внеочередные задачи не закрывают ворота стадий автоматически.
 
