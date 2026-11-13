@@ -6,6 +6,7 @@ using Godot;
 // Observes existing input signals; never triggers buttons, changes their styles or moves controls.
 public partial class ButtonFeedbackController : Node
 {
+    public const string LocalFeedbackGroup = "button_feedback_local";
     public static ButtonFeedbackController Instance { get; private set; }
     public readonly record struct VisualFrame(Rect2 Bounds, Color Accent, float Strength, float Pressed, float Flash);
     private const float FlashSeconds = 0.18f;
@@ -44,7 +45,7 @@ public partial class ButtonFeedbackController : Node
 
     private void OnNodeAdded(Node node)
     {
-        if (node is not BaseButton button || _states.ContainsKey(button)) return;
+        if (node is not BaseButton button || button.IsInGroup(LocalFeedbackGroup) || _states.ContainsKey(button)) return;
         var state = new State { Button = button, OriginalCursor = button.MouseDefaultCursorShape };
         state.Enter = () => { state.Hovered = true; state.Sequence = ++_sequence; };
         state.Exit = () => { state.Hovered = false; state.Held = false; };

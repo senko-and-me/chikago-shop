@@ -5,6 +5,60 @@ using Godot;
 
 public partial class ProjectTest
 {
+    private async Task TestLocalizedCraftButtons()
+    {
+        string locale = TranslationServer.GetLocale();
+        var game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
+        game.SavePath = "";
+        Root.AddChild(game);
+        game.SetProcess(false);
+        var camera = game.GetNode<WorldCamera>("Camera2D");
+        camera.SetProcess(false);
+        game.Score = 1000;
+        game.TryUnlockMusicWorkshop();
+        try
+        {
+            foreach (string language in new[] { "ru", "en", "ru", "en" })
+            {
+                TranslationServer.SetLocale(language);
+                await ToSignal(this, SignalName.ProcessFrame);
+                foreach (string room in new[] { "Atelier", "MusicWorkshop" })
+                {
+                    bool english = language == "en";
+                    var button = game.GetNode<Button>($"World/{room}/GetItemButton");
+                    Check(button.Size == new Vector2(450, 190) && button.Text == "" && !button.Disabled,
+                        "Language changes must preserve craft-button geometry and availability");
+                    foreach (string state in new[] { "normal", "hover", "pressed", "disabled" })
+                        Check(((StyleBoxTexture)button.GetThemeStylebox(state)).Texture.ResourcePath ==
+                            (english ? "res://art/ui/panel_small.png" : "res://art/ui/create_button.png"),
+                            "Every craft-button state must use the selected language artwork");
+                    var caption = button.GetNode<Label>("EnglishCaption");
+                    var help = button.GetNode<TextureRect>("RarityHotspot/EnglishHelp");
+                    Check(caption.Visible == english && help.Visible == english && caption.Text == "CREATE\nITEMS" &&
+                        caption.MouseFilter == Control.MouseFilterEnum.Ignore && help.MouseFilter == Control.MouseFilterEnum.Ignore,
+                        "English lettering and question icon must switch together without blocking input");
+                }
+            }
+            var atelier = game.GetNode<Button>("World/Atelier/GetItemButton");
+            camera.Zoom = Vector2.One * 0.9f;
+            camera.Position = atelier.GetGlobalTransform() * (atelier.Size / 2);
+            camera.ClampToBounds();
+            using (var image = await CapturePresentation("craft-button-english")) { }
+            int cash = game.Score, energy = game.EnergyRemaining;
+            await ClickControl(game, "World/Atelier/GetItemButton");
+            Check(game.GetNode<EmbroideryGame>("EmbroideryGame").IsOpen && game.Score == cash && game.EnergyRemaining == energy,
+                "A real click on the translated button must open the existing minigame without charging before activation");
+            await PressEscapeForTest();
+            Check(!game.CraftMiniGameOpen && !Paused, "The translated craft flow must still cancel normally");
+        }
+        finally
+        {
+            game.QueueFree();
+            TranslationServer.SetLocale(locale);
+        }
+        await ToSignal(this, SignalName.ProcessFrame);
+    }
+
     private async Task TestRoomDoorways()
     {
         const string save = "user://room_doorway_test.json";
@@ -20,8 +74,15 @@ public partial class ProjectTest
                 {
                     var overlay = game.GetNode<ColorRect>($"World/{room}/LockedOverlay");
                     var curtain = overlay.GetNode<TextureRect>("LockedCurtain");
+                    var title = overlay.GetNode<Label>("LockTitle");
+                    Check(title.GetThemeColor("font_color") == Colors.Black &&
+                        title.GetThemeColor("font_outline_color") == Colors.White &&
+                        title.GetThemeConstant("outline_size") >= 6,
+                        "Locked-room titles must contrast with both white cloth and black stripes without dimming the curtain");
                     Check(overlay.Visible == !open && curtain.Texture.ResourcePath == "res://art/rooms/locked_curtain.png" &&
-                        curtain.Size == overlay.Size && curtain.MouseFilter == Control.MouseFilterEnum.Ignore &&
+                        Mathf.IsEqualApprox(curtain.Size.X, overlay.Size.X) &&
+                        Mathf.Abs((curtain.Size.Y - overlay.Size.Y) * overlay.GetParent<Node2D>().GlobalScale.Y - 10) < 0.02f &&
+                        curtain.MouseFilter == Control.MouseFilterEnum.Ignore &&
                         curtain.GetIndex() == 0 && curtain.Modulate == Colors.White,
                         "Curtains must cover both locked rooms, keep labels above them and leave input to the existing overlay");
                 }
@@ -32,9 +93,13 @@ public partial class ProjectTest
             {
                 var sprite = game.GetNode<Sprite2D>("World/" + entry.Item1);
                 Check(sprite.Texture.ResourcePath == "res://art/rooms/" + entry.Item2 + suffix &&
-                    sprite.Texture.GetSize() == new Vector2(1398, 1080) && sprite.Position == new Vector2(3, 4) &&
-                    sprite.Scale == Vector2.One && !sprite.Centered,
-                    $"{entry.Item2} must show the {(open ? "open" : "closed")} doorway without changing room geometry");
+                    sprite.Texture.GetSize() == new Vector2(1398, 1080) && Mathf.IsEqualApprox(sprite.Position.X, 3) &&
+                    Mathf.IsEqualApprox(sprite.Scale.X, 1) && !sprite.Centered,
+                    $"{entry.Item2} must show the {(open ? "open" : "closed")} doorway with the same width and source art");
+                float overlap = game.IsInsideTree() ? 10 / sprite.GetParent<Node2D>().GlobalScale.Y : 0;
+                Check(Mathf.Abs(sprite.Scale.Y * 1080 - (1080 + overlap)) < 0.02f &&
+                    Mathf.Abs(sprite.Position.Y - (entry.Item2 == "cashier" ? 4 - overlap : 4)) < 0.02f,
+                    "Doorway backgrounds must retain the thinner floor seam across unlock and reload");
             }
         }
         async Task Reload()

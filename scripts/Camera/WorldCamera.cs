@@ -48,10 +48,17 @@ public partial class WorldCamera : Camera2D
     public override void _Ready()
     {
         _viewport = GetViewport();
-        _targetZoom = Mathf.Clamp(Zoom.X, MinZoom, ZoomLimit);
-        Zoom = Vector2.One * _targetZoom;
-        _zoomAnchor = GetViewportRect().Size / 2f;
         _viewport.SizeChanged += ClampToBounds;
+        ResetToOverview();
+    }
+
+    public void ResetToOverview()
+    {
+        CancelDrag();
+        _targetZoom = MinZoom;
+        Zoom = Vector2.One * _targetZoom;
+        Position = WorldBounds.GetCenter();
+        _zoomAnchor = GetViewportRect().Size / 2f;
         ClampToBounds();
     }
 

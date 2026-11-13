@@ -16,6 +16,13 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--craft-localization-checks"))
+            {
+                await TestLocalizedCraftButtons();
+                GD.Print("CRAFT_LOCALIZATION_CHECKS_PASS: RU/EN/RU, both workshops, styles, help icon, real craft click and cancellation");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--camera-limits-checks"))
             {
                 await TestCameraReferenceLimits();

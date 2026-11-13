@@ -5,6 +5,7 @@ using Godot;
 
 public sealed class DayCycleController
 {
+    private static readonly int TotalDays = EconomyConfigProvider.Load().Days.TotalDays;
 	public DaySession Session { get; } = new();
 	public bool Started { get; private set; }
 	public DayUpgradeSession Upgrades { get; } = new();
@@ -63,6 +64,13 @@ public sealed class DayCycleController
 		_startButton.AddThemeColorOverride("font_color", Colors.Black);
 		_startButton.AddThemeColorOverride("font_hover_color", Colors.Black);
 		_startButton.AddThemeColorOverride("font_focus_color", Colors.Black);
+		_startButton.AddToGroup(ButtonFeedbackController.LocalFeedbackGroup);
+		foreach (string state in new[] { "normal", "hover", "pressed", "focus", "disabled" })
+			_startButton.AddThemeStyleboxOverride(state, new StyleBoxEmpty());
+		_startButton.MouseEntered += UpdateClockFeedback;
+		_startButton.MouseExited += UpdateClockFeedback;
+		_startButton.FocusEntered += UpdateClockFeedback;
+		_startButton.FocusExited += UpdateClockFeedback;
 		_startButton.Pressed += StartDay;
 		_timer.AddChild(_startButton);
 		_startButton.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
@@ -82,7 +90,7 @@ public sealed class DayCycleController
 	{
 		if (Started || Session.IsClosed || Upgrades.Pending || _game.GetTree().Paused || _game.Failed || _game.Completed) return;
 		Started = true;
-		_announcements.Observe(Session.RemainingSeconds, Session.Duration, false);
+		_announcements.Observe(Session.RemainingSeconds, Session.Duration, false, _game.CurrentDay, TotalDays);
 		RefreshTimer();
 		_game.SynchronizeDayState();
 	}
@@ -91,7 +99,7 @@ public sealed class DayCycleController
 	{
 		if (!OS.IsDebugBuild() || _game.Failed || _game.Completed || Upgrades.Pending) return;
 		Session.AddTimeForTesting(30);
-		_announcements.Observe(Session.RemainingSeconds, Session.Duration, Session.IsClosed);
+		_announcements.Observe(Session.RemainingSeconds, Session.Duration, Session.IsClosed, _game.CurrentDay, TotalDays);
 		RefreshTimer();
 		UpdateDayNightBackground();
 		_game.SynchronizeDayState();
@@ -102,7 +110,7 @@ public sealed class DayCycleController
 		bool crafting = _game.CraftMiniGameOpen;
 		if (!Started || Upgrades.Pending || (_game.GetTree().Paused && !crafting) || _game.Failed || _game.Completed) return;
 		bool closed = Session.Tick(delta);
-		_announcements.Observe(Session.RemainingSeconds, Session.Duration, Session.IsClosed);
+		_announcements.Observe(Session.RemainingSeconds, Session.Duration, Session.IsClosed, _game.CurrentDay, TotalDays);
 		UpdateDayNightBackground();
 		bool secondChanged = RefreshTimer();
 		if (closed) _game.SynchronizeDayState();
@@ -116,7 +124,7 @@ public sealed class DayCycleController
 		switch (Session.RequestEnd(_game.TradeActive))
 		{
 			case EndDayAction.Closed:
-				_announcements.Observe(Session.RemainingSeconds, Session.Duration, Session.IsClosed);
+				_announcements.Observe(Session.RemainingSeconds, Session.Duration, Session.IsClosed, _game.CurrentDay, TotalDays);
 				RefreshTimer();
 				UpdateDayNightBackground();
 				_game.SynchronizeDayState();
@@ -238,11 +246,19 @@ public sealed class DayCycleController
 		int seconds = (int)Math.Ceiling(Session.RemainingSeconds);
 		_startButton.Visible = !Started && !Session.IsClosed && !_game.Failed && !_game.Completed;
 		_startButton.Disabled = Upgrades.Pending;
+		UpdateClockFeedback();
 		_timer.Text = Started || Session.IsClosed ? seconds.ToString("00", System.Globalization.CultureInfo.InvariantCulture) : "";
 		bool changed = seconds != _displayedSeconds;
 		_displayedSeconds = seconds;
 		_clock.Texture = seconds == 0 ? _clockExpired : _clockActive;
 		return changed;
+	}
+
+	private void UpdateClockFeedback()
+	{
+		bool active = _startButton.Visible && !_startButton.Disabled &&
+			(_startButton.IsHovered() || _startButton.HasFocus());
+		_clock.SelfModulate = active ? new Color(0.9f, 0.9f, 0.9f) : Colors.White;
 	}
 
 	private void LayoutTimer()

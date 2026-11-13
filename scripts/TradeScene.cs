@@ -444,8 +444,7 @@ public partial class TradeScene : Node2D
 				MouseFilter = Control.MouseFilterEnum.Ignore
 			};
 
-			title.AddThemeColorOverride(
-				"font_color", Colors.White);
+			RoomDoorwayPresentation.StyleLockedTitle(title);
 
 			title.AddThemeFontSizeOverride(
 				"font_size", 52);
@@ -527,9 +526,8 @@ public partial class TradeScene : Node2D
 			? $"1 item  •  ${MusicSpinCost} + 1 energy"
 			: $"1 предмет  •  {MusicSpinCost}$ + 1 энергия";
 
-		// The illustrated button already contains its lettering.
-		_atelierGetItemButton.Text = string.Empty;
-		_musicGetItemButton.Text = string.Empty;
+		CraftButtonPresentation.Apply(_atelierGetItemButton, english);
+		CraftButtonPresentation.Apply(_musicGetItemButton, english);
 	}
 
 	private void EnsureExtraShowroomOverlay()
@@ -571,8 +569,7 @@ public partial class TradeScene : Node2D
 		title.AddThemeFontSizeOverride(
 			"font_size", 48);
 
-		title.AddThemeColorOverride(
-			"font_color", Colors.White);
+		RoomDoorwayPresentation.StyleLockedTitle(title);
 
 		_rightShowroomOverlay.AddChild(title);
 	}
@@ -1217,6 +1214,7 @@ public partial class TradeScene : Node2D
 
 	public void NewGame()
 	{
+		GetNode<WorldCamera>("Camera2D").ResetToOverview();
 		_dayCycle.Reset();
 		FinishTrade();
 

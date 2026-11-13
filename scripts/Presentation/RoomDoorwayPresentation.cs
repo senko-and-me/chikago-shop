@@ -3,6 +3,13 @@ using Godot;
 // The existing unlock state controls the music room and the right showroom together.
 public partial class RoomDoorwayPresentation : Node
 {
+    public static void StyleLockedTitle(Label title)
+    {
+        title.AddThemeColorOverride("font_color", Colors.Black);
+        title.AddThemeColorOverride("font_outline_color", Colors.White);
+        title.AddThemeConstantOverride("outline_size", 6);
+    }
+
     public static void AddLockedCurtain(ColorRect overlay)
     {
         overlay.Color = Colors.Black;
@@ -16,6 +23,10 @@ public partial class RoomDoorwayPresentation : Node
         };
         overlay.AddChild(curtain);
         curtain.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        var room = overlay.GetParent<Node2D>();
+        float overlap = RoomFramePresentation.FloorSeamOverlap / room.GlobalScale.Y;
+        if (room.Name == "Showroom") curtain.OffsetTop -= overlap;
+        else curtain.OffsetBottom += overlap;
     }
 
     private Sprite2D _corridor = null!, _cashier = null!;

@@ -4,6 +4,10 @@
 locale = "en"
 messages = {
 &"Магазин открыт": &"Shop is open",
+&"День {0} из {1}": &"Day {0} of {1}",
+&"Остался {0} день, включая сегодня": &"{0} day left, including today",
+&"Осталось {0} дня, включая сегодня": &"{0} days left, including today",
+&"Осталось {0} дней, включая сегодня": &"{0} days left, including today",
 &"Магазин закрыт": &"Shop is closed",
 &"Середина дня": &"Midday",
 &"НАСТРОЙКИ": &"SETTINGS",

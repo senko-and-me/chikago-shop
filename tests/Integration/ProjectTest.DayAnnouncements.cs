@@ -28,13 +28,20 @@ public partial class ProjectTest
             TranslationServer.SetLocale("ru");
             game = Create();
             game.NewGame();
+            game.EndDay(); // Explicit Start introduced in HF-106.
             game._Process(0);
             var overlay = game.GetNode<DayAnnouncementOverlay>("DayAnnouncements");
             var title = overlay.GetNode<Label>("Root/Title");
+            var details = overlay.GetNode<Label>("Root/Details");
             overlay.SetProcess(false);
             Check(overlay.IsShowing && title.Text == "Магазин открыт" && overlay.Opacity == 0 && !Paused,
                 "New day must start a nonblocking opening announcement with a transparent first frame");
-            foreach (string path in new[] { "Root", "Root/Shade", "Root/Title" })
+            Check(details.Visible && details.Text == "День 1 из 7\nОсталось 7 дней, включая сегодня",
+                "Opening must show the current day and remaining days including today");
+            float groupCenter = (title.GetGlobalRect().Position.Y + details.GetGlobalRect().End.Y) / 2;
+            Check(Mathf.Abs(groupCenter - Root.GetVisibleRect().Size.Y * 0.6f) < 1,
+                "The announcement block must sit slightly below center at sixty percent of viewport height");
+            foreach (string path in new[] { "Root", "Root/Shade", "Root/Title", "Root/Details" })
                 Check(overlay.GetNode<Control>(path).MouseFilter == Control.MouseFilterEnum.Ignore,
                     "All full-screen announcement controls must pass pointer input through");
             overlay._Process(0.225);
@@ -59,6 +66,7 @@ public partial class ProjectTest
             game._Process(0.2);
             overlay.SetProcess(false);
             Check(overlay.IsShowing && title.Text == "Середина дня", "Crossing halfway must show midday");
+            Check(!details.Visible, "Midday must not retain the new-day countdown");
             overlay._Process(0.6);
             foreach (var size in new[] { new Vector2I(960, 540), new Vector2I(1280, 720) })
             foreach (string language in new[] { "en", "ru" })
@@ -86,6 +94,7 @@ public partial class ProjectTest
             overlay = game.GetNode<DayAnnouncementOverlay>("DayAnnouncements");
             Check(!overlay.IsShowing, "Continuing after halfway must not replay opening or midday");
             game.NewGame();
+            game.EndDay(); // Start before testing manual closure.
             game.EndDay();
             Check(overlay.IsShowing && overlay.GetNode<Label>("Root/Title").Text == "Магазин закрыт",
                 "Manual day closure must show the shop-closed announcement");
@@ -101,6 +110,7 @@ public partial class ProjectTest
             await WaitForDayCardAnimation(game);
             game.GetNode<DayTransitionCard>("DayTransitionCard").Choose(DayUpgrade.Time);
             await WaitForDayCardAnimation(game);
+            game.EndDay(); // Start day two after the upgrade choice.
             game._Process(0);
             overlay.Dismiss();
             Check(game.DayRemainingSeconds == 120, "Time-upgrade fixture must have120 seconds");
@@ -134,9 +144,30 @@ public partial class ProjectTest
             Check(overlay.IsShowing && overlay.GetNode<Label>("Root/Title").Text == "Магазин закрыт",
                 "A debug-reopened day must allow a fresh closing announcement");
             game.ReturnToCheckpoint();
+            game.EndDay(); // Checkpoints also wait for explicit Start.
             game._Process(0);
             Check(overlay.IsShowing && overlay.GetNode<Label>("Root/Title").Text == "Магазин открыт",
                 "Restarting a checkpoint must reset opening and midday milestones");
+            overlay.SetProcess(false);
+            foreach (int day in new[] { 1, 4, 6, 7 })
+            foreach (string language in new[] { "ru", "en" })
+            {
+                overlay.BeginDay();
+                overlay.Observe(90, 90, false, day, 7);
+                TranslationServer.SetLocale(language);
+                overlay.SetProcess(false);
+                overlay._Process(0.6);
+                details = overlay.GetNode<Label>("Root/Details");
+                int left = 8 - day;
+                string ru = left == 1 ? "Остался 1 день, включая сегодня"
+                    : left is >= 2 and <= 4 ? $"Осталось {left} дня, включая сегодня" : $"Осталось {left} дней, включая сегодня";
+                string expected = language == "en" ? $"Day {day} of 7\n{left} {(left == 1 ? "day" : "days")} left, including today"
+                    : $"День {day} из 7\n{ru}";
+                Check(details.Text == expected, "Day countdown must handle first/last day and Russian/English plurals during live locale changes");
+                Check(Root.GetVisibleRect().Encloses(details.GetGlobalRect()), "Day countdown must fit inside the viewport");
+            }
+            await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+            Root.GetTexture().GetImage().SavePng(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "chikago-hf116-last-day-en.png"));
         }
         finally
         {

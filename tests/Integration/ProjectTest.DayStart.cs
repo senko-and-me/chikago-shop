@@ -30,6 +30,37 @@ public partial class ProjectTest
             Check(Mathf.Abs(timer.Size.X - 207) < 0.1f && timer.OffsetLeft == 6 && timer.OffsetBottom == -6,
                 "Clock must grow by 15% from 180 to 207 and sit six pixels from the lower-left corner");
             Check(!game.DayStarted && start.Visible && timer.Text == "", "A fresh day must display Start on the clock");
+            var clock = timer.GetNode<TextureRect>("Clock");
+            start.ReleaseFocus();
+            Root.PushInput(new InputEventMouseMotion { Position = new Vector2(800, 400) }, true);
+            using (var normal = await CapturePresentation())
+            {
+                Vector2 point = ScreenBounds(start).GetCenter();
+                Root.PushInput(new InputEventMouseMotion { Position = point, GlobalPosition = point }, true);
+                using var hover = await CapturePresentation("clock-hover");
+                Check(clock.SelfModulate == new Color(0.9f, 0.9f, 0.9f) && start.GetThemeStylebox("hover") is StyleBoxEmpty &&
+                    start.GetThemeStylebox("focus") is StyleBoxEmpty,
+                    "Hover must gently darken the clock texture without a theme rectangle or focus border");
+                var feedback = ButtonFeedbackController.Instance.GetVisualFrame();
+                Check(feedback.Strength == 0 || !feedback.Bounds.Intersects(ScreenBounds(start)),
+                    "The global feedback shader must not draw its rectangular outline over the clock");
+                Rect2 rect = ScreenBounds(clock);
+                Vector2 pixels = new Vector2(normal.GetWidth(), normal.GetHeight()) / Root.GetVisibleRect().Size;
+                int darkened = 0;
+                for (int y = (int)(rect.Position.Y * pixels.Y); y < rect.End.Y * pixels.Y; y += 3)
+                for (int x = (int)(rect.Position.X * pixels.X); x < rect.End.X * pixels.X; x += 3)
+                {
+                    float before = normal.GetPixel(x, y).R, after = hover.GetPixel(x, y).R;
+                    if (before > 0.75f && before - after > 0.05f && before - after < 0.15f) darkened++;
+                }
+                Check(darkened > 100, "Rendered white clock pixels must show a light, ten-percent darkening");
+                Root.PushInput(new InputEventMouseMotion { Position = new Vector2(800, 400) }, true);
+                using (var settle = await CapturePresentation()) { }
+                Check(clock.SelfModulate == Colors.White, "Leaving the clock must restore its original brightness");
+                start.GrabFocus();
+                Check(clock.SelfModulate.R == 0.9f, "Keyboard focus must use the same subtle darkening");
+                start.ReleaseFocus();
+            }
             game._Process(15);
             Check(game.DayRemainingSeconds == 90 && !game.DayStarted, "The day must not tick before Start");
             game.PersistProgress();
@@ -41,6 +72,8 @@ public partial class ProjectTest
             TranslationServer.SetLocale("ru");
             await ClickControl(game, "HUD/Root/DayTimer/StartButton");
             Check(game.DayStarted && !start.Visible && game.DayRemainingSeconds == 90, "A real click must start exactly once");
+            Check(game.GetNode<TextureRect>("HUD/Root/DayTimer/Clock").SelfModulate == Colors.White,
+                "Starting the day must clear the hover darkening");
             start.EmitSignal(BaseButton.SignalName.Pressed);
             game._Process(1);
             Check(game.DayRemainingSeconds == 89 && game.GetNode<Label>("HUD/Root/DayTimer").Text == "89",

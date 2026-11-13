@@ -19,6 +19,23 @@ public partial class ProjectTest
         Rect2 View() => new(camera.Position - Root.GetVisibleRect().Size / camera.Zoom / 2,
             Root.GetVisibleRect().Size / camera.Zoom);
         void CheckInside() => Check(allowed.Grow(0.05f).Encloses(View()), "The entire visible viewport must stay inside the reference movement range");
+        void CheckStartingView()
+        {
+            Vector2 widest = View().Size / factor;
+            Check(widest.X <= 2560.1f && widest.Y <= 1440.1f &&
+                (Mathf.Abs(widest.X - 2560) < 0.1f || Mathf.Abs(widest.Y - 1440) < 0.1f),
+                "Game entry and NewGame must immediately use the maximum allowed overview for the current window");
+            Vector2 halfView = View().Size / 2;
+            Vector2 center = world.GetCenter();
+            Vector2 expected = new(
+                halfView.X >= allowed.Size.X / 2 ? allowed.GetCenter().X :
+                    Mathf.Clamp(center.X, allowed.Position.X + halfView.X, allowed.End.X - halfView.X),
+                halfView.Y >= allowed.Size.Y / 2 ? allowed.GetCenter().Y :
+                    Mathf.Clamp(center.Y, allowed.Position.Y + halfView.Y, allowed.End.Y - halfView.Y));
+            Check(camera.Position.DistanceTo(expected) < 0.02f,
+                "The starting overview must be centered on the world scene within the navigation bounds");
+            CheckInside();
+        }
         void Wheel(MouseButton direction)
         {
             for (int i = 0; i < 100; i++)
@@ -28,6 +45,7 @@ public partial class ProjectTest
         }
         try
         {
+            CheckStartingView();
             Check(camera.ReferenceSize == new Vector2(4560, 2565) &&
                 camera.NavigationRegion == new Rect2(429, 563, 3662, 1440) &&
                 camera.OverviewSize == new Vector2(2560, 1440) && camera.CloseupSize == new Vector2(1036, 583),
@@ -36,6 +54,8 @@ public partial class ProjectTest
             {
                 Root.Size = size;
                 await ToSignal(this, SignalName.ProcessFrame);
+                game.NewGame();
+                CheckStartingView();
                 camera.ClampToBounds();
                 Wheel(MouseButton.WheelDown);
                 CheckInside();
@@ -77,6 +97,14 @@ public partial class ProjectTest
                 Check((camera.Position + offset / camera.Zoom).DistanceTo(anchor) < 0.02f,
                     "Reference limits must preserve smooth zoom toward the cursor away from the boundaries");
                 CheckInside();
+                // Restart after zooming and panning: no pending zoom may pull the overview away again.
+                camera._UnhandledInput(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = true });
+                game.NewGame();
+                camera._Input(new InputEventMouseMotion { Relative = new Vector2(200, 100) });
+                camera._Process(1d / 60);
+                CheckStartingView();
+                if (size.X == 1280)
+                    using (var image = await CapturePresentation("camera-start-overview")) { }
             }
         }
         finally

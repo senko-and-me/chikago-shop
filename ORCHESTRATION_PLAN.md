@@ -10,6 +10,108 @@
 
 ## Текущий фронт
 
+### HF-119 — публикация интерфейса и стартового вида
+
+Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-13; HF-112…HF-118 DONE, пользователь разрешил commit/push.
+CP-HF-119 read-set: текущий фронт, Git status/diff/refs/remotes, evidence .local/checks/hf112…hf118, изменённые файлы HF-112…HF-118. Write-set: ORCHESTRATION_PLAN.md; Git index/commits/main и origin/main для текущих docs/{ASSET_AUDIT,GAMEPLAY}.md, localization/en.tres, scripts/Camera/WorldCamera.cs, scripts/Days/DayCycleController.cs, scripts/Presentation/{ButtonFeedbackController,RoomDoorwayPresentation,RoomFramePresentation,CraftButtonPresentation}.cs и CraftButtonPresentation.cs.uid, scripts/TradeScene.cs, scripts/UI/DayAnnouncementOverlay.cs, tests/Integration/ProjectTest.{CameraLimits,DayAnnouncements,DayStart,Resources,RoomFrames}.cs, tests/ProjectTest.cs. Out of scope: .local/, source/, builds/, новые игровые правки, force push. Приёмка: обычный push main, remote SHA совпадает с HEAD, дерево чистое. Проверки: fetch/divergence, diff-check, сохранённые build и профильные rendered tests HF-112…HF-118, проверка удалённой ветки после публикации.
+
+### HF-118 — старт камеры с максимального отдаления по центру сцены
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-13; зависимости HF-109 DONE, активных пересечений нет.
+CP-HF-118 read-set: текущий фронт, scripts/Camera/WorldCamera.cs, scripts/TradeScene.cs (NewGame), scripts/Persistence/TradeScene.Persistence.cs (камера не сохраняется), scenes/trade_scene.tscn (параметры камеры), tests/Integration/ProjectTest.CameraLimits.cs, docs/GAMEPLAY.md. Write-set: ORCHESTRATION_PLAN.md, scripts/Camera/WorldCamera.cs, scripts/TradeScene.cs (один вызов сброса вида в NewGame), tests/Integration/ProjectTest.CameraLimits.cs, docs/GAMEPLAY.md (стартовый вид). Evidence: .local/checks/hf118 и изолированная копия. Out of scope: ограничения/управление камеры, сохранения, игровая логика, source/, commit/push. Приёмка: вход в сцену и NewGame устанавливают максимальное разрешённое отдаление для текущего окна, центр мировой сцены с соблюдением границ; прежняя цель зума/drag сброшены; движение/зум/границы сохранены. Проверки: build, rendered --camera-limits-checks с initial/NewGame, два размера окна, diff-check.
+
+```text
+Task: HF-118
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: WorldCamera.ResetToOverview рассчитывает минимальный разрешённый Zoom для текущего viewport, центрирует мировую сцену с ClampToBounds, сбрасывает drag, цель зума и anchor. Вызывается из _Ready и NewGame (один presentation-вызов в TradeScene). Расширен camera regression, уточнены gameplay docs.
+Checks: local/isolated build PASS (0 warnings/errors); rendered --camera-limits-checks PASS (exit 0: initial entry, NewGame на 1280×720/1000×800, отсутствие отскока к старой цели/drag, максимальный обзор, 4 края, resize, курсорный anchor, GUI/pause lifecycle); preview просмотрен; diff-check PASS.
+Acceptance: начало игры сразу показывает максимально разрешённый обзор по центру сцены; повторная новая игра возвращает этот вид после навигации. Ограничения остаются прежними и учитывают размеры окна.
+Read-set exception: .local/checks/hf104/hf104-check-dir.txt — изолированная копия; пользовательские сохранения не затронуты.
+Risks/blocker: новых нет.
+Next: основной фронт S1-04. Commit/push не выполнялись.
+```
+
+Evidence: .local/checks/hf118/{build,local-build,camera-limits}*.log и preview.png.
+### HF-117 — тонкие стыки рамок без белых просветов
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-13; зависимости HF-113 DONE, активных пересечений нет.
+CP-HF-117 read-set: текущий фронт, scripts/Presentation/RoomFramePresentation.cs, scripts/Presentation/RoomDoorwayPresentation.cs, scripts/TradeScene.cs (overlay), art/ui/camera_frame.png/.import, shaders/monochrome.gdshader, tests/Integration/ProjectTest.RoomFrames.cs, tests/Integration/ProjectTest.Resources.cs, scenes/trade_scene.tscn (геометрия), .local/checks/hf113/preview.png. Write-set (расширен координатором для сужения самого межэтажного зазора): ORCHESTRATION_PLAN.md, scripts/Presentation/RoomFramePresentation.cs, scripts/Presentation/RoomDoorwayPresentation.cs (край занавеса), tests/Integration/ProjectTest.RoomFrames.cs, tests/Integration/ProjectTest.Resources.cs (геометрия фонов/занавесов). .local/checks/hf117 и изолированная копия — evidence. Out of scope: source/, исходные фото, геометрия интерактивных объектов/мебели, камера, затемнение занавеса, экономика, commit/push. Приёмка: фон каждой комнаты заходит на 10 world px в межэтажный зазор (остаток около 19 вместо 39 px), наружный силуэт здания сохранён; горизонтальный штрих рамки вдвое тоньше; непрерывный чёрный сердечник закрывает пиксельные просветы стыка, без белых вкраплений самой рамки; оси рамок остаются на границах, центр прозрачен, закрытые/открытые комнаты работают. Проверки: build, rendered --room-frame-checks (пиксели, толщина, непрерывность), --room-doorway-checks, preview, diff-check.
+
+```text
+Task: HF-117
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: RoomFramePresentation — горизонтальный масштаб штриха 0,2 вместо 0,4, сплошной чёрный сердечник по периметру и чёрная модуляция PNG; фон верхних комнат продлён вниз на 10 world px, нижних вверх на 10 px. Межэтажный зазор уменьшен примерно с 39 до 19 world px. RoomDoorwayPresentation продлевает занавесы до новых краёв. Regression-тесты проверяют фактические пиксели рамок, толщину, непрерывность четырёх сторон и углов, совпадение с новыми границами, геометрию фонов/занавесов после unlock/reload.
+Checks: isolated/local build PASS (0 warnings/errors); rendered --room-frame-checks PASS (exit 0); --room-doorway-checks PASS (exit 0: initial/failed/successful unlock/reload/checkpoint/new game); close-up preview просмотрен; diff-check PASS. Субпиксельная непрерывность измеряется с учётом уменьшения до 20%: alpha >0,5 в каждом пикселе оси, непрозрачные части рамки строго чёрные; горизонтальная alpha-толщина <4 px.
+Acceptance: межэтажная полоса заметно тоньше, белые вкрапления и просветы вдоль рамок закрыты; рамки совпадают с обновлёнными границами фонов. Фото не потребовалось редактировать. Мебель, интерактивные области, внешний силуэт здания и прозрачность/яркость занавесов сохранены.
+Read-set exception: .local/checks/hf104/hf104-check-dir.txt — повторное использование изолированной копии. Write-set расширен координатором на край занавеса и соответствующий regression; без этого фоновые полосы оставались широкими после уменьшения рамки.
+Risks/blocker: новых нет; полная integration suite с прежним tooltip baseline FAIL не объявляется зелёной.
+Next: основной фронт S1-04. Commit/push не выполнялись.
+```
+
+Evidence: .local/checks/hf117/{build,local-build,room-frame,room-doorway}*.log и preview.png.
+### HF-116 — расширенное уведомление нового дня ниже центра
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-13; активных пересечений/зависимостей нет.
+CP-HF-116 read-set: текущий фронт; scripts/UI/DayAnnouncementOverlay.cs, scripts/Days/DayCycleController.cs, scripts/Configuration/EconomyConfigProvider.cs, scripts/Crafting/WorkshopItemCatalog.cs (число дней); scripts/TradeScene.cs (CurrentDay/lifecycle, без изменений); tests/Integration/ProjectTest.DayAnnouncements.cs, localization/en.tres, docs/GAMEPLAY.md. Write-set: ORCHESTRATION_PLAN.md, scripts/UI/DayAnnouncementOverlay.cs, scripts/Days/DayCycleController.cs (только передача текущего/общего дней), tests/Integration/ProjectTest.DayAnnouncements.cs, localization/en.tres (новые строки), docs/GAMEPLAY.md (уведомление). .local/checks/hf116 и изолированная копия — evidence. Out of scope: длительность/правила дня, сохранения, экономика, source/, commit/push. Приёмка: при открытии показаны номер дня и сколько осталось, включая текущий день (7→1); грамматика RU/EN и live language switch; текстовый блок на 60% высоты, середина/закрытие без счётчика; fade/pause/input/reload сохранены. Проверки: build, rendered --day-announcement-checks (актуализация фикстур под ручной Start из HF-106, RU/EN, размеры, lifecycle, числа), --day-start-checks, diff-check.
+
+```text
+Task: HF-116
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: DayAnnouncementOverlay — дополнительная строка с номером дня/остатком и грамматикой, live перевод составного текста; адаптивная компоновка блока на 60% высоты. DayCycleController передаёт CurrentDay и TotalDays из economy config (однократная загрузка). EN-ключи, gameplay docs; существующая day-announcement fixture актуализирована для явного Start из HF-106 и расширена проверками countdown.
+Checks: build PASS (0 warnings/errors); rendered --day-announcement-checks и --day-start-checks PASS (exit 0). Проверены остатки 7/4/2/1, RU/EN plural/live switch, положение ниже центра, размеры, input-ignore, отсутствие details у midday, fade/pause/reload/checkpoint/следующий день/увеличенная длительность; реальный дневной Start/save lifecycle сохранён. EN preview просмотрен; diff-check PASS.
+Acceptance: открытие нового дня показывает «Магазин открыт», «День N из 7» и сколько осталось, включая текущий день; остальные объявления ниже центра без счётчика. Длительность анимации и дни/баланс не менялись.
+Read-set exception: .local/checks/hf104/hf104-check-dir.txt — изолированная копия; пользовательские сохранения не затронуты.
+Risks/blocker: новых нет; общий integration baseline tooltip FAIL вне задачи.
+Next: основной фронт S1-04. Commit/push не выполнялись.
+```
+
+Evidence: .local/checks/hf116/{build,isolated-build,day-announcement,day-start}*.log и preview.png.
+### HF-115 — английская кнопка создания предметов
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-13; активных пересечений/зависимостей нет.
+CP-HF-115 read-set: текущий фронт; публичная Drive 17ntZUHFM_HplXZsQJTUuufh4bYPu5M4q → UI/Готовое/{UI в самой игре/Кнопка созданя,Общий UI}; art/ui/{create_button,panel_small}.png, art/fonts/game.ttf; scripts/TradeScene.cs (RefreshCraftLabels), scripts/Localization/GameLocalization.cs, scripts/MainMenu.cs (переключение языка), scenes/trade_scene.tscn (стили/кнопки), scripts/UI/EmbroideryGame.cs (тест открытия/отмены); tests/Integration/ProjectTest.{Resources,Localization}.cs; tests/ProjectTest.cs; docs/ASSET_AUDIT.md. Write-set: ORCHESTRATION_PLAN.md, scripts/Presentation/CraftButtonPresentation.cs/.uid; scripts/TradeScene.cs (только вызовы оформления в RefreshCraftLabels), tests/Integration/ProjectTest.Resources.cs, tests/ProjectTest.cs (новая группа), docs/ASSET_AUDIT.md. .local/checks/hf115, изолированная копия — evidence. Out of scope: source/, билды Drive, замена русской графики, экономика/крафт/сохранения, commit/push. Приёмка: готовой EN-версии в разделе создания нет (только русская PNG и три примера подсказки); английская надпись CREATE ITEMS добавлена средствами UI поверх готовой пустой панели в прежнем стиле; значок ? сохранён crop из исходника; обе мастерские меняются RU/EN без изменения состояний/размеров/кликов. Проверки: build, rendered --craft-localization-checks (RU/EN/RU, состояния, реальные кнопки, preview), diff-check.
+
+```text
+Task: HF-115
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: новый CraftButtonPresentation.cs/.uid собирает английскую кнопку из готовой blank panel, нативного CREATE ITEMS и AtlasTexture значка вопроса; две строки подключения в RefreshCraftLabels; RU/EN regression-группа; аудит и план. Русская PNG и scene-геометрия не менялись.
+Checks: Drive root/UI/Готовое/UI в самой игре/Кнопка созданя и Общий UI прочитаны; actual download единственной кнопки совпадает с русской runtime PNG по SHA256 EA951785AF6E1510E665F4A09612A420A7A4874A187745F12F08961C574E6023. Build PASS (0 warnings/errors); isolated/local import PASS (exit 0); rendered --craft-localization-checks PASS (exit 0: RU/EN/RU/EN, оба workshop, normal/hover/pressed/disabled, сохранённые размеры/availability, overlay input-ignore, настоящий клик открывает прежнюю мини-игру без раннего списания, Escape отменяет). EN preview просмотрен; diff-check PASS.
+Acceptance: английская кнопка есть в обеих мастерских при English, исходная русская картинка возвращается при Russian. Готовая английская bitmap-кнопка не найдена в профильном разделе; новая версия собрана кодом UI из существующей графики и шрифта, без AI/bitmap-редактирования. Прежняя экономика и область подсказки сохранены.
+Read-set exception: .local/checks/hf104/hf104-check-dir.txt для изолированной копии; source/ и пользовательские настройки/сохранения не затронуты.
+Risks/blocker: наличие EN-версии в иных непрофильных разделах Drive не утверждается; прежние duplicate UI UID warnings вне задачи.
+Next: основной фронт S1-04. Commit/push не выполнялись.
+```
+
+Evidence: .local/checks/hf115/drive-*.html, drive-create-button.png, {build,isolated-build,import,local-import,checks}*.log и preview.png.
+### HF-114 — лёгкое затемнение часов при наведении
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-13; активных зависимостей/пересечений нет.
+CP-HF-114 read-set: текущий фронт; scripts/Days/DayCycleController.cs, scripts/Presentation/ButtonFeedbackController.cs, shaders/monochrome.gdshader; tests/Integration/ProjectTest.DayStart.cs. Write-set: ORCHESTRATION_PLAN.md; scripts/Days/DayCycleController.cs (только feedback часов); scripts/Presentation/ButtonFeedbackController.cs (opt-out для локального feedback); tests/Integration/ProjectTest.DayStart.cs (rendered hover). .local/checks/hf114 и изолированная копия — evidence. Out of scope: поведение запуска дня, прочие кнопки, экономика, source/, commit/push. Приёмка: на часах/«Начать» нет прямоугольной hover/focus-рамки; лёгкое затемнение самой текстуры на 10% по силуэту, без прямоугольной плашки; уход мыши/начало дня возвращает яркость, настоящий клик работает, фокус клавиатуры заметен тем же затемнением. Проверки: build, rendered --day-start-checks с пиксельным сравнением hover/normal, diff-check.
+
+Handoff HF-114: REVIEW → DONE после приёмки координатором. Changed: кнопка старта часов использует локальный feedback (group opt-out из общего rectangular outline), StyleBoxEmpty для пяти состояний, hover/keyboard focus затемняют только текстуру часов до 0,9; exit/скрытие старта возвращают белую модуляцию. Checks: build PASS (0 warnings/errors); rendered --day-start-checks PASS (exit 0), >100 светлых пикселей часов стали темнее на 5–15%, отсутствуют global/theme borders, проверены уход мыши, фокус, очистка после настоящего клика и прежний lifecycle/save/reload; preview просмотрен; diff-check PASS. Acceptance: лёгкое затемнение по alpha-силуэту без рамки/прямоугольной плашки, прочие кнопки сохраняют прежний feedback. Read-set exception: .local/checks/hf104/hf104-check-dir.txt для изолированной копии. Risks/blocker: новых нет. Next: основной фронт S1-04. Evidence: .local/checks/hf114/{build,isolated-build,checks}*.log и preview.png. Commit/push не выполнялись.
+### HF-113 — рамки точно по границам комнат
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-13; зависимости/активные пересечения отсутствуют.
+CP-HF-113 read-set: текущий фронт, scripts/Presentation/RoomFramePresentation.cs, art/ui/camera_frame.png, tests/Integration/ProjectTest.RoomFrames.cs, scenes/trade_scene.tscn (трансформы/фоны комнат). Write-set: ORCHESTRATION_PLAN.md, scripts/Presentation/RoomFramePresentation.cs, tests/Integration/ProjectTest.RoomFrames.cs. .local/checks/hf113/ и изолированная копия — evidence. Out of scope: размеры/положение комнат, камера, фон, надписи HF-112, экономика, source/, commit/push. Приёмка: центр реального штриха PNG совпадает с четырьмя краями каждой комнаты, нет прежнего внутреннего отступа; прозрачный центр/мышь/занавесы сохраняются. Проверки: build, rendered --room-frame-checks с проверкой всех шести границ и снимком при близком zoom, --room-doorway-checks, diff-check.
+
+```text
+Task: HF-113
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: RoomFramePresentation теперь один раз измеряет середину alpha-штриха на четырёх сторонах исходного PNG и выносит соответствующую часть NinePatch за границы комнаты, совмещая штрих с периметром; atlas переиспользуется шестью рамками. Tests/ProjectTest.RoomFrames — измерение центра реального отрисованного alpha-штриха в отдельном прозрачном SubViewport для всех 24 сторон, крупный preview; план.
+Checks: build PASS (0 warnings/errors); rendered --room-frame-checks PASS (exit 0), пиксельная погрешность центра штриха <0,8 px в контрольном рендере; --room-doorway-checks PASS (exit 0); крупный план просмотрен; diff-check PASS.
+Acceptance: устранён внутренний отступ визуальной рамки — ось штриха проходит по периметру комнаты. Размеры/положения комнат, прозрачность центра, игнорирование мыши и z-index поверх занавесов сохранены; правки контраста HF-112 сохранены.
+Read-set exception: .local/checks/hf104/hf104-check-dir.txt для повторного использования изолированной копии. source/ и пользовательские сохранения не затронуты.
+Risks/blocker: естественная неровность рисунка PNG сохранена; новых блокеров нет.
+Next: основной фронт S1-04. Commit/push не выполнялись.
+```
+
+Evidence: .local/checks/hf113/{build,isolated-build,room-frame,room-doorway}*.log и preview.png.
+### HF-112 — читаемая надпись закрытой комнаты
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-13; зависимостей/активных пересечений нет. По скриншоту ROOM LOCKED теряется на светлом занавесе.
+CP-HF-112 read-set: текущий фронт, scripts/TradeScene.cs (создание LockTitle), scripts/Presentation/RoomDoorwayPresentation.cs, tests/Integration/ProjectTest.Resources.cs. Write-set: ORCHESTRATION_PLAN.md; scripts/TradeScene.cs (только стиль двух LockTitle); scripts/Presentation/RoomDoorwayPresentation.cs (общий стиль); tests/Integration/ProjectTest.Resources.cs (проверка контраста). .local/checks/hf112 и изолированная копия — evidence/preview. Out of scope: затемнение занавеса, экономика, геометрия, source/, commit/push. Приёмка: чёрный текст с белой обводкой читаем поверх светлых и чёрных полос, одинаковый стиль у ROOM LOCKED/DISPLAYS LOCKED, прежняя локализация/покупка. Проверки: build, --room-doorway-checks, рендер, diff-check.
+
+Handoff HF-112: REVIEW → DONE после приёмки координатором. Changed: общий StyleLockedTitle в RoomDoorwayPresentation, два вызова оформления в TradeScene, regression-проверка обоих заголовков и план. Checks: build PASS (0 warnings/errors), isolated --room-doorway-checks PASS (exit 0), rendered EN preview PASS (exit 0), снимок просмотрен, diff-check PASS. Acceptance: чёрный текст с белой обводкой 6 читается на занавесе; надпись витрин оформлена так же, яркость PNG и покупка не менялись. Read-set exception: .local/checks/hf104/hf104-check-dir.txt для изолированной копии. Risks/blocker: новых нет. Next: основной фронт S1-04. Evidence: .local/checks/hf112/{build,checks,preview}*.log и preview.png. Commit/push не выполнялись.
 ### HF-111 — публикация изменений интерфейса и камеры
 
 Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-13. HF-105…HF-110 DONE; пользователь явно разрешил commit и push.
