@@ -5,7 +5,7 @@ using Godot;
 
 public sealed class DayCycleController
 {
-    private static readonly int TotalDays = EconomyConfigProvider.Load().Days.TotalDays;
+	private static readonly int TotalDays = EconomyConfigProvider.Load().Days.TotalDays;
 	public DaySession Session { get; } = new();
 	public bool Started { get; private set; }
 	public DayUpgradeSession Upgrades { get; } = new();

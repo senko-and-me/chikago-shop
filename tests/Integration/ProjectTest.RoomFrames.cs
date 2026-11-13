@@ -30,14 +30,32 @@ public partial class ProjectTest
                 Rect2 localBounds = art.Transform * art.GetRect();
                 Rect2 worldBounds = art.GlobalTransform * art.GetRect();
                 Rect2 expected = new(entry.Item3.Position * (5760f / 4560), entry.Item3.Size * (5760f / 4560));
-                expected.Size += new Vector2(0, 10);
-                if (entry.Item3.Position.Y == 1297) expected.Position -= new Vector2(0, 10);
+                bool leftColumn = entry.Item3.Position.X == 1125;
+                bool middleColumn = entry.Item3.Position.X == 1963;
+                expected.Size += new Vector2(middleColumn ? 4 : 2, 13);
+                if (!leftColumn) expected.Position -= new Vector2(2, 0);
+                if (entry.Item3.Position.Y == 1297) expected.Position -= new Vector2(0, 13);
                 Check(worldBounds.Position.DistanceTo(expected.Position) < 0.02f && worldBounds.Size.DistanceTo(expected.Size) < 0.02f,
-                    "Room art must cover ten world pixels of the floor gap while retaining the outside building edges");
+                    "Room art must narrow internal partitions while retaining the outside building edges");
+                Check(roomFrame.Scale == new Vector2(0.4f, 0.2f) && roomFrame.SelfModulate == Colors.Black &&
+                    roomFrame.PatchMarginLeft == 96 && roomFrame.PatchMarginTop == 96 &&
+                    roomFrame.PatchMarginRight == 96 && roomFrame.PatchMarginBottom == 96,
+                    "Thinner, lighter partitions must preserve the original frame thickness, artwork and black color");
                 Check(new Rect2(roomFrame.Position, roomFrame.Size * roomFrame.Scale).Encloses(localBounds) &&
                     roomFrame.ZIndex > 100 && !roomFrame.DrawCenter && roomFrame.MouseFilter == Control.MouseFilterEnum.Ignore,
                     "Each room must have an input-transparent frame around its art and above its locked curtain");
                 await CheckRenderedRoomStroke(roomFrame, localBounds);
+            }
+            var partitions = game.GetNode<Node2D>("World/RoomPartitions");
+            Check(partitions.GetChildCount() == 7, "All internal partitions must be styled in both rows and between floors");
+            foreach (ColorRect partition in partitions.GetChildren())
+            {
+                bool floor = partition.Name.ToString() is "AtelierToShowroomLeft" or "CorridorToTradingRoom" or "MusicWorkshopToShowroom";
+                float width = floor ? partition.Size.Y : partition.Size.X;
+                Check(width > 0 && width < (floor ? 14 : 10) &&
+                    partition.Color == new Color(0.16f, 0.16f, 0.16f) && partition.ZIndex == 100 &&
+                    partition.MouseFilter == Control.MouseFilterEnum.Ignore,
+                    "Partitions must be narrower and slightly lighter than black frames without blocking input");
             }
             var layout = game.GetNode<Sprite2D>("World/RoomLayout");
             foreach (string period in new[] { "Day", "Night" })
@@ -63,6 +81,15 @@ public partial class ProjectTest
             camera.Position = new Vector2(3520, 1400);
             camera.Zoom = Vector2.One * 0.7f;
             using (var closeup = await CapturePresentation("room-frame-alignment")) { }
+            // Sample the actual floor partition between its unchanged black frames.
+            var seam = partitions.GetNode<ColorRect>("MusicWorkshopToShowroom");
+            Vector2 seamPixel = seam.GetGlobalTransformWithCanvas() * (seam.Size / 2);
+            using (var closeup = await CapturePresentation("room-partitions"))
+            {
+                Color pixel = closeup.GetPixel(Mathf.RoundToInt(seamPixel.X), Mathf.RoundToInt(seamPixel.Y));
+                Check(pixel.R > 0.1f && pixel.R < 0.22f && Mathf.Abs(pixel.R - pixel.G) < 0.01f,
+                    "The rendered inter-floor wall must be dark gray while the frame stays black");
+            }
         }
         finally
         {

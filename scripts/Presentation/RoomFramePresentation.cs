@@ -3,7 +3,8 @@ using Godot;
 // Frame the existing room art in its local space, including above the locked curtains.
 public partial class RoomFramePresentation : Node
 {
-    public const float FloorSeamOverlap = 10f;
+    public const float FloorSeamOverlap = 13f;
+    private const float SideSeamOverlap = 2f;
     private static readonly Vector2 ArtScale = new(0.4f, 0.2f);
 
     public override void _Ready()
@@ -16,6 +17,7 @@ public partial class RoomFramePresentation : Node
         Vector4 inset = new(StrokeCenter(image, region, true, false), StrokeCenter(image, region, false, false),
             StrokeCenter(image, region, true, true), StrokeCenter(image, region, false, true));
         inset *= new Vector4(ArtScale.X, ArtScale.Y, ArtScale.X, ArtScale.Y);
+        var openings = new System.Collections.Generic.Dictionary<string, Rect2>();
         foreach (var entry in new[] {
             ("Atelier", "Background"), ("MusicWorkshop", "Background"),
             ("Showroom", "ShowroomBackground"), ("ShowroomLeft", "ShowroomBackground"),
@@ -26,11 +28,16 @@ public partial class RoomFramePresentation : Node
             // Fill part of the existing floor gap with room art. Only the background stretches;
             // furniture, interaction areas and the outer building silhouette stay in place.
             bool lowerFloor = entry.Item1 is "Showroom" or "ShowroomLeft" or "TradingRoom";
+            bool leftColumn = entry.Item1 is "Atelier" or "ShowroomLeft";
+            bool rightColumn = entry.Item1 is "MusicWorkshop" or "Showroom";
             float overlap = FloorSeamOverlap / room.GlobalScale.Y;
-            float height = (background.Transform * background.GetRect()).Size.Y;
-            background.Scale *= new Vector2(1, (height + overlap) / height);
+            float sideOverlap = SideSeamOverlap / room.GlobalScale.X;
+            Vector2 size = (background.Transform * background.GetRect()).Size;
+            background.Scale *= (size + new Vector2(sideOverlap * (leftColumn || rightColumn ? 1 : 2), overlap)) / size;
             if (lowerFloor) background.Position -= new Vector2(0, overlap);
+            if (!leftColumn) background.Position -= new Vector2(sideOverlap, 0);
             Rect2 bounds = background.Transform * background.GetRect();
+            openings[entry.Item1] = room.GlobalTransform * bounds;
             Vector2 topLeft = new(inset.X, inset.Y);
             Vector2 bottomRight = new(inset.Z, inset.W);
             var border = CreateBorder(bounds.Size + topLeft + bottomRight, texture);
@@ -52,6 +59,26 @@ public partial class RoomFramePresentation : Node
             seal.AddThemeStyleboxOverride("panel", style);
             border.AddChild(seal);
             room.AddChild(border);
+        }
+        // These are the walls between the openings, separate from the black illustrated frames.
+        var world = GetNode<Node2D>("../World");
+        var partitions = new Node2D { Name = "RoomPartitions" };
+        world.AddChild(partitions);
+        foreach (var pair in new[] { ("Atelier", "Corridor"), ("Corridor", "MusicWorkshop"),
+            ("ShowroomLeft", "TradingRoom"), ("TradingRoom", "Showroom"),
+            ("Atelier", "ShowroomLeft"), ("Corridor", "TradingRoom"), ("MusicWorkshop", "Showroom") })
+        {
+            Rect2 first = openings[pair.Item1], second = openings[pair.Item2];
+            bool horizontal = second.Position.Y > first.End.Y;
+            Rect2 gap = horizontal
+                ? new Rect2(first.Position.X, first.End.Y, first.Size.X, second.Position.Y - first.End.Y)
+                : new Rect2(first.End.X, first.Position.Y, second.Position.X - first.End.X, first.Size.Y);
+            gap = world.GlobalTransform.AffineInverse() * gap;
+            partitions.AddChild(new ColorRect {
+                Name = pair.Item1 + "To" + pair.Item2, Position = gap.Position, Size = gap.Size,
+                Color = new Color(0.16f, 0.16f, 0.16f), ZIndex = 100,
+                MouseFilter = Control.MouseFilterEnum.Ignore
+            });
         }
     }
 

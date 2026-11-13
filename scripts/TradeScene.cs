@@ -433,24 +433,6 @@ public partial class TradeScene : Node2D
 			workshop.AddChild(overlay);
 			RoomDoorwayPresentation.AddLockedCurtain(overlay);
 
-			Label title = new()
-			{
-				Name = "LockTitle",
-				Position = new Vector2(510f, 330f),
-				Size = new Vector2(900f, 110f),
-				Text = "КОМНАТА ЗАКРЫТА",
-				HorizontalAlignment = HorizontalAlignment.Center,
-				VerticalAlignment = VerticalAlignment.Center,
-				MouseFilter = Control.MouseFilterEnum.Ignore
-			};
-
-			RoomDoorwayPresentation.StyleLockedTitle(title);
-
-			title.AddThemeFontSizeOverride(
-				"font_size", 52);
-
-			overlay.AddChild(title);
-
 			Button unlockButton = new()
 			{
 				Name = "UnlockButton",
@@ -555,23 +537,6 @@ public partial class TradeScene : Node2D
 		showroom.AddChild(_rightShowroomOverlay);
 		RoomDoorwayPresentation.AddLockedCurtain(_rightShowroomOverlay);
 
-		Label title = new Label
-		{
-			Name = "LockTitle",
-			Position = new Vector2(320, 410),
-			Size = new Vector2(1280, 170),
-			Text = "ВИТРИНЫ ЗАКРЫТЫ",
-			HorizontalAlignment = HorizontalAlignment.Center,
-			VerticalAlignment = VerticalAlignment.Center,
-			MouseFilter = Control.MouseFilterEnum.Ignore
-		};
-
-		title.AddThemeFontSizeOverride(
-			"font_size", 48);
-
-		RoomDoorwayPresentation.StyleLockedTitle(title);
-
-		_rightShowroomOverlay.AddChild(title);
 	}
 
 	public override void _Process(double delta)
@@ -859,15 +824,6 @@ public partial class TradeScene : Node2D
 		}
 
 		_rightShowroomOverlay.Visible = !MusicWorkshopUnlocked;
-
-		if (_rightShowroomOverlay.GetNodeOrNull<Label>(
-			"LockTitle") is Label lockTitle)
-		{
-			lockTitle.Text =
-				GameLocalization.Language == "en"
-					? "DISPLAYS LOCKED"
-					: "ВИТРИНЫ ЗАКРЫТЫ";
-		}
 
 		_extraShowroomHint.Text = !MusicWorkshopUnlocked
 			? GameLocalization.Language == "en"

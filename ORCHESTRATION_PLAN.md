@@ -1,7 +1,7 @@
 # Оркестровый план: «Бакалея для гангстеров»
 
 Версия плана: 1.2
-Обновлено: 2026-11-13
+Обновлено: 2026-11-14
 Стадия по реестру: `S1 — домен, конфигурация и воспроизводимость`
 
 Этот файл хранит требования, решения, стадии и текущий фронт. Рабочий протокол — в [AGENTS.md](AGENTS.md), подробные завершённые отчёты — в [архиве](docs/archive/ORCHESTRATION_HISTORY_2026-11-12.md). `source/` остаётся локальным архивом и не входит в Git.
@@ -10,6 +10,28 @@
 
 ## Текущий фронт
 
+### HF-121 — публикация перегородок и удаления заголовков
+
+Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-14; HF-120 DONE, пользователь разрешил commit/push.
+CP-HF-121 read-set: текущий фронт, Git status/diff/refs/remotes, evidence .local/checks/hf120. Write-set: ORCHESTRATION_PLAN.md; Git index/commits/main и origin/main для scripts/Presentation/{RoomFramePresentation,RoomDoorwayPresentation}.cs, scripts/TradeScene.cs, tests/Integration/ProjectTest.{RoomFrames,Resources}.cs; текущая пользовательская правка отступа scripts/Days/DayCycleController.cs включается без изменения содержимого. Out of scope: .local/, source/, builds/, новые игровые изменения, force push. Приёмка: push main, remote SHA совпадает с HEAD, дерево чистое. Проверки: fetch/divergence, diff-check, сохранённые local/isolated build и rendered room-frame/room-doorway checks HF-120, ls-remote.
+
+### HF-120 — тонкие светлые перегородки и занавесы без заголовков
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-14; HF-117 DONE, активных пересечений нет.
+CP-HF-120 read-set: текущий фронт, scripts/Presentation/{RoomFramePresentation,RoomDoorwayPresentation}.cs, scripts/TradeScene.cs (заголовки/локализация), scenes/trade_scene.tscn (геометрия), tests/Integration/ProjectTest.{RoomFrames,Resources}.cs. Write-set: ORCHESTRATION_PLAN.md, scripts/Presentation/{RoomFramePresentation,RoomDoorwayPresentation}.cs, scripts/TradeScene.cs (удаление двух LockTitle и их refresh), tests/Integration/ProjectTest.{RoomFrames,Resources}.cs. .local/checks/hf120 и изолированная копия — evidence. Out of scope: source/, bitmap-файлы, стиль/толщина рамок, мебель/интерактивные области, пользовательская правка scripts/Days/DayCycleController.cs, экономика, commit/push. Приёмка: межэтажный зазор уже ещё на 6 world px, межкомнатный на 4 world px; перегородки тёмно-серые вместо чёрного при прежних чёрных рамках; нет надписей о закрытой комнате/витринах на обоих языках, кнопка открытия/цена и занавесы сохранены. Проверки: build, rendered --room-frame-checks и --room-doorway-checks, визуальный крупный план, diff-check.
+
+```text
+Task: HF-120
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: RoomFramePresentation продлевает фоны в межэтажный зазор на 13 вместо 10 world px, боковые края во внутренние перегородки на 2 world px; 7 отдельных тёмно-серых перегородок (RGB 0,16) рисуются под прежними чёрными рамками. RoomDoorwayPresentation подгоняет край занавеса под фон без затемнения. Из TradeScene удалены оба LockTitle и refresh заголовка витрин, неиспользуемый StyleLockedTitle удалён. Regression проверяет прежние margin/scale/цвет рамок, новые ширины/цвет 7 перегородок, пиксель реального рендера, отсутствие заголовков и согласование занавесов.
+Checks: local/isolated build PASS (0 warnings/errors); rendered --room-frame-checks PASS (exit 0: 24 стороны/углы, прежняя толщина рамок, перегородки, day/night, close-up); --room-doorway-checks PASS (exit 0: failed/successful unlock, reload, checkpoint, NewGame); preview просмотрен; diff-check PASS. LockTitle/StyleLockedTitle больше не встречаются в scripts.
+Acceptance: межэтажная перегородка около 13 вместо 19 world px, вертикальные около 10 вместо 14 world px, цвет немного светлее; стиль и толщина рамки сохранены. Нет ROOM LOCKED/DISPLAYS LOCKED и их русских вариантов; занавесы и прежняя кнопка открытия за 100$ сохранены.
+Read-set exception: .local/checks/hf104/hf104-check-dir.txt — повторное использование изолированной копии. Пользовательская правка scripts/Days/DayCycleController.cs сохранена без изменений.
+Risks/blocker: новых нет; полный integration suite с прежним tooltip baseline FAIL не объявляется зелёным.
+Next: основной фронт S1-04. Commit/push не выполнялись.
+```
+
+Evidence: .local/checks/hf120/{build,local-build,room-frame,room-doorway}*.log и preview.png.
 ### HF-119 — публикация интерфейса и стартового вида
 
 Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-13; HF-112…HF-118 DONE, пользователь разрешил commit/push.

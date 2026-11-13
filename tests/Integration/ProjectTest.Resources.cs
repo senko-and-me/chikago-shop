@@ -74,14 +74,10 @@ public partial class ProjectTest
                 {
                     var overlay = game.GetNode<ColorRect>($"World/{room}/LockedOverlay");
                     var curtain = overlay.GetNode<TextureRect>("LockedCurtain");
-                    var title = overlay.GetNode<Label>("LockTitle");
-                    Check(title.GetThemeColor("font_color") == Colors.Black &&
-                        title.GetThemeColor("font_outline_color") == Colors.White &&
-                        title.GetThemeConstant("outline_size") >= 6,
-                        "Locked-room titles must contrast with both white cloth and black stripes without dimming the curtain");
+                    Check(!overlay.HasNode("LockTitle"), "Locked rooms and displays must have no title over their curtains");
                     Check(overlay.Visible == !open && curtain.Texture.ResourcePath == "res://art/rooms/locked_curtain.png" &&
-                        Mathf.IsEqualApprox(curtain.Size.X, overlay.Size.X) &&
-                        Mathf.Abs((curtain.Size.Y - overlay.Size.Y) * overlay.GetParent<Node2D>().GlobalScale.Y - 10) < 0.02f &&
+                        Mathf.Abs((curtain.Size.X - overlay.Size.X) * overlay.GetParent<Node2D>().GlobalScale.X - 2) < 0.02f &&
+                        Mathf.Abs((curtain.Size.Y - overlay.Size.Y) * overlay.GetParent<Node2D>().GlobalScale.Y - 13) < 0.02f &&
                         curtain.MouseFilter == Control.MouseFilterEnum.Ignore &&
                         curtain.GetIndex() == 0 && curtain.Modulate == Colors.White,
                         "Curtains must cover both locked rooms, keep labels above them and leave input to the existing overlay");
@@ -93,10 +89,13 @@ public partial class ProjectTest
             {
                 var sprite = game.GetNode<Sprite2D>("World/" + entry.Item1);
                 Check(sprite.Texture.ResourcePath == "res://art/rooms/" + entry.Item2 + suffix &&
-                    sprite.Texture.GetSize() == new Vector2(1398, 1080) && Mathf.IsEqualApprox(sprite.Position.X, 3) &&
-                    Mathf.IsEqualApprox(sprite.Scale.X, 1) && !sprite.Centered,
-                    $"{entry.Item2} must show the {(open ? "open" : "closed")} doorway with the same width and source art");
-                float overlap = game.IsInsideTree() ? 10 / sprite.GetParent<Node2D>().GlobalScale.Y : 0;
+                    sprite.Texture.GetSize() == new Vector2(1398, 1080) && !sprite.Centered,
+                    $"{entry.Item2} must show the {(open ? "open" : "closed")} doorway with the same source art");
+                float sideOverlap = game.IsInsideTree() ? 2 / sprite.GetParent<Node2D>().GlobalScale.X : 0;
+                Check(Mathf.Abs(sprite.Position.X - (3 - sideOverlap)) < 0.02f &&
+                    Mathf.Abs(sprite.Scale.X * 1398 - (1398 + sideOverlap * 2)) < 0.02f,
+                    "Doorway backgrounds must retain the narrower vertical partitions across unlock and reload");
+                float overlap = game.IsInsideTree() ? 13 / sprite.GetParent<Node2D>().GlobalScale.Y : 0;
                 Check(Mathf.Abs(sprite.Scale.Y * 1080 - (1080 + overlap)) < 0.02f &&
                     Mathf.Abs(sprite.Position.Y - (entry.Item2 == "cashier" ? 4 - overlap : 4)) < 0.02f,
                     "Doorway backgrounds must retain the thinner floor seam across unlock and reload");
