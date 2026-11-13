@@ -16,12 +16,13 @@ public partial class DayTransitionCard : CanvasLayer
     private ColorRect _shade = null!;
     private PokerCardBack _deck = null!;
     private DayCardDealAnimator _animation = null!;
+    private DayCardSceneTransition _sceneTransition = null!;
     private Label _title = null!;
-    private enum Phase { Closed, Dealing, Choosing, Leaving }
+    private enum Phase { Closed, Framing, Dealing, Choosing, Leaving }
     private Phase _phase;
     private int _generation;
     private float _layoutScale = 1;
-    public bool IsAnimating => _phase is Phase.Dealing or Phase.Leaving;
+    public bool IsAnimating => _phase is Phase.Framing or Phase.Dealing or Phase.Leaving;
     public IReadOnlyList<DayUpgrade> Options { get; private set; } = Array.Empty<DayUpgrade>();
     public event Action<DayUpgrade> Chosen;
     public event Action Skipped;
@@ -32,40 +33,17 @@ public partial class DayTransitionCard : CanvasLayer
 
     public override void _Ready()
     {
-        Name = "DayTransitionCard";
-        Layer = 120;
-        ProcessMode = ProcessModeEnum.Always;
-        _root = new Control { Name = "Root", Visible = false, Theme = GD.Load<Theme>("res://themes/game_theme.tres") };
-        AddChild(_root);
-        MonochromePresentation.CoverExceptions(_root);
-        _root.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        _root = GetNode<Control>("Root");
+        _panel = GetNode<PanelContainer>("Root/Center/Card");
+        _route = GetNode<Label>("Root/Center/Card/Content/Route");
+        _title = GetNode<Label>("Root/Center/Card/Content/Title");
+        _choices = GetNode<Control>("Root/Center/Card/Content/Choices");
+        _skip = GetNode<Button>("Root/Center/Card/Content/Skip");
+        _shade = GetNode<ColorRect>("Root/Shade");
+        _deck = GetNode<PokerCardBack>("Root/Deck");
         _animation = new DayCardDealAnimator(this);
-        _shade = new ColorRect { Name = "Shade", Color = new Color(0, 0, 0, 0.64f), MouseFilter = Control.MouseFilterEnum.Stop };
-        _root.AddChild(_shade);
-        _shade.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        _deck = new PokerCardBack { Name = "Deck", IsDeck = true };
-        _root.AddChild(_deck);
-        var center = new CenterContainer { Name = "Center" };
-        _root.AddChild(center);
-        center.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        _panel = new PanelContainer { Name = "Card" };
-        _panel.AddThemeStyleboxOverride("panel", new StyleBoxFlat
-        {
-            BgColor = new Color(0, 0, 0, 0),
-            ContentMarginLeft = 24, ContentMarginRight = 24, ContentMarginTop = 24, ContentMarginBottom = 24,
-            CornerRadiusTopLeft = 8, CornerRadiusTopRight = 8, CornerRadiusBottomLeft = 8, CornerRadiusBottomRight = 8
-        });
-        center.AddChild(_panel);
-        var content = new VBoxContainer { Name = "Content" };
-        content.AddThemeConstantOverride("separation", 12);
-        _panel.AddChild(content);
-        _route = AddLabel(content, "Route", "", 22, "eeeeee");
-        _title = AddLabel(content, "Title", "Выберите улучшение", 30, "ffffff");
-        // Free layout lets the cards move without fighting a Container's sorting pass.
-        _choices = new Control { Name = "Choices", MouseFilter = Control.MouseFilterEnum.Ignore };
-        content.AddChild(_choices);
-        _skip = new Button { Name = "Skip", Text = "Пропустить", CustomMinimumSize = new Vector2(0, 36) };
-        content.AddChild(_skip);
+        _sceneTransition = new DayCardSceneTransition(this);
+        MonochromePresentation.CoverExceptions(_root);
         _skip.Pressed += Skip;
         _root.Resized += OnResize;
         Layout();
@@ -73,44 +51,21 @@ public partial class DayTransitionCard : CanvasLayer
 
     private Button AddChoice(Node parent, DayUpgrade upgrade, string title, string amount, string description, string duration)
     {
-        var panel = new PanelContainer { Name = upgrade.ToString(), SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
-        panel.AddThemeStyleboxOverride("panel", new StyleBoxFlat
-        {
-            BgColor = new Color("f3f1eb"), BorderColor = new Color("202020"),
-            BorderWidthLeft = 2, BorderWidthRight = 2, BorderWidthTop = 2, BorderWidthBottom = 2,
-            ContentMarginLeft = 18, ContentMarginRight = 18, ContentMarginTop = 16, ContentMarginBottom = 16,
-            CornerRadiusTopLeft = 6, CornerRadiusTopRight = 6, CornerRadiusBottomLeft = 6, CornerRadiusBottomRight = 6
-        });
+        var panel = GD.Load<PackedScene>("res://scenes/UI/DayUpgradeCard.tscn").Instantiate<PanelContainer>();
+        panel.Name = upgrade.ToString();
         parent.AddChild(panel);
         _cards.Add(panel);
-        var content = new VBoxContainer { Name = "Content" };
-        content.AddThemeConstantOverride("separation", 8);
-        panel.AddChild(content);
-        AddLabel(content, "Amount", amount, 38, "202020");
-        AddLabel(content, "Title", title, 22, "202020").CustomMinimumSize = new Vector2(0, 52);
-        AddLabel(content, "Description", description, 18, "3c3c3c").CustomMinimumSize = new Vector2(0, 72);
-        content.AddChild(new Control { Name = "Spacer", SizeFlagsVertical = Control.SizeFlags.ExpandFill,
-            MouseFilter = Control.MouseFilterEnum.Ignore });
-        AddLabel(content, "Duration", duration, 14, "555555").CustomMinimumSize = new Vector2(0, 34);
+        panel.GetNode<Label>("Content/Amount").Text = amount;
+        panel.GetNode<Label>("Content/Title").Text = title;
+        panel.GetNode<Label>("Content/Description").Text = description;
+        panel.GetNode<Label>("Content/Duration").Text = duration;
         int cost = DayUpgradeSession.Cost(upgrade);
-        var button = new Button { Name = "Choose", Text = GameLocalization.Format("Купить за {0}$", cost),
-            Disabled = _balance < cost, CustomMinimumSize = new Vector2(0, 44) };
-        content.AddChild(button);
+        var button = panel.GetNode<Button>("Content/Choose");
+        button.Text = GameLocalization.Format("Купить за {0}$", cost);
+        button.Disabled = _balance < cost;
         button.Pressed += () => Choose(upgrade);
-        panel.AddChild(new PokerCardBack { Name = "Back", Visible = false });
         return button;
     }
-
-    private static Label AddLabel(Node parent, string name, string text, int size, string color)
-    {
-        var label = new Label { Name = name, Text = text, HorizontalAlignment = HorizontalAlignment.Center,
-            AutowrapMode = TextServer.AutowrapMode.WordSmart, MouseFilter = Control.MouseFilterEnum.Ignore };
-        label.AddThemeFontSizeOverride("font_size", size);
-        label.AddThemeColorOverride("font_color", new Color(color));
-        parent.AddChild(label);
-        return label;
-    }
-
     private void Layout()
     {
         _layoutScale = Mathf.Clamp(_root.Size.Y / 720, 0.6f, 1);
@@ -158,7 +113,8 @@ public partial class DayTransitionCard : CanvasLayer
     private void OnResize()
     {
         Layout();
-        if (IsOpen && _phase != Phase.Leaving) Reflow(_generation);
+        if (IsOpen && _phase == Phase.Framing) PrepareDeal(_generation);
+        else if (IsOpen && _phase != Phase.Leaving) Reflow(_generation);
     }
 
     private async void Reflow(int generation)
@@ -192,6 +148,16 @@ public partial class DayTransitionCard : CanvasLayer
         });
     }
 
+    private void PrepareDeal(int generation)
+    {
+        _sceneTransition.Begin(() =>
+        {
+            if (generation != _generation || !IsOpen) return;
+            _phase = Phase.Dealing;
+            Reflow(generation);
+        });
+    }
+
     public void Open(int previousDay, int nextDay, IReadOnlyList<DayUpgrade> options, int balance)
     {
         if (IsOpen || previousDay is < 1 or > 6 || nextDay != previousDay + 1 || GetTree().Paused) return;
@@ -218,7 +184,7 @@ public partial class DayTransitionCard : CanvasLayer
         _navigationButtons.Add(_skip);
         _route.Text = $"{previousDay:00}  →  {nextDay:00}  ·  " + GameLocalization.Format("Средства: {0}$", balance);
         _ownsPause = true;
-        _phase = Phase.Dealing;
+        _phase = Phase.Framing;
         int generation = ++_generation;
         GetTree().Paused = true;
         _shade.Modulate = _panel.Modulate = _deck.Modulate = new Color(1, 1, 1, 0);
@@ -226,7 +192,7 @@ public partial class DayTransitionCard : CanvasLayer
         _root.Show();
         LockActions(true);
         Layout();
-        Reflow(generation);
+        PrepareDeal(generation);
         // Opening the screen with the mouse must not preselect a purchase.
         GetViewport().GuiReleaseFocus();
     }
@@ -261,6 +227,7 @@ public partial class DayTransitionCard : CanvasLayer
         if (!IsOpen) return;
         ++_generation;
         _animation.Cancel();
+        _sceneTransition.Restore();
         _phase = Phase.Closed;
         _root.Hide();
         if (_ownsPause) GetTree().Paused = false;
@@ -309,6 +276,7 @@ public partial class DayTransitionCard : CanvasLayer
     {
         ++_generation;
         _animation?.Cancel();
+        _sceneTransition?.Restore();
         if (_ownsPause) GetTree().Paused = false;
     }
 }

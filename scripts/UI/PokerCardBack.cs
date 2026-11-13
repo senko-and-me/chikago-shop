@@ -3,7 +3,7 @@ using Godot;
 // Code-drawn monochrome card backs; no additional bitmap assets are needed.
 public partial class PokerCardBack : Control
 {
-    public bool IsDeck { get; set; }
+    [Export] public bool IsDeck { get; set; }
 
     public override void _Ready()
     {

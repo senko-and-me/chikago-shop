@@ -10,6 +10,62 @@
 
 ## Текущий фронт
 
+### HF-125 — публикация сцен, анимаций и уведомлений
+
+Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-14; HF-122…HF-124 DONE, пользователь разрешил commit/push.
+CP-HF-125 read-set: текущий фронт, Git status/diff/refs/remotes, evidence .local/checks/hf122…hf124. Write-set: ORCHESTRATION_PLAN.md; Git index/commits/main и origin/main для текущего набора HF-122…HF-124: docs/GAMEPLAY.md, localization/en.tres, scenes/trade_scene.tscn, scenes/UI/{InventoryUI,DayTransitionCard,DayUpgradeCard}.tscn, scripts/Camera/WorldCamera.cs, scripts/Days/{DayCycleController,DayNightBackground}.cs, scripts/Presentation/{DayCardDealAnimator,RoomDoorwayPresentation,DayCardSceneTransition,InventoryExpansionAnimator}.cs и новые .uid, удаление RoomFramePresentation.cs/.uid, scripts/TradeScene.cs, scripts/UI/{DayAnnouncementOverlay,DayTransitionCard,InventoryUI,PokerCardBack}.cs, tests/ProjectTest.cs, tests/Integration/ProjectTest.{CardDealing,DayAnnouncements,Resources,RoomFrames,InventoryExpansion}.cs и новый .uid. Out of scope: .local/, source/, builds/, новые игровые правки, force push. Приёмка: обычный push main, HEAD совпадает с remote SHA, дерево чистое. Проверки: fetch/divergence, diff-check, ранее прошедшие build/import и профильные rendered checks, ls-remote после публикации.
+
+### HF-124 — остаток дней и срок промежуточной квоты в уведомлении
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-14; HF-123/HF-116 DONE, активных пересечений нет.
+CP-HF-124 read-set: текущий фронт, scripts/UI/DayAnnouncementOverlay.cs, scripts/Days/DayCycleController.cs, scripts/TradeScene.cs (FirstDeadline), scripts/Configuration/EconomyConfigProvider.cs, src/ChikagoShop.Domain/Configuration/EconomyConfig.cs (тип Quotas), localization/en.tres, tests/Integration/ProjectTest.DayAnnouncements.cs, docs/GAMEPLAY.md. Write-set: ORCHESTRATION_PLAN.md, scripts/UI/DayAnnouncementOverlay.cs, scripts/Days/DayCycleController.cs (передача срока из конфигурации), localization/en.tres, tests/Integration/ProjectTest.DayAnnouncements.cs, docs/GAMEPLAY.md. Evidence .local/checks/hf124 и изолированная копия. Out of scope: экономика/сроки/сохранения, source/, commit/push. Приёмка: нет «День N из M»; короткое «Осталось 2 дня», второй строкой срок промежуточной квоты до её дедлайна включительно; текущий день входит в остаток, после первого дедлайна строка квоты исчезает, RU/EN/plural/live switch. Проверки: build, rendered day-announcement и day-start checks, preview, diff-check.
+
+```text
+Task: HF-124
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: DayAnnouncementOverlay показывает короткое «Осталось N дней» без номера/общего числа. До первого дедлайна включительно добавляется «До промежуточной квоты: N дней», далее строка исчезает; высота блока учитывает одну/две строки. DayCycleController передаёт срок из economy config; добавлены RU/EN plural-ключи и regression на дни 1/3/4/5/6/7. Docs актуализированы.
+Checks: local/isolated build PASS (0 warnings/errors); rendered day-announcement PASS (текст, дедлайн 4→2→1→скрыт, общий остаток, RU/EN/live translation, viewport, lifecycle/pause/reload), day-start PASS; preview с «До промежуточной квоты: 2 дня» просмотрен; diff-check PASS. Финальная визуальная доводка HF-123 сохранила normal-style пустых ячеек в анимационных копиях; повторный inventory-expansion PASS, предметы/иконки сохранены.
+Acceptance: уведомление сразу сообщает остаток и срок промежуточной квоты, без «День N из M»; текущий день включён в оба счётчика. Стоимости и дедлайны не менялись.
+Read-set exception: нет.
+Risks/blocker: новых нет; прежние import UID warnings и baseline tooltip FAIL полного suite вне задачи.
+Next: основной фронт S1-04. Commit/push не выполнялись.
+```
+
+Evidence: .local/checks/hf124/{build,local-build,day-announcement,day-start}*.log и preview.png; анимации — evidence HF-123.
+### HF-123 — анимация расширения инвентаря и вступление к выбору карт
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-14; HF-122 DONE, активных пересечений нет.
+CP-HF-123 read-set: текущий фронт, scripts/UI/{InventoryUI,SlotUI,DayTransitionCard,PokerCardBack,ZoomResponsiveUi,DayAnnouncementOverlay}.cs, scripts/Presentation/{DayCardDealAnimator,MonochromePresentation}.cs, scripts/Camera/WorldCamera.cs, scripts/Days/DayCycleController.cs, scripts/TradeScene.cs (capacity/ready/unlock), scenes/UI/{InventoryUI,SlotUI}.tscn, tests/Integration/ProjectTest.{Inventory,CardDealing,Helpers,DayStart}.cs, tests/ProjectTest.cs, docs/GAMEPLAY.md. Write-set: ORCHESTRATION_PLAN.md, scripts/UI/{InventoryUI,DayTransitionCard,PokerCardBack}.cs, scripts/Presentation/DayCardDealAnimator.cs, новые scripts/Presentation/{InventoryExpansionAnimator,DayCardSceneTransition}.cs/.uid, scripts/Camera/WorldCamera.cs, scripts/Days/DayCycleController.cs (инстанцирование готовой сцены), scenes/UI/InventoryUI.tscn, новые scenes/UI/{DayTransitionCard,DayUpgradeCard}.tscn, tests/Integration/ProjectTest.CardDealing.cs, новые tests/Integration/ProjectTest.InventoryExpansion.cs/.uid, tests/ProjectTest.cs (группа), docs/GAMEPLAY.md. Evidence: .local/checks/hf123 и изолированная копия. Out of scope: bitmap/source/, фон HF-122, домен/стоимости/сохранения, commit/push. Приёмка: рост 3→6 сдвигает старые ячейки влево, новые последовательно влетают из-под экрана; загрузка сразу показывает финальное состояние; reset/resize/removal отменяют анимацию. Карты: камера плавно возвращается к начальному разрешённому обзору, затем UI исчезает, колода поднимается снизу, начинается прежняя раздача; пауза/input сохраняются, закрытие/сброс/удаление восстанавливают UI и отменяют callbacks без списаний. Постоянные элементы и шаблон карты заданы в .tscn. Проверки: build/import; rendered inventory-expansion/card-dealing/camera-limits/day-start; resize/cancel/reload; preview; diff-check.
+
+```text
+Task: HF-123
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: InventoryExpansionAnimator — временные input-ignore копии кадров/иконок, старые слоты сдвигаются влево за 0,45 с, новые прилетают снизу за 0,48 с со сдвигом 0,18 с. InventoryUI блокирует взаимодействие на переходе, отменяет при resize/reset/exit и пропускает первичную загрузку. Постоянный фон/счётчик/animation host находятся в InventoryUI.tscn. WorldCamera поддерживает отменяемый ReturnToOverview. DayCardSceneTransition — камера 0,7 с → fade UI 0,25 с → скрытие HUD/world UI; оформление комнат сохраняется; close/reset/exit восстанавливает видимость/opacity и отменяет tweens. DayCardDealAnimator поднимает колоду снизу перед раздачей. DayTransitionCard/DayUpgradeCard вынесены в сцены, PokerCardBack.IsDeck экспортирован; DayCycleController инстанцирует сцену. Обновлены regression и docs.
+Checks: local/isolated build PASS (0 warnings/errors); import PASS (прежние duplicate UI UID warnings); rendered inventory-expansion PASS (сдвиг/порядок/иконка/сохранность предметов/reset/resize/reload), card-dealing PASS (RU/EN, 960×540/1280×720, плавность/порядок, скрытие/возврат UI, deck/flip/purchase/skip/cancel/reload/resize), camera-limits и day-start PASS. Preview инвентаря/карт просмотрены. Старая card fixture актуализирована под явный Start из HF-106.
+Acceptance: расширение и показ карт проходят по запрошенной последовательности; анимации не изменяют экономику/сохранения/доменные правила. Постоянная разметка редактируется в сценах.
+Read-set exception: нет; изолированная копия определена через .local/checks/hf104/hf104-check-dir.txt.
+Risks/blocker: прежний tooltip baseline полного suite вне задачи.
+Next: HF-124 — уточнение уведомления по последнему сообщению пользователя. Commit/push не выполнялись.
+```
+
+Evidence: .local/checks/hf123/{build,local-build,import,inventory-expansion,card-dealing,camera-limits,day-start}*.log и {inventory,cards}-preview.png.
+### HF-122 — фон и оформление комнат заданы в сцене
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-14; HF-120 DONE, активных пересечений нет.
+CP-HF-122 read-set: текущий фронт, scenes/trade_scene.tscn, scripts/Presentation/{RoomFramePresentation,RoomDoorwayPresentation}.cs/.uid, scripts/Days/DayNightBackground.cs, scripts/TradeScene.cs (overlay lifecycle), tests/Integration/ProjectTest.{RoomFrames,Resources,CameraLimits}.cs, tests/ProjectTest.cs (доступные проверки), docs/GAMEPLAY.md, ChikagoShop.csproj. Write-set: ORCHESTRATION_PLAN.md, scenes/trade_scene.tscn, удаление scripts/Presentation/RoomFramePresentation.cs/.uid, scripts/Presentation/RoomDoorwayPresentation.cs, scripts/Days/DayNightBackground.cs, scripts/TradeScene.cs (только получение готовых overlay/button вместо создания), tests/Integration/ProjectTest.{RoomFrames,Resources}.cs, docs/GAMEPLAY.md. .local/checks/hf122 и изолированная копия — инструменты переноса/evidence. Out of scope: source/, bitmap-файлы, новая графика/дизайн, игровые правила, остальной UI, commit/push. Приёмка: до _Ready в PackedScene уже есть шесть фонов с конечными трансформами, шесть рамок со сплошным сердечником, семь перегородок, два фона день/ночь, два занавеса и кнопка открытия; редактор показывает ту же компоновку, runtime не создаёт/не двигает их. Код только переключает текстуры/видимость/alpha по состоянию. Внешний вид, прежние камеры/локализация/покупка сохранены. Проверки: before-tree→runtime regression, build/import, rendered room-frame/room-doorway/camera-limits/day-start, визуальное сравнение, diff-check.
+
+```text
+Task: HF-122
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: trade_scene.tscn содержит конечные трансформы шести фонов, AtlasTexture и общий StyleBoxFlat рамок, шесть RoomFrame/SeamSeal, семь RoomPartitions, TimeOfDayNight/Day и два LockedOverlay/LockedCurtain с UnlockButton. Все узлы принадлежат PackedScene и доступны в редакторе до запуска. RoomFramePresentation.cs/.uid удалены; RoomDoorwayPresentation больше не создаёт занавесы, TradeScene только связывает ссылки на готовые overlay/button. DayNightBackground только получает готовый дневной слой и обновляет alpha. Фиксированные offsets занавесов заданы явно, не зависят от runtime-разрешения anchors. Тесты и gameplay docs актуализированы.
+Checks: local/isolated build PASS (0 warnings/errors); import PASS (exit 0, прежние duplicate UI UID warnings); rendered room-frame PASS (before-tree ownership/геометрия 32 узлов, неизменность после _Ready, прежние пиксели рамок, day/night alpha/reset); room-doorway PASS (initial editor geometry, unlock/reload/checkpoint/NewGame); camera-limits и day-start PASS. Preview до/после совпадает побайтно: SHA256 E5FEFB6F15C5AD0B821F09ABE25385181BC8605ED07F4C28165AA95C2939954F. diff-check PASS.
+Acceptance: компоновка фона полностью задана в сцене, код не создаёт и не подгоняет оформление при старте; визуальный результат прежний, состояние по-прежнему переключается кодом. Кнопка открытия, камера и ручной запуск дня работают.
+Read-set exception: scripts/CounterWorld.cs и ChikagoShop.csproj для диагностики порядка _Ready и изолированного инструмента переноса; .local/checks/hf104/hf104-check-dir.txt — изолированная копия. Одноразовый BakeBackground/migrate-background остался в изолированной копии/.local, в runtime-проект не добавлен.
+Risks/blocker: прежние duplicate UI UID warnings и baseline tooltip FAIL вне задачи; новых блокеров нет.
+Next: основной фронт S1-04. Commit/push не выполнялись.
+```
+
+Evidence: .local/checks/hf122/{bake-build,bake,build,local-build,import,room-frame,room-doorway,camera-limits,day-start}*.log, baked-background.tscn, migrate-background.ps1, preview.png.
 ### HF-121 — публикация перегородок и удаления заголовков
 
 Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-14; HF-120 DONE, пользователь разрешил commit/push.

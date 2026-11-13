@@ -36,8 +36,8 @@ public partial class ProjectTest
             overlay.SetProcess(false);
             Check(overlay.IsShowing && title.Text == "Магазин открыт" && overlay.Opacity == 0 && !Paused,
                 "New day must start a nonblocking opening announcement with a transparent first frame");
-            Check(details.Visible && details.Text == "День 1 из 7\nОсталось 7 дней, включая сегодня",
-                "Opening must show the current day and remaining days including today");
+            Check(details.Visible && details.Text == "Осталось 7 дней\nДо промежуточной квоты: 4 дня",
+                "Opening must directly show remaining days and the interim quota deadline, including today");
             float groupCenter = (title.GetGlobalRect().Position.Y + details.GetGlobalRect().End.Y) / 2;
             Check(Mathf.Abs(groupCenter - Root.GetVisibleRect().Size.Y * 0.6f) < 1,
                 "The announcement block must sit slightly below center at sixty percent of viewport height");
@@ -149,22 +149,34 @@ public partial class ProjectTest
             Check(overlay.IsShowing && overlay.GetNode<Label>("Root/Title").Text == "Магазин открыт",
                 "Restarting a checkpoint must reset opening and midday milestones");
             overlay.SetProcess(false);
-            foreach (int day in new[] { 1, 4, 6, 7 })
+            foreach (int day in new[] { 1, 3, 4, 5, 6, 7 })
             foreach (string language in new[] { "ru", "en" })
             {
                 overlay.BeginDay();
-                overlay.Observe(90, 90, false, day, 7);
+                overlay.Observe(90, 90, false, day, 7, 4);
                 TranslationServer.SetLocale(language);
                 overlay.SetProcess(false);
                 overlay._Process(0.6);
                 details = overlay.GetNode<Label>("Root/Details");
                 int left = 8 - day;
-                string ru = left == 1 ? "Остался 1 день, включая сегодня"
-                    : left is >= 2 and <= 4 ? $"Осталось {left} дня, включая сегодня" : $"Осталось {left} дней, включая сегодня";
-                string expected = language == "en" ? $"Day {day} of 7\n{left} {(left == 1 ? "day" : "days")} left, including today"
-                    : $"День {day} из 7\n{ru}";
-                Check(details.Text == expected, "Day countdown must handle first/last day and Russian/English plurals during live locale changes");
+                string ru = left == 1 ? "Остался 1 день"
+                    : left is >= 2 and <= 4 ? $"Осталось {left} дня" : $"Осталось {left} дней";
+                string expected = language == "en" ? $"{left} {(left == 1 ? "day" : "days")} left" : ru;
+                if (day <= 4)
+                {
+                    int quotaLeft = 5 - day;
+                    expected += language == "en" ? $"\nInterim quota: {quotaLeft} {(quotaLeft == 1 ? "day" : "days")} left"
+                        : $"\nДо промежуточной квоты: {quotaLeft} {(quotaLeft == 1 ? "день" : "дня")}";
+                }
+                Check(details.Text == expected, "Direct countdown must handle quota deadline, first/last day, Russian/English plurals and live locale changes");
                 Check(Root.GetVisibleRect().Encloses(details.GetGlobalRect()), "Day countdown must fit inside the viewport");
+                if (day == 3 && language == "ru")
+                {
+                    var hud = game.GetNode<CanvasLayer>("HUD");
+                    hud.Hide();
+                    using (var image = await CapturePresentation("quota-countdown")) { }
+                    hud.Show();
+                }
             }
             await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
             Root.GetTexture().GetImage().SavePng(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "chikago-hf116-last-day-en.png"));

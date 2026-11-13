@@ -37,7 +37,14 @@ public partial class ProjectTest
                 Root.Size = size;
                 TranslationServer.SetLocale(language);
                 game.NewGame();
-                game.EndDay(); game.EndDay();
+                var camera = game.GetNode<WorldCamera>("Camera2D");
+                Vector2 initialPosition = camera.Position;
+                Vector2 initialZoom = camera.Zoom;
+                camera.Position += new Vector2(250, 120);
+                camera.Zoom = initialZoom * 1.6f;
+                camera.ClampToBounds();
+                Vector2 closeupPosition = camera.Position;
+                game.EndDay(); game.EndDay(); game.EndDay();
                 var card = game.GetNode<DayTransitionCard>("DayTransitionCard");
                 Check(card.IsOpen && card.IsAnimating && Paused && game.DayUpgrades.Pending,
                     "Dealing must overlay the paused game while the upgrade remains pending");
@@ -47,7 +54,25 @@ public partial class ProjectTest
                     "Translucent shade and transparent tray must preserve the gameplay background");
                 card.Choose(DayUpgrade.Cash); card.Skip();
                 Check(game.Score == 220 && game.DayUpgrades.Pending, "Early input must not commit a choice during dealing");
-                await ToSignal(CreateTimer(0.36, true), SceneTreeTimer.SignalName.Timeout);
+                var hud = game.GetNode<Control>("HUD/Root");
+                var deck = card.GetNode<Control>("Root/Deck");
+                Check(camera.IsReturningToOverview && camera.Position == closeupPosition && hud.Visible && deck.Modulate.A == 0,
+                    "The camera return must begin before hiding UI or revealing the deck, with no initial jump");
+                await ToSignal(CreateTimer(0.28, true), SceneTreeTimer.SignalName.Timeout);
+                Check(camera.Position.DistanceTo(initialPosition) < closeupPosition.DistanceTo(initialPosition) &&
+                    camera.Position.DistanceTo(initialPosition) > 0.1f && hud.Visible && deck.Modulate.A == 0,
+                    "The camera must travel smoothly while the UI and hidden deck retain their first-stage states");
+                await ToSignal(CreateTimer(0.5, true), SceneTreeTimer.SignalName.Timeout);
+                Check(camera.Zoom.DistanceTo(initialZoom) < 0.001f && camera.Position.DistanceTo(initialPosition) < 0.05f &&
+                    hud.Modulate.A < 1 && hud.Modulate.A > 0 && deck.Modulate.A == 0,
+                    "Only after reaching the NewGame overview may UI begin fading out");
+                await ToSignal(CreateTimer(0.3, true), SceneTreeTimer.SignalName.Timeout);
+                Check(!hud.Visible && !game.GetNode<Control>("HUD/InventoryUI").Visible &&
+                    !game.GetNode<Control>("World/Atelier/GetItemButton").Visible &&
+                    game.GetNode<Control>("World/MusicWorkshop/LockedOverlay/LockedCurtain").IsVisibleInTree() &&
+                    deck.Position.Y > Root.GetVisibleRect().Size.Y - deck.Size.Y - 28,
+                    "All gameplay UI must be hidden before the deck rises from below, while background curtains remain visible");
+                await ToSignal(CreateTimer(0.55, true), SceneTreeTimer.SignalName.Timeout);
                 var first = card.GetNode<PanelContainer>("Root/Center/Card/Content/Choices/Cash");
                 Check(card.IsAnimating && first.GetNode<Control>("Back").Visible && first.Scale.X < 1 &&
                     card.GetNode<Control>("Root/Deck").IsVisibleInTree(),
@@ -82,9 +107,23 @@ public partial class ProjectTest
                 Check(!card.IsOpen && !Paused && !game.DayUpgrades.Pending && game.CurrentDay == 2 &&
                     game.Score == (buy ? 250 : 220) && game.DayUpgrades.Selected == (buy ? DayUpgrade.Cash : DayUpgrade.None),
                     "Exactly one purchase or free skip must apply after exit and resume the new day");
+                Check(hud.Visible && hud.Modulate == Colors.White && game.GetNode<Control>("HUD/InventoryUI").Visible &&
+                    game.GetNode<Control>("World/Atelier/GetItemButton").Visible,
+                    "Leaving the cards must restore gameplay UI and its full opacity");
+            }
+            foreach (double delay in new[] { 0.1, 0.8 })
+            {
+                game.NewGame();
+                game.EndDay(); game.EndDay(); game.EndDay();
+                await ToSignal(CreateTimer(delay, true), SceneTreeTimer.SignalName.Timeout);
+                game.NewGame();
+                await ToSignal(CreateTimer(0.4, true), SceneTreeTimer.SignalName.Timeout);
+                Check(!Paused && game.GetNode<Control>("HUD/Root").Visible &&
+                    game.GetNode<Control>("HUD/Root").Modulate == Colors.White,
+                    "Reset during camera travel or UI fade must cancel late callbacks and restore UI opacity");
             }
             game.NewGame();
-            game.EndDay(); game.EndDay();
+            game.EndDay(); game.EndDay(); game.EndDay();
             var active = game.GetNode<DayTransitionCard>("DayTransitionCard");
             Root.Size = new Vector2I(960, 540);
             await WaitForDayCardAnimation(active);
@@ -93,7 +132,7 @@ public partial class ProjectTest
             await ToSignal(CreateTimer(0.7, true), SceneTreeTimer.SignalName.Timeout);
             Check(!Paused && !active.IsOpen && game.Score == 220 && game.CurrentDay == 1,
                 "Reset during exit must cancel its callback and release pause without charging");
-            game.EndDay(); game.EndDay();
+            game.EndDay(); game.EndDay(); game.EndDay();
             await WaitForDayCardAnimation(active);
             active.Choose(DayUpgrade.Cash);
             game.QueueFree();
@@ -106,7 +145,7 @@ public partial class ProjectTest
             active.Skip();
             await WaitForDayCardAnimation(active);
             game.NewGame();
-            game.EndDay(); game.EndDay();
+            game.EndDay(); game.EndDay(); game.EndDay();
             game.QueueFree(); // Cancel deferred layout and entrance callbacks too.
             await ToSignal(this, SignalName.ProcessFrame);
             game = null;

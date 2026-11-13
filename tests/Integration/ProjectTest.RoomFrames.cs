@@ -8,6 +8,32 @@ public partial class ProjectTest
         Check(DisplayServer.GetName() != "headless", "Camera frame checks require rendering");
         Vector2I originalSize = Root.Size;
         var game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
+        // Inspect the packed scene before _Ready: an editor must see the complete background already.
+        var sceneGeometry = new System.Collections.Generic.List<(CanvasItem Node, Transform2D Transform, Rect2 Rect)>();
+        void Remember(string path)
+        {
+            var node = game.GetNode<CanvasItem>(path);
+            Check(node.Owner == game, "Background artwork and decorations must be owned by the packed scene, not generated at runtime");
+            sceneGeometry.Add((node, node.GetTransform(), node is Control control ? control.GetRect() : default));
+        }
+        foreach (var entry in new[] { ("Atelier", "Background"), ("MusicWorkshop", "Background"),
+            ("Showroom", "ShowroomBackground"), ("ShowroomLeft", "ShowroomBackground"),
+            ("Corridor", "CorridorBackground"), ("TradingRoom", "TradingRoomBackground") })
+        {
+            Remember($"World/{entry.Item1}/{entry.Item2}");
+            Remember($"World/{entry.Item1}/RoomFrame");
+            Remember($"World/{entry.Item1}/RoomFrame/SeamSeal");
+        }
+        foreach (string room in new[] { "MusicWorkshop", "Showroom" })
+        {
+            Remember($"World/{room}/LockedOverlay");
+            Remember($"World/{room}/LockedOverlay/LockedCurtain");
+        }
+        Remember("World/MusicWorkshop/LockedOverlay/UnlockButton");
+        Remember("World/TimeOfDayDay");
+        Remember("World/TimeOfDayNight");
+        foreach (ColorRect partition in game.GetNode("World/RoomPartitions").GetChildren())
+            Remember("World/RoomPartitions/" + partition.Name);
         game.SavePath = "";
         Root.AddChild(game);
         game.SetProcess(false);
@@ -15,6 +41,11 @@ public partial class ProjectTest
         camera.SetProcess(false);
         try
         {
+            Check(!game.HasNode("RoomFrames"), "No runtime frame builder may remain in the scene");
+            foreach (var snapshot in sceneGeometry)
+                Check(snapshot.Node.GetTransform().IsEqualApprox(snapshot.Transform) &&
+                    (snapshot.Node is not Control control || control.GetRect().IsEqualApprox(snapshot.Rect)),
+                    $"Runtime must retain the scene-authored background geometry: {snapshot.Node.GetPath()}");
             Check(!game.HasNode("ViewportFrame"), "The screen border must be absent while room frames remain");
             foreach (var entry in new[] {
                 ("Atelier", "Background", new Rect2(1125, 819, 827, 447)),
@@ -75,8 +106,12 @@ public partial class ProjectTest
             game.EndDay(); // Start, then run to the night endpoint.
             game._Process(game.DayRemainingSeconds);
             game.GetNode<DayAnnouncementOverlay>("DayAnnouncements").Dismiss();
+            Check(game.GetNode<Sprite2D>("World/TimeOfDayDay").Modulate.A == 0,
+                "The scene-owned daylight layer must fade out at the end of the day");
             using (var night = await CapturePresentation("room-layout-night")) { }
             game.NewGame();
+            Check(game.GetNode<Sprite2D>("World/TimeOfDayDay").Modulate.A == 1,
+                "NewGame must restore daylight without recreating or moving the background layers");
             game.GetNode<CanvasLayer>("HUD").Show();
             camera.Position = new Vector2(3520, 1400);
             camera.Zoom = Vector2.One * 0.7f;

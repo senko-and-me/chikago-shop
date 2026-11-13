@@ -91,11 +91,11 @@ public partial class ProjectTest
                 Check(sprite.Texture.ResourcePath == "res://art/rooms/" + entry.Item2 + suffix &&
                     sprite.Texture.GetSize() == new Vector2(1398, 1080) && !sprite.Centered,
                     $"{entry.Item2} must show the {(open ? "open" : "closed")} doorway with the same source art");
-                float sideOverlap = game.IsInsideTree() ? 2 / sprite.GetParent<Node2D>().GlobalScale.X : 0;
+                float sideOverlap = 2 / sprite.GetParent<Node2D>().Scale.X;
                 Check(Mathf.Abs(sprite.Position.X - (3 - sideOverlap)) < 0.02f &&
                     Mathf.Abs(sprite.Scale.X * 1398 - (1398 + sideOverlap * 2)) < 0.02f,
                     "Doorway backgrounds must retain the narrower vertical partitions across unlock and reload");
-                float overlap = game.IsInsideTree() ? 13 / sprite.GetParent<Node2D>().GlobalScale.Y : 0;
+                float overlap = 13 / sprite.GetParent<Node2D>().Scale.Y;
                 Check(Mathf.Abs(sprite.Scale.Y * 1080 - (1080 + overlap)) < 0.02f &&
                     Mathf.Abs(sprite.Position.Y - (entry.Item2 == "cashier" ? 4 - overlap : 4)) < 0.02f,
                     "Doorway backgrounds must retain the thinner floor seam across unlock and reload");

@@ -3,28 +3,6 @@ using Godot;
 // The existing unlock state controls the music room and the right showroom together.
 public partial class RoomDoorwayPresentation : Node
 {
-    public static void AddLockedCurtain(ColorRect overlay)
-    {
-        overlay.Color = Colors.Black;
-        var curtain = new TextureRect
-        {
-            Name = "LockedCurtain",
-            Texture = GD.Load<Texture2D>("res://art/rooms/locked_curtain.png"),
-            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-            StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
-            MouseFilter = Control.MouseFilterEnum.Ignore
-        };
-        overlay.AddChild(curtain);
-        curtain.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        var room = overlay.GetParent<Node2D>();
-        var background = room.GetNode<Sprite2D>(room.Name == "Showroom" ? "ShowroomBackground" : "Background");
-        Rect2 bounds = background.Transform * background.GetRect();
-        curtain.OffsetLeft = bounds.Position.X;
-        curtain.OffsetTop = bounds.Position.Y;
-        curtain.OffsetRight = bounds.End.X - overlay.Size.X;
-        curtain.OffsetBottom = bounds.End.Y - overlay.Size.Y;
-    }
-
     private Sprite2D _corridor = null!, _cashier = null!;
     private Texture2D _corridorOpen = null!, _corridorClosed = null!;
     private Texture2D _cashierOpen = null!, _cashierClosed = null!;

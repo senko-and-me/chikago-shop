@@ -223,7 +223,7 @@ public partial class TradeScene : Node2D
 		_musicGetItemButton = GetNode<Button>(
 			"World/MusicWorkshop/GetItemButton");
 
-		EnsureMusicWorkshopUi();
+		BindMusicWorkshopUi();
 
 		_rarityPanels[0] = GetNode<Control>(
 			"World/Atelier/RarityPanel");
@@ -275,7 +275,7 @@ public partial class TradeScene : Node2D
 		_extraShowroomHint = GetNode<Label>(
 			"World/Showroom/ShowroomHint");
 
-		EnsureExtraShowroomOverlay();
+		BindExtraShowroomOverlay();
 
 		_inventoryUI = GetNode<InventoryUI>("HUD/InventoryUI");
 		_inventoryUI.Initialize(this);
@@ -410,49 +410,12 @@ public partial class TradeScene : Node2D
 		}
 	}
 
-	private void EnsureMusicWorkshopUi()
+	private void BindMusicWorkshopUi()
 	{
 		Node2D workshop =
 			GetNode<Node2D>("World/MusicWorkshop");
 
 		RefreshCraftLabels();
-
-		if (!workshop.HasNode("LockedOverlay"))
-		{
-			ColorRect overlay = new()
-			{
-				Name = "LockedOverlay",
-				Position = Vector2.Zero,
-				Size = new Vector2(1920f, 1080f),
-				Color = new Color(
-					0.015f, 0.015f, 0.015f, 0.97f),
-				MouseFilter = Control.MouseFilterEnum.Pass,
-				ZIndex = 100
-			};
-
-			workshop.AddChild(overlay);
-			RoomDoorwayPresentation.AddLockedCurtain(overlay);
-
-			Button unlockButton = new()
-			{
-				Name = "UnlockButton",
-				Position = new Vector2(660f, 470f),
-				Size = new Vector2(600f, 170f),
-				Text = "ОТКРЫТЬ ЗА 100$",
-				TooltipText =
-					"Открыть музыкальную комнату за 100$",
-				MouseDefaultCursorShape =
-					Control.CursorShape.PointingHand
-			};
-
-			unlockButton.AddThemeColorOverride(
-				"font_color", Colors.White);
-
-			unlockButton.AddThemeFontSizeOverride(
-				"font_size", 38);
-
-			overlay.AddChild(unlockButton);
-		}
 
 		_musicLockedOverlay =
 			workshop.GetNode<Control>("LockedOverlay");
@@ -512,33 +475,10 @@ public partial class TradeScene : Node2D
 		CraftButtonPresentation.Apply(_musicGetItemButton, english);
 	}
 
-	private void EnsureExtraShowroomOverlay()
+	private void BindExtraShowroomOverlay()
 	{
-		Node2D showroom =
-			GetNode<Node2D>("World/Showroom");
-
-		_rightShowroomOverlay =
-			showroom.GetNodeOrNull<ColorRect>("LockedOverlay");
-
-		if (_rightShowroomOverlay != null)
-			return;
-
-		_rightShowroomOverlay = new ColorRect
-		{
-			Name = "LockedOverlay",
-			Position = Vector2.Zero,
-			Size = new Vector2(1920, 1080),
-			Color = new Color(
-				0.015f, 0.015f, 0.015f, 0.90f),
-			MouseFilter = Control.MouseFilterEnum.Stop,
-			ZIndex = 100
-		};
-
-		showroom.AddChild(_rightShowroomOverlay);
-		RoomDoorwayPresentation.AddLockedCurtain(_rightShowroomOverlay);
-
+		_rightShowroomOverlay = GetNode<ColorRect>("World/Showroom/LockedOverlay");
 	}
-
 	public override void _Process(double delta)
 	{
 		if (GetTree().Paused)

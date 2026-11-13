@@ -6,7 +6,7 @@
 [ext_resource type="PackedScene" uid="uid://u2ve41t8yhqn" path="res://scenes/customer.tscn" id="5_customer"]
 [ext_resource type="Texture2D" uid="uid://cbtl6isdq4h6k" path="res://art/items/hat_cloche.png" id="6_hat"]
 [ext_resource type="Texture2D" uid="uid://bw57e18b5g53h" path="res://art/items/gloves.png" id="7_gloves"]
-[ext_resource type="Texture2D" path="res://art/items/guitar.png" id="8_guitar"]
+[ext_resource type="Texture2D" uid="uid://cksoybvtgb8dl" path="res://art/items/guitar.png" id="8_guitar"]
 [ext_resource type="Texture2D" uid="uid://opqiutt7np6v" path="res://art/rooms/showroom.jpg" id="9_bkxpd"]
 [ext_resource type="PackedScene" uid="uid://4wqv2sl2gvaw" path="res://scenes/UI/InventoryUI.tscn" id="9_cppqn"]
 [ext_resource type="Texture2D" uid="uid://bdnt1wjejacqf" path="res://art/items/trumpet.svg" id="9_trumpet"]
@@ -18,7 +18,6 @@
 [ext_resource type="Texture2D" uid="uid://dfxl3bik7r087" path="res://art/ui/panel_large.png" id="16_panel_large"]
 [ext_resource type="Texture2D" uid="uid://bf1y5qehuwoj" path="res://art/ui/panel_small.png" id="17_panel_small"]
 [ext_resource type="Texture2D" uid="uid://bljkoxphrw4ki" path="res://art/ui/create_button.png" id="18_create_button"]
-[ext_resource type="Texture2D" uid="uid://brbt53eulckmp" path="res://art/ui/dialog_panel.png" id="18_dwgkk"]
 [ext_resource type="PackedScene" path="res://scenes/UI/RarityPanel.tscn" id="19_rarity_panel"]
 [ext_resource type="Script" uid="uid://dxn8wgvls5a4a" path="res://scripts/UI/PauseMenu.cs" id="20_pause"]
 [ext_resource type="Script" uid="uid://bdswgixl6srw1" path="res://scripts/UI/ZoomResponsiveUi.cs" id="21_zoom_ui"]
@@ -26,10 +25,13 @@
 [ext_resource type="Script" uid="uid://cnnctojfahevu" path="res://scripts/Camera/WorldCamera.cs" id="23_world_camera"]
 [ext_resource type="Script" uid="uid://moiorwdg8bcp" path="res://scripts/Presentation/RoomDoorwayPresentation.cs" id="24_doorways"]
 [ext_resource type="Texture2D" uid="uid://cog2ypvb6uqtj" path="res://art/ui/panel_inverted.png" id="25_inverted"]
-[ext_resource type="Script" path="res://scripts/Audio/GameplayMusicDirector.cs" id="26_game_music"]
-[ext_resource type="Script" path="res://scripts/Presentation/RoomFramePresentation.cs" id="29_room_frames"]
-[ext_resource type="AudioStream" path="res://audio/music/menu_theme_loop.wav" id="27_day_music"]
-[ext_resource type="AudioStream" path="res://audio/music/thoughtful_loop.wav" id="28_upgrade_music"]
+[ext_resource type="Script" uid="uid://6v4lxl6qtq6y" path="res://scripts/Audio/GameplayMusicDirector.cs" id="26_game_music"]
+[ext_resource type="AudioStream" uid="uid://dapsv2fl4qete" path="res://audio/music/menu_theme_loop.wav" id="27_day_music"]
+[ext_resource type="AudioStream" uid="uid://chjxk4p6834ac" path="res://audio/music/thoughtful_loop.wav" id="28_upgrade_music"]
+[ext_resource type="Texture2D" uid="uid://b8xud5umuwi61" path="res://art/rooms/night_time.png" id="background_1_jqty7"]
+[ext_resource type="Texture2D" uid="uid://dcpdw0kad8qlu" path="res://art/rooms/day_time.png" id="background_2_31fg5"]
+[ext_resource type="Texture2D" uid="uid://bj3pbvpqnrv7g" path="res://art/ui/camera_frame.png" id="background_4_00ccd"]
+[ext_resource type="Texture2D" uid="uid://deul0bfifm5rg" path="res://art/rooms/locked_curtain.png" id="background_6_2e12l"]
 
 [sub_resource type="AtlasTexture" id="InvertedHeaderTexture"]
 atlas = ExtResource("25_inverted")
@@ -57,6 +59,19 @@ content_margin_top = 12.0
 content_margin_right = 18.0
 content_margin_bottom = 12.0
 texture = ExtResource("17_panel_small")
+
+[sub_resource type="AtlasTexture" id="RoomFrameAtlas"]
+atlas = ExtResource("background_4_00ccd")
+region = Rect2(400, 400, 1249, 1249)
+
+[sub_resource type="StyleBoxFlat" id="RoomFrameSealStyle"]
+bg_color = Color(0, 0, 0, 1)
+draw_center = false
+border_width_left = 20
+border_width_top = 50
+border_width_right = 20
+border_width_bottom = 50
+border_color = Color(0, 0, 0, 1)
 
 [sub_resource type="StyleBoxFlat" id="TradePanelStyle"]
 content_margin_left = 15.0
@@ -114,7 +129,7 @@ bg_color = Color(0.56, 0.48, 0.38, 1)
 script = ExtResource("1_main")
 metadata/_edit_horizontal_guides_ = [-1162.0]
 
-[node name="GameplayMusicDirector" type="Node" parent="."]
+[node name="GameplayMusicDirector" type="Node" parent="." unique_id=292534364]
 script = ExtResource("26_game_music")
 DayStream = ExtResource("27_day_music")
 UpgradeStream = ExtResource("28_upgrade_music")
@@ -136,10 +151,11 @@ texture = ExtResource("14_layout")
 centered = false
 
 [node name="Atelier" type="Node2D" parent="World" unique_id=549384318]
-position = Vector2(1421.052632, 1034.526316)
+position = Vector2(1421.0526, 1034.5264)
 scale = Vector2(0.544079, 0.522807)
 
 [node name="Background" type="Sprite2D" parent="World/Atelier" unique_id=925849790]
+scale = Vector2(1.0019145, 1.0230238)
 texture = ExtResource("11_atelier")
 centered = false
 
@@ -224,11 +240,38 @@ offset_top = 360.0
 offset_right = 1870.0
 offset_bottom = 764.0
 
+[node name="RoomFrame" type="NinePatchRect" parent="World/Atelier" unique_id=1634601319]
+self_modulate = Color(0, 0, 0, 1)
+z_index = 101
+offset_left = -15.189681
+offset_top = -6.933375
+offset_right = 4869.9507
+offset_bottom = 5587.7666
+scale = Vector2(0.4, 0.2)
+texture = SubResource("RoomFrameAtlas")
+draw_center = false
+patch_margin_left = 96
+patch_margin_top = 96
+patch_margin_right = 96
+patch_margin_bottom = 96
+
+[node name="SeamSeal" type="Panel" parent="World/Atelier/RoomFrame" unique_id=1241022148]
+show_behind_parent = true
+layout_mode = 0
+offset_left = 27.974203
+offset_top = 9.666874
+offset_right = 4857.1636
+offset_bottom = 5583.9956
+mouse_filter = 2
+theme_override_styles/panel = SubResource("RoomFrameSealStyle")
+
 [node name="MusicWorkshop" type="Node2D" parent="World" unique_id=420096257]
-position = Vector2(3250.105263, 1034.526316)
+position = Vector2(3250.1052, 1034.5264)
 scale = Vector2(0.538816, 0.522807)
 
 [node name="Background" type="Sprite2D" parent="World/MusicWorkshop" unique_id=1597515467]
+position = Vector2(-3.7118425, 0)
+scale = Vector2(1.0019332, 1.0230238)
 texture = ExtResource("4_pi35y")
 centered = false
 
@@ -313,8 +356,62 @@ offset_top = 330.0
 offset_right = 790.0
 offset_bottom = 734.0
 
+[node name="RoomFrame" type="NinePatchRect" parent="World/MusicWorkshop" unique_id=191755671]
+self_modulate = Color(0, 0, 0, 1)
+z_index = 101
+offset_left = -18.901524
+offset_top = -6.933375
+offset_right = 4866.329
+offset_bottom = 5587.7666
+scale = Vector2(0.4, 0.2)
+texture = SubResource("RoomFrameAtlas")
+draw_center = false
+patch_margin_left = 96
+patch_margin_top = 96
+patch_margin_right = 96
+patch_margin_bottom = 96
+
+[node name="SeamSeal" type="Panel" parent="World/MusicWorkshop/RoomFrame" unique_id=1662291476]
+show_behind_parent = true
+layout_mode = 0
+offset_left = 27.974203
+offset_top = 9.666874
+offset_right = 4857.2534
+offset_bottom = 5583.9956
+mouse_filter = 2
+theme_override_styles/panel = SubResource("RoomFrameSealStyle")
+
+[node name="LockedOverlay" type="ColorRect" parent="World/MusicWorkshop" unique_id=1604263624]
+z_index = 100
+offset_right = 1920.0
+offset_bottom = 1080.0
+mouse_filter = 1
+color = Color(0, 0, 0, 1)
+
+[node name="LockedCurtain" type="TextureRect" parent="World/MusicWorkshop/LockedOverlay" unique_id=1953917145]
+layout_mode = 0
+offset_left = -3.7118425
+offset_right = 1920.0
+offset_bottom = 1104.8657
+mouse_filter = 2
+texture = ExtResource("background_6_2e12l")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="UnlockButton" type="Button" parent="World/MusicWorkshop/LockedOverlay" unique_id=1687329513]
+layout_mode = 0
+offset_left = 660.0
+offset_top = 470.0
+offset_right = 1260.0
+offset_bottom = 640.0
+tooltip_text = "Открыть музыкальную комнату за 100$"
+mouse_default_cursor_shape = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 38
+text = "ОТКРЫТЬ ЗА 100$"
+
 [node name="Showroom" type="Node2D" parent="World" unique_id=1166953855]
-position = Vector2(3250.105263, 1638.315789)
+position = Vector2(3250.1052, 1638.3158)
 scale = Vector2(0.538816, 0.507602)
 
 [node name="ShowroomHeader" type="NinePatchRect" parent="World/Showroom" unique_id=1324160784]
@@ -343,6 +440,8 @@ horizontal_alignment = 1
 
 [node name="ShowroomBackground" type="Sprite2D" parent="World/Showroom" unique_id=685989829]
 z_index = -1
+position = Vector2(-3.7118425, -25.610617)
+scale = Vector2(1.0019332, 1.0237135)
 texture = ExtResource("9_bkxpd")
 centered = false
 
@@ -377,8 +476,50 @@ offset_top = 660.0
 offset_right = 1676.0
 offset_bottom = 890.0
 
+[node name="RoomFrame" type="NinePatchRect" parent="World/Showroom" unique_id=1745261771]
+self_modulate = Color(0, 0, 0, 1)
+z_index = 101
+offset_left = -18.901524
+offset_top = -32.54399
+offset_right = 4866.329
+offset_bottom = 5565.881
+scale = Vector2(0.4, 0.2)
+texture = SubResource("RoomFrameAtlas")
+draw_center = false
+patch_margin_left = 96
+patch_margin_top = 96
+patch_margin_right = 96
+patch_margin_bottom = 96
+
+[node name="SeamSeal" type="Panel" parent="World/Showroom/RoomFrame" unique_id=1053982270]
+show_behind_parent = true
+layout_mode = 0
+offset_left = 27.974203
+offset_top = 9.666874
+offset_right = 4857.2534
+offset_bottom = 5587.7197
+mouse_filter = 2
+theme_override_styles/panel = SubResource("RoomFrameSealStyle")
+
+[node name="LockedOverlay" type="ColorRect" parent="World/Showroom" unique_id=581286688]
+z_index = 100
+offset_right = 1920.0
+offset_bottom = 1080.0
+color = Color(0, 0, 0, 1)
+
+[node name="LockedCurtain" type="TextureRect" parent="World/Showroom/LockedOverlay" unique_id=744648570]
+layout_mode = 0
+offset_left = -3.7118425
+offset_top = -25.610617
+offset_right = 1920.0
+offset_bottom = 1080.0
+mouse_filter = 2
+texture = ExtResource("background_6_2e12l")
+expand_mode = 1
+stretch_mode = 6
+
 [node name="ShowroomLeft" type="Node2D" parent="World" unique_id=975797514]
-position = Vector2(1421.052632, 1638.315789)
+position = Vector2(1421.0526, 1638.3158)
 scale = Vector2(0.544079, 0.507602)
 
 [node name="ShowroomHeader" type="NinePatchRect" parent="World/ShowroomLeft" unique_id=1817932225]
@@ -407,6 +548,8 @@ horizontal_alignment = 1
 
 [node name="ShowroomBackground" type="Sprite2D" parent="World/ShowroomLeft" unique_id=1095207837]
 z_index = -1
+position = Vector2(0, -25.610617)
+scale = Vector2(1.0019145, 1.0237135)
 texture = ExtResource("9_bkxpd")
 centered = false
 
@@ -440,12 +583,38 @@ offset_top = 678.0
 offset_right = 1679.0
 offset_bottom = 908.0
 
+[node name="RoomFrame" type="NinePatchRect" parent="World/ShowroomLeft" unique_id=2015928761]
+self_modulate = Color(0, 0, 0, 1)
+z_index = 101
+offset_left = -15.189681
+offset_top = -32.54399
+offset_right = 4869.9507
+offset_bottom = 5565.881
+scale = Vector2(0.4, 0.2)
+texture = SubResource("RoomFrameAtlas")
+draw_center = false
+patch_margin_left = 96
+patch_margin_top = 96
+patch_margin_right = 96
+patch_margin_bottom = 96
+
+[node name="SeamSeal" type="Panel" parent="World/ShowroomLeft/RoomFrame" unique_id=1914835363]
+show_behind_parent = true
+layout_mode = 0
+offset_left = 27.974203
+offset_top = 9.666874
+offset_right = 4857.1636
+offset_bottom = 5587.7197
+mouse_filter = 2
+theme_override_styles/panel = SubResource("RoomFrameSealStyle")
+
 [node name="TradingRoom" type="Node2D" parent="World" unique_id=1662077441]
-position = Vector2(2477.955274, 1636.28538)
+position = Vector2(2477.9553, 1636.2854)
 scale = Vector2(0.541224, 0.507602)
 
 [node name="TradingRoomBackground" type="Sprite2D" parent="World/TradingRoom" unique_id=2014665045]
-position = Vector2(3, 4)
+position = Vector2(-0.6953275, -21.610617)
+scale = Vector2(1.0052866, 1.0237135)
 texture = ExtResource("12_cashier")
 centered = false
 
@@ -557,29 +726,152 @@ theme_override_styles/hover = SubResource("DeclineHover")
 theme_override_styles/disabled = SubResource("DeclineDisabled")
 text = "×"
 
+[node name="RoomFrame" type="NinePatchRect" parent="World/TradingRoom" unique_id=822122125]
+self_modulate = Color(0, 0, 0, 1)
+z_index = 101
+offset_left = -15.885009
+offset_top = -28.543991
+offset_right = 3573.5425
+offset_bottom = 5569.881
+scale = Vector2(0.4, 0.2)
+texture = SubResource("RoomFrameAtlas")
+draw_center = false
+patch_margin_left = 96
+patch_margin_top = 96
+patch_margin_right = 96
+patch_margin_bottom = 96
+
+[node name="SeamSeal" type="Panel" parent="World/TradingRoom/RoomFrame" unique_id=450246474]
+show_behind_parent = true
+layout_mode = 0
+offset_left = 27.974203
+offset_top = 9.666874
+offset_right = 3561.4507
+offset_bottom = 5587.7197
+mouse_filter = 2
+theme_override_styles/panel = SubResource("RoomFrameSealStyle")
+
 [node name="Corridor" type="Node2D" parent="World" unique_id=380293147]
-position = Vector2(2477.955274, 1032.435088)
+position = Vector2(2477.9553, 1032.435)
 scale = Vector2(0.541224, 0.522807)
 
 [node name="CorridorBackground" type="Sprite2D" parent="World/Corridor" unique_id=1737565920]
-position = Vector2(3, 4)
+position = Vector2(-0.6953275, 4)
+scale = Vector2(1.0052866, 1.0230238)
 texture = ExtResource("13_58qc8")
+centered = false
+
+[node name="RoomFrame" type="NinePatchRect" parent="World/Corridor" unique_id=273806998]
+self_modulate = Color(0, 0, 0, 1)
+z_index = 101
+offset_left = -15.885009
+offset_top = -2.933375
+offset_right = 3573.5425
+offset_bottom = 5591.7666
+scale = Vector2(0.4, 0.2)
+texture = SubResource("RoomFrameAtlas")
+draw_center = false
+patch_margin_left = 96
+patch_margin_top = 96
+patch_margin_right = 96
+patch_margin_bottom = 96
+
+[node name="SeamSeal" type="Panel" parent="World/Corridor/RoomFrame" unique_id=1072729927]
+show_behind_parent = true
+layout_mode = 0
+offset_left = 27.974203
+offset_top = 9.666874
+offset_right = 3561.4507
+offset_bottom = 5583.9956
+mouse_filter = 2
+theme_override_styles/panel = SubResource("RoomFrameSealStyle")
+
+[node name="RoomPartitions" type="Node2D" parent="World" unique_id=955298735]
+
+[node name="AtelierToCorridor" type="ColorRect" parent="World/RoomPartitions" unique_id=452005304]
+z_index = 100
+offset_left = 2467.684
+offset_top = 1034.5264
+offset_right = 2477.579
+offset_bottom = 1612.158
+mouse_filter = 2
+color = Color(0.16, 0.16, 0.16, 1)
+
+[node name="CorridorToMusicWorkshop" type="ColorRect" parent="World/RoomPartitions" unique_id=327335989]
+z_index = 100
+offset_left = 3238.2102
+offset_top = 1034.5262
+offset_right = 3248.1052
+offset_bottom = 1612.1577
+mouse_filter = 2
+color = Color(0.16, 0.16, 0.16, 1)
+
+[node name="ShowroomLeftToTradingRoom" type="ColorRect" parent="World/RoomPartitions" unique_id=1451834010]
+z_index = 100
+offset_left = 2467.684
+offset_top = 1625.3158
+offset_right = 2477.579
+offset_bottom = 2186.526
+mouse_filter = 2
+color = Color(0.16, 0.16, 0.16, 1)
+
+[node name="TradingRoomToShowroom" type="ColorRect" parent="World/RoomPartitions" unique_id=669127994]
+z_index = 100
+offset_left = 3238.2102
+offset_top = 1625.3158
+offset_right = 3248.1052
+offset_bottom = 2186.526
+mouse_filter = 2
+color = Color(0.16, 0.16, 0.16, 1)
+
+[node name="AtelierToShowroomLeft" type="ColorRect" parent="World/RoomPartitions" unique_id=1864084039]
+z_index = 100
+offset_left = 1421.0526
+offset_top = 1612.158
+offset_right = 2467.684
+offset_bottom = 1625.3158
+mouse_filter = 2
+color = Color(0.16, 0.16, 0.16, 1)
+
+[node name="CorridorToTradingRoom" type="ColorRect" parent="World/RoomPartitions" unique_id=1172272930]
+z_index = 100
+offset_left = 2477.579
+offset_top = 1612.1577
+offset_right = 3238.2102
+offset_bottom = 1625.3158
+mouse_filter = 2
+color = Color(0.16, 0.16, 0.16, 1)
+
+[node name="MusicWorkshopToShowroom" type="ColorRect" parent="World/RoomPartitions" unique_id=1382402309]
+z_index = 100
+offset_left = 3248.1052
+offset_top = 1612.158
+offset_right = 4284.632
+offset_bottom = 1625.3158
+mouse_filter = 2
+color = Color(0.16, 0.16, 0.16, 1)
+
+[node name="TimeOfDayNight" type="Sprite2D" parent="World" unique_id=83871982]
+z_index = -9
+scale = Vector2(1.2631578, 1.2631578)
+texture = ExtResource("background_1_jqty7")
+centered = false
+
+[node name="TimeOfDayDay" type="Sprite2D" parent="World" unique_id=1385586684]
+z_index = -9
+scale = Vector2(1.2631578, 1.2631578)
+texture = ExtResource("background_2_31fg5")
 centered = false
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=550359116 node_paths=PackedStringArray("BoundsSource")]
 position = Vector2(2880, 1620.6316)
 zoom = Vector2(0.39583334, 0.39583334)
 script = ExtResource("23_world_camera")
-BoundsSource = NodePath("../World/RoomLayout")
 ReferenceSize = Vector2(4560, 2565)
 NavigationRegion = Rect2(429, 563, 3662, 1440)
 OverviewSize = Vector2(2560, 1440)
 CloseupSize = Vector2(1036, 583)
-
-[node name="DELETE_LATE" type="Sprite2D" parent="." unique_id=794820871]
-position = Vector2(2856, 1630)
-scale = Vector2(2.8845596, 0.041474093)
-texture = ExtResource("18_dwgkk")
+BoundsSource = NodePath("../World/RoomLayout")
 
 [node name="HUD" type="CanvasLayer" parent="." unique_id=1744648689]
 
@@ -729,6 +1021,3 @@ script = ExtResource("21_zoom_ui")
 
 [node name="RoomDoorways" type="Node" parent="." unique_id=1292616752]
 script = ExtResource("24_doorways")
-
-[node name="RoomFrames" type="Node" parent="."]
-script = ExtResource("29_room_frames")

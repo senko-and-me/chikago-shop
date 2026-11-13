@@ -16,6 +16,13 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--inventory-expansion-checks"))
+            {
+                await TestInventoryExpansion();
+                GD.Print("INVENTORY_EXPANSION_CHECKS_PASS: left shift, staggered arrivals, items, reset, resize and reload");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--craft-localization-checks"))
             {
                 await TestLocalizedCraftButtons();

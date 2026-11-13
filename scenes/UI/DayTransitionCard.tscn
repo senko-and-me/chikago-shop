@@ -1,0 +1,85 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/UI/DayTransitionCard.cs" id="1_card"]
+[ext_resource type="Theme" path="res://themes/game_theme.tres" id="2_theme"]
+[ext_resource type="Script" path="res://scripts/UI/PokerCardBack.cs" id="3_back"]
+
+[sub_resource type="StyleBoxFlat" id="Tray"]
+resource_local_to_scene = true
+content_margin_left = 24.0
+content_margin_top = 24.0
+content_margin_right = 24.0
+content_margin_bottom = 24.0
+bg_color = Color(0, 0, 0, 0)
+
+[node name="DayTransitionCard" type="CanvasLayer"]
+process_mode = 3
+layer = 120
+script = ExtResource("1_card")
+
+[node name="Root" type="Control" parent="."]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_theme")
+
+[node name="Shade" type="ColorRect" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0.64)
+
+[node name="Deck" type="Control" parent="Root"]
+offset_left = 51.2
+offset_top = 548.0
+offset_right = 151.2
+offset_bottom = 692.0
+mouse_filter = 2
+script = ExtResource("3_back")
+IsDeck = true
+
+[node name="Center" type="CenterContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="Card" type="PanelContainer" parent="Root/Center"]
+layout_mode = 2
+custom_minimum_size = Vector2(1080, 0)
+theme_override_styles/panel = SubResource("Tray")
+
+[node name="Content" type="VBoxContainer" parent="Root/Center/Card"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Route" type="Label" parent="Root/Center/Card/Content"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.933333, 0.933333, 0.933333, 1)
+theme_override_font_sizes/font_size = 22
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Title" type="Label" parent="Root/Center/Card/Content"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 30
+text = "Выберите улучшение"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Choices" type="Control" parent="Root/Center/Card/Content"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 460)
+mouse_filter = 2
+
+[node name="Skip" type="Button" parent="Root/Center/Card/Content"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 36)
+text = "Пропустить"

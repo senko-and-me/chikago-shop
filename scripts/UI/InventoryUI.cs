@@ -24,6 +24,9 @@ public partial class InventoryUI : Control
 	private int _capacity = 3;
 	private int _pageStart;
 	private int _revision;
+	private InventoryExpansionAnimator _expansion = null!;
+	private bool _canAnimate;
+	public bool IsExpanding => _expansion?.IsRunning == true;
 
 	public int SelectedIndex { get; private set; } = -1;
 	public PanelContainer ItemPopup => _itemPopup;
@@ -41,40 +44,10 @@ public partial class InventoryUI : Control
 		Container.AddThemeConstantOverride(
 			"separation", (int)SlotGap);
 
-		_slotBackground = new TextureRect
-		{
-			Name = "InventorySlotBackground",
-			MouseFilter = MouseFilterEnum.Ignore,
-			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-			StretchMode = TextureRect.StretchModeEnum.Scale
-		};
-
-		AddChild(_slotBackground);
-		MoveChild(_slotBackground, 0);
-		_slotBackground.Show();
-		_slotBackground.SelfModulate = Colors.White;
-		_slotBackground.ZIndex = 0;
-		Scroller.ZIndex = 1;
-
-		_pageLabel = new Label
-		{
-			Name = "InventoryPageLabel",
-			HorizontalAlignment = HorizontalAlignment.Right,
-			MouseFilter = MouseFilterEnum.Ignore,
-			Visible = false
-		};
-
-		_pageLabel.AddThemeColorOverride(
-			"font_color", Colors.White);
-		_pageLabel.AddThemeColorOverride(
-			"font_outline_color", Colors.Black);
-		_pageLabel.AddThemeConstantOverride(
-			"outline_size", 5);
-		_pageLabel.AddThemeFontSizeOverride(
-			"font_size", 14);
-
-		AddChild(_pageLabel);
-
+		_slotBackground = GetNode<TextureRect>("InventorySlotBackground");
+		_pageLabel = GetNode<Label>("InventoryPageLabel");
+		_expansion = new InventoryExpansionAnimator(this, GetNode<Control>("ExpansionAnimation"));
+		Resized += () => _expansion.Cancel();
 		var layer = new CanvasLayer
 		{
 			Name = "ItemInfoLayer",
@@ -90,6 +63,8 @@ public partial class InventoryUI : Control
 
 		layer.AddChild(_itemPopup);
 		ConfigureLayout();
+		// Parent _Ready restores the save in the same frame; that initial capacity must not animate.
+		Callable.From(() => _canAnimate = true).CallDeferred();
 	}
 
 	public void Initialize(TradeScene tradeScene)
@@ -181,6 +156,7 @@ public partial class InventoryUI : Control
 	private bool CanTransfer(int index)
 	{
 		return _tradeScene != null &&
+			!IsExpanding &&
 			!GetTree().Paused &&
 			!_tradeScene.Failed &&
 			!_tradeScene.Completed &&
@@ -260,6 +236,10 @@ public partial class InventoryUI : Control
 		int capacity = _tradeScene == null
 			? 3
 			: _tradeScene.InventorySlotCapacity;
+		int previousCapacity = _capacity;
+		Rect2 previousBounds = _slotBackground.GetRect();
+		bool animate = capacity > previousCapacity && _canAnimate;
+		if (capacity != previousCapacity) _expansion.Cancel();
 
 		if (capacity != _capacity)
 		{
@@ -280,6 +260,12 @@ public partial class InventoryUI : Control
 		);
 
 		RenderPage();
+		if (animate)
+		{
+			_itemPopup.HideInfo();
+			_expansion.Play(previousBounds, _slotBackground.GetRect(), previousCapacity, _slots,
+				_slotBackground, Scroller, SlotSize, SlotSize + SlotGap);
+		}
 
 		if (SelectedIndex >= _visibleItems.Count)
 			DeselectAll();
@@ -306,7 +292,9 @@ public partial class InventoryUI : Control
 			Container.AddChild(slot);
 
 			slot.MouseEntered += () =>
-				_itemPopup.ShowFor(slot);
+			{
+				if (!IsExpanding) _itemPopup.ShowFor(slot);
+			};
 
 			slot.MouseExited += () =>
 				_itemPopup.HideFor(slot);
@@ -395,6 +383,7 @@ public partial class InventoryUI : Control
 
 	private void OnScrollerGuiInput(InputEvent @event)
 	{
+		if (IsExpanding) return;
 		if (@event is not InputEventMouseButton
 			{ Pressed: true } wheel)
 			return;
@@ -447,4 +436,6 @@ public partial class InventoryUI : Control
 			_tradeScene.RefreshItemButtons();
 		}
 	}
+
+	public override void _ExitTree() => _expansion?.Cancel();
 }

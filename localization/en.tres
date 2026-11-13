@@ -4,6 +4,12 @@
 locale = "en"
 messages = {
 &"Магазин открыт": &"Shop is open",
+&"Остался {0} день": &"{0} day left",
+&"Осталось {0} дня": &"{0} days left",
+&"Осталось {0} дней": &"{0} days left",
+&"До промежуточной квоты: {0} день": &"Interim quota: {0} day left",
+&"До промежуточной квоты: {0} дня": &"Interim quota: {0} days left",
+&"До промежуточной квоты: {0} дней": &"Interim quota: {0} days left",
 &"День {0} из {1}": &"Day {0} of {1}",
 &"Остался {0} день, включая сегодня": &"{0} day left, including today",
 &"Осталось {0} дня, включая сегодня": &"{0} days left, including today",

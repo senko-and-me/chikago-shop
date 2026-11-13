@@ -19,6 +19,8 @@ public partial class WorldCamera : Camera2D
     private bool _dragging;
     private float _targetZoom;
     private Vector2 _zoomAnchor;
+    private Tween _overviewTween;
+    public bool IsReturningToOverview => _overviewTween?.IsRunning() == true;
     private Rect2 WorldBounds => BoundsSource.GlobalTransform * BoundsSource.GetRect();
     private bool HasReference => ReferenceSize.X > 0 && ReferenceSize.Y > 0;
     private Vector2 ReferenceToWorld(Vector2 size) => size / ReferenceSize * WorldBounds.Size;
@@ -54,6 +56,7 @@ public partial class WorldCamera : Camera2D
 
     public void ResetToOverview()
     {
+        CancelOverviewTransition();
         CancelDrag();
         _targetZoom = MinZoom;
         Zoom = Vector2.One * _targetZoom;
@@ -62,8 +65,35 @@ public partial class WorldCamera : Camera2D
         ClampToBounds();
     }
 
+    public void ReturnToOverview(double duration)
+    {
+        CancelOverviewTransition();
+        CancelDrag();
+        float zoom = MinZoom;
+        Vector2 destination = ClampPosition(WorldBounds.GetCenter(), zoom);
+        _overviewTween = CreateTween().SetPauseMode(Tween.TweenPauseMode.Process);
+        _overviewTween.SetParallel().SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.InOut);
+        _overviewTween.TweenProperty(this, "position", destination, duration);
+        _overviewTween.TweenProperty(this, "zoom", Vector2.One * zoom, duration);
+        _overviewTween.Chain().TweenCallback(Callable.From(() =>
+        {
+            _overviewTween = null;
+            _targetZoom = Zoom.X;
+            _zoomAnchor = GetViewportRect().Size / 2f;
+            ClampToBounds();
+        }));
+    }
+
+    public void CancelOverviewTransition()
+    {
+        if (_overviewTween?.IsValid() == true) _overviewTween.Kill();
+        _overviewTween = null;
+        _targetZoom = Zoom.X;
+    }
+
     public override void _ExitTree()
     {
+        CancelOverviewTransition();
         if (_viewport != null) _viewport.SizeChanged -= ClampToBounds;
     }
 
@@ -76,7 +106,7 @@ public partial class WorldCamera : Camera2D
 
     public override void _Process(double delta)
     {
-        if (GetTree().Paused) return;
+        if (GetTree().Paused || IsReturningToOverview) return;
         ClampToBounds();
         _targetZoom = Mathf.Clamp(float.IsFinite(_targetZoom) ? _targetZoom : Zoom.X, MinZoom, ZoomLimit);
         float oldZoom = Zoom.X;
@@ -92,7 +122,7 @@ public partial class WorldCamera : Camera2D
 
     public override void _Input(InputEvent @event)
     {
-        if (GetTree().Paused) return;
+        if (GetTree().Paused || IsReturningToOverview) return;
         if (@event is InputEventMouseButton { Pressed: true } wheel)
         {
             switch (wheel.ButtonIndex)
@@ -112,7 +142,7 @@ public partial class WorldCamera : Camera2D
 
     public override void _UnhandledInput(InputEvent @event)
     {
-        if (GetTree().Paused) return;
+        if (GetTree().Paused || IsReturningToOverview) return;
         if (@event is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true })
             _dragging = true;
     }
@@ -127,17 +157,21 @@ public partial class WorldCamera : Camera2D
 
     public void ClampToBounds()
     {
-        Rect2 bounds = Bounds;
         float zoom = Mathf.Clamp(Zoom.X, MinZoom, ZoomLimit);
         Zoom = Vector2.One * zoom;
-        Vector2 halfView = GetViewportRect().Size / (2f * Zoom);
-        Vector2 position = Position;
+        Position = ClampPosition(Position, zoom);
+    }
+
+    private Vector2 ClampPosition(Vector2 position, float zoom)
+    {
+        Rect2 bounds = Bounds;
+        Vector2 halfView = GetViewportRect().Size / (2f * zoom);
         position.X = halfView.X >= bounds.Size.X / 2f
             ? bounds.GetCenter().X
             : Mathf.Clamp(position.X, bounds.Position.X + halfView.X, bounds.End.X - halfView.X);
         position.Y = halfView.Y >= bounds.Size.Y / 2f
             ? bounds.GetCenter().Y
             : Mathf.Clamp(position.Y, bounds.Position.Y + halfView.Y, bounds.End.Y - halfView.Y);
-        Position = position;
+        return position;
     }
 }

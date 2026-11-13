@@ -6,7 +6,7 @@ public partial class DayAnnouncementOverlay : CanvasLayer
     private Control _root = null!;
     private Label _title = null!;
     private Label _details = null!;
-    private int _day, _totalDays;
+    private int _day, _totalDays, _firstDeadline;
     private bool _openingPending = true, _midpointShown, _closedShown;
     private double _elapsed;
     public bool IsShowing => _root.Visible;
@@ -69,7 +69,7 @@ public partial class DayAnnouncementOverlay : CanvasLayer
         _title.AddThemeFontSizeOverride("font_size", titleSize);
         _details.AddThemeFontSizeOverride("font_size", detailSize);
         float titleHeight = titleSize * 1.4f;
-        float detailsHeight = _details.Visible ? detailSize * 2.8f + 12 : 0;
+        float detailsHeight = _details.Visible ? detailSize * (_details.Text.Contains('\n') ? 2.8f : 1.4f) + 12 : 0;
         float height = titleHeight + detailsHeight;
         _title.AnchorTop = _title.AnchorBottom = 0.6f;
         _title.OffsetTop = -height / 2;
@@ -87,11 +87,19 @@ public partial class DayAnnouncementOverlay : CanvasLayer
     private void RefreshDetails()
     {
         int remaining = _totalDays - _day + 1;
-        string key = remaining % 10 == 1 && remaining % 100 != 11 ? "Остался {0} день, включая сегодня"
+        string key = remaining % 10 == 1 && remaining % 100 != 11 ? "Остался {0} день"
             : remaining % 10 is >= 2 and <= 4 && remaining % 100 is not (>= 12 and <= 14)
-                ? "Осталось {0} дня, включая сегодня" : "Осталось {0} дней, включая сегодня";
-        _details.Text = GameLocalization.Format("День {0} из {1}", _day, _totalDays) + "\n" +
-            GameLocalization.Format(key, remaining);
+                ? "Осталось {0} дня" : "Осталось {0} дней";
+        _details.Text = GameLocalization.Format(key, remaining);
+        int quotaRemaining = _firstDeadline - _day + 1;
+        if (quotaRemaining > 0)
+        {
+            string quotaKey = quotaRemaining % 10 == 1 && quotaRemaining % 100 != 11
+                ? "До промежуточной квоты: {0} день"
+                : quotaRemaining % 10 is >= 2 and <= 4 && quotaRemaining % 100 is not (>= 12 and <= 14)
+                    ? "До промежуточной квоты: {0} дня" : "До промежуточной квоты: {0} дней";
+            _details.Text += "\n" + GameLocalization.Format(quotaKey, quotaRemaining);
+        }
         UpdateFont();
     }
 
@@ -111,7 +119,7 @@ public partial class DayAnnouncementOverlay : CanvasLayer
         _closedShown = remaining <= 0;
     }
 
-    public void Observe(double remaining, double duration, bool closed, int currentDay, int totalDays)
+    public void Observe(double remaining, double duration, bool closed, int currentDay, int totalDays, int firstDeadline)
     {
         if (closed)
         {
@@ -131,6 +139,7 @@ public partial class DayAnnouncementOverlay : CanvasLayer
             _openingPending = false;
             _totalDays = System.Math.Max(1, totalDays);
             _day = System.Math.Clamp(currentDay, 1, _totalDays);
+            _firstDeadline = System.Math.Clamp(firstDeadline, 0, _totalDays);
             RefreshDetails();
             ShowMessage("Магазин открыт", true);
         }

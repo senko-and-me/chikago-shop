@@ -6,6 +6,7 @@ using Godot;
 public sealed class DayCycleController
 {
 	private static readonly int TotalDays = EconomyConfigProvider.Load().Days.TotalDays;
+	private static readonly int FirstQuotaDay = EconomyConfigProvider.Load().Quotas.Find(quota => quota.Id == "first").DeadlineDay;
 	public DaySession Session { get; } = new();
 	public bool Started { get; private set; }
 	public DayUpgradeSession Upgrades { get; } = new();
@@ -31,7 +32,7 @@ public sealed class DayCycleController
 	public DayCycleController(TradeScene game)
 	{
 		_game = game;
-		_card = new DayTransitionCard();
+		_card = GD.Load<PackedScene>("res://scenes/UI/DayTransitionCard.tscn").Instantiate<DayTransitionCard>();
 		_card.Chosen += ChooseUpgrade;
 		_card.Skipped += SkipUpgrade;
 		game.AddChild(_card);
@@ -90,7 +91,7 @@ public sealed class DayCycleController
 	{
 		if (Started || Session.IsClosed || Upgrades.Pending || _game.GetTree().Paused || _game.Failed || _game.Completed) return;
 		Started = true;
-		_announcements.Observe(Session.RemainingSeconds, Session.Duration, false, _game.CurrentDay, TotalDays);
+		_announcements.Observe(Session.RemainingSeconds, Session.Duration, false, _game.CurrentDay, TotalDays, FirstQuotaDay);
 		RefreshTimer();
 		_game.SynchronizeDayState();
 	}
@@ -99,7 +100,7 @@ public sealed class DayCycleController
 	{
 		if (!OS.IsDebugBuild() || _game.Failed || _game.Completed || Upgrades.Pending) return;
 		Session.AddTimeForTesting(30);
-		_announcements.Observe(Session.RemainingSeconds, Session.Duration, Session.IsClosed, _game.CurrentDay, TotalDays);
+		_announcements.Observe(Session.RemainingSeconds, Session.Duration, Session.IsClosed, _game.CurrentDay, TotalDays, FirstQuotaDay);
 		RefreshTimer();
 		UpdateDayNightBackground();
 		_game.SynchronizeDayState();
@@ -110,7 +111,7 @@ public sealed class DayCycleController
 		bool crafting = _game.CraftMiniGameOpen;
 		if (!Started || Upgrades.Pending || (_game.GetTree().Paused && !crafting) || _game.Failed || _game.Completed) return;
 		bool closed = Session.Tick(delta);
-		_announcements.Observe(Session.RemainingSeconds, Session.Duration, Session.IsClosed, _game.CurrentDay, TotalDays);
+		_announcements.Observe(Session.RemainingSeconds, Session.Duration, Session.IsClosed, _game.CurrentDay, TotalDays, FirstQuotaDay);
 		UpdateDayNightBackground();
 		bool secondChanged = RefreshTimer();
 		if (closed) _game.SynchronizeDayState();
@@ -124,7 +125,7 @@ public sealed class DayCycleController
 		switch (Session.RequestEnd(_game.TradeActive))
 		{
 			case EndDayAction.Closed:
-				_announcements.Observe(Session.RemainingSeconds, Session.Duration, Session.IsClosed, _game.CurrentDay, TotalDays);
+				_announcements.Observe(Session.RemainingSeconds, Session.Duration, Session.IsClosed, _game.CurrentDay, TotalDays, FirstQuotaDay);
 				RefreshTimer();
 				UpdateDayNightBackground();
 				_game.SynchronizeDayState();

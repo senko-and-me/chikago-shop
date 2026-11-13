@@ -24,7 +24,12 @@ public sealed class DayCardDealAnimator(Node owner)
         Cancel();
         Tween().TweenProperty(shade, "modulate:a", 1f, 0.25);
         Tween().TweenProperty(panel, "modulate:a", 1f, 0.2);
-        Tween().TweenProperty(deck, "modulate:a", 1f, 0.2);
+        Vector2 deckDestination = deck.Position;
+        deck.Position = new Vector2(deckDestination.X, deck.GetViewportRect().Size.Y + deck.Size.Y);
+        var entrance = Tween();
+        entrance.TweenProperty(deck, "position", deckDestination, 0.42)
+            .SetTrans(Godot.Tween.TransitionType.Cubic).SetEase(Godot.Tween.EaseType.Out);
+        entrance.Parallel().TweenProperty(deck, "modulate:a", 1f, 0.2);
         for (int i = 0; i < cards.Count; i++)
         {
             var card = cards[i];
@@ -38,7 +43,7 @@ public sealed class DayCardDealAnimator(Node owner)
             card.Modulate = new Color(1, 1, 1, 0);
             content.Hide();
             back.Show();
-            double delay = 0.16 + i * 0.14;
+            double delay = 0.55 + i * 0.14;
             var tween = Tween();
             tween.TweenInterval(delay);
             tween.TweenProperty(card, "position", destination, 0.48).SetTrans(Godot.Tween.TransitionType.Cubic).SetEase(Godot.Tween.EaseType.Out);
