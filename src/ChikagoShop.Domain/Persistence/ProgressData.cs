@@ -16,6 +16,8 @@ public sealed record ProgressData
 	public int CheckpointMusicUpgradeLevel { get; set; }
 	public double? DayRemainingSeconds { get; set; }
 	public bool DayClosed { get; set; }
+	// Saves without this additive field already had a running day.
+	public bool DayStarted { get; set; } = true;
 	public int Day { get; set; } = 1;
 	public int Score { get; set; }
 

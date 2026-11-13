@@ -6,6 +6,7 @@ using Godot;
 public sealed class DayCycleController
 {
 	public DaySession Session { get; } = new();
+	public bool Started { get; private set; }
 	public DayUpgradeSession Upgrades { get; } = new();
 	public int CheckpointAtelierLevel { get; private set; }
 	public int CheckpointMusicLevel { get; private set; }
@@ -14,6 +15,7 @@ public sealed class DayCycleController
 	private readonly TradeScene _game;
 	private readonly Label _timer;
 	private readonly TextureRect _clock;
+	private readonly Button _startButton;
 	private readonly Texture2D _clockActive;
 	private readonly Texture2D _clockExpired;
 	private readonly Control _inventoryStrip;
@@ -53,6 +55,17 @@ public sealed class DayCycleController
 		_timer.AddChild(_clock);
 		MonochromePresentation.PreserveClock(_clock);
 		_clock.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+		_startButton = new Button
+		{
+			Name = "StartButton", Text = "Начать", Flat = true,
+			MouseDefaultCursorShape = Control.CursorShape.PointingHand
+		};
+		_startButton.AddThemeColorOverride("font_color", Colors.Black);
+		_startButton.AddThemeColorOverride("font_hover_color", Colors.Black);
+		_startButton.AddThemeColorOverride("font_focus_color", Colors.Black);
+		_startButton.Pressed += StartDay;
+		_timer.AddChild(_startButton);
+		_startButton.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
 		_inventoryStrip = game.GetNode<Control>("HUD/InventoryUI/ScrollContainer");
 		_timer.GetParent<Control>().Resized += LayoutTimer;
 		_inventoryStrip.Resized += LayoutTimer;
@@ -63,7 +76,16 @@ public sealed class DayCycleController
 		UpdateDayNightBackground();
 	}
 
-	public bool CanReceiveBuyers => Session.CanReceiveBuyers && !_game.Failed && !_game.Completed;
+	public bool CanReceiveBuyers => Started && Session.CanReceiveBuyers && !_game.Failed && !_game.Completed;
+
+	public void StartDay()
+	{
+		if (Started || Session.IsClosed || Upgrades.Pending || _game.GetTree().Paused || _game.Failed || _game.Completed) return;
+		Started = true;
+		_announcements.Observe(Session.RemainingSeconds, Session.Duration, false);
+		RefreshTimer();
+		_game.SynchronizeDayState();
+	}
 
 	public void AddDebugTime()
 	{
@@ -78,7 +100,7 @@ public sealed class DayCycleController
 	public void Tick(double delta)
 	{
 		bool crafting = _game.CraftMiniGameOpen;
-		if (Upgrades.Pending || (_game.GetTree().Paused && !crafting) || _game.Failed || _game.Completed) return;
+		if (!Started || Upgrades.Pending || (_game.GetTree().Paused && !crafting) || _game.Failed || _game.Completed) return;
 		bool closed = Session.Tick(delta);
 		_announcements.Observe(Session.RemainingSeconds, Session.Duration, Session.IsClosed);
 		UpdateDayNightBackground();
@@ -90,6 +112,7 @@ public sealed class DayCycleController
 	public void EndDay()
 	{
 		if (_game.Failed || _game.Completed || TransitionOpen || Upgrades.Pending) return;
+		if (!Started && !Session.IsClosed) { StartDay(); return; }
 		switch (Session.RequestEnd(_game.TradeActive))
 		{
 			case EndDayAction.Closed:
@@ -121,6 +144,7 @@ public sealed class DayCycleController
 		_card.Close();
 		Upgrades.Reset(preserveCategories);
 		Session.Reset(ExpectedDuration);
+		Started = false;
 		_announcements.BeginDay();
 		RefreshTimer();
 		UpdateDayNightBackground();
@@ -128,7 +152,8 @@ public sealed class DayCycleController
 
 	public void Restore(double? remaining, bool closed, bool pending = false, DayUpgrade selected = DayUpgrade.None,
 		int day = 2, int atelierLevel = 0, int musicLevel = 0, int checkpointAtelierLevel = 0, int checkpointMusicLevel = 0,
-		int atelierPriceLevel = 0, int musicPriceLevel = 0, int checkpointAtelierPriceLevel = 0, int checkpointMusicPriceLevel = 0)
+		int atelierPriceLevel = 0, int musicPriceLevel = 0, int checkpointAtelierPriceLevel = 0, int checkpointMusicPriceLevel = 0,
+		bool started = true)
 	{
 		Upgrades.Restore(pending, selected, day, atelierLevel, musicLevel, atelierPriceLevel, musicPriceLevel);
 		CheckpointAtelierLevel = Math.Clamp(checkpointAtelierLevel, 0, 6);
@@ -136,7 +161,9 @@ public sealed class DayCycleController
 		CheckpointAtelierPriceLevel = Math.Clamp(checkpointAtelierPriceLevel, 0, 6);
 		CheckpointMusicPriceLevel = Math.Clamp(checkpointMusicPriceLevel, 0, 6);
 		Session.Restore(remaining, closed, ExpectedDuration);
-		_announcements.Restore(Session.RemainingSeconds, Session.Duration);
+		Started = started || Session.IsClosed;
+		if (Started) _announcements.Restore(Session.RemainingSeconds, Session.Duration);
+		else _announcements.BeginDay();
 		RefreshTimer();
 		UpdateDayNightBackground();
 	}
@@ -194,7 +221,8 @@ public sealed class DayCycleController
 
 	public void UpdateEndButton(Button button)
 	{
-		button.Text = Session.IsClosed ? "Начать следующий день" : "Завершить день";
+		RefreshTimer();
+		button.Text = Session.IsClosed ? "Начать следующий день" : Started ? "Завершить день" : "Начать";
 		button.Disabled = _game.Failed || _game.Completed || (Session.IsClosed && _game.TradeActive);
 		button.TooltipText = Session.IsClosed && _game.TradeActive ? "Сначала завершите сделку" : "";
 	}
@@ -208,21 +236,25 @@ public sealed class DayCycleController
 	{
 		LayoutTimer();
 		int seconds = (int)Math.Ceiling(Session.RemainingSeconds);
-		if (seconds == _displayedSeconds) return false;
+		_startButton.Visible = !Started && !Session.IsClosed && !_game.Failed && !_game.Completed;
+		_startButton.Disabled = Upgrades.Pending;
+		_timer.Text = Started || Session.IsClosed ? seconds.ToString("00", System.Globalization.CultureInfo.InvariantCulture) : "";
+		bool changed = seconds != _displayedSeconds;
 		_displayedSeconds = seconds;
-		_timer.Text = seconds.ToString("00", System.Globalization.CultureInfo.InvariantCulture);
 		_clock.Texture = seconds == 0 ? _clockExpired : _clockActive;
-		return true;
+		return changed;
 	}
 
 	private void LayoutTimer()
 	{
 		// Six inventory slots leave less room at narrow window sizes.
-		float size = Mathf.Clamp(_inventoryStrip.GetGlobalRect().Position.X - 24, 64, 180);
-		_timer.OffsetLeft = 12;
-		_timer.OffsetRight = 12 + size;
-		_timer.OffsetTop = -12 - size;
-		_timer.OffsetBottom = -12;
+		float inventoryLeft = _inventoryStrip.GetGlobalRect().Position.X;
+		float size = Mathf.Min(Mathf.Clamp(inventoryLeft - 24, 64, 180) * 1.15f, Mathf.Max(64, inventoryLeft - 12));
+		_timer.OffsetLeft = 6;
+		_timer.OffsetRight = 6 + size;
+		_timer.OffsetTop = -6 - size;
+		_timer.OffsetBottom = -6;
+		_startButton?.AddThemeFontSizeOverride("font_size", Math.Max(16, (int)(size * 0.16f)));
 		int fontSize = Math.Max(18, (int)(size * 0.22f));
 		if (_timer.GetThemeFontSize("font_size") != fontSize) _timer.AddThemeFontSizeOverride("font_size", fontSize);
 	}

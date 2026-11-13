@@ -7,6 +7,19 @@ namespace ChikagoShop.Domain.Tests;
 
 public sealed class ProgressMigrationTests
 {
+    [Test]
+    public void MissingDayStartedPreservesLegacyRunningDay()
+    {
+        var legacy = ProgressJson.Deserialize("{\"save_version\":13,\"day_remaining_seconds\":42}", 3)!;
+        Assert.That(ProgressMigration.Prepare(legacy).DayStarted, Is.True);
+        foreach (bool started in new[] { false, true })
+        {
+            var restored = ProgressMigration.Prepare(ProgressJson.Deserialize(
+                ProgressJson.Serialize(new ProgressData { SaveVersion = ProgressJson.CurrentVersion, DayStarted = started }), 3)!);
+            Assert.That(restored.DayStarted, Is.EqualTo(started));
+        }
+    }
+
     [TestCase(1, false, false, false, 0, null)]
     [TestCase(7, true, false, false, 0, null)]
     [TestCase(8, true, true, false, 0, 60)]
@@ -98,14 +111,14 @@ public sealed class ProgressMigrationTests
             "save_version", "upgrade_pending", "selected_upgrade", "atelier_price_level", "music_price_level",
             "checkpoint_atelier_price_level", "checkpoint_music_price_level", "atelier_upgrade_level",
             "music_upgrade_level", "checkpoint_atelier_upgrade_level", "checkpoint_music_upgrade_level",
-            "day_remaining_seconds", "day_closed", "day", "score", "energy_remaining", "accepted", "declined",
+            "day_remaining_seconds", "day_closed", "day_started", "day", "score", "energy_remaining", "accepted", "declined",
             "quota_stage", "checkpoint_day", "checkpoint_score", "checkpoint_energy", "music_workshop_unlocked",
             "checkpoint_music_workshop_unlocked", "checkpoint_accepted", "checkpoint_declined", "failed", "completed",
             "status", "trade_active", "item_index", "customer_index", "percentage", "rerolls_remaining", "stored_items",
             "checkpoint_items", "showcase_items", "checkpoint_showcase_items", "active_showcase_index", "buyer_countdown"
         ];
         Assert.That(doc.RootElement.EnumerateObject().Select(property => property.Name),
-            Is.EquivalentTo(fields), "Keep the exact existing save schema");
+            Is.EquivalentTo(fields), "Preserve existing save fields with the additive day_started flag");
     }
 
     [Test]

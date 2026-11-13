@@ -16,6 +16,29 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--camera-limits-checks"))
+            {
+                await TestCameraReferenceLimits();
+                await TestStandaloneCamera();
+                GD.Print("CAMERA_LIMITS_CHECKS_PASS: reference zoom limits, all pan edges, resize, cursor anchor, GUI and pause");
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--day-start-checks"))
+            {
+                await TestDayStart();
+                GD.Print("DAY_START_CHECKS_PASS: clock size/insets, real start click, timer/buyers, reload, legacy, next day, checkpoint and new game");
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--room-frame-checks") ||
+                OS.GetCmdlineUserArgs().Contains("--camera-frame-checks"))
+            {
+                await TestRoomFrames();
+                GD.Print("CAMERA_FRAME_CHECKS_PASS: no screen border, six preserved room frames and aligned day/night backgrounds");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--dialogue-localization-checks"))
             {
                 await TestDialogueLocalization();

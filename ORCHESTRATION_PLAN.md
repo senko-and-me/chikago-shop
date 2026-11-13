@@ -10,23 +10,29 @@
 
 ## Текущий фронт
 
-### HF-104 — уборка и публикация ассетов и занавеса
+### HF-111 — публикация изменений интерфейса и камеры
 
-Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-13. Зависимости HF-100 (ассеты), HF-101…HF-103 DONE; активных пересекающихся задач нет. Пользователь разрешил уборку, commit и push.
-CP-HF-104 read-set: AGENTS.md, план, Git status/diff/refs; текущий набор изменённых scripts/scenes/tests/art, IMG_2363.PNG и .import, .gitignore, README.md, docs/ASSET_AUDIT.md, docs/TESTING.md, docs/archive/ORCHESTRATION_HISTORY_2026-11-12.md, tools/verify.ps1, project.godot, .vscode/settings.json. Write-set: ORCHESTRATION_PLAN.md, docs/archive/ORCHESTRATION_HISTORY_2026-11-13.md, README.md, docs/TESTING.md, docs/ASSET_AUDIT.md; перемещение только корневых IMG_2363.PNG и .import в .godot/hf104-original; Git index/commit/main и origin/main для проверенных изменений HF-100…HF-103. Изолированная проверочная копия в системном TEMP. Для baseline-диагностики дополнительно прочитаны tests/Integration/ProjectTest.Ui.cs и ProjectTest.Helpers.cs; их изменение не входит в задачу. Out of scope: source/, сохранения игрока, удаление сборок, новый gameplay, force push. Приёмка: один runtime-занавес в art/rooms, завершённые отчёты в архиве, актуальные ссылки и фронт; build/domain и targeted asset/room/resource/dialogue checks PASS; полный integration прогон проверен сравнением с baseline, прежнее падение явно задокументировано; обычный push, remote SHA совпадает с HEAD, рабочее дерево чистое.
+Статус: `REVIEW`; координатор/исполнитель `/root`; READY 2026-11-13. HF-105…HF-110 DONE; пользователь явно разрешил commit и push.
+CP-HF-111 read-set: текущий фронт, Git status/diff/refs/remotes, evidence HF-110 в .local/checks/hf110/. Write-set: ORCHESTRATION_PLAN.md; Git index/commit/main и origin/main для текущего проверенного набора .gitignore/README/docs, art/ui/camera_frame.png/.import, scenes/trade_scene.tscn, scripts/Camera/WorldCamera.cs, scripts/Days/DayCycleController.cs, scripts/Persistence/TradeScene.Persistence.cs, scripts/TradeScene.cs, scripts/Presentation/RoomFramePresentation.cs/.uid, src/ChikagoShop.Domain/Persistence/ProgressData.cs, tests/ChikagoShop.Domain.Tests/ProgressMigrationTests.cs, tests/ProjectTest.cs, tests/Integration/ProjectTest.{CameraLimits,DayStart,RoomFrames}.cs/.uid. Out of scope: .local/, source/, builds/, новые игровые изменения, force push. Приёмка: обычный push main, remote SHA совпадает с HEAD, рабочее дерево чистое.
+
+Handoff HF-111: REVIEW; изменения HF-105…HF-110 готовы к публикации. Checks: fetch PASS (HEAD и origin/main = 6f0e8e4, 0/0); diff-check PASS; сохранены build PASS (0 warnings/errors), domain PASS (132/132), rendered room-frame/camera-limits/day-start PASS из HF-110; импорт PASS. Полный integration suite не объявляется зелёным: прежнее baseline tooltip-падение задокументировано. Read-set exception: нет. Risks/blocker: прежние диагностические предупреждения вне задачи. Next: commit, push и проверка remote SHA.
+### HF-110 — порядок в папках проекта
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-13; HF-105…HF-109 DONE, активных пересечений нет.
+CP-HF-110 read-set: текущий фронт, AGENTS.md, .gitignore, корневые файлы и имена .godot/hf102…hf109; scripts/Presentation/{ViewportFrame,RoomFramePresentation}.cs/.uid; tests/Integration/ProjectTest.ViewportFrame.cs/.uid, tests/ProjectTest.cs; scenes/trade_scene.tscn; README.md, docs/{ASSET_AUDIT,TESTING,GAMEPLAY}.md, docs/archive/ORCHESTRATION_HISTORY_2026-11-13.md; РамкаПустая.PNG/.import, art/ui/camera_frame.png. Write-set: ORCHESTRATION_PLAN.md, docs/archive/ORCHESTRATION_HISTORY_2026-11-13.md, .gitignore, README.md, docs/{ASSET_AUDIT,TESTING}.md; scripts/Presentation/RoomFramePresentation.cs; удаление неиспользуемого scripts/Presentation/ViewportFrame.cs/.uid после локальной резервной копии; переименование tests/Integration/ProjectTest.ViewportFrame.cs/.uid → ProjectTest.RoomFrames.cs/.uid, tests/ProjectTest.cs (имя метода и alias группы); .local/ (игнорируемые оригиналы, references, evidence, archive, .gdignore); перемещение только root РамкаПустая.PNG/.import и .godot/hf102…hf109 туда. Out of scope: source/, builds/, пользовательские сохранения, игровой баланс/поведение, остальные кэши Godot, commit/push. Приёмка: корень без дубликата фото; dev-материалы вне кэша Godot и Git; нет мёртвого экранного CanvasLayer-класса, room factory сохранён; архивированные завершённые отчёты и актуальная таблица проверок. Проверки: build/domain, import, rendered room-frame/camera-limits/day-start checks, local Markdown links, сохранность основной спецификации, diff-check.
 
 ```text
-Task: HF-104
-Recommended status: REVIEW (принято координатором → DONE после push)
-Changed: завершённые отчёты перенесены в docs/archive/ORCHESTRATION_HISTORY_2026-11-13.md, основной фронт сокращён без изменения требований/ворот; README и docs/TESTING содержат ссылки на аудит и новые группы. Корневые IMG_2363.PNG/.import перемещены в .godot/hf104-original, runtime art/rooms/locked_curtain.png сохранён с тем же SHA256. Подготовлены к публикации прежние изменения HF-100 «ассеты» и HF-101…HF-103.
-Checks: build PASS (0 warnings/errors); domain PASS (131/131); import PASS (exit 0; первичный импорт без кэша сообщил о ещё не импортированном шрифте); rendered --asset-replacement-checks, --room-doorway-checks, --resource-checks, --dialogue-localization-checks PASS (exit 0). Общий ProjectTest FAIL на TestUiLayoutInvalidation:61, Showing a tooltip must immediately activate its presentation updates. Тот же FAIL воспроизведён на исходных runtime/scenes/tests из HEAD=86f0019 в той же изолированной копии, при headless и rendered запуске текущих изменений. Полный suite не объявляется зелёным. Diff-check, локальные Markdown-ссылки и сохранность основной спецификации PASS. git push origin main PASS (86f0019..1353677); ls-remote подтвердил SHA 135367799d66c77b83120234a66dbeb5b7acc94a; рабочее дерево чистое после публикации.
-Acceptance: единственный runtime-занавес без затемнения, готовые музыкальные PNG и прежние игровые identities; источники/сохранения игрока не читались и не менялись. Изменения опубликованы обычным push без переписывания истории.
-Read-set exception: ProjectTest.Ui.cs/Helpers.cs прочитаны для необходимой диагностики существующего падения; для baseline в проверочной копии временно использованы версии изменённых scripts/scenes/tests из HEAD, затем восстановлены рабочие файлы.
-Risks/blocker: существующее падение tooltip suite, прежние duplicate UI UID и shutdown resource warnings. Это не release gate; новые целевые проверки проходят.
-Next: основной фронт S1-04; исправление прежнего tooltip FAIL требует отдельной задачи.
+Task: HF-110
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: .local/{originals,references,checks,archive} с .gdignore, игнорируется Git; пользовательский оригинал рамки и sidecar перемещены из корня, все HF-102…HF-109 evidence сохранены и сгруппированы; удалён неиспользуемый ViewportFrame.cs/.uid с резервной копией .local/archive/*.txt, неизменённая room factory теперь принадлежит RoomFramePresentation; тест переименован в ProjectTest.RoomFrames с сохранением UID, основной флаг --room-frame-checks и совместимый alias --camera-frame-checks; README/docs/план упорядочены, завершённые HF-104…HF-109 перенесены в архив за 13 ноября.
+Checks: build PASS (0 warnings/errors); domain PASS (132/132); Godot import PASS (exit 0); rendered --room-frame-checks, --camera-limits-checks, --day-start-checks PASS (exit 0). Markdown links PASS, основная спецификация после «Как пользоваться планом» совпадает с HEAD, оригинал рамки и runtime-копия имеют одинаковый SHA256, .local игнорируется Git, ссылок на удалённый класс/метод нет, diff-check PASS.
+Acceptance: корень без дубликата изображения; локальные материалы отделены от кэша движка, имена evidence сохранены; шесть комнатных рамок и прежние незакоммиченные изменения сохранены, игровое поведение не менялось. source/, builds/ и пользовательские сохранения не затронуты.
+Read-set exception: .local/checks/hf104/hf104-check-dir.txt прочитан для повторного использования изолированной копии; в ней удалены только четыре известные устаревшие script/test-файла после проверки абсолютных путей.
+Risks/blocker: прежние duplicate UI UID warnings и baseline tooltip FAIL общего suite вне задачи; материалы .local остаются только на этом компьютере.
+Next: основной фронт S1-04. Commit/push не выполнялись.
 ```
 
-Evidence: .godot/hf104-verify.log, hf104-{full,assets,rooms,resources,dialogue,baseline}*.log; путь изолированной копии — .godot/hf104-check-dir.txt. Исходное фото сохранено в .godot/hf104-original/.
+Evidence: .local/checks/hf110/{build,domain,isolated-build,import,room-frame,camera-limits,day-start}*.log.
 Основная стадия: **S1 — домен, конфигурация и воспроизводимость**. `G-S0 = PASSED`, `G-S1 = OPEN`.
 
 | Состояние | Задача | Следующее действие |
@@ -35,7 +41,7 @@ Evidence: .godot/hf104-verify.log, hf104-{full,assets,rooms,resources,dialogue,b
 | `NEXT` | `S1-04` — именованные потоки RNG | Подготовить CP по актуальному коду перед назначением. |
 | Требует сверки | `HF-64`, `VF-02…VF-05` | Сопоставить старые незакрытые статусы с evidence поздних задач. |
 
-Последняя публикация изменений: `1353677` — музыкальные PNG, занавес закрытых комнат без затемнения и уборка документации. HF-100 «ассеты» и HF-101…HF-104 завершены и опубликованы; последующая запись закрывает отчёт публикации.
+Последний опубликованный коммит: `6f0e8e4` — отчёт публикации ассетов и уборки. Локально завершены HF-105…HF-109: рамки только у комнат, часы +15% и ручной старт дня, привязка комнат к day/night-схемам и ограничения камеры. Эти изменения и текущая уборка ещё не закоммичены.
 
 Отчёты и контекст-пакеты: [до 12 ноября](docs/archive/ORCHESTRATION_HISTORY_2026-11-12.md), [за 13 ноября](docs/archive/ORCHESTRATION_HISTORY_2026-11-13.md). Два HF-100 различаются названиями; номера не менялись. Внеочередные задачи не закрывают ворота стадий автоматически.
 

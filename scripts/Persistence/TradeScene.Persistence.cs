@@ -34,6 +34,7 @@ public partial class TradeScene
 				_dayCycle.CheckpointMusicPriceLevel,
 			DayRemainingSeconds = DayRemainingSeconds,
 			DayClosed = DayClosed,
+			DayStarted = _dayCycle.Started,
 			Accepted = Accepted,
 			Declined = Declined,
 			QuotaStage = QuotaStage,
@@ -87,7 +88,8 @@ public partial class TradeScene
 			data.AtelierPriceLevel,
 			data.MusicPriceLevel,
 			data.CheckpointAtelierPriceLevel,
-			data.CheckpointMusicPriceLevel);
+			data.CheckpointMusicPriceLevel,
+			data.DayStarted);
 
 		_storedItems.Clear();
 		_checkpointItems.Clear();

@@ -8,3 +8,6 @@
 
 # Local design documents and original art sources
 /source/
+
+# Local originals, reference downloads and verification evidence (not runtime assets)
+/.local/

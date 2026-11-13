@@ -27,6 +27,7 @@
 [ext_resource type="Script" uid="uid://moiorwdg8bcp" path="res://scripts/Presentation/RoomDoorwayPresentation.cs" id="24_doorways"]
 [ext_resource type="Texture2D" uid="uid://cog2ypvb6uqtj" path="res://art/ui/panel_inverted.png" id="25_inverted"]
 [ext_resource type="Script" path="res://scripts/Audio/GameplayMusicDirector.cs" id="26_game_music"]
+[ext_resource type="Script" path="res://scripts/Presentation/RoomFramePresentation.cs" id="29_room_frames"]
 [ext_resource type="AudioStream" path="res://audio/music/menu_theme_loop.wav" id="27_day_music"]
 [ext_resource type="AudioStream" path="res://audio/music/thoughtful_loop.wav" id="28_upgrade_music"]
 
@@ -135,7 +136,8 @@ texture = ExtResource("14_layout")
 centered = false
 
 [node name="Atelier" type="Node2D" parent="World" unique_id=549384318]
-position = Vector2(304, 535)
+position = Vector2(1421.052632, 1034.526316)
+scale = Vector2(0.544079, 0.522807)
 
 [node name="Background" type="Sprite2D" parent="World/Atelier" unique_id=925849790]
 texture = ExtResource("11_atelier")
@@ -223,7 +225,8 @@ offset_right = 1870.0
 offset_bottom = 764.0
 
 [node name="MusicWorkshop" type="Node2D" parent="World" unique_id=420096257]
-position = Vector2(3622, 535)
+position = Vector2(3250.105263, 1034.526316)
+scale = Vector2(0.538816, 0.522807)
 
 [node name="Background" type="Sprite2D" parent="World/MusicWorkshop" unique_id=1597515467]
 texture = ExtResource("4_pi35y")
@@ -311,7 +314,8 @@ offset_right = 790.0
 offset_bottom = 734.0
 
 [node name="Showroom" type="Node2D" parent="World" unique_id=1166953855]
-position = Vector2(3622, 1629)
+position = Vector2(3250.105263, 1638.315789)
+scale = Vector2(0.538816, 0.507602)
 
 [node name="ShowroomHeader" type="NinePatchRect" parent="World/Showroom" unique_id=1324160784]
 offset_left = 289.0
@@ -374,7 +378,8 @@ offset_right = 1676.0
 offset_bottom = 890.0
 
 [node name="ShowroomLeft" type="Node2D" parent="World" unique_id=975797514]
-position = Vector2(304, 1629)
+position = Vector2(1421.052632, 1638.315789)
+scale = Vector2(0.544079, 0.507602)
 
 [node name="ShowroomHeader" type="NinePatchRect" parent="World/ShowroomLeft" unique_id=1817932225]
 offset_left = 289.0
@@ -436,7 +441,8 @@ offset_right = 1679.0
 offset_bottom = 908.0
 
 [node name="TradingRoom" type="Node2D" parent="World" unique_id=1662077441]
-position = Vector2(2224, 1625)
+position = Vector2(2477.955274, 1636.28538)
+scale = Vector2(0.541224, 0.507602)
 
 [node name="TradingRoomBackground" type="Sprite2D" parent="World/TradingRoom" unique_id=2014665045]
 position = Vector2(3, 4)
@@ -552,7 +558,8 @@ theme_override_styles/disabled = SubResource("DeclineDisabled")
 text = "×"
 
 [node name="Corridor" type="Node2D" parent="World" unique_id=380293147]
-position = Vector2(2224, 531)
+position = Vector2(2477.955274, 1032.435088)
+scale = Vector2(0.541224, 0.522807)
 
 [node name="CorridorBackground" type="Sprite2D" parent="World/Corridor" unique_id=1737565920]
 position = Vector2(3, 4)
@@ -560,10 +567,14 @@ texture = ExtResource("13_58qc8")
 centered = false
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=550359116 node_paths=PackedStringArray("BoundsSource")]
-position = Vector2(3011, 1820)
-zoom = Vector2(0.7, 0.7)
+position = Vector2(2880, 1620.6316)
+zoom = Vector2(0.39583334, 0.39583334)
 script = ExtResource("23_world_camera")
 BoundsSource = NodePath("../World/RoomLayout")
+ReferenceSize = Vector2(4560, 2565)
+NavigationRegion = Rect2(429, 563, 3662, 1440)
+OverviewSize = Vector2(2560, 1440)
+CloseupSize = Vector2(1036, 583)
 
 [node name="DELETE_LATE" type="Sprite2D" parent="." unique_id=794820871]
 position = Vector2(2856, 1630)
@@ -718,3 +729,6 @@ script = ExtResource("21_zoom_ui")
 
 [node name="RoomDoorways" type="Node" parent="." unique_id=1292616752]
 script = ExtResource("24_doorways")
+
+[node name="RoomFrames" type="Node" parent="."]
+script = ExtResource("29_room_frames")

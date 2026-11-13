@@ -83,3 +83,99 @@ CP-HF-99: read-set — AGENTS.md, исходный ORCHESTRATION_PLAN.md, Git st
 Приёмка: основной план начинается с краткого фронта и навигации; прежний фронт сохранён целиком в архиве; незакрытые записи явно видны; требования, решения, таблицы стадий и CP сохранены. Проверки: сравнение исходного журнала, сохранность спецификации, Markdown-ссылки, git diff --check. Изменений поведения игры нет.
 
 Проверено 2026-11-12: исходный журнал сохранён дословно; спецификация, таблицы стадий/ворот, решения и CP совпадают с исходными после двух переименований заголовков и пояснения к старым пакетам. Локальные ссылки и якоря Markdown проверены. Игровой код не менялся, тесты игры не перезапускались. Основной файл сокращён с 2 785 до примерно 650 строк. Публикация уборки плана разрешена последующим явным запросом пользователя; изменения входят в отдельный документационный коммит.
+
+## Дополнение: рамки, часы, фоны и камера (HF-104…HF-109)
+
+### HF-109 — ограничения камеры по трём схемам
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-13; зависимость HF-107 DONE; активных пересечений нет.
+CP-HF-109 read-set: текущий фронт; три Drive PNG пользователя (минимальная область 1csoJtefH4ZZIALFxMPGE_5g7mIDz4Glj, максимальный диапазон 1Kgt76OwRZ819p1ZswnuvWgyil3eF6gsr, максимальная область 1TLw13kwydk8oPXqeM93lit8s3Zh_1dk0); scripts/Camera/WorldCamera.cs; scenes/trade_scene.tscn; tests/Integration/ProjectTest.Camera.cs; tests/ProjectTest.cs; docs/GAMEPLAY.md. Write-set: ORCHESTRATION_PLAN.md, scripts/Camera/WorldCamera.cs, scenes/trade_scene.tscn (только camera exports/initial view), tests/ProjectTest.cs (новая группа), tests/Integration/ProjectTest.CameraLimits.cs/.uid, docs/GAMEPLAY.md. .godot/TEMP — скачивания/evidence/изолированная копия. Out of scope: экономика, комнаты/фоны/рамки, HUD, source/, commit/push. Приёмка: ограничение видимой области камеры в пределах red range, zoom-out не шире 2560x1440, zoom-in не уже 1036x583 в координатах исходной схемы 4560x2565; центр/начальный вид из максимальной области; плавный zoom к курсору/drag/GUI/pause сохраняются; ограничения действуют после resize. Проверки: build, --camera-limits-checks (границы, wheel, pan, два размера, исходная standalone camera suite), rendered endpoints, diff-check.
+
+```text
+Task: HF-109
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: WorldCamera — опциональные ReferenceSize/NavigationRegion/OverviewSize/CloseupSize, единый пересчёт из reference в world; ограничение обоих измерений viewport при zoom/resize; camera exports и начальный overview сцены; новая regression-группа, docs/GAMEPLAY, план.
+Checks: build PASS (0 warnings/errors); isolated/local import PASS (exit 0); rendered --camera-limits-checks PASS (exit 0), включая TestStandaloneCamera. Проверены wheel до обоих пределов, четыре угла pan с ограничением целого viewport, два размера окна, cursor anchor, настоящие GUI drag/world drag, pause/resume и lifecycle. Рендеры максимального обзора и приближения у кассы просмотрены; diff-check PASS.
+Acceptance: по скачанным 4560x2565 PNG красные границы: диапазон Rect2(429,563,3662,1440), максимальный обзор 2560x1440 (центр 2280,1283), минимальный 1036x583 (пример вокруг кассы x1754,y1225). В 1280x720 runtime zoom примерно 0,395833…0,9777. Пределы масштабируются от размера мира и viewport, поэтому не зависят от абсолютного размера окна. Комнаты/рамки/фон/игровая экономика не менялись. Камера без заданных reference-полей сохраняет прежнее standalone-поведение.
+Read-set exception: .godot/hf104-check-dir.txt — повторное использование изолированной копии; source/ и пользовательские сохранения не читались и не менялись.
+Risks/blocker: красные растровые границы сняты с точностью около 1 пикселя; для иных пропорций окна выбран вписанный вид без выхода за обозначенный диапазон. Прежний baseline tooltip FAIL вне задачи.
+Next: основной фронт S1-04. Commit/push не выполнялись.
+```
+
+Evidence: .godot/hf109/{min,range,max}.png; .godot/hf109-{build,import,checks,local-import}*.log; .godot/hf109-overview.png и hf109-closeup.png.
+### HF-108 — убрать экранную рамку
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-13; зависимость HF-107 DONE; активных пересечений нет.
+CP-HF-108 read-set: текущий фронт, scenes/trade_scene.tscn, scripts/Presentation/{ViewportFrame,RoomFramePresentation}.cs, tests/Integration/ProjectTest.ViewportFrame.cs, tests/ProjectTest.cs, docs/ASSET_AUDIT.md. Write-set: ORCHESTRATION_PLAN.md, scenes/trade_scene.tscn (только экранный CanvasLayer и ссылка на его script), tests/Integration/ProjectTest.ViewportFrame.cs, tests/ProjectTest.cs (только текст результата группы), docs/ASSET_AUDIT.md. Out of scope: рамки комнат, фоны, камера, экономика, source/, commit/push. Приёмка: экранного ViewportFrame нет, все шесть рамок комнат сохранены. Проверки: build, rendered --camera-frame-checks, diff-check; .godot/TEMP — evidence.
+
+Handoff HF-108: REVIEW → DONE после приёмки координатором. Changed: только указанный write-set; экранный CanvasLayer удалён из сцены, room frame factory и шесть комнатных рамок сохранены. Checks: build PASS (0 warnings/errors); rendered --camera-frame-checks PASS (exit 0: отсутствие экранной рамки, шесть рамок и границы фонов); diff-check PASS. Acceptance: рамка только вокруг комнат. Read-set exception: .godot/hf104-check-dir.txt для изолированной копии. Risks/blocker: новых нет. Next: основной фронт S1-04. Evidence: .godot/hf108-{build,checks}*.log. Commit/push не выполнялись.
+### HF-107 — соответствие фонам Drive и рамки комнат
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-13; зависимости HF-105/HF-106 DONE, активных пересечений нет.
+CP-HF-107 read-set: текущий фронт; два пользовательских Drive PNG (1sjSPaqW-r7SK6fTfjMtgECzW3yp-Aa0H и 1g0liMsb3C_KWP8y7p2euLR8v-SyK_kpa); art/rooms/{day_time.png,night_time.png,room_layout.jpg,atelier.jpg,music_room.jpg,showroom.jpg,cashier.jpg,upper_corridor.jpg}; РамкаПустая.PNG; scripts/Presentation/ViewportFrame.cs; scripts/Days/DayNightBackground.cs; scripts/UI/ZoomResponsiveUi.cs; scenes/trade_scene.tscn; tests/Integration/ProjectTest.ViewportFrame.cs; tests/ProjectTest.cs; docs/ASSET_AUDIT.md. Write-set: ORCHESTRATION_PLAN.md, docs/ASSET_AUDIT.md; scripts/Presentation/ViewportFrame.cs; scripts/Presentation/RoomFramePresentation.cs/.uid; scenes/trade_scene.tscn (только трансформы шести комнат и подключение рамок); tests/Integration/ProjectTest.ViewportFrame.cs. .godot/TEMP — скачивания, проверочная копия/evidence. Out of scope: исходный PNG, замена уже совпадающих day/night файлов, содержимое комнат/каталог/сохранения/экономика, source/, commit/push. Приёмка: SHA256 дневного/ночного фона равны Drive; фоны покрывают прежний размер мира, комнаты вписаны в шесть прямоугольников новой схемы вместо перекрытия фасада; экранная рамка тоньше вдвое, такие же прозрачные рамки на шести комнатах (включая закрытые), навигация и клики доступны. Проверки: SHA256, build, import, rendered --camera-frame-checks и --day-start-checks, визуальный обзор day/night и diff-check.
+
+```text
+Task: HF-107
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: экранная рамка 0,2 вместо 0,4; общий border factory в ViewportFrame; RoomFramePresentation.cs/.uid — рамки шести комнат поверх занавесов, прозрачный центр и MouseFilter.Ignore; шесть scene-трансформов совпадают с проёмами новых day/night-схем; regression-проверки, аудит и план.
+Checks: повторное скачивание двух Drive PNG и SHA256 comparison PASS; build PASS (0 warnings/errors); import изолированной копии и рабочего проекта PASS (exit 0); rendered --camera-frame-checks, --day-start-checks, --room-doorway-checks PASS (exit 0). Проверены все шесть границ комнат относительно пиксельных прямоугольников схемы, оба фоновых world bounds, прозрачный центр, half thickness, pan/zoom/resize/настоящий клик, покупка/reload/checkpoint/New Game, часы и ручной старт. Дневной и ночной панорамные снимки просмотрены; diff-check PASS.
+Acceptance: day_time/night_time уже идентичны присланным файлам 4560x2565 и не менялись. Вместо старой привязки комнат к room_layout.jpg исправлены их position/scale под новую схему; камера сохраняет прежние bounds. Рамки экрана и всех комнат используют исходную РамкаПустая.PNG через runtime-копию без редактирования. Комнаты/персонажи остаются отдельным игровым передним планом, поэтому ночью содержимое комнат не заменяется чёрными прямоугольниками референса.
+Read-set exception: .godot/hf104-check-dir.txt — повторное использование изолированной копии; source/ и пользовательские сохранения не читались и не менялись.
+Risks/blocker: прежние duplicate UI UID warnings и baseline tooltip FAIL общего integration suite вне задачи.
+Next: основной фронт S1-04. Commit/push не выполнялись.
+```
+
+Evidence: .godot/hf107-{build,import,camera-frame,day-start,room-doorway,local-import}*.log; hf107-hashes.txt; hf107-day.png и hf107-night.png. Скачанные эталоны — .godot/hf107/.
+### HF-106 — часы крупнее и ручной запуск дня
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-13; зависимостей и активных пересечений нет.
+CP-HF-106 read-set: текущий фронт, AGENTS.md; scripts/Days/{DayCycleController,DayNightBackground}.cs; scripts/UI/{DayAnnouncementOverlay,InventoryUI}.cs; scripts/TradeScene.cs (адаптеры/жизненный цикл), scripts/Persistence/TradeScene.Persistence.cs; src/ChikagoShop.Domain/{Days/DaySession,Persistence/ProgressData,Persistence/ProgressMigration,Persistence/ProgressJson}.cs; tests/ProjectTest.cs, tests/Integration/ProjectTest.{Days,Helpers,DayAnnouncements}.cs, tests/ChikagoShop.Domain.Tests/ProgressMigrationTests.cs; localization/en.tres, project.godot. Write-set: ORCHESTRATION_PLAN.md; scripts/Days/DayCycleController.cs; scripts/TradeScene.cs (только read-only forwarding свойства); scripts/Persistence/TradeScene.Persistence.cs; src/ChikagoShop.Domain/Persistence/ProgressData.cs; tests/ProjectTest.cs; tests/Integration/ProjectTest.DayStart.cs/.uid; tests/ChikagoShop.Domain.Tests/ProgressMigrationTests.cs; docs/GAMEPLAY.md (правило запуска). .godot/TEMP — evidence. Out of scope: новая доменная логика в TradeScene, прежние unrelated тестовые дефекты, баланс, source/, commit/push. Приёмка: часы +15% при обычном viewport, отступы 6 вместо 12, защита от пересечения инвентаря на узком экране; «Начать» на часах и в прежней дневной кнопке запускает день один раз; до старта время и новые покупатели стоят; каждый новый день/чекпоинт ждёт старта, старые сохранения продолжаются; состояние нового старта переживает reload; RU/EN. Проверки: build/domain, --day-start-checks (рендер/настоящий клик, reload, следующий день, новая игра), diff-check.
+
+```text
+Task: HF-106
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: DayCycleController — часы 207 вместо 180, отступы 6 вместо 12, адаптация к узкому экрану и кнопка «Начать»; TradeScene — только forwarding DayStarted; persistence mapping/ProgressData — дополнительный day_started (default true для прежних сохранений), новые доменные и integration проверки, docs/GAMEPLAY и план.
+Checks: build PASS (0 warnings/errors); domain PASS (132/132); isolated import PASS (exit 0); rendered --day-start-checks PASS (exit 0). Проверены настоящий клик, повторный старт без сброса, ожидание таймера/покупателей и приход покупателя после старта, reload обоих состояний, legacy save, следующий день после пропуска карточки, checkpoint, New Game, EN и narrow viewport с шестью слотами. Рендер до старта просмотрен; diff-check PASS.
+Acceptance: до старта нового дня таймер и покупатели ждут; секунды заменяют «Начать» после клика; ручной старт есть и в прежней дневной кнопке; сохранения совместимы. Поле JSON добавлено совместимо без изменения версии 13, старые поля сохранены. Прежние незакоммиченные изменения рамки и исходное изображение сохранены.
+Read-set exception: .godot/hf104-check-dir.txt для прежней изолированной копии, docs/GAMEPLAY.md для актуализации правила запуска. Пользовательские сохранения не затронуты.
+Risks/blocker: ранее известный baseline tooltip FAIL общего suite не исправлялся; прежние интеграционные сценарии, предполагающие автоматический запуск, требуют перехода к явному Start при их следующей актуализации.
+Next: основной фронт S1-04. Commit/push не выполнялись.
+```
+
+Evidence: .godot/hf106-{build,import,checks}*.log; .godot/hf106-day-start.png.
+### HF-105 — рамка по краям камеры
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-13; зависимостей и пересечений с активными задачами нет.
+CP-HF-105 read-set: текущий фронт, AGENTS.md, РамкаПустая.PNG, scripts/Camera/WorldCamera.cs, scripts/Presentation/MonochromePresentation.cs, scripts/UI/{PauseMenu,DayTransitionCard,EmbroideryGame,DayAnnouncementOverlay}.cs, scenes/trade_scene.tscn, tests/ProjectTest.cs, tests/Integration/ProjectTest.{Presentation,Camera}.cs, project.godot, .vscode/settings.json. Write-set: ORCHESTRATION_PLAN.md, art/ui/camera_frame.png и .import, scripts/Presentation/ViewportFrame.cs и .uid, scenes/trade_scene.tscn, tests/ProjectTest.cs, tests/Integration/ProjectTest.ViewportFrame.cs и .uid. TEMP/.godot — проверочные копии/evidence. Out of scope: исходное изображение, source/, экономика, сохранения игрока, движение/границы камеры, меню, commit/push. Приёмка: предоставленная рамка по краям игрового viewport, центр прозрачен, HUD/модальные окна сверху; бордюр неподвижен при pan/zoom и меняет размер с viewport, мышь не перехватывает. Проверки: build, импорт, rendered --camera-frame-checks с двумя размерами и настоящим кликом, снимок и diff-check.
+
+```text
+Task: HF-105
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: art/ui/camera_frame.png/.import (копия исходника без изменения байтов), scripts/Presentation/ViewportFrame.cs/.uid, scenes/trade_scene.tscn, tests/ProjectTest.cs, tests/Integration/ProjectTest.ViewportFrame.cs/.uid, план.
+Checks: build PASS (0 warnings/errors); import в изолированной копии и рабочем проекте PASS (exit 0); rendered --camera-frame-checks PASS (exit 0); git diff --check PASS. Снимки 1280x720 и 1000x800 просмотрены. Проверены видимые пиксели на четырёх краях, неизменность центра, неподвижность бордюра при pan/zoom, resize и настоящий клик сквозь рамку.
+Acceptance: рамка привязана к viewport отдельным CanvasLayer ниже HUD и модальных окон; прозрачные поля исходника исключены AtlasTexture, центр не рисуется; nine-patch сохраняет углы и толщину при смене пропорций окна. Исходный РамкаПустая.PNG сохранён в корне без изменений.
+Read-set exception: .godot/hf104-check-dir.txt прочитан для повторного использования уже изолированной проверочной копии; пользовательские сохранения не затронуты.
+Risks/blocker: прежние duplicate UI UID warnings; общий integration suite имеет ранее подтверждённое baseline tooltip-падение и не перезапускался для этой локальной правки.
+Next: основной фронт S1-04. Commit/push не выполнялись.
+```
+
+Evidence: .godot/hf105-{build,import,checks,local-import}*.log; предпросмотр .godot/hf105-camera-frame.png, оба исходных снимка в системном TEMP/chikago-hf67-camera-frame-*.png.
+### HF-104 — уборка и публикация ассетов и занавеса
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-13. Зависимости HF-100 (ассеты), HF-101…HF-103 DONE; активных пересекающихся задач нет. Пользователь разрешил уборку, commit и push.
+CP-HF-104 read-set: AGENTS.md, план, Git status/diff/refs; текущий набор изменённых scripts/scenes/tests/art, IMG_2363.PNG и .import, .gitignore, README.md, docs/ASSET_AUDIT.md, docs/TESTING.md, docs/archive/ORCHESTRATION_HISTORY_2026-11-12.md, tools/verify.ps1, project.godot, .vscode/settings.json. Write-set: ORCHESTRATION_PLAN.md, docs/archive/ORCHESTRATION_HISTORY_2026-11-13.md, README.md, docs/TESTING.md, docs/ASSET_AUDIT.md; перемещение только корневых IMG_2363.PNG и .import в .godot/hf104-original; Git index/commit/main и origin/main для проверенных изменений HF-100…HF-103. Изолированная проверочная копия в системном TEMP. Для baseline-диагностики дополнительно прочитаны tests/Integration/ProjectTest.Ui.cs и ProjectTest.Helpers.cs; их изменение не входит в задачу. Out of scope: source/, сохранения игрока, удаление сборок, новый gameplay, force push. Приёмка: один runtime-занавес в art/rooms, завершённые отчёты в архиве, актуальные ссылки и фронт; build/domain и targeted asset/room/resource/dialogue checks PASS; полный integration прогон проверен сравнением с baseline, прежнее падение явно задокументировано; обычный push, remote SHA совпадает с HEAD, рабочее дерево чистое.
+
+```text
+Task: HF-104
+Recommended status: REVIEW (принято координатором → DONE после push)
+Changed: завершённые отчёты перенесены в docs/archive/ORCHESTRATION_HISTORY_2026-11-13.md, основной фронт сокращён без изменения требований/ворот; README и docs/TESTING содержат ссылки на аудит и новые группы. Корневые IMG_2363.PNG/.import перемещены в .godot/hf104-original, runtime art/rooms/locked_curtain.png сохранён с тем же SHA256. Подготовлены к публикации прежние изменения HF-100 «ассеты» и HF-101…HF-103.
+Checks: build PASS (0 warnings/errors); domain PASS (131/131); import PASS (exit 0; первичный импорт без кэша сообщил о ещё не импортированном шрифте); rendered --asset-replacement-checks, --room-doorway-checks, --resource-checks, --dialogue-localization-checks PASS (exit 0). Общий ProjectTest FAIL на TestUiLayoutInvalidation:61, Showing a tooltip must immediately activate its presentation updates. Тот же FAIL воспроизведён на исходных runtime/scenes/tests из HEAD=86f0019 в той же изолированной копии, при headless и rendered запуске текущих изменений. Полный suite не объявляется зелёным. Diff-check, локальные Markdown-ссылки и сохранность основной спецификации PASS. git push origin main PASS (86f0019..1353677); ls-remote подтвердил SHA 135367799d66c77b83120234a66dbeb5b7acc94a; рабочее дерево чистое после публикации.
+Acceptance: единственный runtime-занавес без затемнения, готовые музыкальные PNG и прежние игровые identities; источники/сохранения игрока не читались и не менялись. Изменения опубликованы обычным push без переписывания истории.
+Read-set exception: ProjectTest.Ui.cs/Helpers.cs прочитаны для необходимой диагностики существующего падения; для baseline в проверочной копии временно использованы версии изменённых scripts/scenes/tests из HEAD, затем восстановлены рабочие файлы.
+Risks/blocker: существующее падение tooltip suite, прежние duplicate UI UID и shutdown resource warnings. Это не release gate; новые целевые проверки проходят.
+Next: основной фронт S1-04; исправление прежнего tooltip FAIL требует отдельной задачи.
+```
+
+Evidence: .godot/hf104-verify.log, hf104-{full,assets,rooms,resources,dialogue,baseline}*.log; путь изолированной копии — .godot/hf104-check-dir.txt. Исходное фото сохранено в .godot/hf104-original/.
+
+В HF-110 локальные evidence HF-102…HF-109 перенесены из .godot/ в .local/checks/<task>/ и .local/references/<task>/, оригиналы — в .local/originals/. Имена файлов сохранены; в исторических записях оставлены исходные пути.

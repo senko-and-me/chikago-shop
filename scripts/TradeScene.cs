@@ -91,6 +91,7 @@ public partial class TradeScene : Node2D
 		(_polishing?.IsOpen ?? false);
 
 	public bool DayClosed => _dayCycle.Session.IsClosed;
+	public bool DayStarted => _dayCycle.Started;
 	public bool DayTransitionOpen =>
 		_dayCycle?.TransitionOpen ?? false;
 

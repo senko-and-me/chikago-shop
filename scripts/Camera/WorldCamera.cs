@@ -6,6 +6,12 @@ public partial class WorldCamera : Camera2D
 {
     [Export] public Sprite2D BoundsSource { get; set; } = null!;
 
+    // Optional limits measured in pixels of the design reference, independent of world scale.
+    [Export] public Vector2 ReferenceSize { get; set; }
+    [Export] public Rect2 NavigationRegion { get; set; }
+    [Export] public Vector2 OverviewSize { get; set; }
+    [Export] public Vector2 CloseupSize { get; set; }
+
     private const float MaxZoom = 1.8f;
     private const float ZoomStep = 1.12f;
     private const float ZoomSmoothness = 12f;
@@ -13,9 +19,31 @@ public partial class WorldCamera : Camera2D
     private bool _dragging;
     private float _targetZoom;
     private Vector2 _zoomAnchor;
-    private Rect2 Bounds => BoundsSource.GlobalTransform * BoundsSource.GetRect();
-    private float MinZoom => GetViewportRect().Size.X / Bounds.Size.X;
-    private float ZoomLimit => Mathf.Max(MaxZoom, MinZoom);
+    private Rect2 WorldBounds => BoundsSource.GlobalTransform * BoundsSource.GetRect();
+    private bool HasReference => ReferenceSize.X > 0 && ReferenceSize.Y > 0;
+    private Vector2 ReferenceToWorld(Vector2 size) => size / ReferenceSize * WorldBounds.Size;
+    private Rect2 Bounds => HasReference && NavigationRegion.HasArea()
+        ? new Rect2(WorldBounds.Position + ReferenceToWorld(NavigationRegion.Position), ReferenceToWorld(NavigationRegion.Size))
+        : WorldBounds;
+    private float MinZoom
+    {
+        get
+        {
+            Vector2 largest = HasReference && OverviewSize.X > 0 && OverviewSize.Y > 0
+                ? ReferenceToWorld(OverviewSize) : Bounds.Size;
+            Vector2 ratio = GetViewportRect().Size / largest.Min(Bounds.Size);
+            return Mathf.Max(ratio.X, ratio.Y);
+        }
+    }
+    private float ZoomLimit
+    {
+        get
+        {
+            if (!HasReference || CloseupSize.X <= 0 || CloseupSize.Y <= 0) return Mathf.Max(MaxZoom, MinZoom);
+            Vector2 ratio = GetViewportRect().Size / ReferenceToWorld(CloseupSize);
+            return Mathf.Max(MinZoom, Mathf.Min(ratio.X, ratio.Y));
+        }
+    }
 
     public override void _Ready()
     {

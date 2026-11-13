@@ -45,6 +45,9 @@ godot --headless --path . --script res://tests/ProjectTest.cs -- --game-music-ch
 | Ресурсы, локализованные картинки и шрифт | `--resource-checks` |
 | Музыкальные PNG, маски полировки, оплата, торговля и загрузка | `--asset-replacement-checks` |
 | Занавесы и двери комнат: покупка, загрузка, checkpoint и новая игра | `--room-doorway-checks` |
+| Рамки шести комнат и привязка к дневной/ночной схеме | `--room-frame-checks` (прежний alias `--camera-frame-checks`) |
+| Ограничения камеры по схемам, pan/zoom, resize, GUI и pause | `--camera-limits-checks` |
+| Кнопка «Начать», часы, ожидание покупателей и загрузка старых сохранений | `--day-start-checks` |
 | Сохранения и миграции | `--persistence-checks` |
 | Баланс | `--balance-checks` |
 | Таймер дня | `--day-timer-checks` |
@@ -56,7 +59,9 @@ godot --headless --path . --script res://tests/ProjectTest.cs -- --game-music-ch
 | Палитра / кнопки | `--presentation-checks`, `--button-feedback-checks` |
 | Язык в паузе / мишень вышивки | `--pause-localization-checks`, `--embroidery-target-checks` |
 
-Проверки пикселей, палитры, кнопок, мишени вышивки и замены музыкальных ассетов требуют рендеринга: запускайте их без `--headless`. Снимки сохраняются в системный TEMP; `--asset-replacement-checks --asset-preview` сохраняет барабан в `user://drum-polishing.png` изолированной копии.
+Проверки пикселей, палитры, кнопок, мишени вышивки, замены музыкальных ассетов, рамок комнат, границ камеры и ручного старта требуют рендеринга: запускайте их без `--headless`. Снимки сохраняются в системный TEMP; `--asset-replacement-checks --asset-preview` сохраняет барабан в `user://drum-polishing.png` изолированной копии.
+
+Локальные материалы проверки храните в `.local/checks/<task>/`, скачанные схемы — в `.local/references/`, пользовательские оригиналы — в `.local/originals/`. Папка исключена из Git; `.local/.gdignore` исключает её из импорта Godot. В HF-110 evidence HF-102…HF-109 перенесены сюда из `.godot/`, сохраняя имена файлов; пути в исторических отчётах указывают их прежнее расположение. Кэш `.godot/` предназначен для файлов движка.
 
 `tools/verify.ps1` запускает сборку, тесты домена, импорт и интеграционные проверки. Его также следует запускать в изолированной копии проекта:
 
