@@ -12,9 +12,18 @@
 
 ### HF-142 — публикация обучения HF-140/HF-141
 
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-14; HF-140/HF-141 DONE. Пользователь разрешил commit/push.
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-14; HF-140/HF-141 DONE. Пользователь разрешил commit/push.
 
 CP-HF-142 read-set: текущий фронт, diff/status/log/remote Git, evidence `.local/checks/hf140` и `.local/checks/hf141`. Write-set: Git index/commits/main/origin/main; ORCHESTRATION_PLAN.md, docs/GAMEPLAY.md, localization/en.tres, scenes/UI/FirstTradeTutorial.tscn, scripts/Camera/WorldCamera.cs, scripts/TradeScene.cs, scripts/UI/FirstTradeTutorial.cs, scripts/Presentation/TutorialCameraCheckpoint.cs и .uid, tests/Integration/ProjectTest.CameraLimits.cs, tests/Integration/ProjectTest.Menu.cs, tests/Integration/ProjectTest.Tutorial.cs, tests/ProjectTest.cs (публикация готового diff). Out of scope: source/, пользовательский diff scenes/trade_scene.tscn, новые изменения поведения. Приёмка: готовые изменения обучения отправлены обычным push без force, HEAD совпадает с origin/main; пользовательская локальная сцена сохранена вне коммита. Проверки: существующие build/tutorial/camera-limits/card-dealing/intro-transition PASS, staged diff-check, push и сравнение remote HEAD.
+
+Task: HF-142
+Recommended status: REVIEW → принято координатором, DONE
+Changed: опубликован готовый write-set CP-HF-142, feature commit `48e87ff` в origin/main.
+Checks: staged diff-check PASS; обычный push origin main PASS; build/tutorial/camera-limits/card-dealing/intro-transition PASS по evidence HF-140/HF-141.
+Acceptance: камера по этапам, практика управления, обучение каждой новой партии и подтверждение пропуска опубликованы; пользовательский diff scenes/trade_scene.tscn сохранён локально вне коммита.
+Read-set exception: нет.
+Risks/blocker: нет новых; прежние предупреждения UID и общий tooltip baseline не относятся к этой публикации.
+Next: продолжить работу по следующему запросу пользователя.
 
 ### HF-141 — обучение каждой новой партии и подтверждение пропуска
 
