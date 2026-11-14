@@ -12,8 +12,18 @@
 
 ### HF-132 — публикация мини-игр, портретов и кнопок
 
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-14; HF-128–HF-131 DONE; пользователь явно запросил push.
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-14; HF-128–HF-131 DONE; пользователь явно запросил push.
 CP-HF-132 read-set: текущий фронт, git status/diff/log/remotes, evidence .local/checks/hf{128,129,131}; write-set: ORCHESTRATION_PLAN.md, Git index/commit и origin/main для готовых файлов HF-128–HF-131 (art/dialogue/, scenes/UI/{DialoguePlayer,CraftButton}.tscn, scenes/trade_scene.tscn, scripts/Dialogue/DialoguePlayer.cs, scripts/MainMenu.cs, scripts/Presentation/CraftButton{Presentation,Visual}.cs/.uid, scripts/UI/EmbroideryGame.cs, shaders/dialogue_portrait.gdshader/.uid, src/ChikagoShop.Domain/Crafting/MiniGameVariantPicker.cs, tests/ChikagoShop.Domain.Tests/MiniGameVariantPickerTests.cs, tests/Integration/ProjectTest.{DialogueLocalization,Localization,Resources,DialoguePortraits}.cs/.uid, tests/ProjectTest.cs, docs/{ASSET_AUDIT,GAMEPLAY}.md). Out of scope: source/, .local/, игровые сохранения, новые изменения поведения, force-push. Приёмка: обычный push в origin/main, HEAD=origin/main, рабочее дерево чистое. Проверки: fetch/divergence, сохранённые результаты build/domain/rendered checks, staged diff-check/stat, post-push rev/status.
+```text
+Task: HF-132
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: готовые HF-128–HF-131 опубликованы коммитом 8a29144 в origin/main: взвешенные варианты мини-игр, сцена диалога с тремя портретами и исправленными полутонами, общая сцена кнопки с готовой текстурной рамкой и единым оттенком значка. Локальные архивы/проверки не включены.
+Checks: fetch до публикации HEAD...origin/main=0/0; сохранённые local/isolated build PASS, domain 139/139 PASS, dialogue-portraits и craft-localization PASS; staged diff-check PASS; обычный push PASS, после публикации HEAD=origin/main, status пуст.
+Acceptance: изменения доступны в удалённой main, новых поведенческих правок в задаче нет.
+Read-set exception: нет.
+Risks/blocker: прежние предупреждения UID и baseline полного suite описаны в feature-handoff; локальные оригиналы находятся в .local/originals/dialogue/, игровые копии опубликованы.
+Next: основной фронт S1-04.
+```
 ### HF-131 — текстурная рамка крафта и общий оттенок значка
 
 Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-14; HF-130 DONE, активных пересечений нет.
