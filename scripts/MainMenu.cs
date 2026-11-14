@@ -110,6 +110,7 @@ public partial class MainMenu : Control
 
 		BuildLanguageMenu();
 		var volume = GD.Load<PackedScene>("res://scenes/UI/MusicVolumeControl.tscn").Instantiate<MusicVolumeControl>();
+		volume.CustomMinimumSize = new Vector2(_fullscreenButton.CustomMinimumSize.X, volume.CustomMinimumSize.Y);
 		var settings = GetNode<VBoxContainer>("SettingsMenuContainer/Settings");
 		settings.AddChild(volume);
 		settings.MoveChild(volume, settings.GetNode("LanguageRow").GetIndex());

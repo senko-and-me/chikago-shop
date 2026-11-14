@@ -32,6 +32,17 @@ public partial class ProjectTest
                 var percentage = control.GetNode<Label>("Content/Header/Percentage");
                 Check(control.IsVisibleInTree() && Root.GetVisibleRect().Encloses(control.GetGlobalRect()),
                     "Music slider must fit the visible settings panel");
+                var fullscreen = control.GetParent().GetNode<Control>("FullscreenButton");
+                Check(Math.Abs(control.GetGlobalRect().Position.X - fullscreen.GetGlobalRect().Position.X) < 1 &&
+                      Math.Abs(control.Size.X - fullscreen.Size.X) < 1,
+                    "Music volume must align with the fullscreen control and match its width in both menus");
+                if (host is TradeScene)
+                {
+                    Check(control.GetThemeStylebox("panel") is StyleBoxFlat plain &&
+                          plain.BgColor == ((StyleBoxFlat)fullscreen.GetThemeStylebox("normal")).BgColor &&
+                          !control.GetNode<HSlider>("Content/Slider").HasThemeIconOverride("grabber"),
+                        "Pause volume must use the fullscreen background and a plain native slider handle");
+                }
                 Check(title.Tr(title.Text) == (language == "en" ? "Music volume" : "Громкость музыки") &&
                       !title.GetGlobalRect().Intersects(percentage.GetGlobalRect()), "Localized label and percentage must not overlap");
                 if (DisplayServer.GetName() != "headless")

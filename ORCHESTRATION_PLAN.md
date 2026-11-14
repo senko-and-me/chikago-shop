@@ -10,6 +10,29 @@
 
 ## Текущий фронт
 
+### HF-138 — коммиты музыки и объединение с main
+
+Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-14; HF-135…137 DONE. Пользователь запросил коммиты в ветке музыки, затем перенос в main.
+CP-HF-138 read-set: текущий фронт, git status/diff/log/branches, файлы/evidence HF-135…137. Write-set: ORCHESTRATION_PLAN.md, Git index/objects и локальные refs feature/music/main; .local/checks/hf138 — временные индексные версии. Out of scope: source/, игровые сохранения, несвязанные изменения, remote push, переписывание опубликованных коммитов. Приёмка: существующая feature/music продвинута fast-forward к актуальной main, три тематических коммита (пролог/громкость/оформление), main получает их fast-forward; итоговое дерево соответствует проверенному результату, status чистый. Проверки: ancestry, staged diff-check каждого коммита, сохранённые build/music checks, итоговые refs/status/tree.
+
+
+### HF-137 — ширина громкости в меню и простое оформление в паузе
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-14; HF-136 DONE, активных пересечений нет.
+CP-HF-137 read-set/write-set: ORCHESTRATION_PLAN.md, scripts/{MainMenu.cs,UI/PauseMenu.cs,UI/MusicVolumeControl.cs}, tests/Integration/ProjectTest.MusicSettings.cs; read-only scenes/UI/MusicVolumeControl.tscn, themes/game_theme.tres. .local/checks/hf137 — изолированная копия/evidence. Out of scope: source/, аудиологика/сохранения/переходы, прежние пользовательские изменения, commit/push. Приёмка: в главном меню громкость той же ширины и выравнивания, что FullscreenButton; в паузе простой серый фон как у полного экрана, без бумажной рамки/фигурного бегунка; RU/EN и отступы сохраняются. Проверки: build, rendered --music-settings-checks (960×540/1280×720, ширина/стили/ввод/сохранение), diff-check.
+
+
+```text
+Task: HF-137
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: MainMenu задаёт громкости ту же ширину500, что FullscreenButton; PauseMenu включает PlainStyle общего MusicVolumeControl: ровный фон как FullscreenButton, стандартный круглый бегунок, обычный размер шрифта и компактные отступы. Добавлены regression assertions ширины/выравнивания и plain-стиля.
+Checks: dotnet build ChikagoShop.sln --no-restore → PASS (0 warnings/errors); isolated rendered --music-settings-checks → PASS (exit0, RU/EN,960×540/1280×720, мышь/клавиатура/сохранение); git diff --check → PASS.
+Acceptance: ширина и положение обоих блоков совпадают с полным экраном; бумажная рамка и фигурный бегунок остались только в главном меню. Визуально просмотрены menu-volume-ru-1280.png и pause-volume-ru-960.png. Evidence: .local/checks/hf137/settings*.log и project/*-volume-*.png.
+Read-set exception: готовая изолированная копия HF-136 и новая сборка использованы для рендера; source/ и игровые сохранения не читались.
+Risks/blocker: прежнее сообщение Failed to read the root certificate store тестового окружения; проверки PASS. Commit/push не выполнялись.
+Next: пользовательская приёмка оформления.
+```
+
 ### HF-136 — ползунок громкости музыки в настройках
 
 Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-14; HF-135 DONE, других активных пересечений нет.
