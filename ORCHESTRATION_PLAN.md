@@ -12,8 +12,18 @@
 
 ### HF-134 — публикация нового комплекта предметов
 
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-14; HF-133 DONE; пользователь явно запросил push во время реализации.
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-14; HF-133 DONE; пользователь явно запросил push во время реализации.
 CP-HF-134 read-set: текущий фронт, git status/diff/log/remotes, evidence HF-133. Write-set: ORCHESTRATION_PLAN.md, Git index/commit и origin/main для точного write-set HF-133. Out of scope: source/, .local/, сохранения, новые изменения поведения, force-push. Приёмка: обычный push в origin/main, HEAD=origin/main, status чистый. Проверки: fetch до публикации0/0; сохранённые build/domain/rendered checks HF-133; staged diff-check/stat; post-push revision/status.
+```text
+Task: HF-134
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: HF-133 опубликована в origin/main коммитом cb8b5d0:16 новых артов, каталог/редкости и нормализованные вероятности,16 готовых торговых вариантов сцены,8 вариантов полировки, удаление старого арта и обновлённые тесты/документы.
+Checks: fetch0/0; build PASS, domain141/141 PASS, rendered asset-replacement и resource-checks PASS (evidence HF-133); staged diff-check PASS; обычный push PASS; после push HEAD=origin/main, status пустой.
+Acceptance: новый комплект доступен в удалённой main; локальные тестовые данные/сохранения не опубликованы.
+Read-set exception: нет.
+Risks/blocker: прежние предупреждения UID и legacy aliases описаны в HF-133.
+Next: основной фронт S1-04.
+```
 ### HF-133 — новый комплект предметов и удаление старого арта
 
 Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-14; HF-132 DONE, пользователь разрешил замену/удаление старого арта и самостоятельное назначение редкостей.
