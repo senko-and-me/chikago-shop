@@ -3,6 +3,12 @@
 [resource]
 locale = "en"
 messages = {
+&"Пропустить обучение?": &"Skip the tutorial?",
+&"Подсказки для этой партии будут скрыты. Обучение можно повторить в меню паузы.": &"Hints will be hidden for this run. You can replay the tutorial from the pause menu.",
+&"Продолжить обучение": &"Continue tutorial",
+&"Да, пропустить": &"Yes, skip",
+&"Осмотритесь: зажмите ЛКМ на свободном фоне и подвигайте камеру. Затем измените масштаб колесом мыши. Выполните оба действия, чтобы продолжить.": &"Look around: hold the left mouse button on the background and move the camera. Then change the zoom with the mouse wheel. Complete both actions to continue.",
+&"Перемещение: {0}  •  Масштаб: {1}": &"Movement: {0}  •  Zoom: {1}",
 &"Громкость музыки": &"Music volume",
 &"виолончель": &"cello",
 &"саксофон": &"saxophone",

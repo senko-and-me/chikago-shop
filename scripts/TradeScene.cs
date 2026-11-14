@@ -19,6 +19,8 @@ public partial class TradeScene : Node2D
 
 	[Export]
 	public string SavePath { get; set; } = "user://trade_progress.json";
+	public bool LoadedSavedGame { get; private set; }
+	public event Action NewGameStarted;
 
 	private static readonly int FirstDeadline = Economy.Quotas.Single(entry => entry.Id == "first").DeadlineDay;
 	private static readonly int FinalDay = Economy.Days.TotalDays;
@@ -346,6 +348,7 @@ public partial class TradeScene : Node2D
 		DebugHotkeysController.Attach(this, _dayCycle);
 
 		bool restored = LoadProgress();
+		LoadedSavedGame = restored;
 
 		RefreshScore();
 		RefreshProgress();
@@ -1110,6 +1113,7 @@ public partial class TradeScene : Node2D
 
 	public void NewGame()
 	{
+		LoadedSavedGame = false;
 		GetNode<WorldCamera>("Camera2D").ResetToOverview();
 		_dayCycle.Reset();
 		FinishTrade();
@@ -1150,6 +1154,7 @@ public partial class TradeScene : Node2D
 		_inventoryUI.UpdateUI(_storedItems);
 		RefreshShowcases();
 		SaveProgress();
+		NewGameStarted?.Invoke();
 	}
 
 }

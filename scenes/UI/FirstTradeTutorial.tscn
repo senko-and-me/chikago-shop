@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" path="res://scripts/UI/FirstTradeTutorial.cs" id="1_tutorial"]
 [ext_resource type="Theme" path="res://themes/game_theme.tres" id="2_theme"]
+[ext_resource type="Script" path="res://scripts/Presentation/TutorialCameraCheckpoint.cs" id="3_checkpoint"]
 
 [sub_resource type="StyleBoxFlat" id="Paper"]
 content_margin_left = 16.0
@@ -29,6 +30,47 @@ shadow_size = 2
 process_mode = 3
 layer = 95
 script = ExtResource("1_tutorial")
+CameraTravelSeconds = 0.8
+
+[node name="CameraCheckpoints" type="Node2D" parent="."]
+
+[node name="Camera" type="Marker2D" parent="CameraCheckpoints"]
+script = ExtResource("3_checkpoint")
+FocusTarget = NodePath("World/RoomLayout")
+ReferenceViewSize = Vector2(1900, 1068.75)
+
+[node name="Start" type="Marker2D" parent="CameraCheckpoints"]
+script = ExtResource("3_checkpoint")
+Overview = true
+
+[node name="Craft" type="Marker2D" parent="CameraCheckpoints"]
+script = ExtResource("3_checkpoint")
+FocusTarget = NodePath("World/Atelier/Background")
+ReferenceViewSize = Vector2(1600, 900)
+
+[node name="Select" type="Marker2D" parent="CameraCheckpoints"]
+script = ExtResource("3_checkpoint")
+FocusTarget = NodePath("World/Atelier/Background")
+ReferenceViewSize = Vector2(1900, 1068.75)
+
+[node name="Place" type="Marker2D" parent="CameraCheckpoints"]
+script = ExtResource("3_checkpoint")
+FocusTarget = NodePath("World/ShowroomLeft/ShowroomBackground")
+ReferenceViewSize = Vector2(1600, 900)
+
+[node name="WaitBuyer" type="Marker2D" parent="CameraCheckpoints"]
+script = ExtResource("3_checkpoint")
+FocusTarget = NodePath("World/ShowroomLeft/ShowroomBackground")
+ReferenceViewSize = Vector2(1900, 1068.75)
+
+[node name="Offer" type="Marker2D" parent="CameraCheckpoints"]
+script = ExtResource("3_checkpoint")
+FocusTarget = NodePath("World/TradingRoom/Item")
+ReferenceViewSize = Vector2(1400, 787.5)
+
+[node name="Summary" type="Marker2D" parent="CameraCheckpoints"]
+script = ExtResource("3_checkpoint")
+Overview = true
 
 [node name="Root" type="Control" parent="."]
 visible = false
@@ -81,6 +123,14 @@ theme_override_font_sizes/font_size = 14
 text = "Колесо — масштаб. Зажмите ЛКМ на фоне, чтобы двигать камеру."
 autowrap_mode = 3
 
+[node name="CameraProgress" type="Label" parent="Root/Panel/Content"]
+visible = false
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.13, 0.13, 0.13, 1)
+theme_override_font_sizes/font_size = 17
+autowrap_mode = 3
+
 [node name="Actions" type="HBoxContainer" parent="Root/Panel/Content"]
 layout_mode = 2
 theme_override_constants/separation = 8
@@ -97,6 +147,75 @@ layout_mode = 2
 size_flags_horizontal = 3
 custom_minimum_size = Vector2(0, 34)
 text = "Понятно"
+
+[node name="SkipConfirmation" type="Control" parent="Root"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+
+[node name="Shade" type="ColorRect" parent="Root/SkipConfirmation"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.4)
+
+[node name="Center" type="CenterContainer" parent="Root/SkipConfirmation"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Panel" type="PanelContainer" parent="Root/SkipConfirmation/Center"]
+custom_minimum_size = Vector2(440, 0)
+layout_mode = 2
+theme_override_styles/panel = SubResource("Paper")
+
+[node name="Content" type="VBoxContainer" parent="Root/SkipConfirmation/Center/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="Root/SkipConfirmation/Center/Panel/Content"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.08, 0.08, 0.08, 1)
+theme_override_font_sizes/font_size = 24
+text = "Пропустить обучение?"
+horizontal_alignment = 1
+
+[node name="Message" type="Label" parent="Root/SkipConfirmation/Center/Panel/Content"]
+custom_minimum_size = Vector2(400, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.13, 0.13, 0.13, 1)
+theme_override_font_sizes/font_size = 19
+text = "Подсказки для этой партии будут скрыты. Обучение можно повторить в меню паузы."
+autowrap_mode = 3
+
+[node name="Actions" type="HBoxContainer" parent="Root/SkipConfirmation/Center/Panel/Content"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Cancel" type="Button" parent="Root/SkipConfirmation/Center/Panel/Content/Actions"]
+layout_mode = 2
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 40)
+text = "Продолжить обучение"
+
+[node name="Confirm" type="Button" parent="Root/SkipConfirmation/Center/Panel/Content/Actions"]
+layout_mode = 2
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 40)
+text = "Да, пропустить"
 
 [node name="Replay" type="Button" parent="."]
 visible = false

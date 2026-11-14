@@ -50,6 +50,28 @@ public partial class ProjectTest
                 camera.NavigationRegion == new Rect2(429, 563, 3662, 1440) &&
                 camera.OverviewSize == new Vector2(2560, 1440) && camera.CloseupSize == new Vector2(1036, 583),
                 "Scene limits must use the measured red rectangles from all three user references");
+            int navigationEvents = 0;
+            camera.UserPanned += _ => navigationEvents++;
+            camera.UserZoomed += () => navigationEvents++;
+            camera.FocusOn(new Vector2(-100000, 100000), new Vector2(1600, 900), 0.25);
+            float zoomBeforeInput = camera.Zoom.X;
+            camera._Input(new InputEventMouseButton { ButtonIndex = MouseButton.WheelUp, Pressed = true });
+            camera._UnhandledInput(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = true });
+            camera._Input(new InputEventMouseMotion { Relative = new Vector2(400, 0) });
+            Check(camera.IsFocusing && camera.Zoom.X == zoomBeforeInput && navigationEvents == 0,
+                "Automatic focus must temporarily block manual navigation and never report practice completion");
+            while (camera.IsFocusing)
+            {
+                CheckInside();
+                await ToSignal(this, SignalName.ProcessFrame);
+            }
+            CheckInside();
+            camera.FocusOn(allowed.GetCenter(), new Vector2(1600, 900), 0.5);
+            Root.Size = new Vector2I(960, 540);
+            await ToSignal(this, SignalName.ProcessFrame);
+            Check(!camera.IsFocusing && navigationEvents == 0,
+                "Resize must cancel a focus flight without generating user-navigation events");
+            CheckInside();
             foreach (Vector2I size in new[] { new Vector2I(1280, 720), new Vector2I(1000, 800) })
             {
                 Root.Size = size;

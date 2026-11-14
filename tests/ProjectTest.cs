@@ -33,7 +33,7 @@ public partial class ProjectTest : SceneTree
             if (OS.GetCmdlineUserArgs().Contains("--tutorial-checks"))
             {
                 await TestFirstTradeTutorial();
-                GD.Print("TUTORIAL_CHECKS_PASS: first sale, real clicks, highlights, pause, localization, skip, replay and reload");
+                GD.Print("TUTORIAL_CHECKS_PASS: camera practice/flights, first sale, real clicks, highlights, pause, localization, skip, replay and reload");
                 Quit();
                 return;
             }

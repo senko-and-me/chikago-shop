@@ -20,6 +20,11 @@ public partial class WorldCamera : Camera2D
     private float _targetZoom;
     private Vector2 _zoomAnchor;
     private Tween _overviewTween;
+    private Tween _focusTween;
+    public event Action<Vector2> UserPanned;
+    public event Action UserZoomed;
+    public event Action OverviewReset;
+    public bool IsFocusing => _focusTween?.IsRunning() == true;
     public bool IsReturningToOverview => _overviewTween?.IsRunning() == true;
     private Rect2 WorldBounds => BoundsSource.GlobalTransform * BoundsSource.GetRect();
     private bool HasReference => ReferenceSize.X > 0 && ReferenceSize.Y > 0;
@@ -50,12 +55,13 @@ public partial class WorldCamera : Camera2D
     public override void _Ready()
     {
         _viewport = GetViewport();
-        _viewport.SizeChanged += ClampToBounds;
+        _viewport.SizeChanged += OnViewportSizeChanged;
         ResetToOverview();
     }
 
     public void ResetToOverview()
     {
+        CancelFocusTransition();
         CancelOverviewTransition();
         CancelDrag();
         _targetZoom = MinZoom;
@@ -63,10 +69,12 @@ public partial class WorldCamera : Camera2D
         Position = WorldBounds.GetCenter();
         _zoomAnchor = GetViewportRect().Size / 2f;
         ClampToBounds();
+        OverviewReset?.Invoke();
     }
 
     public void ReturnToOverview(double duration)
     {
+        CancelFocusTransition();
         CancelOverviewTransition();
         CancelDrag();
         float zoom = MinZoom;
@@ -91,10 +99,51 @@ public partial class WorldCamera : Camera2D
         _targetZoom = Zoom.X;
     }
 
-    public override void _ExitTree()
+    public void FocusOn(Vector2 worldPosition, Vector2 referenceViewSize, double duration)
     {
         CancelOverviewTransition();
-        if (_viewport != null) _viewport.SizeChanged -= ClampToBounds;
+        CancelFocusTransition();
+        CancelDrag();
+        Vector2 view = HasReference ? ReferenceToWorld(referenceViewSize) : referenceViewSize;
+        Vector2 ratio = GetViewportRect().Size / view;
+        float destinationZoom = Mathf.Clamp(Mathf.Max(ratio.X, ratio.Y), MinZoom, ZoomLimit);
+        Vector2 destination = ClampPosition(worldPosition, destinationZoom);
+        Vector2 startPosition = Position;
+        float startZoom = Zoom.X;
+        _focusTween = CreateTween().SetPauseMode(Tween.TweenPauseMode.Stop)
+            .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.InOut);
+        _focusTween.TweenMethod(Callable.From<float>(blend =>
+        {
+            Zoom = Vector2.One * Mathf.Lerp(startZoom, destinationZoom, blend);
+            Position = ClampPosition(startPosition.Lerp(destination, blend), Zoom.X);
+        }), 0f, 1f, duration);
+        _focusTween.TweenCallback(Callable.From(() =>
+        {
+            _focusTween = null;
+            _targetZoom = Zoom.X;
+            _zoomAnchor = GetViewportRect().Size / 2f;
+            ClampToBounds();
+        }));
+    }
+
+    public void CancelFocusTransition()
+    {
+        if (_focusTween?.IsValid() == true) _focusTween.Kill();
+        _focusTween = null;
+        _targetZoom = Zoom.X;
+    }
+
+    private void OnViewportSizeChanged()
+    {
+        CancelFocusTransition();
+        ClampToBounds();
+    }
+
+    public override void _ExitTree()
+    {
+        CancelFocusTransition();
+        CancelOverviewTransition();
+        if (_viewport != null) _viewport.SizeChanged -= OnViewportSizeChanged;
     }
 
     public override void _Notification(int what)
@@ -106,7 +155,7 @@ public partial class WorldCamera : Camera2D
 
     public override void _Process(double delta)
     {
-        if (GetTree().Paused || IsReturningToOverview) return;
+        if (GetTree().Paused || IsReturningToOverview || IsFocusing) return;
         ClampToBounds();
         _targetZoom = Mathf.Clamp(float.IsFinite(_targetZoom) ? _targetZoom : Zoom.X, MinZoom, ZoomLimit);
         float oldZoom = Zoom.X;
@@ -122,7 +171,7 @@ public partial class WorldCamera : Camera2D
 
     public override void _Input(InputEvent @event)
     {
-        if (GetTree().Paused || IsReturningToOverview) return;
+        if (GetTree().Paused || IsReturningToOverview || IsFocusing) return;
         if (@event is InputEventMouseButton { Pressed: true } wheel)
         {
             switch (wheel.ButtonIndex)
@@ -135,14 +184,16 @@ public partial class WorldCamera : Camera2D
             CancelDrag();
         else if (@event is InputEventMouseMotion motion && _dragging)
         {
+            Vector2 before = Position;
             Position -= motion.Relative / Zoom;
             ClampToBounds();
+            if (Position != before) UserPanned?.Invoke((Position - before) * Zoom);
         }
     }
 
     public override void _UnhandledInput(InputEvent @event)
     {
-        if (GetTree().Paused || IsReturningToOverview) return;
+        if (GetTree().Paused || IsReturningToOverview || IsFocusing) return;
         if (@event is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true })
             _dragging = true;
     }
@@ -153,6 +204,7 @@ public partial class WorldCamera : Camera2D
         if (Mathf.IsEqualApprox(newTarget, _targetZoom)) return;
         _targetZoom = newTarget;
         _zoomAnchor = mousePosition;
+        UserZoomed?.Invoke();
     }
 
     public void ClampToBounds()

@@ -4,12 +4,16 @@ using Godot;
 // Observes public gameplay state; tutorial actions never create items, change time or buy anything.
 public partial class FirstTradeTutorial : CanvasLayer
 {
-    public enum Step { Start, Craft, Select, Place, WaitBuyer, Offer, Summary }
+    public enum Step { Camera, Start, Craft, Select, Place, WaitBuyer, Offer, Summary }
+    [Export] public double CameraTravelSeconds { get; set; } = 0.8;
     public Step CurrentStep { get; private set; }
     public bool IsActive { get; private set; }
     public bool IsShowing => _root?.Visible == true;
     public string ProgressPath { get; set; }
     public Control Target { get; private set; }
+    public bool CameraPanDone { get; private set; }
+    public bool CameraZoomDone { get; private set; }
+    public bool IsSkipConfirmationOpen => _confirmation?.Visible == true;
     private TradeScene _game;
     private Control _root;
     private PanelContainer _panel;
@@ -20,6 +24,14 @@ public partial class FirstTradeTutorial : CanvasLayer
     private int _acceptedAtStart;
     private bool _sawSale;
     private int _lastAccepted;
+    private WorldCamera _camera;
+    private Label _cameraProgress;
+    private Step? _appliedCameraStep;
+    private bool _ownsOverview;
+    private float _panDistance;
+    private Vector2 _viewportSize;
+    private Control _confirmation;
+    private bool _ownsConfirmationPause;
 
     public override void _Ready()
     {
@@ -29,7 +41,16 @@ public partial class FirstTradeTutorial : CanvasLayer
         _highlight = GetNode<Panel>("Root/Highlight");
         _body = GetNode<Label>("Root/Panel/Content/Body");
         _done = GetNode<Button>("Root/Panel/Content/Actions/Done");
-        GetNode<Button>("Root/Panel/Content/Actions/Skip").Pressed += Finish;
+        _cameraProgress = GetNode<Label>("Root/Panel/Content/CameraProgress");
+        _camera = _game.GetNode<WorldCamera>("Camera2D");
+        _camera.UserPanned += OnUserPanned;
+        _camera.UserZoomed += OnUserZoomed;
+        _camera.OverviewReset += OnOverviewReset;
+        _confirmation = GetNode<Control>("Root/SkipConfirmation");
+        GetNode<Button>("Root/Panel/Content/Actions/Skip").Pressed += ShowSkipConfirmation;
+        GetNode<Button>("Root/SkipConfirmation/Center/Panel/Content/Actions/Confirm").Pressed += ConfirmSkip;
+        GetNode<Button>("Root/SkipConfirmation/Center/Panel/Content/Actions/Cancel").Pressed += CancelSkip;
+        _game.NewGameStarted += OnNewGameStarted;
         _done.Pressed += Finish;
         Callable.From(Initialize).CallDeferred();
     }
@@ -39,8 +60,10 @@ public partial class FirstTradeTutorial : CanvasLayer
         if (!IsInsideTree()) return;
         ProgressPath ??= string.IsNullOrEmpty(_game.SavePath) ? "" : _game.SavePath + ".tutorial.cfg";
         var config = new ConfigFile();
-        bool restored = !string.IsNullOrEmpty(ProgressPath) && config.Load(ProgressPath) == Error.Ok;
+        bool restored = _game.LoadedSavedGame && !string.IsNullOrEmpty(ProgressPath) && config.Load(ProgressPath) == Error.Ok;
         bool finished = restored && config.GetValue("tutorial", "finished", false).AsBool();
+        CameraPanDone = restored && config.GetValue("tutorial", "camera_pan_done", false).AsBool();
+        CameraZoomDone = restored && config.GetValue("tutorial", "camera_zoom_done", false).AsBool();
         _initialized = true;
         // Empty SavePath is a transient scene preview/test; explicit Restart still works there.
         if (!finished && !string.IsNullOrEmpty(ProgressPath) && (restored || _game.CurrentDay == 1))
@@ -49,6 +72,8 @@ public partial class FirstTradeTutorial : CanvasLayer
             _acceptedAtStart = restored ? config.GetValue("tutorial", "accepted_at_start", _game.Accepted).AsInt32() : _game.Accepted;
             _lastAccepted = _game.Accepted;
             _sawSale = _game.Accepted > _acceptedAtStart;
+            // Establish the run before its first day starts, so Continue can restore camera practice.
+            _game.PersistProgress();
             Save(false);
             Refresh();
         }
@@ -61,6 +86,10 @@ public partial class FirstTradeTutorial : CanvasLayer
 
     public void Restart()
     {
+        CloseConfirmation();
+        StopCamera();
+        CameraPanDone = CameraZoomDone = false;
+        _panDistance = 0;
         IsActive = true;
         _acceptedAtStart = _game.Accepted;
         _lastAccepted = _game.Accepted;
@@ -69,12 +98,58 @@ public partial class FirstTradeTutorial : CanvasLayer
         Refresh();
     }
 
+    private void OnNewGameStarted()
+    {
+        if (_initialized && (IsActive || !string.IsNullOrEmpty(ProgressPath))) Restart();
+    }
+
+    private void ShowSkipConfirmation()
+    {
+        if (!IsActive || IsSkipConfirmationOpen || GetTree().Paused) return;
+        StopCamera();
+        _confirmation.Show();
+        _ownsConfirmationPause = true;
+        GetTree().Paused = true;
+        GetNode<Button>("Root/SkipConfirmation/Center/Panel/Content/Actions/Cancel").GrabFocus();
+        Refresh();
+    }
+
+    private void CloseConfirmation()
+    {
+        if (GodotObject.IsInstanceValid(_confirmation)) _confirmation.Hide();
+        if (_ownsConfirmationPause) GetTree().Paused = false;
+        _ownsConfirmationPause = false;
+    }
+
+    private void CancelSkip()
+    {
+        if (!IsSkipConfirmationOpen) return;
+        CloseConfirmation();
+        Refresh();
+    }
+
+    private void ConfirmSkip()
+    {
+        if (!IsSkipConfirmationOpen) return;
+        CloseConfirmation();
+        Finish();
+    }
+
+    public override void _Input(InputEvent input)
+    {
+        if (!IsSkipConfirmationOpen || input is not InputEventKey { Pressed: true, Echo: false, Keycode: Key.Escape }) return;
+        CancelSkip();
+        GetViewport().SetInputAsHandled();
+    }
+
     private void Finish()
     {
+        StopCamera();
         IsActive = false;
         _root.Hide();
         Target = null;
         Save(true);
+        _camera.ReturnToOverview(CameraTravelSeconds);
     }
 
     private void Save(bool finished)
@@ -83,6 +158,8 @@ public partial class FirstTradeTutorial : CanvasLayer
         var config = new ConfigFile();
         config.SetValue("tutorial", "finished", finished);
         config.SetValue("tutorial", "accepted_at_start", _acceptedAtStart);
+        config.SetValue("tutorial", "camera_pan_done", CameraPanDone);
+        config.SetValue("tutorial", "camera_zoom_done", CameraZoomDone);
         Error error = config.Save(ProgressPath);
         if (error != Error.Ok) GD.PushWarning($"Tutorial progress could not be saved: {error}");
     }
@@ -98,14 +175,27 @@ public partial class FirstTradeTutorial : CanvasLayer
 
     private void Refresh()
     {
+        if (IsSkipConfirmationOpen)
+        {
+            _root.Show();
+            _panel.Hide();
+            _highlight.Hide();
+            return;
+        }
+        _panel.Show();
         if (GetTree().Paused || _game.CraftMiniGameOpen || _game.DayTransitionOpen || _game.Failed || _game.Completed)
         {
             _root.Hide();
+            StopCamera(cancelOverview: !_game.DayTransitionOpen);
             return;
         }
+        Vector2 size = GetViewport().GetVisibleRect().Size;
+        if (_viewportSize != size) { StopCamera(); _viewportSize = size; }
         _root.Show();
         Target = null;
-        if (_sawSale) SetStep(Step.Summary, "Первая продажа готова! Следите за энергией и суммой квоты в панели дня. К сроку на счёте должна быть нужная сумма.",
+        if (!CameraPanDone || !CameraZoomDone) SetStep(Step.Camera,
+            "Осмотритесь: зажмите ЛКМ на свободном фоне и подвигайте камеру. Затем измените масштаб колесом мыши. Выполните оба действия, чтобы продолжить.", null);
+        else if (_sawSale) SetStep(Step.Summary, "Первая продажа готова! Следите за энергией и суммой квоты в панели дня. К сроку на счёте должна быть нужная сумма.",
             _game.GetNode<Control>("HUD/Root/ProgressPanel"));
         else if (_game.TradeActive) SetStep(Step.Offer,
             "Покупатель предлагает цену. Кнопка «✓» продаёт товар. Кнопка «×» меняет покупателя и тратит попытку: новая цена может стать ниже. Продайте первый предмет.",
@@ -143,6 +233,54 @@ public partial class FirstTradeTutorial : CanvasLayer
         _body.Text = message;
         Target = target;
         _done.Visible = step == Step.Summary;
+        _cameraProgress.Visible = step == Step.Camera;
+        _cameraProgress.Text = GameLocalization.Format("Перемещение: {0}  •  Масштаб: {1}",
+            CameraPanDone ? "✓" : "—", CameraZoomDone ? "✓" : "—");
+        if (_appliedCameraStep != step && !_game.DayTransitionOpen)
+        {
+            GetNode<TutorialCameraCheckpoint>("CameraCheckpoints/" + step).MoveCamera(_game, _camera, CameraTravelSeconds);
+            _ownsOverview = GetNode<TutorialCameraCheckpoint>("CameraCheckpoints/" + step).Overview;
+            _appliedCameraStep = step;
+        }
+    }
+
+    private bool Practicing => IsActive && IsShowing && CurrentStep == Step.Camera && !GetTree().Paused;
+
+    private void OnUserPanned(Vector2 displacement)
+    {
+        if (!Practicing || CameraPanDone) return;
+        _panDistance += displacement.Length();
+        if (_panDistance < 64) return;
+        CameraPanDone = true;
+        Save(false);
+    }
+
+    private void OnUserZoomed()
+    {
+        if (!Practicing || CameraZoomDone) return;
+        CameraZoomDone = true;
+        Save(false);
+    }
+
+    private void StopCamera(bool cancelOverview = true)
+    {
+        _camera.CancelFocusTransition();
+        if (_ownsOverview && cancelOverview) _camera.CancelOverviewTransition();
+        _ownsOverview = false;
+        _appliedCameraStep = null;
+    }
+
+    private void OnOverviewReset() => _appliedCameraStep = null;
+
+    public override void _ExitTree()
+    {
+        CloseConfirmation();
+        if (GodotObject.IsInstanceValid(_game)) _game.NewGameStarted -= OnNewGameStarted;
+        if (!GodotObject.IsInstanceValid(_camera)) return;
+        _camera.UserPanned -= OnUserPanned;
+        _camera.UserZoomed -= OnUserZoomed;
+        _camera.OverviewReset -= OnOverviewReset;
+        StopCamera();
     }
 
     private void Layout()

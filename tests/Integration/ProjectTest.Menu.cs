@@ -19,9 +19,14 @@ public partial class ProjectTest
         foreach (bool skip in new[] { false, true })
         {
             var menu = menuScene.Instantiate<MainMenu>();
-            Check(menu.GameScene?.ResourcePath == "res://scenes/trade_scene.tscn",
-                "The serialized main menu must reference the actual game scene");
-            if (nullOverride) menu.GameScene = null;
+            Check(menu.GameScene == null || menu.GameScene.ResourcePath == "res://scenes/trade_scene.tscn",
+                "The serialized menu must use the actual game scene or the supported empty-override fallback");
+            menu.GameScene = nullOverride ? null : GD.Load<PackedScene>("res://scenes/trade_scene.tscn");
+            var oldTutorial = new ConfigFile();
+            oldTutorial.SetValue("tutorial", "finished", true);
+            oldTutorial.SetValue("tutorial", "camera_pan_done", true);
+            oldTutorial.SetValue("tutorial", "camera_zoom_done", true);
+            oldTutorial.Save("user://trade_progress.json.tutorial.cfg");
             Root.AddChild(menu);
             CurrentScene = menu;
             menu.OnPlayPressed();
@@ -43,16 +48,22 @@ public partial class ProjectTest
             Check(CurrentScene is TradeScene && !Paused,
                 $"Intro must enter gameplay instead of returning to NewGame (null={nullOverride}, skip={skip})");
             var game = (TradeScene)CurrentScene;
+            var tutorial = game.GetNode<FirstTradeTutorial>("FirstTradeTutorial");
+            Check(!game.LoadedSavedGame && tutorial.IsActive && !tutorial.CameraPanDone && !tutorial.CameraZoomDone,
+                "Every actual menu NewGame path must ignore the previous run's completed tutorial");
             game.SetProcess(false);
             Check(game.CurrentDay == 1 && game.Score == game.StartingMoney && game.DayRemainingSeconds > 88 &&
-                  game.GetNode<Label>("HUD/Root/DayTimer").Text == "90",
-                "The exported game must start a real new day with the current economy and clock");
+                  !game.DayStarted && game.GetNode<Button>("HUD/Root/DayTimer/StartButton").Visible,
+                "A new run must preserve the current starting economy and wait for manual day start during camera practice");
             game.Score = 321;
             game.PersistProgress();
             game.QueueFree();
             CurrentScene = null;
             await ToSignal(this, SignalName.ProcessFrame);
         }
+        var completedTutorial = new ConfigFile();
+        completedTutorial.SetValue("tutorial", "finished", true);
+        completedTutorial.Save("user://trade_progress.json.tutorial.cfg");
         var continueMenu = menuScene.Instantiate<MainMenu>();
         continueMenu.GameScene = null;
         Root.AddChild(continueMenu);
@@ -61,6 +72,9 @@ public partial class ProjectTest
         continueMenu.GetNode<TextureButton>("MainMenuContainer/Menu/ContinueButton").EmitSignal(BaseButton.SignalName.Pressed);
         await ToSignal(this, SignalName.ProcessFrame);
         await ToSignal(this, SignalName.ProcessFrame);
+        Check(CurrentScene is TradeScene continued && continued.LoadedSavedGame &&
+            !continued.GetNode<FirstTradeTutorial>("FirstTradeTutorial").IsActive,
+            "Actual menu Continue must preserve the current run's completed or skipped tutorial");
         Check(CurrentScene is TradeScene && ((TradeScene)CurrentScene).Score == 321,
             "Continue must also resolve a missing scene without resetting saved progress");
         CurrentScene.QueueFree();
