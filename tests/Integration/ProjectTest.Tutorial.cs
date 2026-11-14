@@ -41,6 +41,31 @@ public partial class ProjectTest
             MouseButtonAt(point, MouseButton.Left, false);
             await Frame();
         }
+        async Task CheckCameraLocked()
+        {
+            await CameraSettled();
+            var camera = game.GetNode<WorldCamera>("Camera2D");
+            Check(camera.NavigationLocked, "Camera must stay locked after navigation practice");
+            Vector2 position = camera.Position, zoom = camera.Zoom;
+            camera.SetProcess(true);
+            await PanCamera();
+            Vector2 point = new(30, Root.Size.Y * 0.55f);
+            MouseButtonAt(point, MouseButton.WheelUp, true);
+            MouseButtonAt(point, MouseButton.WheelUp, false);
+            await Frame();
+            Check(camera.Position.IsEqualApprox(position) && camera.Zoom.IsEqualApprox(zoom),
+                "Dragging and wheel input must not change a settled tutorial checkpoint");
+            camera.SetProcess(false);
+        }
+        void CheckFreshRun()
+        {
+            Check(game.CurrentDay == 1 && !game.DayStarted && !game.DayClosed &&
+                game.Score == game.StartingMoney && game.EnergyRemaining == game.EnergyCapacity &&
+                game.Accepted == 0 && game.Declined == 0 && game.QuotaStage == 0 &&
+                game.StoredItems.Length == 0 && System.Array.TrueForAll(game.ShowcaseItems, item => item < 0) &&
+                !game.TradeActive && !game.MusicWorkshopUnlocked && !game.GetNode<WorldCamera>("Camera2D").NavigationLocked,
+                "Leaving tutorial must restore a fresh playable day, resources, items and free camera");
+        }
         async Task Create()
         {
             game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
@@ -84,6 +109,7 @@ public partial class ProjectTest
                 !tutorial.CameraPanDone && !tutorial.CameraZoomDone,
                 "An intermediate camera frame must move smoothly without completing the manual practice");
             await CameraSettled();
+            Check(!initialCamera.NavigationLocked, "Practice must allow manual camera movement");
             using (var image = await CapturePresentation("tutorial-camera")) { }
             var panelRect = tutorial.GetNode<Control>("Root/Panel").GetGlobalRect();
             Vector2 uiPoint = panelRect.Position + new Vector2(20, 20);
@@ -105,7 +131,8 @@ public partial class ProjectTest
             await Frame();
             Check(tutorial.CameraZoomDone, "A real wheel input must complete zoom practice");
             Step(FirstTradeTutorial.Step.Start);
-            await CameraSettled();
+            await CheckCameraLocked();
+            Check(!tutorial.HasNode("Root/Panel/Content/Navigation"), "Later steps must not repeat manual navigation instructions");
             Highlight();
             Check(!Paused && !game.DayStarted && game.Score == game.StartingMoney && game.StoredItems.Length == 0,
                 "Starting the tutorial must not pause gameplay, spend money or generate items");
@@ -113,7 +140,7 @@ public partial class ProjectTest
             await Frame();
             Step(FirstTradeTutorial.Step.Craft);
             Check(game.GetNode<WorldCamera>("Camera2D").IsFocusing, "Craft instructions must start a new camera flight");
-            await CameraSettled();
+            await CheckCameraLocked();
             Highlight();
             using (var image = await CapturePresentation("tutorial-craft")) { }
             await ClickControl(game, "World/Atelier/GetItemButton");
@@ -122,7 +149,7 @@ public partial class ProjectTest
             FinishEmbroidery(game);
             await Frame();
             Step(FirstTradeTutorial.Step.Select);
-            await CameraSettled();
+            await CheckCameraLocked();
             Highlight();
             await Reload();
             Step(FirstTradeTutorial.Step.Select);
@@ -131,7 +158,7 @@ public partial class ProjectTest
             await ClickControl(game, "HUD/InventoryUI/ScrollContainer/HBoxContainer/" + slots.GetChild(0).Name);
             await Frame();
             Step(FirstTradeTutorial.Step.Place);
-            await CameraSettled();
+            await CheckCameraLocked();
             var camera = game.GetNode<WorldCamera>("Camera2D");
             camera.Position += new Vector2(100, 50);
             camera.Zoom *= 1.1f;
@@ -154,11 +181,11 @@ public partial class ProjectTest
             await ClickControl(game, "World/ShowroomLeft/Showcases/Slot1");
             await Frame();
             Step(FirstTradeTutorial.Step.WaitBuyer);
-            await CameraSettled();
+            await CheckCameraLocked();
             game._Process(game.BuyerCountdown + 0.01);
             await Frame();
             Step(FirstTradeTutorial.Step.Offer);
-            await CameraSettled();
+            await CheckCameraLocked();
             Highlight();
             var buyerHint = tutorial.GetNode<Label>("Root/Panel/Content/Body");
             Check(buyerHint.Text.Contains("✓") && buyerHint.Text.Contains("×"),
@@ -167,11 +194,13 @@ public partial class ProjectTest
             await ClickControl(game, "World/TradingRoom/Item/TradePanel/Content/Buttons/AcceptButton");
             await Frame();
             Step(FirstTradeTutorial.Step.Summary);
+            await CheckCameraLocked();
             Check(game.Score == cash + offer && game.Accepted == 1, "The guided sale must apply exactly the normal reward once");
             await Reload();
             Step(FirstTradeTutorial.Step.Summary);
             await ClickControl(game, "FirstTradeTutorial/Root/Panel/Content/Actions/Done");
             Check(!tutorial.IsActive && !tutorial.IsShowing, "Acknowledging the summary must complete onboarding");
+            CheckFreshRun();
             Check(game.GetNode<WorldCamera>("Camera2D").IsReturningToOverview, "Completing onboarding must fly back to the initial overview");
             await CameraSettled();
             Vector2 returnedPosition = game.GetNode<WorldCamera>("Camera2D").Position;
@@ -182,6 +211,7 @@ public partial class ProjectTest
                 "The completed tutorial must finish at the same view as a new game");
             await Reload();
             Check(!tutorial.IsActive, "Completed onboarding must not replay when loading the game");
+            CheckFreshRun();
             game.GetNode<PauseMenu>("PauseMenu").Open();
             await Frame();
             await ClickControl(game, "PauseMenu/Root/Overlay/Center/Panel/Content/Menu/NewGameButton");
@@ -244,14 +274,27 @@ public partial class ProjectTest
             Check(!tutorial.IsSkipConfirmationOpen && !Paused &&
                 !game.GetNode<Control>("PauseMenu/Root/Overlay").Visible,
                 "Escape must cancel skip without opening the pause menu or ending onboarding");
+            await ClickControl(game, "HUD/Root/DayTimer/StartButton");
+            game.GetItemFromAtelier();
+            FinishEmbroidery(game);
+            await Frame();
+            Check(game.DayStarted && game.Score < game.StartingMoney && game.StoredItems.Length > 0 &&
+                game.EnergyRemaining < game.EnergyCapacity, "Skip must be tested after real paid practice has changed the run");
+            int scoreBeforeCancel = game.Score;
+            await ClickControl(game, "FirstTradeTutorial/Root/Panel/Content/Actions/Skip");
+            await ClickControl(game, "FirstTradeTutorial/Root/SkipConfirmation/Center/Panel/Content/Actions/Cancel");
+            Check(game.Score == scoreBeforeCancel && game.DayStarted && game.StoredItems.Length > 0,
+                "Cancelling skip must preserve the current practice day and its items");
             await ClickControl(game, "FirstTradeTutorial/Root/Panel/Content/Actions/Skip");
             await ClickControl(game, "FirstTradeTutorial/Root/SkipConfirmation/Center/Panel/Content/Actions/Confirm");
             Check(!tutorial.IsActive && !tutorial.IsSkipConfirmationOpen && !Paused,
                 "Only explicit confirmation must finish the tutorial and unpause gameplay");
+            CheckFreshRun();
             Check(game.GetNode<WorldCamera>("Camera2D").IsReturningToOverview, "Skipping must also return to the starting overview");
             await CameraSettled();
             await Reload();
             Check(!tutorial.IsActive && !tutorial.IsShowing, "Skipping must persist just like completing onboarding");
+            CheckFreshRun();
             game.NewGame();
             await Frame();
             Step(FirstTradeTutorial.Step.Camera);

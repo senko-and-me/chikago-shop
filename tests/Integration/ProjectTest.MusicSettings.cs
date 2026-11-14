@@ -43,12 +43,33 @@ public partial class ProjectTest
                           !control.GetNode<HSlider>("Content/Slider").HasThemeIconOverride("grabber"),
                         "Pause volume must use the fullscreen background and a plain native slider handle");
                 }
+                else
+                {
+                    var back = host.GetNode<TextureButton>("SettingsMenuContainer/Settings/BackButton");
+                    var languages = control.GetParent().GetNode<HBoxContainer>("LanguageRow");
+                    Check(back.IsVisibleInTree() && back.TextureNormal != null && back.Size.Y >= 60 &&
+                        Root.GetVisibleRect().Encloses(back.GetGlobalRect()) &&
+                        !back.GetGlobalRect().Intersects(languages.GetGlobalRect()),
+                        "The textured Back button must fit below language selection at both window sizes");
+                    Check(languages.GetNode<Button>("RussianButton").Text == "Русский" &&
+                        languages.GetNode<Button>("EnglishButton").GetThemeStylebox("normal") is StyleBoxTexture,
+                        "Scene-authored language controls must use paper textures and correct text");
+                }
                 Check(title.Tr(title.Text) == (language == "en" ? "Music volume" : "Громкость музыки") &&
                       !title.GetGlobalRect().Intersects(percentage.GetGlobalRect()), "Localized label and percentage must not overlap");
                 if (DisplayServer.GetName() != "headless")
                 {
                     using var image = await CapturePresentation();
                     image.SavePng($"res://{name}-{language}-{size.X}.png");
+                }
+                if (host is MainMenu main)
+                {
+                    await ClickControl(main, "SettingsMenuContainer/Settings/BackButton");
+                    Check(!main.GetNode<Control>("SettingsMenuContainer").Visible &&
+                        main.GetNode<Control>("MainMenuContainer").Visible,
+                        "A real Back click must return from settings to the main menu");
+                    main.OnSettingsPressed();
+                    await ToSignal(this, SignalName.ProcessFrame);
                 }
             }
         }

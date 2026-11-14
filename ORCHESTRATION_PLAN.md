@@ -10,6 +10,29 @@
 
 ## Текущий фронт
 
+### HF-144 — публикация настроек и исправлений обучения
+
+Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-14; HF-143 DONE. Пользователь разрешил commit/push.
+
+CP-HF-144 read-set: текущий фронт, Git status/diff/remote, evidence .local/checks/hf143. Write-set: Git index/commits/main/origin/main; готовый diff HF-143 в ORCHESTRATION_PLAN.md, docs/GAMEPLAY.md, localization/en.tres, scenes/UI/FirstTradeTutorial.tscn, scenes/main_menu.tscn, scripts/Camera/WorldCamera.cs, scripts/MainMenu.cs, scripts/UI/FirstTradeTutorial.cs, tests/Integration/ProjectTest.MusicSettings.cs, tests/Integration/ProjectTest.Tutorial.cs. Out of scope: source/, прежний пользовательский diff scenes/trade_scene.tscn, новые изменения поведения. Приёмка: обычный push без force; HEAD=origin/main; локальная пользовательская сцена сохранена. Проверки: staged diff-check, существующие build/tutorial/music-settings/camera-limits/card-dealing PASS HF-143, push и сравнение refs/status.
+
+### HF-143 — настройки и завершение учебной партии
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-14; HF-142 DONE, активных пересечений нет.
+
+CP-HF-143 read-set: текущий фронт; scripts/MainMenu.cs, scenes/main_menu.tscn, scripts/UI/{FirstTradeTutorial,MusicVolumeControl,PauseMenu}.cs, scripts/Camera/WorldCamera.cs, scripts/TradeScene.cs (существующий NewGame), scripts/Presentation/{TutorialCameraCheckpoint,DayCardSceneTransition,MonochromePresentation}.cs, scenes/UI/{FirstTradeTutorial,MusicVolumeControl}.tscn, themes/game_theme.tres, art/ui/{button_back,panel_small}.png, art/ui/music_slider_grip.svg; tests/Integration/ProjectTest.{Tutorial,MusicSettings,CameraLimits,Helpers}.cs, tests/ProjectTest.cs, docs/GAMEPLAY.md, localization/en.tres; .local/checks/hf139/project/override.cfg. Write-set: ORCHESTRATION_PLAN.md, scripts/MainMenu.cs (привязки настроек), scenes/main_menu.tscn (сценовая разметка и текстурные стили настроек), scripts/UI/FirstTradeTutorial.cs, scenes/UI/FirstTradeTutorial.tscn, scripts/Camera/WorldCamera.cs, tests/Integration/ProjectTest.{Tutorial,MusicSettings}.cs, docs/GAMEPLAY.md, localization/en.tres; .local/checks/hf143 и изолированный test project .local/checks/hf139/project. Out of scope: source/, пользовательский diff scenes/trade_scene.tscn, новая доменная логика/изменение TradeScene.cs, музыка/save schema, commit/push. Приёмка: настройки в бумажном стиле, видимая рабочая Назад в RU/EN960×540 и1280×720; разметка хранится в сцене. Finish/подтверждённый skip через существующий NewGame восстанавливает исходный день/деньги/энергию/товары и сохраняет completed tutorial без повторного запуска; отмена skip не сбрасывает день. Камера принимает пользовательский ввод только на практике, после неё закреплена на checkpoint, в обычной игре свободна; повторная подсказка ЛКМ/колесо не показывается. Проверки: build, rendered tutorial/music-settings/camera-limits/card-dealing, diff-check, сохранность пользовательской сцены.
+
+```text
+Task: HF-143
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: настройки главного меню хранятся в main_menu.tscn (громкость, язык, текстурные стили и компактная Назад). Убрано ограничение максимальной высоты300 и runtime-построение этой разметки; MainMenu связывает существующие кнопки с обработчиками. Бумажные текстуры задают неровные края переключателей языка; выбранный язык светлее. Finish и подтверждённый skip вызывают существующий NewGame без повторного запуска tutorial, сохраняют finished и плавно возвращают камеру к исходному обзору. Тексты итога/подтверждения сообщают о сбросе первого дня. WorldCamera.NavigationLocked блокирует drag/wheel/остаточное масштабирование после практики; checkpoint-перелёты продолжают работать. Повторная строка Navigation удалена из tutorial scene. TradeScene.cs не менялся.
+Checks: local/isolated build PASS (0 warnings/errors); isolated import PASS (только прежние4 duplicate UI UID warnings); rendered tutorial PASS (реальные drag/wheel блокируются на Start/Craft/Select/Place/WaitBuyer/Offer/Summary; практика доступна; finish/skip восстанавливают стартовые ресурсы/товары/состояние дня и сохраняются при reload; отмена skip сохраняет оплаченный крафт). Rendered music-settings PASS (RU/EN960×540/1280×720, видимая текстурная Назад, реальный клик возвращает меню, громкость/пауза/сохранение работают). Rendered camera-limits и card-dealing PASS. stderr всех4 runtime-групп пуст; git diff-check PASS; SHA256 пользовательской trade_scene.tscn совпадает с hf139 backup. Снимок menu-volume-ru-960.png просмотрен. Evidence: .local/checks/hf143, screenshots в .local/checks/hf139/project.
+Acceptance: все требования подтверждены; в обычной игре после обучения камера свободна, следующий первый день ожидает нажатия Начать со стартовыми ресурсами; finished не вызывает цикл повторного обучения.
+Read-set exception: нет; source/ и реальные пользовательские сохранения не читались. Рендер выполнялся в прежнем изолированном user:// HF139.
+Risks/blocker: прежние duplicate UID warnings; повтор обучения через паузу также заканчивается сбросом учебной партии, что явно указано в документации и подтверждении skip.
+Next: пользовательская приёмка; commit/push не выполнялись.
+```
+
 ### HF-142 — публикация обучения HF-140/HF-141
 
 Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-14; HF-140/HF-141 DONE. Пользователь разрешил commit/push.

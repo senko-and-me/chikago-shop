@@ -1,7 +1,7 @@
 using System.Linq;
 using Godot;
 
-// Observes public gameplay state; tutorial actions never create items, change time or buy anything.
+// Observes gameplay during practice and resets the practice run through the existing NewGame action on exit.
 public partial class FirstTradeTutorial : CanvasLayer
 {
     public enum Step { Camera, Start, Craft, Select, Place, WaitBuyer, Offer, Summary }
@@ -32,6 +32,7 @@ public partial class FirstTradeTutorial : CanvasLayer
     private Vector2 _viewportSize;
     private Control _confirmation;
     private bool _ownsConfirmationPause;
+    private bool _finishing;
 
     public override void _Ready()
     {
@@ -100,13 +101,14 @@ public partial class FirstTradeTutorial : CanvasLayer
 
     private void OnNewGameStarted()
     {
-        if (_initialized && (IsActive || !string.IsNullOrEmpty(ProgressPath))) Restart();
+        if (!_finishing && _initialized && (IsActive || !string.IsNullOrEmpty(ProgressPath))) Restart();
     }
 
     private void ShowSkipConfirmation()
     {
         if (!IsActive || IsSkipConfirmationOpen || GetTree().Paused) return;
         StopCamera();
+        _camera.NavigationLocked = true;
         _confirmation.Show();
         _ownsConfirmationPause = true;
         GetTree().Paused = true;
@@ -144,10 +146,20 @@ public partial class FirstTradeTutorial : CanvasLayer
 
     private void Finish()
     {
+        if (!IsActive || _finishing) return;
+        _finishing = true;
         StopCamera();
         IsActive = false;
         _root.Hide();
         Target = null;
+        _camera.NavigationLocked = false;
+        // Reuse the game's reset; suppress its tutorial replay notification for this one reset.
+        // Preserve the view so the reset ends with a smooth flight rather than a camera jump.
+        Vector2 position = _camera.Position, zoom = _camera.Zoom;
+        try { _game.NewGame(); }
+        finally { _finishing = false; }
+        _camera.Position = position;
+        _camera.Zoom = zoom;
         Save(true);
         _camera.ReturnToOverview(CameraTravelSeconds);
     }
@@ -195,7 +207,7 @@ public partial class FirstTradeTutorial : CanvasLayer
         Target = null;
         if (!CameraPanDone || !CameraZoomDone) SetStep(Step.Camera,
             "Осмотритесь: зажмите ЛКМ на свободном фоне и подвигайте камеру. Затем измените масштаб колесом мыши. Выполните оба действия, чтобы продолжить.", null);
-        else if (_sawSale) SetStep(Step.Summary, "Первая продажа готова! Следите за энергией и суммой квоты в панели дня. К сроку на счёте должна быть нужная сумма.",
+        else if (_sawSale) SetStep(Step.Summary, "Первая продажа готова! Следите за энергией и суммой квоты в панели дня. К сроку на счёте должна быть нужная сумма. Нажмите «Понятно», чтобы начать первый день заново со стартовыми ресурсами.",
             _game.GetNode<Control>("HUD/Root/ProgressPanel"));
         else if (_game.TradeActive) SetStep(Step.Offer,
             "Покупатель предлагает цену. Кнопка «✓» продаёт товар. Кнопка «×» меняет покупателя и тратит попытку: новая цена может стать ниже. Продайте первый предмет.",
@@ -230,6 +242,7 @@ public partial class FirstTradeTutorial : CanvasLayer
     private void SetStep(Step step, string message, Control target)
     {
         CurrentStep = step;
+        _camera.NavigationLocked = step != Step.Camera;
         _body.Text = message;
         Target = target;
         _done.Visible = step == Step.Summary;
@@ -277,6 +290,7 @@ public partial class FirstTradeTutorial : CanvasLayer
         CloseConfirmation();
         if (GodotObject.IsInstanceValid(_game)) _game.NewGameStarted -= OnNewGameStarted;
         if (!GodotObject.IsInstanceValid(_camera)) return;
+        _camera.NavigationLocked = false;
         _camera.UserPanned -= OnUserPanned;
         _camera.UserZoomed -= OnUserZoomed;
         _camera.OverviewReset -= OnOverviewReset;

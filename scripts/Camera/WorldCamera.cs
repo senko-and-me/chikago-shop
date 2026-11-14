@@ -21,6 +21,18 @@ public partial class WorldCamera : Camera2D
     private Vector2 _zoomAnchor;
     private Tween _overviewTween;
     private Tween _focusTween;
+    private bool _navigationLocked;
+    public bool NavigationLocked
+    {
+        get => _navigationLocked;
+        set
+        {
+            if (_navigationLocked == value) return;
+            _navigationLocked = value;
+            CancelDrag();
+            _targetZoom = Zoom.X;
+        }
+    }
     public event Action<Vector2> UserPanned;
     public event Action UserZoomed;
     public event Action OverviewReset;
@@ -155,7 +167,7 @@ public partial class WorldCamera : Camera2D
 
     public override void _Process(double delta)
     {
-        if (GetTree().Paused || IsReturningToOverview || IsFocusing) return;
+        if (GetTree().Paused || IsReturningToOverview || IsFocusing || NavigationLocked) return;
         ClampToBounds();
         _targetZoom = Mathf.Clamp(float.IsFinite(_targetZoom) ? _targetZoom : Zoom.X, MinZoom, ZoomLimit);
         float oldZoom = Zoom.X;
@@ -171,7 +183,7 @@ public partial class WorldCamera : Camera2D
 
     public override void _Input(InputEvent @event)
     {
-        if (GetTree().Paused || IsReturningToOverview || IsFocusing) return;
+        if (GetTree().Paused || IsReturningToOverview || IsFocusing || NavigationLocked) return;
         if (@event is InputEventMouseButton { Pressed: true } wheel)
         {
             switch (wheel.ButtonIndex)
@@ -193,7 +205,7 @@ public partial class WorldCamera : Camera2D
 
     public override void _UnhandledInput(InputEvent @event)
     {
-        if (GetTree().Paused || IsReturningToOverview || IsFocusing) return;
+        if (GetTree().Paused || IsReturningToOverview || IsFocusing || NavigationLocked) return;
         if (@event is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true })
             _dragging = true;
     }

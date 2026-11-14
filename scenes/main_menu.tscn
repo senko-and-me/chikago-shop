@@ -15,6 +15,36 @@
 [ext_resource type="AudioStream" path="res://audio/music/thoughtful_loop.wav" id="12_thoughtful_music"]
 [ext_resource type="AudioStream" path="res://audio/music/sinister_loop.wav" id="13_sinister_music"]
 
+[ext_resource type="PackedScene" path="res://scenes/UI/MusicVolumeControl.tscn" id="14_volume"]
+[ext_resource type="Texture2D" path="res://art/ui/panel_small.png" id="15_paper"]
+
+[sub_resource type="ButtonGroup" id="LanguageGroup"]
+
+[sub_resource type="StyleBoxTexture" id="LanguageNormal"]
+texture = ExtResource("15_paper")
+modulate_color = Color(0.65, 0.65, 0.65, 1)
+content_margin_left = 16.0
+content_margin_right = 16.0
+content_margin_top = 8.0
+content_margin_bottom = 8.0
+
+[sub_resource type="StyleBoxTexture" id="LanguageHover"]
+texture = ExtResource("15_paper")
+modulate_color = Color(0.85, 0.85, 0.85, 1)
+content_margin_left = 16.0
+content_margin_right = 16.0
+content_margin_top = 8.0
+content_margin_bottom = 8.0
+
+[sub_resource type="StyleBoxTexture" id="LanguageSelected"]
+texture = ExtResource("15_paper")
+content_margin_left = 16.0
+content_margin_right = 16.0
+content_margin_top = 8.0
+content_margin_bottom = 8.0
+
+[sub_resource type="StyleBoxEmpty" id="NoFocusBorder"]
+
 [node name="MainMenu" type="Control" unique_id=1262597174]
 layout_mode = 3
 anchors_preset = 15
@@ -142,10 +172,9 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Settings" type="VBoxContainer" parent="SettingsMenuContainer" unique_id=1438355285]
-custom_minimum_size = Vector2(500, 390)
-custom_maximum_size = Vector2(-1, 300)
+custom_minimum_size = Vector2(500, 0)
 layout_mode = 2
-theme_override_constants/separation = 25
+theme_override_constants/separation = 14
 
 [node name="SettingsTitle" type="Label" parent="SettingsMenuContainer/Settings" unique_id=997985758]
 layout_mode = 2
@@ -156,14 +185,74 @@ text = "НАСТРОЙКИ"
 horizontal_alignment = 1
 
 [node name="FullscreenButton" type="TextureButton" parent="SettingsMenuContainer/Settings" unique_id=1428789062]
-custom_minimum_size = Vector2(360, 64)
+custom_minimum_size = Vector2(500, 72)
 layout_mode = 2
+size_flags_horizontal = 4
+mouse_default_cursor_shape = 2
+ignore_texture_size = true
+stretch_mode = 0
 texture_normal = ExtResource("9_5dd4i")
 
-[node name="BackButton" type="TextureButton" parent="SettingsMenuContainer/Settings" unique_id=1768434549]
-custom_minimum_size = Vector2(360, 100)
-custom_maximum_size = Vector2(400, -1)
+[node name="MusicVolume" parent="SettingsMenuContainer/Settings" instance=ExtResource("14_volume")]
+custom_minimum_size = Vector2(500, 100)
 layout_mode = 2
+
+[node name="LanguageRow" type="HBoxContainer" parent="SettingsMenuContainer/Settings"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="LanguageLabel" type="Label" parent="SettingsMenuContainer/Settings/LanguageRow"]
+layout_mode = 2
+auto_translate_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 24
+text = "Язык"
+vertical_alignment = 1
+
+[node name="EnglishButton" type="Button" parent="SettingsMenuContainer/Settings/LanguageRow"]
+custom_minimum_size = Vector2(160, 52)
+layout_mode = 2
+auto_translate_mode = 2
+mouse_default_cursor_shape = 2
+theme_override_colors/font_color = Color(0.08, 0.08, 0.08, 1)
+theme_override_colors/font_hover_color = Color(0.08, 0.08, 0.08, 1)
+theme_override_colors/font_pressed_color = Color(0.08, 0.08, 0.08, 1)
+theme_override_colors/font_hover_pressed_color = Color(0.08, 0.08, 0.08, 1)
+theme_override_font_sizes/font_size = 24
+theme_override_styles/normal = SubResource("LanguageNormal")
+theme_override_styles/hover = SubResource("LanguageHover")
+theme_override_styles/pressed = SubResource("LanguageSelected")
+theme_override_styles/hover_pressed = SubResource("LanguageSelected")
+theme_override_styles/focus = SubResource("NoFocusBorder")
+toggle_mode = true
+button_group = SubResource("LanguageGroup")
+text = "English"
+
+[node name="RussianButton" type="Button" parent="SettingsMenuContainer/Settings/LanguageRow"]
+custom_minimum_size = Vector2(160, 52)
+layout_mode = 2
+auto_translate_mode = 2
+mouse_default_cursor_shape = 2
+theme_override_colors/font_color = Color(0.08, 0.08, 0.08, 1)
+theme_override_colors/font_hover_color = Color(0.08, 0.08, 0.08, 1)
+theme_override_colors/font_pressed_color = Color(0.08, 0.08, 0.08, 1)
+theme_override_colors/font_hover_pressed_color = Color(0.08, 0.08, 0.08, 1)
+theme_override_font_sizes/font_size = 24
+theme_override_styles/normal = SubResource("LanguageNormal")
+theme_override_styles/hover = SubResource("LanguageHover")
+theme_override_styles/pressed = SubResource("LanguageSelected")
+theme_override_styles/hover_pressed = SubResource("LanguageSelected")
+theme_override_styles/focus = SubResource("NoFocusBorder")
+toggle_mode = true
+button_group = SubResource("LanguageGroup")
+text = "Русский"
+
+[node name="BackButton" type="TextureButton" parent="SettingsMenuContainer/Settings" unique_id=1768434549]
+custom_minimum_size = Vector2(280, 80)
+layout_mode = 2
+size_flags_horizontal = 4
 mouse_default_cursor_shape = 2
 texture_normal = ExtResource("4_back")
 ignore_texture_size = true

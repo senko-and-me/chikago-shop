@@ -115,14 +115,6 @@ theme_override_colors/font_color = Color(0.13, 0.13, 0.13, 1)
 theme_override_font_sizes/font_size = 19
 autowrap_mode = 3
 
-[node name="Navigation" type="Label" parent="Root/Panel/Content"]
-layout_mode = 2
-mouse_filter = 2
-theme_override_colors/font_color = Color(0.35, 0.35, 0.35, 1)
-theme_override_font_sizes/font_size = 14
-text = "Колесо — масштаб. Зажмите ЛКМ на фоне, чтобы двигать камеру."
-autowrap_mode = 3
-
 [node name="CameraProgress" type="Label" parent="Root/Panel/Content"]
 visible = false
 layout_mode = 2
@@ -198,7 +190,7 @@ custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.13, 0.13, 0.13, 1)
 theme_override_font_sizes/font_size = 19
-text = "Подсказки для этой партии будут скрыты. Обучение можно повторить в меню паузы."
+text = "Обучение завершится, и первый день начнётся заново со стартовыми деньгами и энергией. Обучение можно повторить в меню паузы."
 autowrap_mode = 3
 
 [node name="Actions" type="HBoxContainer" parent="Root/SkipConfirmation/Center/Panel/Content"]
