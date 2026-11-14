@@ -3,6 +3,19 @@
 [resource]
 locale = "en"
 messages = {
+&"виолончель": &"cello",
+&"саксофон": &"saxophone",
+&"бубен": &"tambourine",
+&"платье": &"dress",
+&"туфли": &"dress shoes",
+&"граммофон": &"gramophone",
+&"скрипка": &"violin",
+&"меховая накидка": &"fur stole",
+&"пиджак": &"tailored jacket",
+&"метроном": &"metronome",
+&"маракасы": &"maracas",
+&"рубашка": &"shirt",
+&"кепка": &"newsboy cap",
 &"Первая продажа": &"Your first sale",
 &"Пропустить обучение": &"Skip tutorial",
 &"Повторить обучение": &"Replay tutorial",

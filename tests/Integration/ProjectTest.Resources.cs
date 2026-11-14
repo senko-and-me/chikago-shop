@@ -256,20 +256,28 @@ public partial class ProjectTest
     private async Task TestDriveAssetReplacements()
     {
         string[] kinds = { "hat", "gloves", "guitar", "trumpet", "clothing_first", "clothing_exclusive",
-            "clothing_unique", "music_first", "music_exclusive", "music_unique" };
+            "clothing_unique", "music_first", "music_exclusive", "music_unique",
+            "cloche_hat", "shoes", "dress", "tambourine", "saxophone", "cello" };
         Check(WorkshopItemCatalog.Items.Count == kinds.Length &&
               WorkshopItemCatalog.Items.Select(item => item.Kind).SequenceEqual(kinds),
-            "Replacing artwork must not add, reorder or rename saved item identities");
-        foreach (var entry in new[] { (2, "guitar.png"), (7, "violin.png"), (8, "drums.png") })
+            "The first ten save kinds must stay stable and six new kinds must append");
+        foreach (var item in WorkshopItemCatalog.Items)
         {
-            Check(TradeScene.GetItemArtPath(entry.Item1) == "res://art/items/" + entry.Item2,
-                "Existing items must resolve to the approved artist PNGs");
-            var image = GD.Load<Texture2D>(TradeScene.GetItemArtPath(entry.Item1)).GetImage();
-            Check(image.GetFormat() == Image.Format.Rgba8 && image.GetPixel(0, 0).A == 0,
-                "Artist images must preserve a transparent background");
+            using var image = GD.Load<Texture2D>(item.ArtPath).GetImage();
+            Check(item.ArtPath.EndsWith(".png") && image.GetPixel(0, 0).A == 0,
+                "All sixteen new PNGs must preserve transparent padding");
+            string before = TranslationServer.GetLocale();
+            TranslationServer.SetLocale("en");
+            Check(GameLocalization.Text(item.Name) != item.Name, "Every new item must have an English name");
+            TranslationServer.SetLocale(before);
         }
+        foreach (string workshop in new[] { "atelier", "music" })
+            Check(WorkshopItemCatalog.Items.Count(item => item.WorkshopId == workshop) == 8,
+                "Each workshop must contain eight new items");
         var game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
         game.SavePath = "";
+        Check(game.GetNode<Node2D>("World/TradingRoom/Item").GetChildren().OfType<Sprite2D>().Count() == 16,
+            "All sixteen trading sprites must be authored in the scene before Ready");
         Root.AddChild(game);
         await ToSignal(this, SignalName.ProcessFrame);
         try
@@ -277,7 +285,7 @@ public partial class ProjectTest
             var variants = game.GetNode<Node2D>("World/TradingRoom/Item").GetChildren().OfType<Sprite2D>().ToArray();
             Check(variants.Length == kinds.Length && variants.Select(sprite => sprite.Name.ToString().ToLowerInvariant()).Distinct().Count() == kinds.Length,
                 "Trading must retain exactly one sprite for each existing item kind");
-            foreach (int index in new[] { 2, 7, 8 })
+            foreach (int index in Enumerable.Range(0, kinds.Length))
             {
                 var sprite = variants.Single(value => value.Name.ToString().ToLowerInvariant() == kinds[index]);
                 Vector2 size = sprite.Texture.GetSize() * sprite.Scale;
@@ -285,10 +293,8 @@ public partial class ProjectTest
                     "Trading sprites must use matching catalogue art and fit their existing display area");
             }
             var surface = game.GetNode<PolishingSurface>("PolishingGame/Surface/Polishing");
-            Check(PolishingSurface.InstrumentKinds.Count == 4 && PolishingSurface.InstrumentKinds.Contains("drums") &&
-                  !PolishingSurface.InstrumentKinds.Contains("sax"),
-                "Artist drums must replace the sax choice rather than add another minigame variant");
-            foreach (string kind in PolishingSurface.InstrumentKinds.Concat(new[] { "sax" }))
+            Check(PolishingSurface.InstrumentKinds.Count == 8, "Polishing must use all eight new music artworks");
+            foreach (string kind in PolishingSurface.InstrumentKinds)
             {
                 var session = surface.Begin(kind);
                 Check(session.Cells.Any(cell => cell.Inside) && !session.Inside(0, 0),
@@ -299,24 +305,17 @@ public partial class ProjectTest
                 for (int i = 0; i < 30; i++) session.MoveRub(cell.X + (i % 2 == 0 ? 14 : 0), cell.Y, 20);
                 Check(session.Progress > 0, "Rubbing inside each instrument silhouette must remove its coating");
             }
-            // Open the actual paid mini-game on the drum variant and use viewport mouse events.
+            // Open the actual paid minigame and exercise its selected new silhouette.
             game.Score = 1000;
             game.TryUnlockMusicWorkshop();
-            int drumIndex = PolishingSurface.InstrumentKinds.ToList().IndexOf("drums");
-            for (ulong seed = 0; ; seed++)
-            {
-                GD.Seed(seed);
-                if (GD.Randi() % 4 == (uint)drumIndex) { GD.Seed(seed); break; }
-                Check(seed < 100, "A deterministic drum fixture seed must be found");
-            }
             var miniGame = game.GetNode<EmbroideryGame>("PolishingGame");
             miniGame.SetProcess(false);
             game.GetItemFromMusicWorkshop();
-            Check(miniGame.IsOpen && surface.InstrumentKind == "drums", "Opening polishing must select the ready drum artwork");
+            Check(miniGame.IsOpen && PolishingSurface.InstrumentKinds.Contains(surface.InstrumentKind), "Opening polishing must select one of the eight new artworks");
             int cashBefore = game.Score, energyBefore = game.EnergyRemaining;
             miniGame.Activate();
             Check(game.Score == cashBefore - WorkshopItemCatalog.CraftCost("music") && game.EnergyRemaining == energyBefore - 1,
-                "The new drum presentation must retain the existing craft payment");
+                "The new item presentation must retain the existing craft payment");
             await ToSignal(this, SignalName.ProcessFrame);
             await ToSignal(this, SignalName.ProcessFrame);
             var target = miniGame.Polishing.Cells.First(cell => cell.Inside && miniGame.Polishing.Inside(cell.X + 14, cell.Y));
@@ -333,12 +332,12 @@ public partial class ProjectTest
             }
             Root.PushInput(new InputEventMouseButton { Position = right, GlobalPosition = right,
                 ButtonIndex = MouseButton.Left, Pressed = false }, true);
-            Check(miniGame.Polishing.Progress > 0, "Real viewport mouse strokes must clean the artist drum silhouette");
+            Check(miniGame.Polishing.Progress > 0, "Real viewport mouse strokes must clean the selected new silhouette");
             if (OS.GetCmdlineUserArgs().Contains("--asset-preview"))
             {
                 await ToSignal(this, SignalName.ProcessFrame);
                 await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
-                Root.GetTexture().GetImage().SavePng(System.IO.Path.Combine(OS.GetUserDataDir(), "drum-polishing.png"));
+                Root.GetTexture().GetImage().SavePng(System.IO.Path.Combine(OS.GetUserDataDir(), "new-item-polishing.png"));
             }
         }
         finally { game.QueueFree(); }

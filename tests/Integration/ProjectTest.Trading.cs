@@ -126,8 +126,8 @@ public partial class ProjectTest
         foreach (string kind in new[] { "Hat", "Gloves", "Guitar", "Trumpet" })
             Check(game.GetNode<Sprite2D>($"World/TradingRoom/Item/{kind}").Texture != null,
                 $"The {kind} item must have an illustration");
-        Check(TradeScene.GetItemArtPath(0).EndsWith("hat_cloche.png") &&
-              TradeScene.GetItemArtPath(1).EndsWith("gloves.png"),
+        Check(TradeScene.GetItemArtPath(0).EndsWith("cap.png") &&
+              TradeScene.GetItemArtPath(1).EndsWith("shirt.png"),
             "Atelier items must use the transparent-background PNG artwork");
         Check(TradeScene.GetItemRarity(0) == "Ширпотреб" && TradeScene.GetItemRerollLimit(0) == 3 &&
               TradeScene.GetItemRarity(1) == "Заурядная" && TradeScene.GetItemRerollLimit(1) == 2 &&

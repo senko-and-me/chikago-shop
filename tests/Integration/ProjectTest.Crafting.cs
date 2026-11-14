@@ -209,18 +209,11 @@ public partial class ProjectTest
             game.GetItemFromMusicWorkshop();
             Check(!polishing.IsOpen && !Paused,"Locked music workshop must not open polishing");
             game.Score=500; game.TryUnlockMusicWorkshop();
-            foreach(string kind in new[]{"violin","trumpet","sax","guitar"})
+            foreach(string kind in PolishingSurface.InstrumentKinds)
             {
-                var mask=GD.Load<Texture2D>($"res://art/minigames/polishing_{kind}_mask.svg").GetImage();
-                Check(mask.GetWidth()==600 && mask.GetHeight()==480 &&
-                      GD.Load<Texture2D>($"res://art/minigames/polishing_{kind}.svg")!=null,
-                    "All four reference illustrations and masks must import at matching dimensions");
-                mask.Convert(Image.Format.Rgba8);
-                byte[] rgba=mask.GetData(),alpha=new byte[600*480];
-                for(int i=0;i<alpha.Length;i++) alpha[i]=rgba[i*4+3];
-                var model=new ChikagoShop.Domain.Crafting.PolishingSession(alpha);
+                var model=game.GetNode<PolishingSurface>("PolishingGame/Surface/Polishing").Begin(kind);
                 Check(model.Cells.Count(cell=>cell.Inside)>100,
-                    "Every reference instrument must supply a nonempty playable polishing region");
+                    "Every new music item must supply a nonempty playable alpha silhouette");
             }
             foreach(Vector2I size in new[]{new Vector2I(1280,720),new Vector2I(960,540)})
             {

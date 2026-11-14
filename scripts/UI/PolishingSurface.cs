@@ -5,14 +5,8 @@ using Godot;
 
 public partial class PolishingSurface : Control
 {
-	// Artist artwork replaces the old sax variant; the minigame still has four choices.
 	public static System.Collections.Generic.IReadOnlyList<string> InstrumentKinds { get; } =
-		Array.AsReadOnly(new[] { "violin", "trumpet", "drums", "guitar" });
-	private const string ViolinPath =
-		"res://art/minigames/violin.png";
-
-	private const string GuitarPath = "res://art/items/guitar.png";
-
+		Array.AsReadOnly(new[] { "maracas", "tambourine", "metronome", "trumpet", "violin", "saxophone", "cello", "gramophone" });
 	private const string ClothPath =
 		"res://art/minigames/polishing_cloth.png";
 
@@ -71,14 +65,9 @@ void fragment() {
 
 		Texture2D mask;
 
-		string rasterPath = kind switch
-		{
-			"violin" => ViolinPath,
-			"guitar" => GuitarPath,
-			"drums" => "res://art/items/drums.png",
-			_ => null
-		};
-		if (rasterPath != null && ResourceLoader.Exists(rasterPath))
+		if (!System.Linq.Enumerable.Contains(InstrumentKinds, kind))
+			throw new ArgumentOutOfRangeException(nameof(kind));
+		string rasterPath = $"res://art/items/{kind}.png";
 		{
 			// Use the same fitted pixels for both artwork and the playable silhouette.
 			Texture2D original = GD.Load<Texture2D>(rasterPath);
@@ -113,15 +102,6 @@ void fragment() {
 			_instrument = ImageTexture.CreateFromImage(fitted);
 			mask = _instrument;
 		}
-		else
-		{
-			_instrument = GD.Load<Texture2D>(
-				$"res://art/minigames/polishing_{kind}.svg");
-
-			mask = GD.Load<Texture2D>(
-				$"res://art/minigames/polishing_{kind}_mask.svg");
-		}
-
 		Image maskImage = mask.GetImage();
 		maskImage.Convert(Image.Format.Rgba8);
 

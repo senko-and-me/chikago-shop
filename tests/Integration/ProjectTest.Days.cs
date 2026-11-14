@@ -388,11 +388,15 @@ public partial class ProjectTest
                               panel.Values.GetNode<Label>("Chance2").GetThemeColor("font_color") == (boosted ? new Color("208447") : Colors.Black),
                             "Chances below baseline must be red and above baseline green; the other category stays neutral");
                     }
-                    int[] counts = new int[10];
+                    int[] counts = new int[WorkshopItemCatalog.Items.Count];
                     string workshop = choice == DayUpgrade.Atelier ? "atelier" : "music";
-                    for (int ticket = 0; ticket < 100; ticket++) counts[WorkshopItemCatalog.Roll(workshop, ticket, game.DayUpgrades)]++;
-                    foreach (var item in WorkshopItemCatalog.Items.Select((item, index) => (item, index)).Where(x => x.item.WorkshopId == workshop))
-                        Check(counts[item.index] == WorkshopItemCatalog.RarityWeight(workshop, item.item.RarityId, game.DayUpgrades), "All 100 tickets must match the displayed category chances");
+                    for (int ticket = 0; ticket < WorkshopItemCatalog.TotalWeight(workshop); ticket++)
+                        counts[WorkshopItemCatalog.Roll(workshop, ticket, game.DayUpgrades)]++;
+                    foreach (var rarity in WorkshopItemCatalog.Items.Select((item, index) => (item, index))
+                        .Where(x => x.item.WorkshopId == workshop).GroupBy(x => x.item.RarityId))
+                        Check(rarity.Sum(entry => counts[entry.index]) * 100 ==
+                            WorkshopItemCatalog.RarityWeight(workshop, rarity.Key, game.DayUpgrades) * WorkshopItemCatalog.TotalWeight(workshop),
+                            "All tickets must match the displayed category chances regardless of item counts");
                 }
                 game.EndDay();
                 await WaitForDayCardAnimation(game);

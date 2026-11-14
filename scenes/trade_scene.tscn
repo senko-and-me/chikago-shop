@@ -4,12 +4,8 @@
 [ext_resource type="Script" uid="uid://c6334skyxf3jy" path="res://scripts/CounterWorld.cs" id="2_world"]
 [ext_resource type="Texture2D" uid="uid://bc8clisawybhl" path="res://art/rooms/music_room.jpg" id="4_pi35y"]
 [ext_resource type="PackedScene" uid="uid://u2ve41t8yhqn" path="res://scenes/customer.tscn" id="5_customer"]
-[ext_resource type="Texture2D" uid="uid://cbtl6isdq4h6k" path="res://art/items/hat_cloche.png" id="6_hat"]
-[ext_resource type="Texture2D" uid="uid://bw57e18b5g53h" path="res://art/items/gloves.png" id="7_gloves"]
-[ext_resource type="Texture2D" uid="uid://cksoybvtgb8dl" path="res://art/items/guitar.png" id="8_guitar"]
 [ext_resource type="Texture2D" uid="uid://opqiutt7np6v" path="res://art/rooms/showroom.jpg" id="9_bkxpd"]
 [ext_resource type="PackedScene" uid="uid://4wqv2sl2gvaw" path="res://scenes/UI/InventoryUI.tscn" id="9_cppqn"]
-[ext_resource type="Texture2D" uid="uid://bdnt1wjejacqf" path="res://art/items/trumpet.svg" id="9_trumpet"]
 [ext_resource type="PackedScene" uid="uid://wj2ymug80tk2" path="res://scenes/UI/ShowcaseSlot.tscn" id="10_showcase"]
 [ext_resource type="Texture2D" uid="uid://cq6tis3xjvmup" path="res://art/rooms/atelier.jpg" id="11_atelier"]
 [ext_resource type="Texture2D" uid="uid://d21j3cp04fmi5" path="res://art/rooms/cashier_closed.jpg" id="12_cashier"]
@@ -34,6 +30,23 @@
 [ext_resource type="PackedScene" path="res://scenes/UI/FirstTradeTutorial.tscn" id="30_tutorial"]
 
 [ext_resource type="PackedScene" path="res://scenes/UI/CraftButton.tscn" id="31_craft_button"]
+
+[ext_resource type="Texture2D" path="res://art/items/cap.png" id="item_0"]
+[ext_resource type="Texture2D" path="res://art/items/shirt.png" id="item_1"]
+[ext_resource type="Texture2D" path="res://art/items/maracas.png" id="item_2"]
+[ext_resource type="Texture2D" path="res://art/items/metronome.png" id="item_3"]
+[ext_resource type="Texture2D" path="res://art/items/gloves.png" id="item_4"]
+[ext_resource type="Texture2D" path="res://art/items/jacket.png" id="item_5"]
+[ext_resource type="Texture2D" path="res://art/items/fur_stole.png" id="item_6"]
+[ext_resource type="Texture2D" path="res://art/items/trumpet.png" id="item_7"]
+[ext_resource type="Texture2D" path="res://art/items/violin.png" id="item_8"]
+[ext_resource type="Texture2D" path="res://art/items/gramophone.png" id="item_9"]
+[ext_resource type="Texture2D" path="res://art/items/cloche_hat.png" id="item_10"]
+[ext_resource type="Texture2D" path="res://art/items/shoes.png" id="item_11"]
+[ext_resource type="Texture2D" path="res://art/items/dress.png" id="item_12"]
+[ext_resource type="Texture2D" path="res://art/items/tambourine.png" id="item_13"]
+[ext_resource type="Texture2D" path="res://art/items/saxophone.png" id="item_14"]
+[ext_resource type="Texture2D" path="res://art/items/cello.png" id="item_15"]
 
 [sub_resource type="AtlasTexture" id="InvertedHeaderTexture"]
 atlas = ExtResource("25_inverted")
@@ -598,33 +611,101 @@ color = Color(0.239216, 0.533333, 0.592157, 1)
 visible = false
 position = Vector2(676, 651)
 
-[node name="Hat" type="Sprite2D" parent="World/TradingRoom/Item" unique_id=1966016124]
+[node name="Hat" type="Sprite2D" parent="World/TradingRoom/Item"]
 visible = false
-position = Vector2(-14.000001, -119)
-scale = Vector2(0.1, 0.1)
-texture = ExtResource("6_hat")
-centered = false
+position = Vector2(64, -48)
+scale = Vector2(0.08333333, 0.08333333)
+texture = ExtResource("item_0")
 
-[node name="Gloves" type="Sprite2D" parent="World/TradingRoom/Item" unique_id=1300447676]
+[node name="Gloves" type="Sprite2D" parent="World/TradingRoom/Item"]
 visible = false
-position = Vector2(-44, -119)
-scale = Vector2(0.15, 0.15)
-texture = ExtResource("7_gloves")
-centered = false
+position = Vector2(64, -48)
+scale = Vector2(0.08839779, 0.08839779)
+texture = ExtResource("item_1")
 
-[node name="Guitar" type="Sprite2D" parent="World/TradingRoom/Item" unique_id=1529809276]
+[node name="Guitar" type="Sprite2D" parent="World/TradingRoom/Item"]
 visible = false
-position = Vector2(-14, -119)
-scale = Vector2(0.06355932, 0.06355932)
-texture = ExtResource("8_guitar")
-centered = false
+position = Vector2(64, -48)
+scale = Vector2(0.08333333, 0.08333333)
+texture = ExtResource("item_2")
 
-[node name="Trumpet" type="Sprite2D" parent="World/TradingRoom/Item" unique_id=1997586069]
+[node name="Trumpet" type="Sprite2D" parent="World/TradingRoom/Item"]
 visible = false
-position = Vector2(-14, -119)
-scale = Vector2(1.56, 1.56)
-texture = ExtResource("9_trumpet")
-centered = false
+position = Vector2(64, -48)
+scale = Vector2(0.10207337, 0.10207337)
+texture = ExtResource("item_3")
+
+[node name="Clothing_first" type="Sprite2D" parent="World/TradingRoom/Item"]
+visible = false
+position = Vector2(64, -48)
+scale = Vector2(0.08333333, 0.08333333)
+texture = ExtResource("item_4")
+
+[node name="Clothing_exclusive" type="Sprite2D" parent="World/TradingRoom/Item"]
+visible = false
+position = Vector2(64, -48)
+scale = Vector2(0.08333333, 0.08333333)
+texture = ExtResource("item_5")
+
+[node name="Clothing_unique" type="Sprite2D" parent="World/TradingRoom/Item"]
+visible = false
+position = Vector2(64, -48)
+scale = Vector2(0.09756098, 0.09756098)
+texture = ExtResource("item_6")
+
+[node name="Music_first" type="Sprite2D" parent="World/TradingRoom/Item"]
+visible = false
+position = Vector2(64, -48)
+scale = Vector2(0.08333333, 0.08333333)
+texture = ExtResource("item_7")
+
+[node name="Music_exclusive" type="Sprite2D" parent="World/TradingRoom/Item"]
+visible = false
+position = Vector2(64, -48)
+scale = Vector2(0.10207337, 0.10207337)
+texture = ExtResource("item_8")
+
+[node name="Music_unique" type="Sprite2D" parent="World/TradingRoom/Item"]
+visible = false
+position = Vector2(64, -48)
+scale = Vector2(0.09756098, 0.09756098)
+texture = ExtResource("item_9")
+
+[node name="Cloche_hat" type="Sprite2D" parent="World/TradingRoom/Item"]
+visible = false
+position = Vector2(64, -48)
+scale = Vector2(0.08333333, 0.08333333)
+texture = ExtResource("item_10")
+
+[node name="Shoes" type="Sprite2D" parent="World/TradingRoom/Item"]
+visible = false
+position = Vector2(64, -48)
+scale = Vector2(0.08333333, 0.08333333)
+texture = ExtResource("item_11")
+
+[node name="Dress" type="Sprite2D" parent="World/TradingRoom/Item"]
+visible = false
+position = Vector2(64, -48)
+scale = Vector2(0.08333333, 0.08333333)
+texture = ExtResource("item_12")
+
+[node name="Tambourine" type="Sprite2D" parent="World/TradingRoom/Item"]
+visible = false
+position = Vector2(64, -48)
+scale = Vector2(0.08333333, 0.08333333)
+texture = ExtResource("item_13")
+
+[node name="Saxophone" type="Sprite2D" parent="World/TradingRoom/Item"]
+visible = false
+position = Vector2(64, -48)
+scale = Vector2(0.10207337, 0.10207337)
+texture = ExtResource("item_14")
+
+[node name="Cello" type="Sprite2D" parent="World/TradingRoom/Item"]
+visible = false
+position = Vector2(64, -48)
+scale = Vector2(0.08333333, 0.08333333)
+texture = ExtResource("item_15")
 
 [node name="TradePanel" type="PanelContainer" parent="World/TradingRoom/Item" unique_id=703097951]
 visible = false

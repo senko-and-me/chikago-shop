@@ -5,7 +5,7 @@ using Godot;
 
 public partial class EmbroideryGame : CanvasLayer
 {
-	private readonly MiniGameVariantPicker _variants = new(4);
+	private readonly MiniGameVariantPicker _variants;
 	public EmbroiderySession Session { get; private set; } = new();
 	public PolishingSession Polishing { get; private set; } = null!;
 	public bool IsPolishing { get; }
@@ -24,6 +24,7 @@ public partial class EmbroideryGame : CanvasLayer
 	public EmbroideryGame(Action acquire, bool polishing = false)
 	{
 		_acquire = acquire;
+		_variants = new MiniGameVariantPicker(polishing ? PolishingSurface.InstrumentKinds.Count : 4);
 		IsPolishing = polishing;
 	}
 

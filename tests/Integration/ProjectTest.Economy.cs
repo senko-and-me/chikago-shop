@@ -27,40 +27,53 @@ public partial class ProjectTest
             foreach (string workshop in new[] { "atelier", "music" })
             {
                 int[] counts = new int[WorkshopItemCatalog.Items.Count];
-                Check(WorkshopItemCatalog.TotalWeight(workshop) == config.Rarities.Sum(rarity => rarity.Weight),
-                    "Crafting must use the configured rarity weight total");
+                int multiplier = WorkshopItemCatalog.TotalWeight(workshop) / config.Rarities.Sum(rarity => rarity.Weight);
+                Check(multiplier > 0, "Crafting must use a positive integer ticket multiplier");
                 for (int ticket = 0; ticket < WorkshopItemCatalog.TotalWeight(workshop); ticket++)
                     counts[WorkshopItemCatalog.Roll(workshop, ticket)]++;
                 foreach (var rarity in config.Rarities)
                 {
-                    int index = WorkshopItemCatalog.Items.Select((item,index)=>(item,index))
-                        .Single(entry => entry.item.WorkshopId == workshop && entry.item.RarityId == rarity.Id).index;
-                    Check(counts[index] == rarity.Weight && TradeScene.GetItemBasePrice(index) == rarity.BasePrices[workshop] &&
-                          TradeScene.GetItemRerollLimit(index) == rarity.Rerolls,
-                        "All five workshop rarities must use the configured odds, prices and rerolls");
+                    var entries = WorkshopItemCatalog.Items.Select((item,index)=>(item,index))
+                        .Where(entry => entry.item.WorkshopId == workshop && entry.item.RarityId == rarity.Id).ToArray();
+                    Check(entries.Sum(entry => counts[entry.index]) == rarity.Weight * multiplier &&
+                        entries.All(entry => counts[entry.index] == rarity.Weight * multiplier / entries.Length &&
+                            TradeScene.GetItemBasePrice(entry.index) == rarity.BasePrices[workshop] &&
+                            TradeScene.GetItemRerollLimit(entry.index) == rarity.Rerolls),
+                        "Rarity odds must stay configured and split equally between its items, with matching prices and rerolls");
+                }
+                for (int level = 1; level <= 6; level++)
+                {
+                    var upgrades = new DayUpgradeSession();
+                    upgrades.Restore(false, DayUpgrade.None, atelierLevel: level, musicLevel: level);
+                    var boosted = new int[WorkshopItemCatalog.Items.Count];
+                    for (int ticket = 0; ticket < WorkshopItemCatalog.TotalWeight(workshop); ticket++)
+                        boosted[WorkshopItemCatalog.Roll(workshop, ticket, upgrades)]++;
+                    foreach (var rarity in config.Rarities)
+                    {
+                        var entries = WorkshopItemCatalog.Items.Select((item, index) => (item, index))
+                            .Where(entry => entry.item.WorkshopId == workshop && entry.item.RarityId == rarity.Id).ToArray();
+                        int expected = WorkshopItemCatalog.RarityWeight(workshop, rarity.Id, upgrades) * multiplier;
+                        Check(entries.Sum(entry => boosted[entry.index]) == expected &&
+                            entries.All(entry => boosted[entry.index] == expected / entries.Length),
+                            "All six upgrade levels must preserve displayed rarity odds and equal item shares");
+                    }
                 }
             }
             Check(TradeScene.GetItemKind(0) == "hat" && TradeScene.GetItemKind(1) == "gloves" &&
                   TradeScene.GetItemKind(2) == "guitar" && TradeScene.GetItemKind(3) == "trumpet",
                 "Legacy save indices must keep their original item identity");
-            var colors = new System.Collections.Generic.HashSet<Color>();
-            for (int index=4;index<10;index++)
+            for (int index=0;index<WorkshopItemCatalog.Items.Count;index++)
             {
                 var texture = GD.Load<Texture2D>(TradeScene.GetItemArtPath(index));
                 var image = texture.GetImage();
                 Check(image.GetPixel(0,0).A == 0, "Item artwork must retain transparent padding");
-                if (TradeScene.GetItemArtPath(index).Contains("placeholder_"))
-                {
-                    Check(image.GetWidth() == 128 && image.GetHeight() == 128,
-                        "Remaining placeholder icons must retain their square size");
-                    colors.Add(image.GetPixel(64,64));
-                }
+                Check(!TradeScene.GetItemArtPath(index).Contains("placeholder_"), "Every item must use the new artist artwork");
             }
-            Check(colors.Count == 4, "The four remaining placeholders must retain distinct colors");
             using (var file = FileAccess.Open(path, FileAccess.ModeFlags.Write))
-                file.StoreString("{\"save_version\":8,\"day_remaining_seconds\":120,\"score\":1000,\"energy_remaining\":2,\"stored_items\":[4,5,6,7,8,9]}");
+                file.StoreString("{\"save_version\":8,\"day_remaining_seconds\":120,\"score\":1000,\"energy_remaining\":2,\"stored_items\":[" +
+                    string.Join(",", Enumerable.Range(0, WorkshopItemCatalog.Items.Count)) + "]}");
             game = await Load();
-            for(int index=4;index<10;index++)
+            for(int index=0;index<WorkshopItemCatalog.Items.Count;index++)
             {
                 var inventory = game.GetNode<HBoxContainer>("HUD/InventoryUI/ScrollContainer/HBoxContainer");
                 var slot = inventory.GetChild<SlotUI>(0);
@@ -99,7 +112,7 @@ public partial class ProjectTest
             if(FileAccess.FileExists(path)) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(path));
         }
         await ToSignal(this, SignalName.ProcessFrame);
-        GD.Print("All six high-rarity items, configured rarity odds, trading and reload checks passed");
+        GD.Print("All 16 items, configured rarity odds, equal per-rarity shares, trading and reload checks passed");
     }
 
     private static void TestEconomyConfig()
