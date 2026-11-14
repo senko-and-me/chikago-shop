@@ -12,9 +12,20 @@
 
 ### HF-138 — коммиты музыки и объединение с main
 
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-14; HF-135…137 DONE. Пользователь запросил коммиты в ветке музыки, затем перенос в main.
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-14; HF-135…137 DONE. Пользователь запросил коммиты в ветке музыки, затем перенос в main.
 CP-HF-138 read-set: текущий фронт, git status/diff/log/branches, файлы/evidence HF-135…137. Write-set: ORCHESTRATION_PLAN.md, Git index/objects и локальные refs feature/music/main; .local/checks/hf138 — временные индексные версии. Out of scope: source/, игровые сохранения, несвязанные изменения, remote push, переписывание опубликованных коммитов. Приёмка: существующая feature/music продвинута fast-forward к актуальной main, три тематических коммита (пролог/громкость/оформление), main получает их fast-forward; итоговое дерево соответствует проверенному результату, status чистый. Проверки: ancestry, staged diff-check каждого коммита, сохранённые build/music checks, итоговые refs/status/tree.
 
+
+```text
+Task: HF-138
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: существующая feature/music продвинута от a35e98c к текущей main4bcbb27 без потери истории; созданы1fbc31f (пролог),162bcfe (громкость),366cb02 (оформление), у каждого подробное описание. main получила все три fast-forward. Отдельный коммит плана фиксирует результат в обеих ветках.
+Checks: ancestry feature/music→main PASS; staged diff-check каждого коммита PASS; итоговые рабочие файлы совпали с проверенной реализацией; main=feature/music=366cb02 после первого merge, status чистый. Сохранённые build/intro-music/game-music/music-settings/rendered checks HF-135…137 PASS; игровой код после проверок не менялся.
+Acceptance: все функциональные изменения закоммичены в музыкальной ветке и перенесены в main; опубликованная история не переписана. GitHub не обновлялся.
+Read-set exception: нет; временные индексные версии и файлы сообщений находятся только в игнорируемой .local/checks/hf138.
+Risks/blocker: remote refs остаются на прежних коммитах до отдельного push. Ограничение записи .git пройдено штатным повышением разрешений для явно запрошенных операций.
+Next: при запросе пользователя опубликовать feature/music и main обычным push.
+```
 
 ### HF-137 — ширина громкости в меню и простое оформление в паузе
 
