@@ -10,6 +10,23 @@
 
 ## Текущий фронт
 
+### HF-135 — восстановление музыки пролога после настройки громкости
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-14; зависимостей и пересечений нет.
+CP-HF-135 read-set: текущий фронт, scenes/main_menu.tscn, scripts/Audio/IntroMusicDirector.cs, tests/Integration/ProjectTest.IntroMusic.cs, tests/ProjectTest.cs, docs/TESTING.md, tools/verify.ps1, .vscode/settings.json, .gitignore. Write-set: ORCHESTRATION_PLAN.md, scenes/main_menu.tscn, tests/Integration/ProjectTest.IntroMusic.cs; .local/checks/hf135 — изолированная копия/evidence. Out of scope: source/, другие пользовательские изменения, музыка игрового дня, commit/push. Приёмка: восстановлены ссылки двух треков и корректные параметры вместо null; пользовательские уровни всех тем -12 dB сохранены; все три темы звучат на одинаковом нормализованном уровне, переходы/skip работают. Проверки: build, isolated --intro-music-checks, git diff --check.
+
+```text
+Task: HF-135
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: scenes/main_menu.tscn — восстановлены две AudioStream-ссылки, компенсация и длительности переходов, меню -6 dB; пользовательские три уровня -12 dB и editor UID сохранены. tests/Integration/ProjectTest.IntroMusic.cs — regression null-параметров и одинаковой нормализованной громкости вместо прежнего crescendo.
+Checks: dotnet build ChikagoShop.sln --no-restore → PASS (0 warnings/errors); isolated Godot --headless --script res://tests/ProjectTest.cs -- --intro-music-checks → PASS; git diff --check → PASS.
+Acceptance: музыкальные петли, переключение по репликам, равные RMS уровни (допуск 1%), плавные/быстрые переходы, завершение, skip и отмена подтверждены интеграционным тестом. Evidence: .local/checks/hf135/intro-music.log.
+Read-set exception: ChikagoShop.csproj и перечни локальных исполняемых файлов прочитаны для сборки/запуска; runtime-ресурсы и themes скопированы в изолированную копию без чтения source/. Старое локальное evidence HF-104/HF-133 отсутствует на этом компьютере, создана новая копия.
+Risks/blocker: Godot сообщает Failed to read the root certificate store в ограниченном окружении; музыкальные проверки завершились PASS, exit 0. Фактическое прослушивание пользователем остаётся оценкой восприятия громкости.
+Next: прослушать пролог в редакторе.
+```
+
+
 ### HF-134 — публикация нового комплекта предметов
 
 Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-14; HF-133 DONE; пользователь явно запросил push во время реализации.
