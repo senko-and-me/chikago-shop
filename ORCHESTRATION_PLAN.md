@@ -10,6 +10,25 @@
 
 ## Текущий фронт
 
+### HF-136 — ползунок громкости музыки в настройках
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-14; HF-135 DONE, других активных пересечений нет.
+
+Расширение координатором: write-set включает tests/Integration/ProjectTest.GameMusic.cs — прежняя фикстура пропускает новый ручной Start, поэтому не открывает карты; привести её к текущему циклу Start → Close → Advance. Дополнительный read-set для диагностики: scripts/Days/DayCycleController.cs, scripts/UI/DayTransitionCard.cs, scripts/Presentation/DayCardSceneTransition.cs, tests/Integration/ProjectTest.{CardDealing,DayStart}.cs.
+CP-HF-136 read-set: текущий фронт, scripts/{MainMenu.cs,UI/PauseMenu.cs,Audio/IntroMusicDirector.cs,Audio/GameplayMusicDirector.cs,Localization/GameLocalization.cs,Presentation/MonochromePresentation.cs}, scenes/main_menu.tscn, themes/game_theme.tres, localization/en.tres, project.godot, tests/ProjectTest.cs, tests/Integration/ProjectTest.{Helpers,Localization,IntroMusic,GameMusic,MenuMusic}.cs, docs/TESTING.md. Write-set: ORCHESTRATION_PLAN.md, project.godot, scripts/{MainMenu.cs,UI/PauseMenu.cs,Audio/IntroMusicDirector.cs,Audio/GameplayMusicDirector.cs}, новые scripts/Audio/MusicSettings.cs и scripts/UI/MusicVolumeControl.cs (.uid), новые scenes/UI/MusicVolumeControl.tscn и art/ui/music_slider_grip.svg (.import), localization/en.tres, tests/ProjectTest.cs, новые tests/Integration/ProjectTest.MusicSettings.cs (.uid), docs/GAMEPLAY.md; .local/checks/hf136 — evidence/изолированная копия. Out of scope: source/, commit/push, базовые уровни треков и монтаж петель, игровые сохранения, несвязанные пользовательские изменения. Приёмка: аккуратный общий ползунок музыки 0–100% в главном меню и паузе, шрифт/бумага/монохром проекта, RU/EN, немедленная реакция без нарушения переходов, 0 выключает звук, настройка сохраняется между запусками и не стирает язык. Проверки: build, isolated music-settings/intro-music/game-music checks, rendered RU/EN 960×540 и1280×720, diff-check.
+
+
+```text
+Task: HF-136
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: MusicSettings autoload — отдельная шина Music, мгновенная громкость/полный mute и сохранение audio/volume без потери языка; все голоса IntroMusicDirector/GameplayMusicDirector направлены в Music. Общая сцена MusicVolumeControl с игровой бумажной текстурой, шрифтом, тонкой дорожкой и SVG-бегунком подключена в главное меню и паузу; RU/EN и процент. Добавлены integration music-settings checks; GameMusic fixture обновлена для ручного старта дня. Документирована настройка в GAMEPLAY.md. Изменения HF-135 сохранены.
+Checks: dotnet build ChikagoShop.sln --no-restore → PASS (0 warnings/errors); rendered --music-settings-checks → PASS (мышь/клавиатура, menu/pause, RU/EN 960×540 и1280×720); headless --music-settings-checks → PASS; --intro-music-checks → PASS; --game-music-checks → PASS; git diff --check → PASS.
+Acceptance: настройка применяется сразу, 0 полностью отключает звук без перезапуска плееров, язык/громкость сохраняются независимо, повторно созданные меню читают значение; все меню/пролог/день/карты используют общий Music bus, плавные переходы сохранены. Визуально просмотрены menu-volume-ru-1280.png и pause-volume-en-960.png; всего сняты8 вариантов. Evidence: .local/checks/hf136/{build,import,settings,music-settings,intro-music,game-music}*.log и project/*-volume-*.png.
+Read-set exception: ChikagoShop.csproj и runtime-ресурсы скопированы в изолированную копию для проверок, без source/; точечная диагностика устаревшей GameMusic fixture согласована координатором выше. Новые UID/import перенесены из изолированного импорта.
+Risks/blocker: Godot пишет Failed to read the root certificate store в ограниченном окружении; проверки завершаются exit0. Первую зависшую headless-съёмку отменили, условие съёмки исправлено на DisplayServer.GetName(); окончательные headless/rendered проверки прошли. Commit/push не выполнялись.
+Next: пользовательская проверка громкости в игре.
+```
+
 ### HF-135 — восстановление музыки пролога после настройки громкости
 
 Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-14; зависимостей и пересечений нет.

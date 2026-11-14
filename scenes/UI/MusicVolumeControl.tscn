@@ -1,0 +1,85 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/UI/MusicVolumeControl.cs" id="1_script"]
+[ext_resource type="Texture2D" path="res://art/ui/music_slider_grip.svg" id="2_grip"]
+[ext_resource type="Texture2D" path="res://art/ui/panel_small.png" id="3_paper"]
+
+[sub_resource type="StyleBoxTexture" id="Style_paper"]
+texture = ExtResource("3_paper")
+content_margin_left = 22.0
+content_margin_right = 22.0
+content_margin_top = 12.0
+content_margin_bottom = 12.0
+
+[sub_resource type="StyleBoxFlat" id="Style_track"]
+bg_color = Color(0.65, 0.62, 0.57, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.32, 0.30, 0.27, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_left = 2
+corner_radius_bottom_right = 2
+content_margin_top = 3.0
+content_margin_bottom = 3.0
+
+[sub_resource type="StyleBoxFlat" id="Style_fill"]
+bg_color = Color(0.24, 0.22, 0.20, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_left = 2
+corner_radius_bottom_right = 2
+content_margin_top = 3.0
+content_margin_bottom = 3.0
+
+[sub_resource type="StyleBoxFlat" id="Style_focus"]
+bg_color = Color(0, 0, 0, 0)
+border_width_bottom = 1
+border_color = Color(0.4, 0.37, 0.32, 0.65)
+
+[node name="MusicVolume" type="PanelContainer"]
+custom_minimum_size = Vector2(360, 100)
+size_flags_horizontal = 4
+theme_override_styles/panel = SubResource("Style_paper")
+script = ExtResource("1_script")
+
+[node name="Content" type="VBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Header" type="HBoxContainer" parent="Content"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Title" type="Label" parent="Content/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.23, 0.21, 0.19, 1)
+theme_override_font_sizes/font_size = 22
+text = "Громкость музыки"
+
+[node name="Percentage" type="Label" parent="Content/Header"]
+custom_minimum_size = Vector2(54, 0)
+layout_mode = 2
+auto_translate_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.32, 0.28, 1)
+theme_override_font_sizes/font_size = 20
+text = "100%"
+horizontal_alignment = 2
+
+[node name="Slider" type="HSlider" parent="Content"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+mouse_default_cursor_shape = 2
+theme_override_icons/grabber = ExtResource("2_grip")
+theme_override_icons/grabber_highlight = ExtResource("2_grip")
+theme_override_icons/grabber_disabled = ExtResource("2_grip")
+theme_override_styles/slider = SubResource("Style_track")
+theme_override_styles/grabber_area = SubResource("Style_fill")
+theme_override_styles/grabber_area_highlight = SubResource("Style_fill")
+theme_override_styles/focus = SubResource("Style_focus")
+step = 1.0
+value = 100.0
+scrollable = false

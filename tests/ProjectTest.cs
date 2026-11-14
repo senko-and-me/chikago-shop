@@ -16,6 +16,13 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--music-settings-checks"))
+            {
+                await TestMusicSettings();
+                GD.Print("MUSIC_SETTINGS_CHECKS_PASS: live bus, mute, persistence, menu/pause, RU/EN, mouse/keyboard and layout");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--dialogue-portraits-checks"))
             {
                 await TestDialoguePortraits();

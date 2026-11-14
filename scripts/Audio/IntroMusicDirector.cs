@@ -38,6 +38,7 @@ public partial class IntroMusicDirector : Node
     {
         ProcessMode = ProcessModeEnum.Always;
         _menu = new Voice { Player = GetParent().GetNode<AudioStreamPlayer>("MenuMusic") };
+        _menu.Player.Bus = MusicSettings.BusName;
         _menu.Player.VolumeDb = MenuVolumeDb;
         _menu.Target = _menu.Player.VolumeLinear;
         _menu.From = _menu.Target;
@@ -52,7 +53,7 @@ public partial class IntroMusicDirector : Node
 
     private Voice AddVoice(string name, AudioStream stream)
     {
-        var player = new AudioStreamPlayer { Name = name, Stream = stream, VolumeLinear = 0 };
+        var player = new AudioStreamPlayer { Name = name, Stream = stream, VolumeLinear = 0, Bus = MusicSettings.BusName };
         AddChild(player);
         var voice = new Voice { Player = player };
         _voices.Add(voice);

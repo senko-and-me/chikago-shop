@@ -32,7 +32,7 @@ public partial class GameplayMusicDirector : Node
 
     private Voice CreateVoice(string name, AudioStream stream)
     {
-        var player = new AudioStreamPlayer { Name = name, Stream = stream, VolumeLinear = 0 };
+        var player = new AudioStreamPlayer { Name = name, Stream = stream, VolumeLinear = 0, Bus = MusicSettings.BusName };
         AddChild(player);
         return new Voice { Player = player };
     }

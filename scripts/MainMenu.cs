@@ -109,6 +109,10 @@ public partial class MainMenu : Control
 		_fullscreenButton.Toggled += OnFullscreenToggled;
 
 		BuildLanguageMenu();
+		var volume = GD.Load<PackedScene>("res://scenes/UI/MusicVolumeControl.tscn").Instantiate<MusicVolumeControl>();
+		var settings = GetNode<VBoxContainer>("SettingsMenuContainer/Settings");
+		settings.AddChild(volume);
+		settings.MoveChild(volume, settings.GetNode("LanguageRow").GetIndex());
 		BuildGameChoiceMenu();
 		BuildSkipButton();
 

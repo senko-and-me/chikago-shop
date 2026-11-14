@@ -85,6 +85,7 @@ public partial class PauseMenu : CanvasLayer
 		foreach (string state in new[] { "normal", "hover", "pressed", "hover_pressed", "disabled" })
 			_fullscreen.AddThemeStyleboxOverride(state, fullscreenStyle);
 		_settings.AddChild(_fullscreen);
+		_settings.AddChild(GD.Load<PackedScene>("res://scenes/UI/MusicVolumeControl.tscn").Instantiate<MusicVolumeControl>());
 		_fullscreen.Toggled += enabled => DisplayServer.WindowSetMode(enabled
 			? DisplayServer.WindowMode.Fullscreen : DisplayServer.WindowMode.Windowed);
 		var languages = new HBoxContainer { Name = "LanguageRow" };

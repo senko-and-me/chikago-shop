@@ -70,7 +70,7 @@ public partial class ProjectTest
             foreach (bool buy in new[] { false, true })
             {
                 game.Score = 1000;
-                game.EndDay(); game.EndDay();
+                game.EndDay(); game.EndDay(); game.EndDay(); // Start the waiting day, close it, then advance.
                 Check(card.IsOpen && card.IsAnimating && Paused, "The real day flow must open paused upgrade dealing");
                 director._Process(0);
                 Check(director.CurrentCue == "upgrades" && upgrades.Playing && day.Playing,
@@ -108,7 +108,7 @@ public partial class ProjectTest
             }
 
             game.NewGame();
-            game.EndDay(); game.EndDay();
+            game.EndDay(); game.EndDay(); game.EndDay();
             director._Process(0.15);
             float[] gains = { day.VolumeLinear, upgrades.VolumeLinear };
             game.NewGame();
@@ -119,7 +119,7 @@ public partial class ProjectTest
                 "Reset during a crossfade must retarget current gains without an audible jump");
             Settle(); CheckDay();
 
-            game.EndDay(); game.EndDay();
+            game.EndDay(); game.EndDay(); game.EndDay();
             game.PersistProgress();
             var oldDay = day;
             await FreeGame();

@@ -3,6 +3,7 @@
 [resource]
 locale = "en"
 messages = {
+&"Громкость музыки": &"Music volume",
 &"виолончель": &"cello",
 &"саксофон": &"saxophone",
 &"бубен": &"tambourine",
