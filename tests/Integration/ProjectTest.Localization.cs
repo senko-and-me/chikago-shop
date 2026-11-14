@@ -277,7 +277,8 @@ public partial class ProjectTest
             foreach (var size in new[] { new Vector2I(960, 540), new Vector2I(1096, 616), new Vector2I(1280, 720), new Vector2I(1600, 900) })
             {
                 Root.Size = size;
-                var sequence = new DialoguePlayer { DialoguePath = sequencePath };
+                var sequence = GD.Load<PackedScene>("res://scenes/UI/DialoguePlayer.tscn").Instantiate<DialoguePlayer>();
+                sequence.DialoguePath = sequencePath;
                 Root.AddChild(sequence);
                 try
                 {
@@ -321,7 +322,8 @@ public partial class ProjectTest
                 : "Первая строка\nВторая строка\nТретья строка.";
             using (var file = FileAccess.Open(fittingPath, FileAccess.ModeFlags.Write))
                 file.StoreString(System.Text.Json.JsonSerializer.Serialize(new[] { new { speaker = "Кастелло", text = fittingText } }));
-            var fittingDialogue = new DialoguePlayer { DialoguePath = fittingPath };
+            var fittingDialogue = GD.Load<PackedScene>("res://scenes/UI/DialoguePlayer.tscn").Instantiate<DialoguePlayer>();
+            fittingDialogue.DialoguePath = fittingPath;
             Root.AddChild(fittingDialogue);
             try
             {
@@ -347,7 +349,8 @@ public partial class ProjectTest
             string sentence = string.Join(" ", Enumerable.Repeat("Длинное предложение для проверки прокрутки", 20)) + ".";
             using (var file = FileAccess.Open(path, FileAccess.ModeFlags.Write))
                 file.StoreString(System.Text.Json.JsonSerializer.Serialize(new[] { new { speaker = "Френки", text = sentence } }));
-            var dialogue = new DialoguePlayer { DialoguePath = path };
+            var dialogue = GD.Load<PackedScene>("res://scenes/UI/DialoguePlayer.tscn").Instantiate<DialoguePlayer>();
+            dialogue.DialoguePath = path;
             Root.AddChild(dialogue);
             try
             {

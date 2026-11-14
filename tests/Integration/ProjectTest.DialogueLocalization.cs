@@ -74,7 +74,7 @@ public partial class ProjectTest
             {
                 TranslationServer.SetLocale(language);
                 Root.Size = size;
-                player = new DialoguePlayer();
+                player = GD.Load<PackedScene>("res://scenes/UI/DialoguePlayer.tscn").Instantiate<DialoguePlayer>();
                 var cues = new List<string>();
                 player.MusicCueRequested += cues.Add;
                 Root.AddChild(player);
@@ -120,7 +120,7 @@ public partial class ProjectTest
             }
 
             TranslationServer.SetLocale("ru");
-            player = new DialoguePlayer();
+            player = GD.Load<PackedScene>("res://scenes/UI/DialoguePlayer.tscn").Instantiate<DialoguePlayer>();
             var liveCues = new List<string>();
             player.MusicCueRequested += liveCues.Add;
             Root.AddChild(player);

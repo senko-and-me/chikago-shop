@@ -1,0 +1,102 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/Presentation/CraftButtonVisual.cs" id="1_visual"]
+[ext_resource type="Texture2D" path="res://art/ui/camera_frame.png" id="2_frame"]
+[ext_resource type="Texture2D" path="res://art/ui/create_button.png" id="3_lettering"]
+[ext_resource type="FontFile" path="res://art/fonts/game.ttf" id="4_font"]
+
+[sub_resource type="StyleBoxEmpty" id="Empty"]
+
+[sub_resource type="AtlasTexture" id="FrameAtlas"]
+atlas = ExtResource("2_frame")
+region = Rect2(392, 392, 1265, 1265)
+
+[sub_resource type="AtlasTexture" id="RussianLettering"]
+atlas = ExtResource("3_lettering")
+region = Rect2(320, 180, 1360, 550)
+filter_clip = true
+
+[sub_resource type="AtlasTexture" id="HelpIcon"]
+atlas = ExtResource("3_lettering")
+region = Rect2(1690, 55, 250, 250)
+filter_clip = true
+
+[node name="CraftButton" type="Button"]
+offset_right = 450.0
+offset_bottom = 190.0
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("Empty")
+theme_override_styles/pressed = SubResource("Empty")
+theme_override_styles/hover = SubResource("Empty")
+theme_override_styles/disabled = SubResource("Empty")
+theme_override_styles/focus = SubResource("Empty")
+script = ExtResource("1_visual")
+
+[node name="Paper" type="ColorRect" parent="."]
+layout_mode = 0
+offset_left = 6.0
+offset_top = 6.0
+offset_right = 444.0
+offset_bottom = 184.0
+mouse_filter = 2
+color = Color(1, 1, 1, 1)
+
+[node name="Frame" type="NinePatchRect" parent="."]
+layout_mode = 0
+offset_right = 3600.0
+offset_bottom = 1520.0
+scale = Vector2(0.125, 0.125)
+mouse_filter = 2
+texture = SubResource("FrameAtlas")
+draw_center = false
+patch_margin_left = 64
+patch_margin_top = 64
+patch_margin_right = 64
+patch_margin_bottom = 64
+
+[node name="RussianCaption" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 18.0
+offset_top = 30.0
+offset_right = 390.0
+offset_bottom = 174.0
+mouse_filter = 2
+texture = SubResource("RussianLettering")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="EnglishCaption" type="Label" parent="."]
+visible = false
+layout_mode = 0
+offset_left = 18.0
+offset_top = 12.0
+offset_right = 390.0
+offset_bottom = 178.0
+mouse_filter = 2
+auto_translate_mode = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 0
+theme_override_fonts/font = ExtResource("4_font")
+theme_override_font_sizes/font_size = 60
+text = "CREATE\nITEMS"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="RarityHotspot" type="Control" parent="."]
+layout_mode = 0
+offset_left = 375.0
+offset_top = 8.0
+offset_right = 447.0
+offset_bottom = 76.0
+mouse_filter = 1
+mouse_default_cursor_shape = 16
+
+[node name="EnglishHelp" type="TextureRect" parent="RarityHotspot"]
+layout_mode = 0
+offset_top = 4.0
+offset_right = 60.0
+offset_bottom = 64.0
+mouse_filter = 2
+texture = SubResource("HelpIcon")
+expand_mode = 1
+stretch_mode = 5

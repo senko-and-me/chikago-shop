@@ -5,6 +5,7 @@ using Godot;
 
 public partial class EmbroideryGame : CanvasLayer
 {
+	private readonly MiniGameVariantPicker _variants = new(4);
 	public EmbroiderySession Session { get; private set; } = new();
 	public PolishingSession Polishing { get; private set; } = null!;
 	public bool IsPolishing { get; }
@@ -168,11 +169,11 @@ public partial class EmbroideryGame : CanvasLayer
 		if (IsPolishing)
 		{
 			var instruments = PolishingSurface.InstrumentKinds;
-			Polishing = _polishingSurface.Begin(instruments[(int)(GD.Randi() % (uint)instruments.Count)]);
+			Polishing = _polishingSurface.Begin(instruments[_variants.Next(Math.Min(GD.Randf(), 0.99999994f))]);
 		}
 		else
 		{
-			Session = new EmbroiderySession((int)(GD.Randi() % 4));
+			Session = new EmbroiderySession(_variants.Next(Math.Min(GD.Randf(), 0.99999994f)));
 		}
 
 		_ownsPause = true;

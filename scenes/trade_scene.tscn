@@ -17,7 +17,6 @@
 [ext_resource type="Texture2D" uid="uid://dcj7da0lpr1fq" path="res://art/rooms/room_layout.jpg" id="14_layout"]
 [ext_resource type="Texture2D" uid="uid://dfxl3bik7r087" path="res://art/ui/panel_large.png" id="16_panel_large"]
 [ext_resource type="Texture2D" uid="uid://bf1y5qehuwoj" path="res://art/ui/panel_small.png" id="17_panel_small"]
-[ext_resource type="Texture2D" uid="uid://bljkoxphrw4ki" path="res://art/ui/create_button.png" id="18_create_button"]
 [ext_resource type="PackedScene" path="res://scenes/UI/RarityPanel.tscn" id="19_rarity_panel"]
 [ext_resource type="Script" uid="uid://dxn8wgvls5a4a" path="res://scripts/UI/PauseMenu.cs" id="20_pause"]
 [ext_resource type="Script" uid="uid://bdswgixl6srw1" path="res://scripts/UI/ZoomResponsiveUi.cs" id="21_zoom_ui"]
@@ -34,25 +33,12 @@
 [ext_resource type="Texture2D" uid="uid://deul0bfifm5rg" path="res://art/rooms/locked_curtain.png" id="background_6_2e12l"]
 [ext_resource type="PackedScene" path="res://scenes/UI/FirstTradeTutorial.tscn" id="30_tutorial"]
 
+[ext_resource type="PackedScene" path="res://scenes/UI/CraftButton.tscn" id="31_craft_button"]
+
 [sub_resource type="AtlasTexture" id="InvertedHeaderTexture"]
 atlas = ExtResource("25_inverted")
 region = Rect2(392, 392, 1265, 1265)
 filter_clip = true
-
-[sub_resource type="StyleBoxTexture" id="CreateButtonNormal"]
-texture = ExtResource("18_create_button")
-
-[sub_resource type="StyleBoxTexture" id="CreateButtonPressed"]
-texture = ExtResource("18_create_button")
-modulate_color = Color(0.78, 0.78, 0.78, 1)
-
-[sub_resource type="StyleBoxTexture" id="CreateButtonHover"]
-texture = ExtResource("18_create_button")
-modulate_color = Color(1, 0.9, 0.72, 1)
-
-[sub_resource type="StyleBoxTexture" id="CreateButtonDisabled"]
-texture = ExtResource("18_create_button")
-modulate_color = Color(0.48, 0.48, 0.48, 0.82)
 
 [sub_resource type="StyleBoxTexture" id="HudSmallPanelStyle"]
 content_margin_left = 18.0
@@ -194,16 +180,12 @@ theme_override_font_sizes/font_size = 24
 text = "Одежда  •  25$ + 1 энергия за предмет"
 horizontal_alignment = 1
 
-[node name="GetItemButton" type="Button" parent="World/Atelier" unique_id=1127177850]
+[node name="GetItemButton" parent="World/Atelier" unique_id=1127177850 instance=ExtResource("31_craft_button")]
 offset_left = 735.0
 offset_top = 849.0
 offset_right = 1185.0
 offset_bottom = 1039.0
 mouse_default_cursor_shape = 2
-theme_override_styles/normal = SubResource("CreateButtonNormal")
-theme_override_styles/pressed = SubResource("CreateButtonPressed")
-theme_override_styles/hover = SubResource("CreateButtonHover")
-theme_override_styles/disabled = SubResource("CreateButtonDisabled")
 
 [node name="PriceHint" type="PanelContainer" parent="World/Atelier/GetItemButton" unique_id=672506262]
 visible = false
@@ -223,15 +205,6 @@ theme_override_font_sizes/font_size = 24
 text = "3 предмета  •  90$"
 horizontal_alignment = 1
 vertical_alignment = 1
-
-[node name="RarityHotspot" type="Control" parent="World/Atelier/GetItemButton" unique_id=563678395]
-anchors_preset = 0
-offset_left = 375.0
-offset_top = 8.0
-offset_right = 447.0
-offset_bottom = 76.0
-mouse_filter = 1
-mouse_default_cursor_shape = 16
 
 [node name="RarityPanel" parent="World/Atelier" unique_id=1554035197 instance=ExtResource("19_rarity_panel")]
 layout_mode = 3
@@ -310,16 +283,12 @@ theme_override_font_sizes/font_size = 24
 text = "Инструменты  •  50$ + 1 энергия за предмет"
 horizontal_alignment = 1
 
-[node name="GetItemButton" type="Button" parent="World/MusicWorkshop" unique_id=2006804839]
+[node name="GetItemButton" parent="World/MusicWorkshop" unique_id=2006804839 instance=ExtResource("31_craft_button")]
 offset_left = 735.0
 offset_top = 849.0
 offset_right = 1185.0
 offset_bottom = 1039.0
 mouse_default_cursor_shape = 2
-theme_override_styles/normal = SubResource("CreateButtonNormal")
-theme_override_styles/pressed = SubResource("CreateButtonPressed")
-theme_override_styles/hover = SubResource("CreateButtonHover")
-theme_override_styles/disabled = SubResource("CreateButtonDisabled")
 
 [node name="PriceHint" type="PanelContainer" parent="World/MusicWorkshop/GetItemButton" unique_id=1906600376]
 visible = false
@@ -339,15 +308,6 @@ theme_override_font_sizes/font_size = 24
 text = "3 предмета  •  110$"
 horizontal_alignment = 1
 vertical_alignment = 1
-
-[node name="RarityHotspot" type="Control" parent="World/MusicWorkshop/GetItemButton" unique_id=1031202944]
-anchors_preset = 0
-offset_left = 375.0
-offset_top = 8.0
-offset_right = 447.0
-offset_bottom = 76.0
-mouse_filter = 1
-mouse_default_cursor_shape = 16
 
 [node name="RarityPanel" parent="World/MusicWorkshop" unique_id=922423804 instance=ExtResource("19_rarity_panel")]
 layout_mode = 3

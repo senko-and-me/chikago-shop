@@ -1,0 +1,154 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/Dialogue/DialoguePlayer.cs" id="1_player"]
+[ext_resource type="Theme" path="res://themes/game_theme.tres" id="2_theme"]
+[ext_resource type="Texture2D" path="res://art/rooms/showroom.jpg" id="3_room"]
+[ext_resource type="Texture2D" path="res://art/ui/dialog_panel.png" id="4_cloud"]
+[ext_resource type="Texture2D" path="res://art/dialogue/frankie.png" id="5_frankie"]
+[ext_resource type="Texture2D" path="res://art/dialogue/castello.png" id="6_castello"]
+[ext_resource type="Texture2D" path="res://art/dialogue/customer.png" id="7_customer"]
+[ext_resource type="Shader" path="res://shaders/dialogue_portrait.gdshader" id="8_portrait"]
+
+[sub_resource type="ShaderMaterial" id="FrankieTone"]
+resource_local_to_scene = true
+shader = ExtResource("8_portrait")
+shader_parameter/lighten = 0.32
+
+[sub_resource type="ShaderMaterial" id="CastelloTone"]
+resource_local_to_scene = true
+shader = ExtResource("8_portrait")
+shader_parameter/lighten = 0.32
+
+[sub_resource type="ShaderMaterial" id="CustomerTone"]
+resource_local_to_scene = true
+shader = ExtResource("8_portrait")
+shader_parameter/lighten = 0.0
+
+[sub_resource type="Shader" id="CloudEdgeShader"]
+code = "shader_type canvas_item;
+void fragment() {
+    vec4 cloud = COLOR;
+    vec2 edge = min(UV, vec2(1.0) - UV);
+    cloud.a *= smoothstep(0.0, 0.055, edge.x) * smoothstep(0.0, 0.10, edge.y);
+    COLOR = cloud;
+}"
+
+[sub_resource type="ShaderMaterial" id="CloudEdge"]
+shader = SubResource("CloudEdgeShader")
+
+[sub_resource type="StyleBoxTexture" id="CloudPanel"]
+texture = ExtResource("4_cloud")
+content_margin_left = 112.0
+content_margin_right = 112.0
+content_margin_top = 64.0
+content_margin_bottom = 64.0
+
+[node name="DialoguePlayer" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+auto_translate_mode = 2
+theme = ExtResource("2_theme")
+script = ExtResource("1_player")
+
+[node name="Background" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+texture = ExtResource("3_room")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Shade" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0.06, 0.045, 0.035, 0.45)
+
+[node name="Characters" type="Control" parent="."]
+layout_mode = 1
+anchor_left = 0.12
+anchor_top = 0.20
+anchor_right = 0.88
+anchor_bottom = 0.79
+mouse_filter = 2
+
+[node name="Castello" type="TextureRect" parent="Characters"]
+material = SubResource("CastelloTone")
+layout_mode = 1
+anchor_right = 0.23
+anchor_bottom = 1.0
+mouse_filter = 2
+texture = ExtResource("6_castello")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Customer" type="TextureRect" parent="Characters"]
+material = SubResource("CustomerTone")
+layout_mode = 1
+anchor_left = 0.21
+anchor_top = 0.04
+anchor_right = 0.44
+anchor_bottom = 0.95
+mouse_filter = 2
+texture = ExtResource("7_customer")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Frankie" type="TextureRect" parent="Characters"]
+material = SubResource("FrankieTone")
+layout_mode = 1
+anchor_left = 0.69
+anchor_right = 0.96
+anchor_bottom = 1.0
+mouse_filter = 2
+texture = ExtResource("5_frankie")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Heading" type="Label" parent="."]
+layout_mode = 1
+anchor_right = 1.0
+offset_top = 32.0
+theme_override_colors/font_color = Color(0.780392, 0.709804, 0.568627, 1)
+theme_override_constants/line_spacing = 10
+theme_override_font_sizes/font_size = 18
+horizontal_alignment = 1
+
+[node name="Panel" type="PanelContainer" parent="."]
+material = SubResource("CloudEdge")
+layout_mode = 1
+anchor_left = 0.11
+anchor_top = 1.0
+anchor_right = 0.89
+anchor_bottom = 1.0
+offset_top = -276.0
+offset_bottom = -16.0
+theme_override_styles/panel = SubResource("CloudPanel")
+
+[node name="Content" type="VBoxContainer" parent="Panel"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Speaker" type="Label" parent="Panel/Content"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.843137, 0.713725, 0.482353, 1)
+theme_override_font_sizes/font_size = 20
+
+[node name="Text" type="RichTextLabel" parent="Panel/Content"]
+layout_mode = 2
+size_flags_vertical = 3
+focus_mode = 0
+mouse_filter = 1
+theme_override_colors/default_color = Color(0.94902, 0.901961, 0.819608, 1)
+theme_override_constants/line_separation = 5
+theme_override_font_sizes/normal_font_size = 20
+bbcode_enabled = true
+scroll_active = false

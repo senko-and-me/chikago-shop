@@ -16,6 +16,13 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--dialogue-portraits-checks"))
+            {
+                await TestDialoguePortraits();
+                GD.Print("DIALOGUE_PORTRAITS_CHECKS_PASS: scene portraits, speaker tones, narration, RU/EN, alpha and resize");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--tutorial-checks"))
             {
                 await TestFirstTradeTutorial();

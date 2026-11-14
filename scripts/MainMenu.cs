@@ -756,7 +756,7 @@ public partial class MainMenu : Control
 	private void StartIntroDialogue()
 	{
 		Music.BeginIntro();
-		ActiveDialogue = new DialoguePlayer();
+		ActiveDialogue = GD.Load<PackedScene>("res://scenes/UI/DialoguePlayer.tscn").Instantiate<DialoguePlayer>();
 
 		ActiveDialogue.Finished += OnIntroFinished;
 		ActiveDialogue.Cancelled += CloseDialogue;

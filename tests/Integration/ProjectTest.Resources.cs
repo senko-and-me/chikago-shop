@@ -7,6 +7,7 @@ public partial class ProjectTest
 {
     private async Task TestLocalizedCraftButtons()
     {
+        await TestCraftPaperEdge();
         string locale = TranslationServer.GetLocale();
         var game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
         game.SavePath = "";
@@ -26,15 +27,17 @@ public partial class ProjectTest
                 {
                     bool english = language == "en";
                     var button = game.GetNode<Button>($"World/{room}/GetItemButton");
+                    Check(button.Material == null && button.GetNode<NinePatchRect>("Frame").Texture is AtlasTexture frame &&
+                        frame.Atlas.ResourcePath == "res://art/ui/camera_frame.png",
+                        "Both craft buttons must use the ready transparent frame texture without a procedural shader");
                     Check(button.Size == new Vector2(450, 190) && button.Text == "" && !button.Disabled,
                         "Language changes must preserve craft-button geometry and availability");
                     foreach (string state in new[] { "normal", "hover", "pressed", "disabled" })
-                        Check(((StyleBoxTexture)button.GetThemeStylebox(state)).Texture.ResourcePath ==
-                            (english ? "res://art/ui/panel_small.png" : "res://art/ui/create_button.png"),
-                            "Every craft-button state must use the selected language artwork");
+                        Check(button.GetThemeStylebox(state) is StyleBoxEmpty,
+                            "Button states must leave the textured scene artwork unobstructed");
                     var caption = button.GetNode<Label>("EnglishCaption");
                     var help = button.GetNode<TextureRect>("RarityHotspot/EnglishHelp");
-                    Check(caption.Visible == english && help.Visible == english && caption.Text == "CREATE\nITEMS" &&
+                    Check(caption.Visible == english && help.Visible && button.GetNode<Control>("RussianCaption").Visible == !english && caption.Text == "CREATE\nITEMS" &&
                         caption.MouseFilter == Control.MouseFilterEnum.Ignore && help.MouseFilter == Control.MouseFilterEnum.Ignore,
                         "English lettering and question icon must switch together without blocking input");
                 }
@@ -44,6 +47,16 @@ public partial class ProjectTest
             camera.Position = atelier.GetGlobalTransform() * (atelier.Size / 2);
             camera.ClampToBounds();
             using (var image = await CapturePresentation("craft-button-english")) { }
+            Vector2 point = atelier.GetGlobalTransformWithCanvas() * (atelier.Size / 2);
+            Root.PushInput(new InputEventMouseMotion { Position = point, GlobalPosition = point }, true);
+            for (int i = 0; i < 3; i++) await ToSignal(this, SignalName.ProcessFrame);
+            Check(atelier.GetNode<Control>("Paper").Modulate == atelier.GetNode<Control>("RarityHotspot/EnglishHelp").Modulate &&
+                atelier.GetNode<Control>("Paper").Modulate.R < 1,
+                "Real mouse hover must darken the help artwork together with the paper");
+            using (var image = await CapturePresentation("craft-button-hover")) { }
+            TranslationServer.SetLocale("ru");
+            using (var image = await CapturePresentation("craft-button-russian")) { }
+            TranslationServer.SetLocale("en");
             int cash = game.Score, energy = game.EnergyRemaining;
             await ClickControl(game, "World/Atelier/GetItemButton");
             Check(game.GetNode<EmbroideryGame>("EmbroideryGame").IsOpen && game.Score == cash && game.EnergyRemaining == energy,
@@ -59,6 +72,61 @@ public partial class ProjectTest
         await ToSignal(this, SignalName.ProcessFrame);
     }
 
+    private async Task TestCraftPaperEdge()
+    {
+        var viewport = new SubViewport { Size = new Vector2I(500, 240), TransparentBg = true,
+            World2D = new World2D(), RenderTargetUpdateMode = SubViewport.UpdateMode.Always };
+        Root.AddChild(viewport);
+        try
+        {
+            var button = GD.Load<PackedScene>("res://scenes/UI/CraftButton.tscn").Instantiate<Button>();
+            Check(button.HasNode("Frame") && button.HasNode("EnglishCaption") &&
+                button.HasNode("RussianCaption") && button.HasNode("RarityHotspot/EnglishHelp"),
+                "All craft artwork must already exist in the reusable scene before Ready");
+            button.Position = new Vector2(16, 16);
+            viewport.AddChild(button);
+            CraftButtonPresentation.Apply(button, true);
+            for (int i = 0; i < 3; i++) await ToSignal(this, SignalName.ProcessFrame);
+            await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+            using (var pixels = viewport.GetTexture().GetImage())
+            {
+                bool clear = false, ink = false;
+                for (int x = 16; x < 466; x++)
+                    for (int y = 16; y < 22; y++)
+                    {
+                        Color c = pixels.GetPixel(x, y);
+                        clear |= c.A < 0.1f;
+                        ink |= c.A > 0.5f && c.R < 0.2f;
+                    }
+                Check(clear && ink && pixels.GetPixel(200, 190).A > 0.99f,
+                    "The frame texture must render a broken transparent contour around an opaque paper center");
+            }
+            foreach (bool disabled in new[] { true, false })
+            {
+                button.Disabled = disabled;
+                for (int i = 0; i < 2; i++) await ToSignal(this, SignalName.ProcessFrame);
+                var paper = button.GetNode<Control>("Paper");
+                var help = button.GetNode<Control>("RarityHotspot/EnglishHelp");
+                Check(paper.Modulate == help.Modulate && (disabled ? help.Modulate.R < 0.6f : help.Modulate == Colors.White),
+                    "Disabled and restored artwork must tint the help icon and paper together");
+                if (disabled)
+                {
+                    await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+                    using var pixels = viewport.GetTexture().GetImage();
+                    Check(Mathf.Abs(pixels.GetPixel(394, 31).R - pixels.GetPixel(380, 31).R) < 0.03f,
+                        "Rendered help-icon paper must match adjacent paper without a bright square");
+                }
+            }
+            button.ToggleMode = true;
+            button.ButtonPressed = true;
+            for (int i = 0; i < 2; i++) await ToSignal(this, SignalName.ProcessFrame);
+            Check(button.GetNode<Control>("Paper").Modulate == button.GetNode<Control>("RarityHotspot/EnglishHelp").Modulate &&
+                Mathf.IsEqualApprox(button.GetNode<Control>("Paper").Modulate.R, 0.78f),
+                "Pressed artwork must darken the icon and paper together as well");
+        }
+        finally { viewport.QueueFree(); }
+        await ToSignal(this, SignalName.ProcessFrame);
+    }
     private async Task TestRoomDoorways()
     {
         const string save = "user://room_doorway_test.json";
