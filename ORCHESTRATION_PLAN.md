@@ -12,9 +12,18 @@
 
 ### HF-144 — публикация настроек и исправлений обучения
 
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-14; HF-143 DONE. Пользователь разрешил commit/push.
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-14; HF-143 DONE. Пользователь разрешил commit/push.
 
 CP-HF-144 read-set: текущий фронт, Git status/diff/remote, evidence .local/checks/hf143. Write-set: Git index/commits/main/origin/main; готовый diff HF-143 в ORCHESTRATION_PLAN.md, docs/GAMEPLAY.md, localization/en.tres, scenes/UI/FirstTradeTutorial.tscn, scenes/main_menu.tscn, scripts/Camera/WorldCamera.cs, scripts/MainMenu.cs, scripts/UI/FirstTradeTutorial.cs, tests/Integration/ProjectTest.MusicSettings.cs, tests/Integration/ProjectTest.Tutorial.cs. Out of scope: source/, прежний пользовательский diff scenes/trade_scene.tscn, новые изменения поведения. Приёмка: обычный push без force; HEAD=origin/main; локальная пользовательская сцена сохранена. Проверки: staged diff-check, существующие build/tutorial/music-settings/camera-limits/card-dealing PASS HF-143, push и сравнение refs/status.
+
+Task: HF-144
+Recommended status: REVIEW → принято координатором, DONE
+Changed: готовые настройки и исправления обучения опубликованы коммитом b055d8c в origin/main.
+Checks: staged diff-check PASS; обычный push PASS; сохранённые build/tutorial/music-settings/camera-limits/card-dealing HF-143 PASS.
+Acceptance: опубликован только write-set HF-143; прежняя пользовательская scenes/trade_scene.tscn осталась локально без изменений.
+Read-set exception: нет.
+Risks/blocker: нет новых.
+Next: следующий запрос пользователя.
 
 ### HF-143 — настройки и завершение учебной партии
 
