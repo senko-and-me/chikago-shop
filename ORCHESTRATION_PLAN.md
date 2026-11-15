@@ -1,7 +1,7 @@
 # Оркестровый план: «Бакалея для гангстеров»
 
 Версия плана: 1.2
-Обновлено: 2026-11-15
+Обновлено: 2026-11-16
 Стадия по реестру: `S1 — домен, конфигурация и воспроизводимость`
 
 Этот файл хранит требования, решения, стадии и текущий фронт. Рабочий протокол — в [AGENTS.md](AGENTS.md), подробные завершённые отчёты — в [архиве](docs/archive/ORCHESTRATION_HISTORY_2026-11-12.md). `source/` остаётся локальным архивом и не входит в Git.
@@ -9,6 +9,74 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+
+### HF-148 — коммит звуков интерфейса в feature/music
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-16; HF-145…147 DONE, пользователь подтвердил результат и запросил коммит в музыкальную ветку.
+CP-HF-148 read-set: текущий фронт, git status/diff/refs, evidence HF-145…147. Write-set: ORCHESTRATION_PLAN.md (HF-145…148), Git index/objects и локальная feature/music; .local/checks/hf148 — сообщение/индексная версия плана. Out of scope: main, push, source/, исходные WAV Downloads, ZIP, несвязанный HF-139. Приёмка: один тематический коммит с пятью SFX, отсроченным hover150мс/отменой быстрого клика, special actions/arrival bell, тестами/документацией; main неизменна; HF-139 остаётся вне коммита. Проверки: staged diff-check/stat, сохранённые build/rendered SFX checks HF-147 PASS, итоговые refs/status.
+
+
+```text
+Task: HF-148
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: в feature/music создан один тематический коммит «Добавить звуки интерфейса и задержку наведения перед кликом»: пять WAV/imports, SoundEffects, presentation event прихода покупателя, документация/интеграционные проверки. Итоговый отчёт включён amend только этого нового неопубликованного коммита.
+Checks: staged diff-check PASS; состав19files проверен; сохранённые build/rendered SFX HF-147 PASS; main=900e9b1 без изменения; вне коммита оставлен только локальный отчёт ZIP HF-139.
+Acceptance: пользовательский результат сохранён в музыкальной ветке одним коммитом, main/remote не затронуты.
+Read-set exception: нет.
+Risks/blocker: HF-139 намеренно остаётся незакоммиченным; push/merge не выполнялись.
+Next: дальнейшие правки или публикация по запросу пользователя.
+```
+
+### HF-147 — вернуть hover/click с отменяемой задержкой наведения
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-15; HF-146 DONE, активных пересечений нет. Пользователь хочет исходные звуки при условии отсутствия пары hover→click при быстром нажатии.
+CP-HF-147 read-set/write-set: ORCHESTRATION_PLAN.md, scripts/Audio/SoundEffects.cs, tests/Integration/ProjectTest.SoundEffects.cs, tests/ProjectTest.cs, docs/GAMEPLAY.md; read-only audio/sfx/{hover,click}.wav, evidence HF-146. .local/checks/hf147 — изолированная копия/evidence. Out of scope: исходники/обработка WAV, source/, музыка, sale/settings/bell semantics, Back geometry, commit/push/ZIP. Приёмка: hover.wav после150мс реального наведения, быстрый click отменяет ожидание и играет только click.wav; начавшийся hover останавливается на mouse-down/activation; уход/скрытие/disabled/удаление отменяют ожидание; no focus/layout hover; pause и спецзвуки сохранены. Проверки: build, rendered SFX fast-click/dwell/leave/hide/pause/lifecycle checks, diff-check.
+
+
+```text
+Task: HF-147
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: исходные hover.wav/click.wav снова назначены своим событиям. HoverDelaySeconds экспортирован, default.15; ожидание ведётся в Always Process с повторной проверкой фактической кнопки под указателем. Реальное движение создаёт одно ожидание; mouse-down/keyboard activation, уход/скрытие/disabled/removal отменяют ожидание и останавливают hover voice. Навигация/смена меню без движения ничего не планируют. Поздних Task/Timer callbacks нет. Специальные эффекты settings/sale/bell сохранены. Документация и интеграционные проверки обновлены.
+Checks: build PASS (0 warnings/errors); isolated rendered --sound-effects-checks PASS: fast enter+press толькоClick; ожидание после fast-click не даёт позднийHover; dwell даёт одинHover; движение внутри не повторяет; mouse-down останавливает играющийHover до release; hide/quick leave/focus не создают звук; основной menu/pause/sale/bell/reload regression PASS; git diff-check PASS.
+Acceptance: при быстром клике до150мс hover не начинается, звучит только отдельный click; при осознанном наведении остаётся прежний hover; исходные WAV не менялись. Evidence: .local/checks/hf147/{build.log,sfx.log,sfx-errors.log}.
+Read-set exception: ChikagoShop.csproj и изолированная копия HF-146 использованы для проверок без source/.
+Risks/blocker: если пользователь уже задержался дольше150мс, начало hover уже прозвучало и его нельзя отменить задним числом; нажатие немедленно прекращает оставшуюся часть. Известная Back geometry вне задачи, прежний certificate-store warning окружения при exit0. Commit/push/ZIP не выполнялись.
+Next: пользовательское прослушивание; задержка доступна в SoundEffects.HoverDelaySeconds при необходимости настройки.
+```
+
+### HF-146 — тихое наведение, прежний hover-файл на обычное нажатие
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-15; HF-145 DONE, активных пересечений нет.
+CP-HF-146 read-set/write-set: ORCHESTRATION_PLAN.md, scripts/Audio/SoundEffects.cs, tests/Integration/ProjectTest.SoundEffects.cs, tests/ProjectTest.cs, docs/GAMEPLAY.md; read-only audio/sfx/hover.wav и evidence HF-145. .local/checks/hf146 — изолированная копия/evidence. Out of scope: исходные WAV/музыка, source/, продажа/settings/bell-семантика, MainMenu Back geometry, commit/push/ZIP, пользовательские правки. Приёмка: любое наведение/фокус без звука, обычное нажатие играет именно hover.wav; settings/sale/bell остаются отдельными, disabled молчат, пауза работает. Проверки: build, rendered --sound-effects-checks, diff-check.
+
+
+```text
+Task: HF-146
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: из SoundEffects удалены Hover cue/voice, MouseMotion/Input/Process наблюдение; generic Click теперь загружает hover.wav. Settings/Sale/CustomerBell и правила доступности/паузы не менялись. Старый click.wav сохранён как неиспользуемый ассет. Тест проверяет тишину при реальном наведении и фокусе, точный путь hover.wav у Click, фактическое проигрывание по нажатию и отсутствие двойных событий; документация и PASS-маркер актуализированы.
+Checks: build PASS (0 warnings/errors); isolated rendered --sound-effects-checks PASS (silent hover, correct WAV on click, main/pause, sale/settings/bell exceptions, disabled/reload/cleanup); git diff-check PASS.
+Acceptance: наведение полностью без звука, обычное нажатие играет именно бывшую запись наведения; отдельные звуки специальных действий сохранены. Evidence: .local/checks/hf146/{build.log,sfx.log,sfx-errors.log}.
+Read-set exception: ChikagoShop.csproj/готовая изолированная копия HF-145 использованы для проверок без source/.
+Risks/blocker: прежняя геометрия BackButton вне задачи; root certificate store warning окружения при exit0. Commit/push/ZIP не выполнялись.
+Next: проверить на слух новое звучание нажатий.
+```
+
+### HF-145 — звуковые эффекты интерфейса, продажи и прихода покупателя
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-15; зависимостей/пересечений нет. Уточнение пользователя: колокольчик только при самостоятельном приходе, без смены кнопкой отказа.
+CP-HF-145 read-set: текущий фронт, пять точных файлов Downloads/{продажа,наведение на иконку,колокольчик,шестерёнка,клик по иконке}.wav, scripts/{TradeScene,CounterWorld,ModularCustomer,MainMenu}.cs, scripts/{Audio/MusicSettings,UI/PauseMenu,UI/SlotUI,UI/InventoryUI,UI/ProgressPanel,Days/DayCycleController,Presentation/ButtonFeedbackController}.cs, scripts/Persistence/TradeScene.Persistence.cs, scenes/trade_scene.tscn, project.godot, tests/ProjectTest.cs, tests/Integration/ProjectTest.{Helpers,Trading,DayStart,ButtonFeedback}.cs, docs/GAMEPLAY.md. Write-set: ORCHESTRATION_PLAN.md, новые audio/sfx/{sale,hover,customer_bell,settings,click}.wav/.import, новый scripts/Audio/SoundEffects.cs/.uid, project.godot, scripts/TradeScene.cs (только presentation event и его вызов в StartBuyerOffer), tests/ProjectTest.cs, новый tests/Integration/ProjectTest.SoundEffects.cs/.uid, docs/GAMEPLAY.md; .local/checks/hf145 — evidence/изолированный запуск. Out of scope: source/, доменная логика TradeScene, исходники Downloads/обработка WAV, музыка/петли, новый ползунок, commit/push/ZIP, несвязанные правки. Приёмка: hover только при движении мыши на активный элемент, не от клика/фокуса/смены меню; обычный клик по всем активным кнопкам/иконкам меню/игры/паузы, SettingsButton — шестерёнка вместо обычного клика, AcceptButton — продажа вместо обычного клика; bell только StartBuyerOffer, не reroll/load. Эффекты работают при паузе независимо от Music bus. Проверки: hashes, build, isolated sfx real-input/event/lifecycle tests + music/button regression, diff-check.
+
+
+```text
+Task: HF-145
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: пять WAV побайтно скопированы в audio/sfx, one-shot импорт без нормализации/сжатия. SoundEffects autoload наблюдает все существующие/динамические BaseButton (включая TextureButton, инвентарь, часы и паузу), различает hover/обычный click/settings/sale, не потребляет input и очищает подписки. Hover только после реального MouseMotion на новый доступный элемент; активация гасит прошлый hover и не запускает его снова. Общая громкость эффектов -6dB, отдельная SFX bus, проигрывание Always/MaxPolyphony. В TradeScene добавлены только presentation event BuyerArrived и один вызов после ShowTrade в StartBuyerOffer; смена/загрузка не вызывают bell. Документировано поведение и добавлен --sound-effects-checks.
+Checks: пять source/asset SHA256 совпали PASS; build PASS (0 warnings/errors); import PASS; headless SFX checks PASS; final rendered --sound-effects-checks PASS (мышь/focus/disabled, меню/пауза, продажа без generic click, самостоятельные приходы/отказ/reload, Music mute не глушит SFX, cleanup); --intro-music-checks PASS; --game-music-checks PASS; git diff-check PASS. --button-feedback-checks FAIL на Texture feedback bounds кнопки Back; без SoundEffects autoload тот же FAIL, baseline подтверждён.
+Acceptance: все пять событий звучат в нужных местах, hover не вызывается кликом/фокусом/сменой меню; bell отсутствует при reroll и restore. Исходные WAV и музыкальная система сохранены. Evidence: .local/checks/hf145/{hashes.txt,build.log,import.log,sound-effects.log,sound-effects-rendered*.log,button-feedback-rendered*.log,button-baseline*.log,intro-music.log,game-music.log}.
+Read-set exception: tests/Integration/ProjectTest.Crafting.cs прочитан только для существующих CraftAtelier/FinishEmbroidery fixtures; ChikagoShop.csproj и runtime-ресурсы скопированы для изолированных проверок без source/. Временное отключение SoundEffects выполнено только в изолированном project.godot и восстановлено.
+Risks/blocker: обнаружена прежняя проблема MainMenu Settings BackButton: global rect(440,910),(400,0), нулевая высота/за экраном; пользователю сообщено во время работы. Она не исправлялась в звуковой задаче, generic click главного меню проверен на языковой кнопке; Back в паузе проверен реальным кликом. Общий visual button suite не объявляется зелёным. Прежнее сообщение root certificate store среды не влияет на SFX/music exit0. Commit/push/ZIP не выполнялись.
+Next: пользовательское прослушивание; отдельно исправить геометрию Back в главных настройках при запросе.
+```
 
 ### HF-144 — коммит обновлённых главных мелодий в feature/music
 

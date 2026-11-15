@@ -16,6 +16,13 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--sound-effects-checks"))
+            {
+                await TestSoundEffects();
+                GD.Print("SOUND_EFFECTS_CHECKS_PASS: delayed cancellable hover, fast click without hover, distinct original click/settings/sale, natural buyer bell, pause and cleanup");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--music-settings-checks"))
             {
                 await TestMusicSettings();

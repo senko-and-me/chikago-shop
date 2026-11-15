@@ -1,0 +1,165 @@
+using System;
+using System.Collections.Generic;
+using Godot;
+
+// Presentation observer: input still belongs to the original controls and game rules.
+public partial class SoundEffects : Node
+{
+    public enum Cue { Hover, Click, Settings, Sale, CustomerBell }
+    public const string BusName = "SFX";
+    public static SoundEffects Instance { get; private set; }
+    [Export] public float VolumeDb { get; set; } = -6;
+    [Export(PropertyHint.Range, "0.05,1,0.01")] public double HoverDelaySeconds { get; set; } = 0.15;
+    public event Action<Cue> Played;
+    private readonly Dictionary<Cue, AudioStreamPlayer> _voices = new();
+    private readonly Dictionary<BaseButton, Action> _buttons = new();
+    private readonly Dictionary<TradeScene, Action> _games = new();
+    private BaseButton _hovered, _pendingHover;
+    private Vector2 _lastPointer = new(float.NaN, float.NaN);
+    private bool _motionPending;
+    private double _hoverElapsed;
+
+    public override void _Ready()
+    {
+        Instance = this;
+        ProcessMode = ProcessModeEnum.Always;
+        if (AudioServer.GetBusIndex(BusName) < 0)
+        {
+            AudioServer.AddBus();
+            AudioServer.SetBusName(AudioServer.BusCount - 1, BusName);
+            AudioServer.SetBusSend(AudioServer.GetBusIndex(BusName), "Master");
+        }
+        foreach (var (cue, file) in new[] { (Cue.Hover, "hover"), (Cue.Click, "click"),
+                     (Cue.Settings, "settings"), (Cue.Sale, "sale"), (Cue.CustomerBell, "customer_bell") })
+        {
+            var player = new AudioStreamPlayer
+            {
+                Name = cue.ToString(), Stream = GD.Load<AudioStream>($"res://audio/sfx/{file}.wav"),
+                Bus = BusName, VolumeDb = VolumeDb, MaxPolyphony = cue == Cue.Hover ? 1 : 4
+            };
+            AddChild(player);
+            _voices.Add(cue, player);
+        }
+        GetTree().NodeAdded += Attach;
+        GetTree().NodeRemoved += Detach;
+        AttachExisting(GetTree().Root);
+    }
+
+    private void AttachExisting(Node node)
+    {
+        Attach(node);
+        foreach (Node child in node.GetChildren()) AttachExisting(child);
+    }
+
+    private void Attach(Node node)
+    {
+        if (node is BaseButton button && !_buttons.ContainsKey(button))
+        {
+            Action activate = () =>
+            {
+                if (!Interactive(button)) return;
+                Play(button.Name.ToString() switch
+                {
+                    "SettingsButton" => Cue.Settings,
+                    "AcceptButton" => Cue.Sale,
+                    _ => Cue.Click
+                });
+            };
+            _buttons.Add(button, activate);
+            button.Pressed += activate;
+        }
+        if (node is TradeScene game && !_games.ContainsKey(game))
+        {
+            Action arrived = () => Play(Cue.CustomerBell);
+            _games.Add(game, arrived);
+            game.BuyerArrived += arrived;
+        }
+    }
+
+    private void Detach(Node node)
+    {
+        if (node is BaseButton button && _buttons.Remove(button, out var callback)) button.Pressed -= callback;
+        if (node is TradeScene game && _games.Remove(game, out var arrived)) game.BuyerArrived -= arrived;
+        if (node == _hovered) { _hovered = null; CancelHover(); }
+    }
+
+    private static bool Interactive(BaseButton button) => GodotObject.IsInstanceValid(button) &&
+        button.IsInsideTree() && !button.IsQueuedForDeletion() && button.IsVisibleInTree() &&
+        !button.Disabled && button.CanProcess();
+
+    private BaseButton PointerButton()
+    {
+        Control control = GetViewport().GuiGetHoveredControl();
+        while (control != null && control is not BaseButton) control = control.GetParent() as Control;
+        return control is BaseButton button && Interactive(button) ? button : null;
+    }
+
+    private void CancelHover()
+    {
+        _pendingHover = null;
+        _hoverElapsed = 0;
+        _voices[Cue.Hover].Stop();
+    }
+
+    public override void _Input(InputEvent input)
+    {
+        if (input is InputEventMouseMotion motion)
+        {
+            if (motion.Position != _lastPointer || motion.Relative.LengthSquared() > 0)
+                _motionPending = (motion.ButtonMask & MouseButtonMask.Left) == 0;
+            _lastPointer = motion.Position;
+        }
+        else if (input is InputEventMouseButton { Pressed: true } or InputEventKey { Pressed: true })
+        {
+            _motionPending = false;
+            CancelHover();
+        }
+    }
+
+    public override void _Process(double delta)
+    {
+        var current = PointerButton();
+        if (_hovered != null && current != _hovered) { _hovered = null; CancelHover(); }
+        if (_motionPending)
+        {
+            _motionPending = false;
+            if (current != _hovered)
+            {
+                CancelHover();
+                _hovered = current;
+                _pendingHover = current;
+            }
+        }
+        if (_pendingHover == null) return;
+        _hoverElapsed += delta;
+        if (_hoverElapsed < Math.Max(0, HoverDelaySeconds)) return;
+        _pendingHover = null;
+        Play(Cue.Hover);
+    }
+
+    private void Play(Cue cue)
+    {
+        if (cue is Cue.Click or Cue.Settings or Cue.Sale) CancelHover();
+        _voices[cue].Play();
+        Played?.Invoke(cue);
+    }
+
+    public override void _ExitTree()
+    {
+        GetTree().NodeAdded -= Attach;
+        GetTree().NodeRemoved -= Detach;
+        foreach (var (button, callback) in _buttons)
+            if (GodotObject.IsInstanceValid(button)) button.Pressed -= callback;
+        foreach (var (game, callback) in _games)
+            if (GodotObject.IsInstanceValid(game)) game.BuyerArrived -= callback;
+        _buttons.Clear();
+        _games.Clear();
+        foreach (var player in _voices.Values)
+        {
+            player.Stop();
+            player.Stream = null;
+        }
+        _voices.Clear();
+        if (Instance == this) Instance = null;
+    }
+}
