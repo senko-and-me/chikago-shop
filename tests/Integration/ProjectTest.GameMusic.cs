@@ -39,7 +39,7 @@ public partial class ProjectTest
         void CheckDay()
         {
             Check(director.CurrentCue == "day" && day.Playing && !upgrades.Playing &&
-                  Math.Abs(day.VolumeDb - (-12.0206)) < 0.001,
+                  Math.Abs(day.VolumeDb - (-12)) < 0.001,
                 "Gameplay must use the main loop at the first intro stage's quiet level");
         }
 
@@ -52,12 +52,13 @@ public partial class ProjectTest
                 "A fresh game must start its main music softly, without the card track");
             Settle();
             CheckDay();
-            Check(((AudioStreamWav)day.Stream).LoopEnd == 940800 &&
-                  ((AudioStreamWav)upgrades.Stream).LoopEnd == 470400 &&
+            Check(((AudioStreamWav)day.Stream).LoopEnd == 1881600 &&
+                  ((AudioStreamWav)upgrades.Stream).LoopEnd == 2419200 &&
                   ((AudioStreamWav)day.Stream).LoopMode == AudioStreamWav.LoopModeEnum.Forward &&
                   ((AudioStreamWav)upgrades.Stream).LoopMode == AudioStreamWav.LoopModeEnum.Forward,
                 "Gameplay must reuse the exact musical loops already checked for the intro");
-            double dayLevel = MusicRms((AudioStreamWav)day.Stream) * day.VolumeLinear;
+            float dayGain = day.VolumeLinear;
+            Check(director.UpgradeCompensation == 1, "New recordings must not use the old thoughtful gain boost");
             ulong playback = day.GetStreamPlayback().GetInstanceId();
             var pause = game.GetNode<PauseMenu>("PauseMenu");
             pause.Open();
@@ -88,9 +89,8 @@ public partial class ProjectTest
                 Check(Paused && upgrades.VolumeLinear > before,
                     "The crossfade must actually advance while the card screen pauses gameplay");
                 Settle();
-                double cardLevel = MusicRms((AudioStreamWav)upgrades.Stream) * upgrades.VolumeLinear;
-                Check(!day.Playing && upgrades.Playing && Math.Abs(cardLevel / dayLevel - 1) < 0.003,
-                    "Upgrade music must have the same steady perceived level as the quiet day theme");
+                Check(!day.Playing && upgrades.Playing && Math.Abs(upgrades.VolumeLinear - dayGain) < 0.0001,
+                    "Upgrade music must have the same configured gain as the day theme");
                 await WaitForDayCardAnimation(game);
                 if (buy) card.Choose(card.Options[0]);
                 else card.Skip();

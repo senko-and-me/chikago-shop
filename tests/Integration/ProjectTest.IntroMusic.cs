@@ -6,6 +6,46 @@ using Godot;
 
 public partial class ProjectTest
 {
+    private static void CheckPreparedMusicSeam(AudioStreamWav stream)
+    {
+        byte[] data = stream.Data;
+        double energy = 0;
+        int count = (int)(stream.MixRate * 0.02);
+        for (int channel = 0; channel < 2; channel++)
+        {
+            double first = BitConverter.ToInt16(data, channel * 2) / 32768.0;
+            double last = BitConverter.ToInt16(data, data.Length - 4 + channel * 2) / 32768.0;
+            Check(Math.Abs(first - last) < 0.001,
+                "The prepared cyclic seam must not introduce an impulsive sample jump in either channel");
+            for (int i = 0; i < count; i++)
+            {
+                double before = BitConverter.ToInt16(data, data.Length - (i + 1) * 4 + channel * 2) / 32768.0;
+                double after = BitConverter.ToInt16(data, i * 4 + channel * 2) / 32768.0;
+                energy += before * before + after * after;
+            }
+        }
+        double seamRms = Math.Sqrt(energy / (count * 4));
+        double bodyRms = MusicRms(stream);
+        Check(seamRms > bodyRms * 0.5 && seamRms < bodyRms * 1.5,
+            "The seam must carry continuous music without a fade to silence or a loudness spike");
+        using var playback = stream.InstantiatePlayback();
+        playback.Start(stream.GetLength() - 0.12);
+        int rate = (int)AudioServer.GetMixRate();
+        var mixed = playback.MixAudio(1, (int)(rate * 0.24));
+        Check(playback.IsPlaying() && playback.GetPlaybackPosition() < 0.25,
+            "The audio probe must actually wrap from the recording's end back to its beginning");
+        int window = rate / 50;
+        for (int offset = 0; offset + window <= mixed.Length; offset += window)
+        {
+            double power = 0;
+            for (int i = offset; i < offset + window; i++) power += mixed[i].LengthSquared() / 2;
+            double rms = Math.Sqrt(power / window);
+            Check(rms > bodyRms * 0.4 && rms < bodyRms * 3,
+                "Every decoded 20ms block around the loop must retain music without a micro-pause or spike");
+        }
+        playback.Stop();
+    }
+
     private static double MusicRms(AudioStreamWav stream)
     {
         byte[] data = stream.Data;
@@ -33,24 +73,33 @@ public partial class ProjectTest
         foreach (string id in new[] { "thoughtful", "sinister" })
         {
             var stream = GD.Load<AudioStreamWav>($"res://audio/music/{id}_loop.wav");
+            int frames = id == "thoughtful" ? 2419200 : 470400;
+            if (id == "thoughtful")
+            {
+                Check(Math.Abs(stream.GetLength() - 64 * 60.0 / 70) < 1.0 / stream.MixRate,
+                    "The thoughtful loop must align with its 70 BPM period rather than the main theme's 90 BPM");
+                CheckPreparedMusicSeam(stream);
+                using var ending = stream.InstantiatePlayback();
+                ending.Start(53.333333333333336);
+                var lastPhrase = ending.MixAudio(1, (int)AudioServer.GetMixRate());
+                Check(ending.IsPlaying() && ending.GetLoopCount() == 0 && ending.GetPlaybackPosition() > 54 &&
+                      lastPhrase.Any(sample => sample.LengthSquared() > 0.00001),
+                    "The last phrase must still play after the former premature 53.333-second boundary");
+                GD.Print($"THOUGHTFUL_ENDING_CHECK: length={stream.GetLength():F6}s, last phrase position={ending.GetPlaybackPosition():F6}s, loops={ending.GetLoopCount()}");
+                ending.Stop();
+            }
             Check(stream.MixRate == 44100 && stream.Stereo &&
                   stream.Format == AudioStreamWav.FormatEnum.Format16Bits &&
                   stream.LoopMode == AudioStreamWav.LoopModeEnum.Forward && stream.LoopBegin == 0 &&
-                  stream.LoopEnd == 470400 && stream.Data.Length == 470400 * 4,
-                "Each new track must be lossless PCM, natively looped at four complete 90 BPM bars");
-            Check(Math.Abs(stream.GetLength() - 16 * 60.0 / 90) < 1.0 / 44100,
-                "MP3 padding and export tails must not change the musical loop duration");
-            byte[] pcm = stream.Data;
-            for (int channel = 0; channel < 2; channel++)
-                Check(Math.Abs(BitConverter.ToInt16(pcm, channel * 2) -
-                      BitConverter.ToInt16(pcm, pcm.Length - 4 + channel * 2)) / 32768.0 < 0.003,
-                    "Prepared MP3-derived loops must have a smooth waveform join");
+                  stream.LoopEnd == frames && stream.Data.Length == frames * 4,
+                "Each track must loop its full recording through Godot's decoder");
+            Check(Math.Abs(stream.GetLength() - frames / 44100.0) < 1.0 / 44100,
+                "The prepared musical period must retain its exact duration");
             using var playback = stream.InstantiatePlayback();
             playback.Start(stream.GetLength() - 0.025);
             var mixed = playback.MixAudio(1, (int)AudioServer.GetMixRate() / 10);
-            Check(playback.IsPlaying() && playback.GetPlaybackPosition() < 0.11 &&
-                  mixed.Any(frame => frame.LengthSquared() > 0.00001),
-                "New music must wrap inside the decoder without a restart or silent gap");
+            Check(playback.IsPlaying() && playback.GetPlaybackPosition() < 0.11 && mixed.Length > 0,
+                "Music must wrap inside the decoder without scheduling a restart");
             playback.Stop();
         }
 
@@ -95,6 +144,9 @@ public partial class ProjectTest
                 "Scene overrides must preserve music streams, positive compensation and fade durations");
             float menuGain = Mathf.DbToLinear(director.MenuVolumeDb);
             float introGain = Mathf.DbToLinear(director.IntroVolumeDb);
+            Check(director.MenuVolumeDb == director.IntroVolumeDb &&
+                  director.ThoughtfulCompensation == 1 && director.SinisterCompensation == 1,
+                "Menu and prologue must share the same gain without legacy source boosts");
             director._Process(1);
             Check(Math.Abs(menuVoice.VolumeLinear - menuGain) < 0.0001,
                 "Idle music processing must preserve the menu level");
@@ -124,20 +176,17 @@ public partial class ProjectTest
             Check(thoughtful.VolumeLinear == halfway, "Repeated cue must not restart its fade or track");
             director._Process(director.CrossfadeSeconds / 2);
             Check(!first.Playing && thoughtful.Playing, "Only thoughtful music must remain after the first transition");
-            double firstLevel = MusicRms((AudioStreamWav)first.Stream) * introGain;
-            double secondLevel = MusicRms((AudioStreamWav)thoughtful.Stream) * thoughtful.VolumeLinear;
-            Check(Math.Abs(secondLevel / firstLevel - 1) < 0.01 &&
+            Check(Math.Abs(thoughtful.VolumeLinear - introGain) < 0.0001 &&
                   director.ThoughtfulVolumeDb == director.IntroVolumeDb,
-                "Thoughtful music must match the first stage's normalized loudness");
+                "Thoughtful music must use the same gain as the untouched main recording");
             while (dialogue.Session.Index < 14) AdvanceMusicLine(dialogue);
             Check(director.CurrentCue == "sinister" && dialogue.Session.Current.Text.StartsWith("Поверь, я и слышать не хочу") &&
                   cues.SequenceEqual(new[] { "thoughtful", "sinister" }),
                 "The refusal speech must trigger sinister music exactly once, including paginated speeches");
             director._Process(director.CrossfadeSeconds);
-            double thirdLevel = MusicRms((AudioStreamWav)sinister.Stream) * sinister.VolumeLinear;
-            Check(!thoughtful.Playing && sinister.Playing && Math.Abs(thirdLevel / firstLevel - 1) < 0.01 &&
+            Check(!thoughtful.Playing && sinister.Playing && Math.Abs(sinister.VolumeLinear - introGain) < 0.0001 &&
                   director.SinisterVolumeDb == director.IntroVolumeDb,
-                "Sinister music must play at the same normalized loudness as the other stages");
+                "Sinister music must use the same configured gain as the other stages");
 
             director.ApplyIntroCue("thoughtful");
             director._Process(0.1);
@@ -198,6 +247,6 @@ public partial class ProjectTest
         }
         finally { await ClearScene(); }
         await ToSignal(CreateTimer(0.2), SceneTreeTimer.SignalName.Timeout);
-        GD.Print("INTRO_MUSIC_CHECKS_PASS: 90 BPM loops, quiet entry, equal normalized levels, sentence cues, smooth/rapid crossfades, full/skip/cancel/exit");
+        GD.Print("INTRO_MUSIC_CHECKS_PASS: seamless musical loops, quiet entry, equal gains, cues, smooth/rapid crossfades, full/skip/cancel/exit");
     }
 }

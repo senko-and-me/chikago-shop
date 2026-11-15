@@ -6,8 +6,8 @@ public partial class GameplayMusicDirector : Node
 {
     [Export] public AudioStream DayStream { get; set; }
     [Export] public AudioStream UpgradeStream { get; set; }
-    [Export] public float VolumeDb { get; set; } = -12.0206f;
-    [Export] public float UpgradeCompensation { get; set; } = 2.7922467f;
+    [Export] public float VolumeDb { get; set; } = -12;
+    [Export] public float UpgradeCompensation { get; set; } = 1;
     [Export] public double CrossfadeSeconds { get; set; } = 2.5;
     [Export] public double FadeInSeconds { get; set; } = 2.5;
     [Export] public NodePath UpgradeCardPath { get; set; } = new("../DayTransitionCard");

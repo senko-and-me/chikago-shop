@@ -7,13 +7,13 @@ using Godot;
 // Scene-owned music: overlapping voices keep even rapid dialogue changes smooth.
 public partial class IntroMusicDirector : Node
 {
-    [Export] public float MenuVolumeDb { get; set; } = -6;
-    [Export] public float IntroVolumeDb { get; set; } = -12.0206f;
-    [Export] public float ThoughtfulVolumeDb { get; set; } = -10;
-    [Export] public float SinisterVolumeDb { get; set; } = -8;
-    // Match source RMS to the menu reference before applying the stage fader.
-    [Export] public float ThoughtfulCompensation { get; set; } = 2.7922467f;
-    [Export] public float SinisterCompensation { get; set; } = 1.4395282f;
+    [Export] public float MenuVolumeDb { get; set; } = -12;
+    [Export] public float IntroVolumeDb { get; set; } = -12;
+    [Export] public float ThoughtfulVolumeDb { get; set; } = -12;
+    [Export] public float SinisterVolumeDb { get; set; } = -12;
+    // Keep the supplied recordings' original mix; use the same gain in every scene.
+    [Export] public float ThoughtfulCompensation { get; set; } = 1;
+    [Export] public float SinisterCompensation { get; set; } = 1;
     [Export] public AudioStream ThoughtfulStream { get; set; } = GD.Load<AudioStream>("res://audio/music/thoughtful_loop.wav");
     [Export] public AudioStream SinisterStream { get; set; } = GD.Load<AudioStream>("res://audio/music/sinister_loop.wav");
     [Export] public double IntroFadeSeconds { get; set; } = 4;

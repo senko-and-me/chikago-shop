@@ -9,20 +9,16 @@ public partial class ProjectTest
     {
         Check(OS.GetUserDataDir().Contains("ChikagoShopStartupSmokeMenuMusic"),
             "Menu music checks require isolated userdata; refusing to touch player saves");
-        const int frames = 940800; // 32 quarter notes at 90 BPM, 44100 Hz.
+        const int frames = 1881600; // 16 complete 4/4 bars at 90 BPM, with a cyclic seam bridge.
         var stream = GD.Load<AudioStreamWav>("res://audio/music/menu_theme_loop.wav");
         Check(stream != null && stream.MixRate == 44100 && stream.Stereo &&
               stream.Format == AudioStreamWav.FormatEnum.Format16Bits &&
               stream.LoopMode == AudioStreamWav.LoopModeEnum.Forward &&
               stream.LoopBegin == 0 && stream.LoopEnd == frames && stream.Data.Length == frames * 4,
-            "The imported music must retain lossless stereo PCM and exact eight-bar native loop points");
-        Check(Math.Abs(stream.GetLength() - 32 * 60.0 / 90) < 1.0 / stream.MixRate,
-            "Loop duration must equal exactly eight 4/4 bars at 90 BPM");
-        byte[] data = stream.Data;
-        double jumpLeft = Math.Abs(BitConverter.ToInt16(data, 0) - BitConverter.ToInt16(data, data.Length - 4)) / 32768.0;
-        double jumpRight = Math.Abs(BitConverter.ToInt16(data, 2) - BitConverter.ToInt16(data, data.Length - 2)) / 32768.0;
-        Check(jumpLeft < 0.003 && jumpRight < 0.003,
-            "The prepared loop must not retain the original abrupt waveform discontinuity");
+            "Godot must decode and loop the full prepared main recording");
+        Check(Math.Abs(stream.GetLength() - frames / 44100.0) < 1.0 / stream.MixRate,
+            "The main loop must contain exactly sixteen complete bars");
+        CheckPreparedMusicSeam(stream);
         using var playback = stream.InstantiatePlayback();
         double loopSeconds = frames / 44100.0;
         playback.Start(loopSeconds - 0.025);
@@ -31,9 +27,6 @@ public partial class ProjectTest
         Check(rendered.Length > 0 && playback.IsPlaying() &&
               playback.GetPlaybackPosition() > 0 && playback.GetPlaybackPosition() < 0.11,
             "Native playback must wrap across the loop boundary without Finished/Play scheduling");
-        for (int start = 0; start + 256 <= rendered.Length; start += 256)
-            Check(rendered.Skip(start).Take(256).Sum(value => value.LengthSquared()) / 256 > 0.00001,
-                "Decoded audio must remain continuous, without a silent gap around the loop seam");
         playback.Stop();
 
         var menuScene = GD.Load<PackedScene>("res://scenes/main_menu.tscn");
@@ -51,7 +44,7 @@ public partial class ProjectTest
             var music = menu.GetNode<AudioStreamPlayer>("MenuMusic");
             var director = menu.GetNode<IntroMusicDirector>("MusicDirector");
             director.SetProcess(false);
-            Check(music.Autoplay && music.Playing && music.Stream == stream && music.VolumeDb == -6,
+            Check(music.Autoplay && music.Playing && music.Stream == stream && music.VolumeDb == -12,
                 "Main menu must automatically play the prepared track at the configured volume");
             ulong initialPlayback = music.GetStreamPlayback().GetInstanceId();
             menu.OnSettingsPressed();
@@ -98,6 +91,6 @@ public partial class ProjectTest
         await ToSignal(this, SignalName.ProcessFrame);
         // AudioServer releases stopped voices on its next mixing blocks.
         await ToSignal(CreateTimer(0.2), SceneTreeTimer.SignalName.Timeout);
-        GD.Print($"MENU_MUSIC_CHECKS_PASS: 90 BPM, 32 beats, lossless native loop; seam deltas {jumpLeft:F7}/{jumpRight:F7}; menu/settings/intro/cancel/gameplay/reentry");
+        GD.Print($"MENU_MUSIC_CHECKS_PASS: seamless sixteen-bar loop ({loopSeconds:F6}s); menu/settings/intro/cancel/gameplay/reentry");
     }
 }

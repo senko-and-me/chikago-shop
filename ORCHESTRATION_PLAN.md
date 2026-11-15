@@ -1,7 +1,7 @@
 # Оркестровый план: «Бакалея для гангстеров»
 
 Версия плана: 1.2
-Обновлено: 2026-11-14
+Обновлено: 2026-11-15
 Стадия по реестру: `S1 — домен, конфигурация и воспроизводимость`
 
 Этот файл хранит требования, решения, стадии и текущий фронт. Рабочий протокол — в [AGENTS.md](AGENTS.md), подробные завершённые отчёты — в [архиве](docs/archive/ORCHESTRATION_HISTORY_2026-11-12.md). `source/` остаётся локальным архивом и не входит в Git.
@@ -9,6 +9,91 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+
+### HF-144 — коммит обновлённых главных мелодий в feature/music
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-15; HF-140…143 DONE; пользователь просит пока только коммит в музыкальной ветке.
+CP-HF-144 read-set: текущий фронт, git status/diff/branches, evidence HF-140…143. Write-set: Git index/objects и локальная feature/music, ORCHESTRATION_PLAN.md (записи HF-140…144); .local/checks/hf144 — индексная версия плана/сообщение коммита. Out of scope: main, push, source/, ZIP, несвязанный локальный отчёт HF-139. Приёмка: один коммит «Изменены главные мелодии» с заменой двух WAV, единым уровнем и финальными петлями90/70BPM, тестами/документацией; main остаётся900e9b1; HF-139 остаётся незакоммиченным. Проверки: staged diff-check/stat, текущие music regression PASS HF-143, commit refs/status.
+
+
+```text
+Task: HF-144
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: в feature/music создан один коммит «Изменены главные мелодии» с подробным описанием замены WAV, подготовки петель90/70BPM, единой громкости, тестов и документации. Итоговый отчёт включён amend только этого нового неопубликованного коммита; функциональные файлы не менялись.
+Checks: staged diff-check PASS; staged stat12files подтверждён; сохранённые build/menu-music/intro-music/game-music HF-143 PASS; main осталась900e9b1. Вне индекса оставлена только прежняя запись HF-139 о сборке ZIP.
+Acceptance: запрошенные музыкальные изменения сохранены отдельным коммитом в музыкальной ветке; main/remote не изменены.
+Read-set exception: нет.
+Risks/blocker: несвязанный локальный отчёт ZIP HF-139 намеренно остаётся незакоммиченным; origin/feature/music ещё указывает на прежнюю опубликованную историю. Push/merge не выполнялись.
+Next: по дальнейшему запросу опубликовать ветку или объединить с main.
+```
+
+### HF-143 — убрать микропаузу задумчивой темы с учётом70BPM
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-15; HF-142 DONE. Пользователь уточнил ориентир70BPM и слышимую паузу на полном исходном fade-out/in.
+CP-HF-143 read-set: текущий фронт, C:/Users/artem/Downloads/задумчиво2.wav (read-only), audio/music/{thoughtful_loop,menu_theme_loop}.wav/.import, .local/checks/hf142/audio-loop и reports, tests/Integration/ProjectTest.{IntroMusic,GameMusic}.cs, docs/GAMEPLAY.md. Write-set: ORCHESTRATION_PLAN.md, audio/music/thoughtful_loop.wav/.import, tests/Integration/ProjectTest.{IntroMusic,GameMusic}.cs, docs/GAMEPLAY.md, .local/checks/hf143 — обработка/evidence/изолированная проверка. Out of scope: главная тема/её импорт, source/, оригиналы Downloads, громкость/межтрековые переходы, commit/push/ZIP. Приёмка: период70BPM сохраняет финальную фразу после53⅓с, убрана экспортная добавка и падение громкости на стыке; нет импульса/паузы в native decoder; главная тема побайтно прежняя. Проверки: музыкальный период/sample seam/энергия в окнах у стыка, hashes main, build, isolated intro/game/menu checks, diff-check.
+
+
+```text
+Task: HF-143
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: thoughtful period2419200frames/54.857142857с=64доли при70BPM; удалены6414frames/145.442мс экспортного хвоста. Fade-out/in стыка заменён raised-cosine bridge по400мс из непрерывного, совпадающего по музыкальной фазе фрагмента (48долей; корреляция head .927/tail .991; точный reference1814437). От0.4до54.457143с waveform побайтно эквивалентен исходному PCM (maxDifference0), в том числе прежняя обрезанная последняя фраза. Импорт и тесты длительности обновлены. Проверка seam требует непрерывной энергии и проверяет каждый20мс блок реального decoder-wrap, вместо исключения для исходного fade.
+Checks: build PASS (0 warnings/errors); isolated import PASS; --intro-music-checks PASS (включая энергию всех20мс блоков вокруг повторения, скачок обоих каналов<.001, последняя фраза53⅓→54.334694с без повторения); --game-music-checks PASS; --menu-music-checks PASS; main WAV/import hashes unchanged PASS; source thoughtful hash unchanged PASS; unchanged-body maxDifference0 PASS; git diff-check PASS.
+Acceptance: нет fade-to-silence на стыке; L/R seam step .00000155/.00000119, средний RMS .04530 вместо .04520 (нормализации нет); поздняя фраза сохранена, главная тема не менялась. Evidence: .local/checks/hf143/{bridge-candidates.jsonl,thoughtful-preparation.json,unchanged-body.json,main-before.txt,build.log,import.log,intro-music.log,game-music.log,menu-music.log}, воспроизводимый локальный audio-loop/Program.cs.
+Read-set exception: ChikagoShop.csproj и готовая изолированная копия HF-142 использованы для сборки/проверок без source/. Неприменимый для WAV GetLoopCount в новой проверке заменён фактическим переходом playback position от конца к началу.
+Risks/blocker:70BPM принят по уточнению пользователя и подтверждён хорошо совпадающими внутренними фазовыми фрагментами; воспроизведение проверено инструментально, музыкальная оценка прослушиванием остаётся за пользователем. Прежнее сообщение root certificate store не влияет на PASS/exit0. Commit/push/ZIP не выполнялись.
+Next: прослушать повтор задумчивой темы в запущенной заново игре.
+```
+
+### HF-142 — восстановить полное окончание восьмитактовой задумчивой темы
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-15; HF-141 DONE. Пользователь подтвердил главную тему и уточнил восьмитактовую длину задумчивой; прежняя оценка90BPM/20тактов для неё ошибочна.
+CP-HF-142 read-set: текущий фронт, C:/Users/artem/Downloads/задумчиво2.wav (read-only), audio/music/{thoughtful_loop,menu_theme_loop}.wav/.import, .local/checks/hf141/audio-loop и analysis/preparation reports, tests/Integration/ProjectTest.{IntroMusic,GameMusic}.cs, docs/GAMEPLAY.md. Write-set: ORCHESTRATION_PLAN.md, audio/music/thoughtful_loop.wav/.import, tests/Integration/ProjectTest.{IntroMusic,GameMusic}.cs, docs/GAMEPLAY.md, .local/checks/hf142 — анализ/обработка/изолированная проверка. Out of scope: главная тема и её импорт/код/тест, source/, оригиналы Downloads, громкость/межтрековые переходы, commit/push/ZIP. Приёмка: окончание оригинальной восьмитактовой фразы не обрезано; стык остаётся непрерывным; главный трек побайтно прежний. Проверки: длительность/сохранность окончательной части, seam/decoder checks, main hashes, build, isolated intro/game checks, diff-check. BPM уточнён у пользователя асинхронно, независимый анализ оригинала продолжается.
+
+
+```text
+Task: HF-142
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: задумчивая восстановлена полностью из оригинала55.002585с/2425614frames, включая последние1.669252с вместо ошибочной границы53⅓с. Полный исходный WAV имеет собственные fade-in/out и стык L/R≈.00000262/.00000250 (без импульса), поэтому дополнительная подмена его краёв не нужна; сохранена естественная концовка. Import loop_end2425614; тесты проверяют SHA256 полного оригинала, воспроизведение последней фразы после53⅓с без loop и переход через фактический конец. Проверка непрерывной громкости остаётся у подготовленной главной темы; к естественному fade задумчивой применяется проверка отсутствия импульса, а не требование постоянного RMS. Документация исправлена.
+Checks: build PASS (0 warnings/errors); isolated import PASS; --intro-music-checks PASS: length55.002585, decoding from53.333333 to54.334694, loops0, слышимые ненулевые samples финальной фразы; actual end decoder-wrap PASS; --game-music-checks PASS; --menu-music-checks PASS; SHA256 главной и её.import до/после совпадают; thoughtful source=runtime D3BC6A7557C0243B01B752AE970E435B767CB34E5735612FBAA8FF9B2C875716; git diff-check PASS.
+Acceptance: преждевременного обрыва исходной восьмитактовой фразы нет; повтор происходит по полному оригиналу, образцы волны на стыке близки к нулю; главная тема и её импорт неизменны. Evidence: .local/checks/hf142/{original-edges.jsonl,main-before.txt,build.log,import.log,intro-music.log,game-music.log,menu-music.log}.
+Read-set exception: ChikagoShop.csproj и готовая изолированная копия HF-141 использованы для проверок; source/ не читался. Предыдущие пользовательские изменения сохранены.
+Risks/blocker: точный BPM в WAV не указан (REAPER bext без tempo); вопрос о BPM задан, ответа к завершению не получено. Новая музыкальная длина не выдумывалась: сохранён полный пользовательский оригинал с естественным окончанием, без привязки к90BPM. Прежнее сообщение root certificate store окружения не влияет на PASS/exit0. Субъективное прослушивание пользователем остаётся музыкальной оценкой; commit/push/ZIP не выполнялись.
+Next: прослушать полный повтор задумчивой темы; если пользователь сообщит BPM, сверить его сетку без нового обрезания нот.
+```
+
+### HF-141 — ровные петли двух обновлённых тем без щелчка
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-15; HF-140 DONE. Новый запрос явно разрешает подгонку аудио, заменяя прежнее ограничение побайтной неизменности runtime-копий; оригиналы Downloads сохраняются.
+CP-HF-141 read-set: текущий фронт, audio/music/{menu_theme_loop,thoughtful_loop}.wav/.import, C:/Users/artem/Downloads/{кйф2,задумчиво2}.wav (read-only), tests/Integration/ProjectTest.{MenuMusic,IntroMusic,GameMusic}.cs, docs/GAMEPLAY.md, scripts/Audio/{IntroMusicDirector,GameplayMusicDirector}.cs (read-only). Write-set: ORCHESTRATION_PLAN.md, audio/music/{menu_theme_loop,thoughtful_loop}.wav/.import, tests/Integration/ProjectTest.{MenuMusic,IntroMusic,GameMusic}.cs, docs/GAMEPLAY.md, .local/checks/hf141 — анализ/обработка/изолированная проверка. Out of scope: source/, исходные файлы Downloads, уровни громкости/межтрековые переходы, зловещая тема, пользовательские изменения, commit/push/ZIP. Приёмка: выбраны музыкально согласованные границы, стык сглажен без паузы и выброса; исходники сохранены; Godot loop_end соответствует подготовленным файлам; проверки реального decoder-wrap, стыкового скачка и громкости. Проверки: signal analysis/seam metrics, build, isolated menu/intro/game checks, diff-check.
+
+
+```text
+Task: HF-141
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: игровые WAV подогнаны к целым музыкальным периодам при90BPM: main1881600frames/16тактов/42.666667с, thoughtful2352000frames/20тактов/53.333333с. Удалены хвосты138/73614frames; исходные24bit stereo44100Hz сохранены. Период main подтверждён корреляцией0.994 на21⅓с. Raised-cosine bridge использует по80мс вокруг одного непрерывного участка оригинала (main reference940735, thoughtful2352028); нет fade-to-zero/нормализации. Import loop_end обновлён, тесты проверяют стерео seam jump<.001, RMS у стыка в0.5…1.5от body и реальный decoder-wrap. Документация обновлена; аудиодиректоры/громкость/переходы не менялись.
+Checks: build PASS (0 warnings/errors); isolated import PASS; --menu-music-checks PASS; --intro-music-checks PASS; --game-music-checks PASS; git diff-check PASS. Main L/R seam step .00006068/.00000310 вместо .039705/.039520; thoughtful .00012445/.00009084, fade-хвост исключён. Общий RMS изменился на -0.00233%/+0.45489% (без нормализации). Оригиналы Downloads сохранили SHA256 HF-140.
+Acceptance: обе подготовленные петли имеют непрерывную звуковую волну, не проваливаются в тишину на стыке, декодер Godot повторяет их нативно, прежние музыкальные переходы проходят regression. Evidence: .local/checks/hf141/{analysis.jsonl,main-preparation.json,thoughtful-preparation.json,original-hashes.txt,build.log,import.log,menu-music.log,intro-music.log,game-music.log}; воспроизводимый локальный обработчик audio-loop/Program.cs.
+Read-set exception: ChikagoShop.csproj и runtime-ресурсы скопированы для изолированных проверок без source/. Временный анализатор собран на установленном.NET10 без сетевых зависимостей; первоначальная net8 restore-попытка не прошла ограничение сети и заменена офлайн-сборкой. Все пользовательские изменения сохранены.
+Risks/blocker: инструментального/декодерного контроля достаточно для критерия отсутствия импульсного стыка; субъективное прослушивание пользователем остаётся финальной музыкальной оценкой. Прежнее сообщение root certificate store окружения не мешает проверкам exit0. Commit/push и пересборка ZIP не выполнялись.
+Next: прослушать обновлённые петли в запущенной заново игре.
+```
+
+### HF-140 — замена главной и задумчивой музыки оригинальными WAV
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-15; активных пересечений нет. Пользователь запрещает обработку аудиофайлов и просит одинаковую громкость во всех местах.
+CP-HF-140 read-set: текущий фронт; C:/Users/artem/Downloads/{кйф2,задумчиво2}.wav (только заголовки/копирование/SHA256), audio/music/{menu_theme_loop,thoughtful_loop}.wav/.import, scripts/Audio/{IntroMusicDirector,GameplayMusicDirector}.cs, scenes/{main_menu,trade_scene}.tscn, tests/Integration/ProjectTest.{MenuMusic,IntroMusic,GameMusic,MusicSettings}.cs, tests/ProjectTest.cs, docs/GAMEPLAY.md. Write-set: ORCHESTRATION_PLAN.md; audio/music/{menu_theme_loop,thoughtful_loop}.wav/.import; scripts/Audio/{IntroMusicDirector,GameplayMusicDirector}.cs; scenes/main_menu.tscn (только уровень меню); tests/Integration/ProjectTest.{MenuMusic,IntroMusic,GameMusic}.cs; docs/GAMEPLAY.md; .local/checks/hf140 — evidence/изолированная копия. Out of scope: source/, редактирование/обрезка/нормализация исходных WAV, новые композиции, музыка зловещая (файл), несвязанные пользовательские изменения сцены/плана, commit/push, пересборка ZIP. Приёмка: кйф2 используется везде вместо главной, задумчиво2 в прологе/картах; SHA256 копий равен исходникам; обе записи зациклены целиком через метаданные Godot; единый gain -12dB без прежних компенсаций; переходы/ползунок сохранены. Проверки: WAV metadata/SHA256, build, isolated menu/intro/game/music-settings checks, diff-check.
+
+
+```text
+Task: HF-140
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: кйф2.wav и задумчиво2.wav скопированы побайтно под существующие runtime-пути главной/задумчивой тем; все текущие сцены автоматически используют новые записи. Import loop_end обновлены на полную длину1881738/2425614 frames (42.669796/55.002585с), trim/normalize/resample/compress остаются выключены. Общий gain меню/пролога/дня/карт -12dB, compensation1; ползунок и переходы сохранены. Тесты обновлены с прежних подготовленных коротких петель/RMS-нормализации на новые SHA256, полную длительность, одинаковый gain и lifecycle. Документация актуализирована.
+Checks: hashes source=destination PASS: main3989653FD7C4CD1E10D9B3EA70F1614F78D5B67DD06F9DAA0D8E4169CD687E97, thoughtfulD3BC6A7557C0243B01B752AE970E435B767CB34E5735612FBAA8FF9B2C875716; build PASS (0 warnings/errors); isolated import PASS; --menu-music-checks PASS; --intro-music-checks PASS; --game-music-checks PASS; --music-settings-checks PASS; git diff-check PASS.
+Acceptance: новые исходные WAV не обрабатывались и совпадают с Downloads по байтам; меню/пролог/торговля/карты используют замену, записи повторяются полностью, gain одинаковый. Evidence: .local/checks/hf140/{audio-hashes.txt,build,import,menu-music,intro-music,game-music,music-settings}.log (hashes — txt).
+Read-set exception: ChikagoShop.csproj и runtime-ресурсы скопированы для изолированного запуска, без source/. Прежние пользовательские удаления лишних экспортированных полей и ext_resource в main_menu.tscn сохранены; добавлен только явный MenuVolumeDb -12. Локальный отчёт HF-139 сохранён.
+Risks/blocker: исходные WAV 24-bit PCM; Godot декодирует импортированный sample в свой16-bit формат, исходные файлы остаются24-bit и неизменными. Одинаковое усиление сохраняет естественные различия исходного микса, нормализации нет. Повтор полной записи не гарантирует прежние границы по90BPM; подрезка/обработка запрещены пользователем. В среде тестов прежнее сообщение root certificate store. Commit/push и пересборка ZIP не выполнялись.
+Next: прослушать обновлённые композиции в игре.
+```
 
 ### HF-138 — коммиты музыки и объединение с main
 
