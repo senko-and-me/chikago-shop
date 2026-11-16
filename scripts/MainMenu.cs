@@ -85,7 +85,7 @@ public partial class MainMenu : Control
 		_playRu = _playButton.TextureNormal;
 		_settingsRu = _settingsButton.TextureNormal;
 		_quitRu = _quitButton.TextureNormal;
-		_backRu = _backButton.TextureNormal;
+		_backRu = GD.Load<Texture2D>("res://art/ui/button_back.png");
 
 
 		_playButton.Pressed += OnPlayPressed;
@@ -321,11 +321,6 @@ public partial class MainMenu : Control
 			"exit.png",
 			english);
 
-		SetButtonTexture(
-			_backButton,
-			_backRu,
-			"back.png",
-			english);
 	}
 
 	private void SetButtonTexture(

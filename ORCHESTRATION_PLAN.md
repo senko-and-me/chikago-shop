@@ -10,6 +10,46 @@
 
 ## Текущий фронт
 
+### HF-149 — публикация оформления настроек HF-147/HF-148
+
+Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-16; HF-147/HF-148 DONE. Пользователь разрешил commit/push.
+
+CP-HF-149 read-set: текущий фронт, Git status/diff/remote, готовый write-set/evidence HF-147/HF-148 и backup main-menu-before.tscn. Write-set: ORCHESTRATION_PLAN.md, docs/GAMEPLAY.md, scenes/UI/MusicVolumeControl.tscn, scenes/UI/FullscreenToggle.tscn, scripts/UI/FullscreenToggle.cs/.uid, scripts/MainMenu.cs, scripts/UI/{MusicVolumeControl,PauseMenu}.cs, tests/Integration/ProjectTest.MusicSettings.cs; scenes/main_menu.tscn (только индексная версия с изменением подписей Settings, пользовательский рабочий файл сохраняется); Git index/commits/main/origin/main; .local/checks/hf149. Out of scope: source/, пользовательский diff main_menu.tscn вне подписей Settings, trade_scene.tscn, новые изменения поведения, ветка feature/music. Приёмка: готовые проверенные настройки опубликованы обычным push без force, HEAD=origin/main, пользовательские изменения обеих сцен сохранены локально вне коммита. Проверки: evidence build/music-settings/pause-localization PASS, staged diff-check, проверка точного staged main_menu diff, push и сравнение refs/status.
+
+### HF-148 — единый масштаб подписей настроек
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-16; HF-147 DONE, активных пересечений нет.
+
+CP-HF-148 read-set/write-set: ORCHESTRATION_PLAN.md, docs/GAMEPLAY.md, scenes/main_menu.tscn (только Settings subtree/ресурсы, с сохранением пользовательских координат основного меню и музыки), scenes/UI/{FullscreenToggle,MusicVolumeControl}.tscn, scripts/{MainMenu,UI/PauseMenu,UI/MusicVolumeControl}.cs (только подписи/типографика), tests/Integration/ProjectTest.MusicSettings.cs. Read-only scripts/UI/FullscreenToggle.cs и art/ui/{panel_small.png,en/fullscreen_off.png,en/back.png}, tests/Integration/ProjectTest.Localization.cs, tests/ProjectTest.cs. Write-set также .local/checks/hf148 и изолированный project .local/checks/hf139/project. Out of scope: source/, заголовки настроек, пользовательские изменения вне Settings subtree/main_menu ресурсов, trade_scene.tscn, gameplay/баланс/музыка, commit/push. Приёмка: в настройках меню и паузы подписи Fullscreen/Music volume/проценты/Language/языки/Back используют24px при прежних заголовках; рисованные края и переключатель сохранены, текст не масштабируется вместе с растровой кнопкой. Back/Fullscreen mouse/keyboard/RU-EN и layout960×540/1280×720 сохраняют работу. Проверки: build/import, rendered --music-settings-checks и --pause-localization-checks, screenshots, diff-check/сохранность пользовательских секций.
+
+```text
+Task: HF-148
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: подписи полного экрана, громкости, процентов, языка/языковых кнопок и Назад в меню/паузе используют24px. Main-menu fullscreen и общая pause fullscreen scene содержат Label поверх внутренней белой области растровой надписи, не закрывающей бумажные края и рисунок toggle; исходные текстуры не редактировались. Back в настройках меню использует существующую пустую бумажную текстуру и Label; отдельная ChoiceBack основного меню сохраняет прежний арт. Разметка/типографика заданы в сценах; код не строит новый UI. Заголовки40px меню/32px паузы прежние. MainMenu перестал подставлять baked back-текстуру только в настройках; вся остальная локализация/управление прежние.
+Checks: local/isolated build PASS (0 warnings/errors); local import PASS (прежние4 duplicate UI UID warnings). Rendered --music-settings-checks PASS: размер24 у всех7 категорий подписей в обоих меню/RU-EN/960×540 и1280×720, fitting fullscreen label, заголовок меню40, реальные клики Назад/Fullscreen и клавиатура, громкость и сохранение, сохранение паузы. Rendered --pause-localization-checks PASS; runtime stderr обеих групп пуст. Просмотрены menu-volume-en-1280.png и pause-volume-ru-960.png. git diff-check PASS. Prefix main_menu.tscn до FullscreenButton полностью совпадает с пользовательским backup (ресурсы/музыка/координаты основного меню/заголовок); trade_scene.tscn SHA256 сохранён. Evidence .local/checks/hf148.
+Acceptance: подписи одного масштаба при прежних заголовках и рабочем рисованном UI.
+Read-set exception: нет; source/ не читался, изолированный user:// HF139.
+Risks/blocker: новых нет; пользовательские изменения вне настройки main_menu и вся trade_scene сохранены.
+Next: пользовательская приёмка; commit/push не выполнялись.
+```
+
+### HF-147 — рисованный переключатель полного экрана в паузе
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-16; HF-146 DONE, активных пересечений нет.
+
+CP-HF-147 read-set: текущий фронт; scripts/UI/PauseMenu.cs, scripts/MainMenu.cs (fullscreen localization read-only), tests/Integration/ProjectTest.{MusicSettings,Localization,Helpers}.cs, tests/ProjectTest.cs; art/ui/ru/fullscreen_{on,off}.png, art/ui/en/fullscreen_{on,off}.png; docs/GAMEPLAY.md. Write-set: ORCHESTRATION_PLAN.md, scripts/UI/PauseMenu.cs, новые scripts/UI/FullscreenToggle.cs/.uid и scenes/UI/FullscreenToggle.tscn, tests/Integration/ProjectTest.MusicSettings.cs, docs/GAMEPLAY.md; .local/checks/hf147 и изолированный project .local/checks/hf139/project. Out of scope: source/, пользовательские main_menu.tscn/trade_scene.tscn, прочие стили паузы/сохранения/баланс/музыка, commit/push. Приёмка: переключатель в паузе использует те же4 рисованные локализованные текстуры, что главное меню; состояния отражают фактический fullscreen, реальное переключение работает на паузе мышью/клавиатурой; reopen/смена языка/оконного режима синхронизируют состояние без повторного сигнала. При960×540 и1280×720 кнопка вписывается в панель и совпадает по ширине с громкостью, рисованная геометрия хранится в отдельной сцене. Проверки: build, import, rendered --music-settings-checks, --pause-localization-checks; git diff-check/сохранность пользовательских сцен.
+
+```text
+Task: HF-147
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: стандартный CheckButton полного экрана в паузе заменён сценой FullscreenToggle.tscn с теми же4 рисованными текстурами RU/EN on/off, что главное меню. Размер360×54 и растяжение по ширине заданы в сцене. Скрипт переключает реальный режим окна и без сигналов синхронизирует состояние/текстуру при открытии, смене языка и внешней смене режима; работает при активной паузе. Прочие элементы настроек и пользовательские сцены не менялись. Docs и regression-проверки обновлены.
+Checks: local/isolated dotnet build PASS (0 warnings/errors); local/isolated import PASS (прежние4 duplicate UI UID warnings). Rendered --music-settings-checks PASS: RU/EN960×540 и1280×720, совпадение texture path с главным меню, соответствие actual fullscreen и ButtonPressed, реальный mouse enable/Space disable в обоих языках без снятия паузы, reopen/external window mode sync, громкость/сохранение/выравнивание/Назад. Rendered --pause-localization-checks PASS, игровой прогресс и время не изменены; runtime stderr обеих групп пуст. Скриншот pause-volume-ru-960.png просмотрен. git diff-check PASS; SHA256 обеих пользовательских сцен сохранён. Evidence: .local/checks/hf147; preview .local/checks/hf139/project/pause-volume-*.png.
+Acceptance: переключатель полного экрана в паузе оформлен как в главном меню и сохраняет управление мышью/клавиатурой, локализацию и паузу.
+Read-set exception: нет; source/ не читался, тесты запускались только с изолированным user:// HF139.
+Risks/blocker: новых нет; прежние duplicate UID warnings.
+Next: пользовательская приёмка; commit/push не выполнялись.
+```
+
 ### HF-146 — сверка GitHub и завершение публикации дебаг-панели
 
 Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-16; HF-145 DONE. Пользователь ранее запросил push, сейчас запросил сверку актуальной версии; публикация ранее не выполнена.
