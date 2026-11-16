@@ -8,7 +8,6 @@ public partial class SoundEffects : Node
     public enum Cue { Hover, Click, Settings, Sale, CustomerBell }
     public const string BusName = "SFX";
     public static SoundEffects Instance { get; private set; }
-    [Export] public float VolumeDb { get; set; } = -6;
     [Export(PropertyHint.Range, "0.05,1,0.01")] public double HoverDelaySeconds { get; set; } = 0.15;
     public double Volume { get; private set; } = 1;
     public event Action<double> VolumeChanged;
@@ -32,15 +31,11 @@ public partial class SoundEffects : Node
             AudioServer.SetBusSend(AudioServer.GetBusIndex(BusName), "Master");
         }
         LoadPreference();
-        foreach (var (cue, file) in new[] { (Cue.Hover, "hover"), (Cue.Click, "click"),
-                     (Cue.Settings, "settings"), (Cue.Sale, "sale"), (Cue.CustomerBell, "customer_bell") })
+        foreach (Cue cue in Enum.GetValues<Cue>())
         {
-            var player = new AudioStreamPlayer
-            {
-                Name = cue.ToString(), Stream = GD.Load<AudioStream>($"res://audio/sfx/{file}.wav"),
-                Bus = BusName, VolumeDb = VolumeDb, MaxPolyphony = cue == Cue.Hover ? 1 : 4
-            };
-            AddChild(player);
+            // Scene-owned players retain the developer's individual Volume dB settings.
+            var player = GetNode<AudioStreamPlayer>(cue.ToString());
+            player.Bus = BusName;
             _voices.Add(cue, player);
         }
         GetTree().NodeAdded += Attach;

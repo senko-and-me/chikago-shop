@@ -1,0 +1,36 @@
+[gd_scene format=3 uid="uid://cydh5j5rirh6e"]
+
+[ext_resource type="Script" uid="uid://dug0sff56e8yt" path="res://scripts/Audio/SoundEffects.cs" id="1_script"]
+[ext_resource type="AudioStream" uid="uid://ccra8yn406m6d" path="res://audio/sfx/hover.wav" id="2_hover"]
+[ext_resource type="AudioStream" uid="uid://ddekd0uqyb4qg" path="res://audio/sfx/click.wav" id="3_click"]
+[ext_resource type="AudioStream" uid="uid://6kh6h58rjjhj" path="res://audio/sfx/settings.wav" id="4_settings"]
+[ext_resource type="AudioStream" uid="uid://daudwmjegqxbe" path="res://audio/sfx/sale.wav" id="5_sale"]
+[ext_resource type="AudioStream" uid="uid://bks33ucfa2t6w" path="res://audio/sfx/customer_bell.wav" id="6_bell"]
+
+[node name="SoundEffects" type="Node" unique_id=62203458]
+process_mode = 3
+script = ExtResource("1_script")
+
+[node name="Hover" type="AudioStreamPlayer" parent="." unique_id=794325492]
+stream = ExtResource("2_hover")
+volume_db = -10.0
+
+[node name="Click" type="AudioStreamPlayer" parent="." unique_id=1105052846]
+stream = ExtResource("3_click")
+volume_db = -12.0
+max_polyphony = 4
+
+[node name="Settings" type="AudioStreamPlayer" parent="." unique_id=1072096386]
+stream = ExtResource("4_settings")
+volume_db = -12.0
+max_polyphony = 4
+
+[node name="Sale" type="AudioStreamPlayer" parent="." unique_id=2137755391]
+stream = ExtResource("5_sale")
+volume_db = -12.0
+max_polyphony = 4
+
+[node name="CustomerBell" type="AudioStreamPlayer" parent="." unique_id=710280389]
+stream = ExtResource("6_bell")
+volume_db = -10.0
+max_polyphony = 4

@@ -56,6 +56,27 @@ public partial class ProjectTest
         try
         {
             effects.SetVolume(1);
+            var authored = GD.Load<PackedScene>("res://scenes/Audio/SoundEffects.tscn").Instantiate<SoundEffects>();
+            try
+            {
+                Check(authored.GetChildren().OfType<AudioStreamPlayer>().Count() == 5,
+                    "Every effect must be authored as an editable player before the scene enters the tree");
+                foreach (var cue in Enum.GetValues<SoundEffects.Cue>())
+                {
+                    var source = authored.GetNode<AudioStreamPlayer>(cue.ToString());
+                    var live = effects.GetNode<AudioStreamPlayer>(cue.ToString());
+                    Check(live.VolumeDb == source.VolumeDb && live.Stream == source.Stream && live.Bus == SoundEffects.BusName,
+                        "Runtime setup must preserve each editor-authored sound and its base volume");
+                }
+                float baseClickDb = effects.GetNode<AudioStreamPlayer>("Click").VolumeDb;
+                GD.Print($"SFX_EDITOR_VOLUME_CHECK: Click={baseClickDb}dB from the saved scene");
+                effects.SetVolume(0.25);
+                Check(effects.GetNode<AudioStreamPlayer>("Click").VolumeDb == baseClickDb &&
+                      Math.Abs(Mathf.DbToLinear(AudioServer.GetBusVolumeDb(AudioServer.GetBusIndex(SoundEffects.BusName))) - 0.25) < 0.001,
+                    "The user's volume must multiply the sound bus without overwriting the developer's base mix");
+                effects.SetVolume(1);
+            }
+            finally { authored.Free(); }
             foreach (var (file, hash) in new[] {
                 ("sale", "82066F6DC4D74D074174197E3DDE173730735AD29AC2C521CC32F6496381406A"),
                 ("hover", "625BF751E3B374C7260413B78030CCA8BFD6A5B3FC62E72D74A448D6F43C9B0C"),

@@ -10,6 +10,31 @@
 
 ## Текущий фронт
 
+### HF-152 — финальная проверка, коммиты и push только feature/music
+
+Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-16; HF-149…151 DONE. Пользователь явно запросил перепроверку всех изменений, тематические коммиты и push музыкальной ветки, без main.
+
+Расширение координатором: read/write-set включает tests/Integration/ProjectTest.ButtonFeedback.cs — вместо устаревшей фиксированной границы70% для EN Back проверить фактическое aspect-fit изображения и пиксели пустых полей; scripts/Presentation/ButtonFeedbackController.cs прочитан только для диагностики. Итоговый контрольный коммит плана также включает сохранённый исторический отчёт HF-139, чтобы после публикации не оставлять локальный хвост документации; сам ZIP не публикуется.
+CP-HF-152 read-set: текущий фронт, git status/diff/log/refs/remotes, файлы и проверки HF-149…151, project.godot, tests/ProjectTest.cs, ChikagoShop.sln, tests/ChikagoShop.Domain.Tests/ChikagoShop.Domain.Tests.csproj. Write-set: файлы HF-149…151 для необходимых исправлений, ORCHESTRATION_PLAN.md (HF-149…152), Git index/objects и локальная/удалённая feature/music; .local/checks/hf152 — снимок/проверки/сообщения/индексные версии. Out of scope: main (локальная и origin/main), force-push, source/, личные настройки/исходные WAV, ZIP, несвязанный HF-139. Приёмка: build/domain и адресные rendered/audio regression PASS или подтверждённая baseline-проблема вне scope; финальное дерево проверено; логичные коммиты; обычный push feature/music; remote SHA совпадает с локальной веткой, main не изменилась. Проверки: diff-check, build/domain, isolated rendered SFX/settings/buttons, menu/intro/game music, редакторский -18dB fixture, ancestry/remote refs/staged diff/итоговый status.
+
+
+### HF-151 — постоянная настройка базовой громкости каждого SFX в инспекторе
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-16; HF-150 DONE, активных пересечений нет. Пользователь хочет разработческую настройку конкретного эффекта в Godot, применяемую при100% игрового ползунка.
+CP-HF-151 read-set: текущий фронт, scripts/Audio/SoundEffects.cs, project.godot, tests/Integration/ProjectTest.SoundEffects.cs, docs/GAMEPLAY.md; read-only audio/sfx/*.wav/.import (пять точных ассетов HF-145), готовая копия HF-150 для проверки. Write-set: ORCHESTRATION_PLAN.md, новый scenes/Audio/SoundEffects.tscn, scripts/Audio/SoundEffects.cs, project.godot (только autoload SoundEffects), tests/Integration/ProjectTest.SoundEffects.cs, docs/GAMEPLAY.md; .local/checks/hf151 — изолированная проверка/evidence. Out of scope: source/, WAV/музыка/поведение UI, пользовательские настройки, commit/push/ZIP, несвязанные правки. Приёмка: пять AudioStreamPlayer заранее заданы в сцене, Volume dB каждого сохраняется редактором и не перезаписывается кодом; стартовые -6dB/нажатия/пауза/ползунок сохранены. Проверки: build, rendered SFX/settings, отдельный fixture с изменённой базовой громкостью Click, diff-check.
+
+
+```text
+Task: HF-151
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: пять AudioStreamPlayer вынесены в scenes/Audio/SoundEffects.tscn с прежними streams/-6dB/polyphony. Autoload загружает сцену, код связывает её узлы и назначает SFX bus, не создаёт плееры и не перезаписывает VolumeDb. Старый общий VolumeDb property удалён, чтобы инспектор каждого узла был единственным источником базового микса; игровой ползунок продолжает множить bus gain. Добавлены инструкции и проверки scene-owned узлов/сохранения developer gain.
+Checks: build PASS (0 warnings/errors); rendered --sound-effects-checks PASS; rendered --music-settings-checks PASS; отдельный изолированный Click=-18dB fixture PASS (stdout SFX_EDITOR_VOLUME_CHECK Click=-18dB, runtime сохранил именно значение сцены, пользовательский gain0.25 не перезаписал его); git diff-check PASS.
+Acceptance: разработчик открывает SoundEffects.tscn, выбирает Hover/Click/Settings/Sale/CustomerBell, меняет Volume dB и сохраняет сцену; при100% в игре звучит заданный baseline. Стартовый микс и поведение звуков/паузы/пропуска не изменены. Evidence: .local/checks/hf151/{build.log,sound-effects*.log,music-settings*.log,editor-volume-fixture*.log}.
+Read-set exception: ChikagoShop.csproj и готовая изолированная копия HF-150 использованы для проверок без source/; fixture менял только изолированную сцену и затем восстановил её.
+Risks/blocker: прежнее certificate-store warning окружения при exit0; WAV и личные настройки не менялись. Commit/push/ZIP не выполнялись.
+Next: пользователь настраивает нужный эффект через Volume dB в обычном дереве сцены.
+```
+
 ### HF-150 — уменьшить Back в главных настройках
 
 Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-16; HF-149 DONE, активных пересечений нет.
