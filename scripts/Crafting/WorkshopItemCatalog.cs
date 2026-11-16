@@ -9,8 +9,8 @@ public sealed record CraftItem(int BasePrice, string RarityId, string Rarity, st
 // Append-only indices preserve the prototype's existing inventory and checkpoint saves.
 public static class WorkshopItemCatalog
 {
-    private static readonly ChikagoShop.Domain.Configuration.EconomyConfig Config = EconomyConfigProvider.Load();
-    public static IReadOnlyList<CraftItem> Items { get; } = System.Array.AsReadOnly(new[]
+    private static ChikagoShop.Domain.Configuration.EconomyConfig Config => EconomyConfigProvider.Load();
+    public static IReadOnlyList<CraftItem> BaselineItems { get; } = System.Array.AsReadOnly(new[]
     {
         // Preserve the first ten save indices, internal kinds and rarity/price tiers.
         Item("atelier", "common", "hat", "кепка", "cap.png"),
@@ -30,18 +30,33 @@ public static class WorkshopItemCatalog
         Item("music", "exclusive", "saxophone", "саксофон", "saxophone.png"),
         Item("music", "unique", "cello", "виолончель", "cello.png")
     });
+    private static int _revision = -1;
+    private static IReadOnlyList<CraftItem> _items;
+    public static IReadOnlyList<CraftItem> Items
+    {
+        get
+        {
+            int revision = DebugBalanceSettings.Revision;
+            if (_items != null && _revision == revision) return _items;
+            var profile = DebugBalanceSettings.Profile;
+            _items = System.Array.AsReadOnly(BaselineItems.Select(item =>
+            {
+                var rarity = Config.Rarities.Single(entry => entry.Id == profile.ItemRarities.GetValueOrDefault(item.Kind, item.RarityId));
+                return item with { BasePrice = (int)profile.Number($"item.{item.Kind}.price", item.BasePrice),
+                    RarityId = rarity.Id, Rarity = rarity.Name, Rerolls = rarity.Rerolls };
+            }).ToArray());
+            _revision = revision;
+            return _items;
+        }
+    }
     private static RarityItemTable Table(string workshop, DayUpgradeSession upgrades = null) => new(
         Items.Select((item, index) => (item, index)).Where(entry => entry.item.WorkshopId == workshop)
             .Select(entry => (entry.index, entry.item.RarityId)),
         Config.Rarities.ToDictionary(rarity => rarity.Id, rarity => RarityWeight(workshop, rarity.Id, upgrades)));
-    private static readonly IReadOnlyDictionary<string, RarityItemTable> Tables = Config.Workshops.ToDictionary(
-        workshop => workshop.Id, workshop => Table(workshop.Id));
-    public static int TotalWeight(string workshop) => Tables[workshop].TotalWeight;
+    public static int TotalWeight(string workshop, DayUpgradeSession upgrades = null) => Table(workshop, upgrades).TotalWeight;
     public static int CraftCost(string workshop) => Config.Workshops.Single(entry => entry.Id == workshop).SpinCost;
     public static int DayDurationSeconds => Config.Days.DurationSeconds;
-    public static int Roll(string workshop, int ticket, DayUpgradeSession upgrades = null) => upgrades == null
-        ? Tables[workshop].Select(ticket)
-        : Table(workshop, upgrades).Select(ticket);
+    public static int Roll(string workshop, int ticket, DayUpgradeSession upgrades = null) => Table(workshop, upgrades).Select(ticket);
     public static int BaselineWeight(string rarityId) => Config.Rarities.Single(rarity => rarity.Id == rarityId).Weight;
     public static int RarityWeight(string workshop, string rarityId, DayUpgradeSession upgrades = null) =>
         upgrades?.Weight(workshop, rarityId, BaselineWeight(rarityId), BaselineWeight("common")) ?? BaselineWeight(rarityId);
@@ -49,7 +64,7 @@ public static class WorkshopItemCatalog
 
     private static CraftItem Item(string workshop, string rarityId, string kind, string name, string art)
     {
-        var rarity = Config.Rarities.Single(entry => entry.Id == rarityId);
+        var rarity = EconomyConfigProvider.Baseline.Rarities.Single(entry => entry.Id == rarityId);
         return new CraftItem(rarity.BasePrices[workshop], rarityId, rarity.Name, kind, name,
             "res://art/items/" + art, workshop, rarity.Rerolls);
     }

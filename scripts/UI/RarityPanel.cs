@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Godot;
 
 public partial class RarityPanel : Control
@@ -87,21 +88,27 @@ public partial class RarityPanel : Control
 		string workshop = GetParent().Name == "MusicWorkshop" ? "music" : "atelier";
 		string[] rarities = ["common", "ordinary", "first_class", "exclusive", "unique"];
 		var upgrades = (_game as TradeScene)?.DayUpgrades;
+		var items = WorkshopItemCatalog.Items.Where(item => item.WorkshopId == workshop).ToArray();
+		var populated = items.Select(item => item.RarityId).ToHashSet();
+		double total = rarities.Where(populated.Contains).Sum(rarity => WorkshopItemCatalog.RarityWeight(workshop, rarity, upgrades));
+		double baseTotal = rarities.Where(populated.Contains).Sum(WorkshopItemCatalog.BaselineWeight);
 		for (int i = 0; i < rarities.Length; i++)
 		{
-			int baseline = WorkshopItemCatalog.BaselineWeight(rarities[i]);
-			int current = WorkshopItemCatalog.RarityWeight(workshop, rarities[i], upgrades);
+			double baseline = populated.Contains(rarities[i]) && baseTotal > 0 ? WorkshopItemCatalog.BaselineWeight(rarities[i]) / baseTotal * 100 : 0;
+			double current = populated.Contains(rarities[i]) && total > 0 ? WorkshopItemCatalog.RarityWeight(workshop, rarities[i], upgrades) / total * 100 : 0;
 			var label = Values.GetNode<Label>($"Chance{i}");
-			label.Text = $"{current}%";
+			label.Text = $"{current:0.#}%";
 			label.TooltipText = GameLocalization.Format("Базовый шанс: {0}%", baseline);
 			label.AddThemeColorOverride("font_color", current > baseline ? new Color("208447") :
 				current < baseline ? new Color("bf3232") : Colors.Black);
-			int[] prices = [Price0, Price1, Price2, Price3, Price4];
-			int price = upgrades?.Price(workshop, prices[i]) ?? prices[i];
+			var category = items.Where(item => item.RarityId == rarities[i]).ToArray();
+			int average = category.Length > 0 ? (int)Math.Round(category.Average(item => item.BasePrice)) : 0;
+			int price = upgrades?.Price(workshop, average) ?? average;
 			var priceLabel = Values.GetNode<Label>($"Price{i}");
 			priceLabel.Text = $"{price}$";
-			priceLabel.AddThemeColorOverride("font_color", price > prices[i] ? new Color("208447") :
-				price < prices[i] ? new Color("bf3232") : Colors.Black);
+			priceLabel.AddThemeColorOverride("font_color", price > average ? new Color("208447") :
+				price < average ? new Color("bf3232") : Colors.Black);
+			Values.GetNode<Label>($"Rerolls{i}").Text = WorkshopItemCatalog.RerollsFor(rarities[i]).ToString();
 		}
 	}
 

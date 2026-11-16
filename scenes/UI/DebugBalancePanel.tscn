@@ -1,0 +1,201 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/Debug/DebugBalancePanel.cs" id="1_script"]
+[ext_resource type="Texture2D" path="res://art/ui/panel_large.png" id="2_paper"]
+[ext_resource type="Texture2D" path="res://art/ui/panel_small.png" id="3_button"]
+
+[sub_resource type="StyleBoxTexture" id="Paper"]
+texture = ExtResource("2_paper")
+content_margin_left = 50.0
+content_margin_top = 34.0
+content_margin_right = 50.0
+content_margin_bottom = 34.0
+
+[sub_resource type="StyleBoxFlat" id="Form"]
+bg_color = Color(0.94, 0.94, 0.93, 1)
+content_margin_left = 12.0
+content_margin_top = 12.0
+content_margin_right = 12.0
+content_margin_bottom = 12.0
+
+[sub_resource type="StyleBoxFlat" id="Input"]
+bg_color = Color(1, 1, 1, 1)
+border_color = Color(0.25, 0.25, 0.25, 1)
+border_width_left = 1
+border_width_right = 1
+border_width_top = 1
+border_width_bottom = 1
+content_margin_left = 10.0
+content_margin_right = 10.0
+
+[sub_resource type="StyleBoxTexture" id="ButtonPaper"]
+texture = ExtResource("3_button")
+content_margin_left = 12.0
+content_margin_top = 6.0
+content_margin_right = 12.0
+content_margin_bottom = 6.0
+
+[sub_resource type="Theme" id="FormTheme"]
+Button/colors/font_color = Color(0.1, 0.1, 0.1, 1)
+Button/colors/font_hover_color = Color(0.1, 0.1, 0.1, 1)
+Button/colors/font_pressed_color = Color(0.1, 0.1, 0.1, 1)
+Button/colors/font_focus_color = Color(0.1, 0.1, 0.1, 1)
+Button/colors/font_hover_pressed_color = Color(0.1, 0.1, 0.1, 1)
+Button/styles/normal = SubResource("ButtonPaper")
+Button/styles/hover = SubResource("ButtonPaper")
+Button/styles/pressed = SubResource("ButtonPaper")
+LineEdit/colors/font_color = Color(0.1, 0.1, 0.1, 1)
+LineEdit/colors/caret_color = Color(0.1, 0.1, 0.1, 1)
+LineEdit/styles/normal = SubResource("Input")
+TabContainer/styles/panel = SubResource("Form")
+
+[node name="DebugBalancePanel" type="CanvasLayer"]
+process_mode = 3
+layer = 300
+script = ExtResource("1_script")
+
+[node name="Root" type="Control" parent="."]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Shade" type="ColorRect" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0.8)
+
+[node name="Inset" type="MarginContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 18
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 18
+
+[node name="Panel" type="PanelContainer" parent="Root/Inset"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Paper")
+theme = SubResource("FormTheme")
+
+[node name="Content" type="VBoxContainer" parent="Root/Inset/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Header" type="HBoxContainer" parent="Root/Inset/Panel/Content"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Root/Inset/Panel/Content/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.08, 0.08, 0.08, 1)
+theme_override_font_sizes/font_size = 27
+text = "БАЛАНС · DEBUG"
+
+[node name="Close" type="Button" parent="Root/Inset/Panel/Content/Header"]
+custom_minimum_size = Vector2(150, 38)
+layout_mode = 2
+text = "Закрыть · F10"
+
+[node name="Hint" type="Label" parent="Root/Inset/Panel/Content"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.18, 0.18, 0.18, 1)
+theme_override_font_sizes/font_size = 16
+text = "Игра приостановлена. Применение сохраняет профиль между запусками debug-билда. Стартовые деньги и энергия выдаются только при новой игре."
+autowrap_mode = 3
+
+[node name="Tabs" type="TabContainer" parent="Root/Inset/Panel/Content"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Партия" type="ScrollContainer" parent="Root/Inset/Panel/Content/Tabs"]
+layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="Rows" type="VBoxContainer" parent="Root/Inset/Panel/Content/Tabs/Партия"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="Создание" type="ScrollContainer" parent="Root/Inset/Panel/Content/Tabs"]
+layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="Rows" type="VBoxContainer" parent="Root/Inset/Panel/Content/Tabs/Создание"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="Редкости" type="ScrollContainer" parent="Root/Inset/Panel/Content/Tabs"]
+layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="Rows" type="VBoxContainer" parent="Root/Inset/Panel/Content/Tabs/Редкости"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="Предметы" type="ScrollContainer" parent="Root/Inset/Panel/Content/Tabs"]
+layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="Rows" type="VBoxContainer" parent="Root/Inset/Panel/Content/Tabs/Предметы"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="Карты" type="ScrollContainer" parent="Root/Inset/Panel/Content/Tabs"]
+layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="Rows" type="VBoxContainer" parent="Root/Inset/Panel/Content/Tabs/Карты"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="Preview" type="Label" parent="Root/Inset/Panel/Content"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.18, 0.18, 0.18, 1)
+theme_override_font_sizes/font_size = 15
+autowrap_mode = 3
+
+[node name="Status" type="Label" parent="Root/Inset/Panel/Content"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.1, 0.1, 0.1, 1)
+theme_override_font_sizes/font_size = 16
+autowrap_mode = 3
+
+[node name="Actions" type="HBoxContainer" parent="Root/Inset/Panel/Content"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Apply" type="Button" parent="Root/Inset/Panel/Content/Actions"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Применить сейчас"
+
+[node name="NewGame" type="Button" parent="Root/Inset/Panel/Content/Actions"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Применить и начать заново"
+
+[node name="Defaults" type="Button" parent="Root/Inset/Panel/Content/Actions"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+text = "Исходные значения"
+
+[node name="Footer" type="Label" parent="Root/Inset/Panel/Content"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.3, 0.3, 1)
+theme_override_font_sizes/font_size = 14
+text = "F10 / Esc — закрыть без применения · Профиль: user://debug_balance.json · В release-сборке отключено"
+autowrap_mode = 3

@@ -7,7 +7,7 @@ using Godot;
 
 public partial class TradeScene : Node2D
 {
-	private static readonly ChikagoShop.Domain.Configuration.EconomyConfig Economy = EconomyConfigProvider.Load();
+	private static ChikagoShop.Domain.Configuration.EconomyConfig Economy => EconomyConfigProvider.Load();
 	[Export(PropertyHint.Range, "1,9999,1")]
 	public int StartingMoney { get; set; } = Economy.StartingMoney;
 
@@ -22,18 +22,18 @@ public partial class TradeScene : Node2D
 	public bool LoadedSavedGame { get; private set; }
 	public event Action NewGameStarted;
 
-	private static readonly int FirstDeadline = Economy.Quotas.Single(entry => entry.Id == "first").DeadlineDay;
-	private static readonly int FinalDay = Economy.Days.TotalDays;
+	private static int FirstDeadline => Economy.Quotas.Single(entry => entry.Id == "first").DeadlineDay;
+	private static int FinalDay => Economy.Days.TotalDays;
 	private const int ShowcaseCapacity = 6;
 	private const int InitialShowcaseCapacity = 3;
-	private static readonly int EnergyBeforeMusicUnlock = Economy.Days.EnergyBeforeMusicUnlock;
-	private static readonly int EnergyAfterMusicUnlock = Economy.Days.EnergyAfterMusicUnlock;
-	private static readonly int AtelierSpinCost = WorkshopItemCatalog.CraftCost("atelier");
-	private static readonly int MusicSpinCost = WorkshopItemCatalog.CraftCost("music");
-	private static readonly int MusicUnlockCost = Economy.Workshops.Single(entry => entry.Id == "music").UnlockCost;
-	private static readonly int ItemsPerSpin = Economy.Days.ItemsPerCraft;
+	private static int EnergyBeforeMusicUnlock => Economy.Days.EnergyBeforeMusicUnlock;
+	private static int EnergyAfterMusicUnlock => Economy.Days.EnergyAfterMusicUnlock;
+	private static int AtelierSpinCost => WorkshopItemCatalog.CraftCost("atelier");
+	private static int MusicSpinCost => WorkshopItemCatalog.CraftCost("music");
+	private static int MusicUnlockCost => Economy.Workshops.Single(entry => entry.Id == "music").UnlockCost;
+	private static int ItemsPerSpin => Economy.Days.ItemsPerCraft;
 
-	private static readonly IReadOnlyList<CraftItem> Items =
+	private static IReadOnlyList<CraftItem> Items =>
 		WorkshopItemCatalog.Items;
 
 	private CounterWorld _world = null!;
@@ -85,7 +85,7 @@ public partial class TradeScene : Node2D
 	private bool _localizationReady;
 
 	private float NextBuyerDelay() =>
-		_buyerArrivalRng.RandfRange(0.5f, 2f);
+		_buyerArrivalRng.RandfRange((float)DebugBalanceSettings.Number("buyer.min"), (float)DebugBalanceSettings.Number("buyer.max"));
 
 	public int SelectedInventoryIndex { get; set; } = -1;
 	public bool CraftMiniGameOpen =>
@@ -467,12 +467,12 @@ public partial class TradeScene : Node2D
 			: $"Инструменты  •  {MusicSpinCost}$ + 1 энергия за предмет";
 
 		atelierPrice.Text = english
-			? $"1 item  •  ${AtelierSpinCost} + 1 energy"
-			: $"1 предмет  •  {AtelierSpinCost}$ + 1 энергия";
+			? $"{ItemsPerSpin} {(ItemsPerSpin == 1 ? "item" : "items")}  •  ${AtelierSpinCost} + 1 energy"
+			: $"{ItemsPerSpin} предмет  •  {AtelierSpinCost}$ + 1 энергия";
 
 		musicPrice.Text = english
-			? $"1 item  •  ${MusicSpinCost} + 1 energy"
-			: $"1 предмет  •  {MusicSpinCost}$ + 1 энергия";
+			? $"{ItemsPerSpin} {(ItemsPerSpin == 1 ? "item" : "items")}  •  ${MusicSpinCost} + 1 energy"
+			: $"{ItemsPerSpin} предмет  •  {MusicSpinCost}$ + 1 энергия";
 
 		CraftButtonPresentation.Apply(_atelierGetItemButton, english);
 		CraftButtonPresentation.Apply(_musicGetItemButton, english);
@@ -566,7 +566,7 @@ public partial class TradeScene : Node2D
 				workshop,
 				_rng.RandiRange(
 					0,
-					WorkshopItemCatalog.TotalWeight(workshop) - 1),
+					WorkshopItemCatalog.TotalWeight(workshop, DayUpgrades) - 1),
 				DayUpgrades);
 
 			_storedItems.Add(index);
@@ -1109,6 +1109,19 @@ public partial class TradeScene : Node2D
 		_inventoryUI.UpdateUI(_storedItems);
 		RefreshShowcases();
 		SaveProgress();
+	}
+
+	public void RefreshDebugBalance()
+	{
+		StartingMoney = Economy.StartingMoney;
+		FirstQuota = Economy.Quotas.Single(entry => entry.Id == "first").Amount;
+		SecondQuota = Economy.Quotas.Single(entry => entry.Id == "final").Amount;
+		_dayCycle.ApplyDebugBalance();
+		RefreshCraftLabels();
+		RefreshDayPresentation();
+		RefreshShowcases();
+		_inventoryUI.UpdateUI(_storedItems);
+		if (TradeActive) RefreshOffer();
 	}
 
 	public void NewGame()

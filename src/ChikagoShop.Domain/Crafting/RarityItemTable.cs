@@ -9,7 +9,8 @@ public sealed class RarityItemTable
     public RarityItemTable(IEnumerable<(int ItemIndex, string RarityId)> items,
         IReadOnlyDictionary<string, int> rarityWeights)
     {
-        var groups = items.GroupBy(item => item.RarityId).ToArray();
+        if (rarityWeights.Values.Any(weight => weight < 0)) throw new ArgumentException("Rarity weights cannot be negative.", nameof(rarityWeights));
+        var groups = items.Where(item => rarityWeights[item.RarityId] > 0).GroupBy(item => item.RarityId).ToArray();
         int multiplier = 1;
         foreach (var group in groups)
         {

@@ -20,6 +20,7 @@ GameLocalization="*res://scripts/Localization/GameLocalization.cs"
 MusicSettings="*res://scripts/Audio/MusicSettings.cs"
 MonochromePresentation="*res://scripts/Presentation/MonochromePresentation.cs"
 ButtonFeedback="*res://scripts/Presentation/ButtonFeedbackController.cs"
+DebugBalance="*res://scenes/UI/DebugBalancePanel.tscn"
 
 [display]
 

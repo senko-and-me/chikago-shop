@@ -170,11 +170,13 @@ public partial class EmbroideryGame : CanvasLayer
 		if (IsPolishing)
 		{
 			var instruments = PolishingSurface.InstrumentKinds;
-			Polishing = _polishingSurface.Begin(instruments[_variants.Next(Math.Min(GD.Randf(), 0.99999994f))]);
+			Polishing = _polishingSurface.Begin(instruments[_variants.Next(Math.Min(GD.Randf(), 0.99999994f))],
+				DebugBalanceSettings.Number("craft.music.seconds"));
 		}
 		else
 		{
-			Session = new EmbroiderySession(_variants.Next(Math.Min(GD.Randf(), 0.99999994f)));
+			Session = new EmbroiderySession(_variants.Next(Math.Min(GD.Randf(), 0.99999994f)),
+				DebugBalanceSettings.Number("craft.atelier.seconds"));
 		}
 
 		_ownsPause = true;

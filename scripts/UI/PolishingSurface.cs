@@ -58,7 +58,7 @@ void fragment() {
 			_clothTexture = GD.Load<Texture2D>(ClothPath);
 	}
 
-	public PolishingSession Begin(string kind)
+	public PolishingSession Begin(string kind, double duration = 10)
 	{
 		EndPointer();
 		InstrumentKind = kind;
@@ -111,7 +111,7 @@ void fragment() {
 		for (int i = 0; i < alpha.Length; i++)
 			alpha[i] = rgba[i * 4 + 3];
 
-		Session = new PolishingSession(alpha);
+		Session = new PolishingSession(alpha, duration: duration);
 		_coatingImage = Image.CreateEmpty(
 			Session.Columns, Session.Rows,
 			false, Image.Format.Rgba8);

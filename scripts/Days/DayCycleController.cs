@@ -5,9 +5,9 @@ using Godot;
 
 public sealed class DayCycleController
 {
-	private static readonly int TotalDays = EconomyConfigProvider.Load().Days.TotalDays;
-	private static readonly int FirstQuotaDay = EconomyConfigProvider.Load().Quotas.Find(quota => quota.Id == "first").DeadlineDay;
-	public DaySession Session { get; } = new();
+	private static int TotalDays => EconomyConfigProvider.Load().Days.TotalDays;
+	private static int FirstQuotaDay => EconomyConfigProvider.Load().Quotas.Find(quota => quota.Id == "first").DeadlineDay;
+	public DaySession Session { get; } = new(5, 3630);
 	public bool Started { get; private set; }
 	public DayUpgradeSession Upgrades { get; } = new();
 	public int CheckpointAtelierLevel { get; private set; }
@@ -32,6 +32,7 @@ public sealed class DayCycleController
 	public DayCycleController(TradeScene game)
 	{
 		_game = game;
+		Upgrades.Rules = DebugBalanceSettings.CardRules;
 		_card = GD.Load<PackedScene>("res://scenes/UI/DayTransitionCard.tscn").Instantiate<DayTransitionCard>();
 		_card.Chosen += ChooseUpgrade;
 		_card.Skipped += SkipUpgrade;
@@ -81,6 +82,7 @@ public sealed class DayCycleController
 		_dayNight = new DayNightBackground(game);
 		_announcements = new DayAnnouncementOverlay();
 		game.AddChild(_announcements);
+		Session.Reset(ExpectedDuration);
 		RefreshTimer();
 		UpdateDayNightBackground();
 	}
@@ -223,6 +225,12 @@ public sealed class DayCycleController
 		Session.ConfigureDuration(ExpectedDuration);
 		RefreshTimer();
 		UpdateDayNightBackground();
+	}
+
+	public void ApplyDebugBalance()
+	{
+		Upgrades.Rules = DebugBalanceSettings.CardRules;
+		SynchronizeRoomDuration();
 	}
 
 	private void UpdateDayNightBackground() =>

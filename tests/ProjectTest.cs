@@ -16,6 +16,13 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--debug-balance-checks"))
+            {
+                await TestDebugBalance();
+                GD.Print("DEBUG_BALANCE_CHECKS_PASS: hotkey/modal, live apply, new run, disk/reload, loot/items/craft/card prices and weights, validation and defaults");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--music-settings-checks"))
             {
                 await TestMusicSettings();
