@@ -12,9 +12,18 @@
 
 ### HF-149 — публикация оформления настроек HF-147/HF-148
 
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-16; HF-147/HF-148 DONE. Пользователь разрешил commit/push.
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-16; HF-147/HF-148 DONE. Пользователь разрешил commit/push.
 
 CP-HF-149 read-set: текущий фронт, Git status/diff/remote, готовый write-set/evidence HF-147/HF-148 и backup main-menu-before.tscn. Write-set: ORCHESTRATION_PLAN.md, docs/GAMEPLAY.md, scenes/UI/MusicVolumeControl.tscn, scenes/UI/FullscreenToggle.tscn, scripts/UI/FullscreenToggle.cs/.uid, scripts/MainMenu.cs, scripts/UI/{MusicVolumeControl,PauseMenu}.cs, tests/Integration/ProjectTest.MusicSettings.cs; scenes/main_menu.tscn (только индексная версия с изменением подписей Settings, пользовательский рабочий файл сохраняется); Git index/commits/main/origin/main; .local/checks/hf149. Out of scope: source/, пользовательский diff main_menu.tscn вне подписей Settings, trade_scene.tscn, новые изменения поведения, ветка feature/music. Приёмка: готовые проверенные настройки опубликованы обычным push без force, HEAD=origin/main, пользовательские изменения обеих сцен сохранены локально вне коммита. Проверки: evidence build/music-settings/pause-localization PASS, staged diff-check, проверка точного staged main_menu diff, push и сравнение refs/status.
+
+Task: HF-149
+Recommended status: REVIEW → принято координатором, DONE
+Changed: готовые изменения HF-147/HF-148 опубликованы обычным push. Индексная main_menu.tscn включает только Label/внутреннюю бумагу Fullscreen и Label/пустую текстуру Back; пользовательские координаты/музыка/метаданные вне этих правок сохранены в рабочем дереве.
+Checks: fetch main без расхождения; сохранённые build/music-settings/pause-localization HF-148 PASS; staged diff-check PASS; точный staged main_menu diff проверен; feature commit и push PASS.
+Acceptance: оформление переключателя паузы и единый24px текст опубликованы; локальные пользовательские изменения main_menu/trade_scene вне коммитов.
+Read-set exception: нет.
+Risks/blocker: нет новых; origin/feature/music обновилась при fetch, в этой задаче не сливалась и не менялась.
+Next: следующий запрос пользователя.
 
 ### HF-148 — единый масштаб подписей настроек
 
