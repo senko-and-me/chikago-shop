@@ -12,9 +12,18 @@
 
 ### HF-151 — публикация пачки сигарет HF-150
 
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-16; HF-150 DONE. Пользователь разрешил commit/push.
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-16; HF-150 DONE. Пользователь разрешил commit/push.
 
 CP-HF-151 read-set: текущий фронт, Git status/diff/remote/refs, готовый write-set/evidence HF-150, backup trade-scene-before.tscn. Write-set: ORCHESTRATION_PLAN.md; готовые docs/GAMEPLAY.md, localization/en.tres, scripts/UI/{ProgressPanel,FirstTradeTutorial}.cs, scripts/Days/DayCycleController.cs, tests/Integration/ProjectTest.{Ui,Helpers}.cs, tests/ProjectTest.cs, scenes/UI/CigaretteProgress.tscn, art/ui/cigarette_{pack_front,pack_back,stick}.png/.import; scenes/trade_scene.tscn (только индексная версия Progress/ClockActionButton/resources поверх HEAD, рабочий пользовательский файл сохраняется); Git index/commits/main/origin/main; .local/checks/hf151 и изолированная trade_scene.tscn HF139 для проверки точной staged-сцены. Out of scope: source/, main_menu.tscn, пользовательские UID/курсор/прочие узлы trade_scene, новые изменения поведения/баланса/save schema. Приёмка: проверенный HF-150 опубликован обычным push без force; HEAD=origin/main; пользовательские изменения обеих сцен сохранены локально вне коммита. Проверки: сохранённые build/import/progress/tutorial/cards/day-start HF-150 PASS, rendered progress точной индексной сцены, staged diff-check/точный scene diff, push и refs/status/hash readback.
+
+Task: HF-151
+Recommended status: REVIEW → принято координатором, DONE
+Changed: готовый HF-150 опубликован коммитом771f173 в origin/main. Индексная trade_scene включает только progress/clock/resources; пользовательские UID/курсор/прочие секции и main_menu остались локально.
+Checks: fetch main без расхождения; staged diff-check PASS; точная индексная scene rendered --progress-toggle-checks PASS, stderr пуст; ранее build/import/tutorial/cards/day-start PASS; обычный push PASS. Рабочие main_menu/trade_scene побайтно совпадают с snapshot HF151.
+Acceptance: опубликованы пачка/3 сигареты/исходный Drive арт/управление днём на часах/тесты, пользовательские изменения сохранены.
+Read-set exception: нет.
+Risks/blocker: нет новых.
+Next: ускорить переход после пропуска пролога по следующему запросу пользователя.
 
 ### HF-150 — пачка сигарет вместо панели прогресса
 
