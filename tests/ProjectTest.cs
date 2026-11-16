@@ -150,7 +150,7 @@ public partial class ProjectTest : SceneTree
             if (OS.GetCmdlineUserArgs().Contains("--progress-toggle-checks"))
             {
                 await TestCollapsibleProgress();
-                GD.Print("PROGRESS_TOGGLE_CHECKS_PASS: no sticky mouse selection, hover and keyboard preserved");
+                GD.Print("PROGRESS_TOGGLE_CHECKS_PASS: cigarette pack hover, animation, live quotas, keyboard and recovery");
                 Quit();
                 return;
             }

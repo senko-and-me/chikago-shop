@@ -213,8 +213,8 @@ public partial class FirstTradeTutorial : CanvasLayer
             "Покупатель предлагает цену. Кнопка «✓» продаёт товар. Кнопка «×» меняет покупателя и тратит попытку: новая цена может стать ниже. Продайте первый предмет.",
             _game.GetNode<Control>("World/TradingRoom/Item/TradePanel"));
         else if (_game.DayClosed) SetStep(Step.Start,
-            "Магазин закрыт. Продайте оставшийся товар, если покупатель уже у кассы, затем перейдите к следующему дню через панель слева.",
-            _game.GetNode<Control>("HUD/Root/ProgressPanel/Content/EndDayButton"));
+            "Магазин закрыт. Продайте оставшийся товар, если покупатель уже у кассы, затем нажмите на часы, чтобы перейти к следующему дню.",
+            _game.GetNode<Control>("HUD/Root/ClockActionButton"));
         else if (!_game.DayStarted) SetStep(Step.Start,
             "Нажмите «Начать» на часах. Пока день не начат, время не идёт. После запуска на торговлю отведена короткая смена.",
             _game.GetNode<Control>("HUD/Root/DayTimer/StartButton"));
@@ -231,8 +231,8 @@ public partial class FirstTradeTutorial : CanvasLayer
                 _game.GetNode<Control>("World/ShowroomLeft/Showcases/Slot1"));
         }
         else if (_game.EnergyRemaining <= 0) SetStep(Step.Start,
-            "Энергия закончилась. Завершите день в панели слева, затем перейдите к следующему. Непроданные вещи сохраняются.",
-            _game.GetNode<Control>("HUD/Root/ProgressPanel/Content/EndDayButton"));
+            "Энергия закончилась. Нажмите на часы, чтобы завершить день, затем ещё раз для перехода к следующему. Непроданные вещи сохраняются.",
+            _game.GetNode<Control>("HUD/Root/ClockActionButton"));
         else SetStep(Step.Craft,
             "Нажмите «Создать предметы» в ателье и выполните мини-игру. Производство стоит денег и энергии; цена указана у кнопки.",
             _game.GetNode<Control>("World/Atelier/GetItemButton"));

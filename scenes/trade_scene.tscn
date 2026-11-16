@@ -17,6 +17,7 @@
 [ext_resource type="Script" uid="uid://dxn8wgvls5a4a" path="res://scripts/UI/PauseMenu.cs" id="20_pause"]
 [ext_resource type="Script" uid="uid://bdswgixl6srw1" path="res://scripts/UI/ZoomResponsiveUi.cs" id="21_zoom_ui"]
 [ext_resource type="Script" uid="uid://dqhunfpycjxyp" path="res://scripts/UI/ProgressPanel.cs" id="22_progress"]
+[ext_resource type="PackedScene" path="res://scenes/UI/CigaretteProgress.tscn" id="32_cigarette_progress"]
 [ext_resource type="Script" uid="uid://cnnctojfahevu" path="res://scripts/Camera/WorldCamera.cs" id="23_world_camera"]
 [ext_resource type="Script" uid="uid://moiorwdg8bcp" path="res://scripts/Presentation/RoomDoorwayPresentation.cs" id="24_doorways"]
 [ext_resource type="Texture2D" uid="uid://cog2ypvb6uqtj" path="res://art/ui/panel_inverted.png" id="25_inverted"]
@@ -124,6 +125,8 @@ bg_color = Color(0.38, 0.33, 0.26, 1)
 
 [sub_resource type="StyleBoxFlat" id="RerollHover"]
 bg_color = Color(0.56, 0.48, 0.38, 1)
+
+[sub_resource type="StyleBoxEmpty" id="ProgressEmpty"]
 
 [node name="TradeScene" type="Node2D" unique_id=620028237]
 script = ExtResource("1_main")
@@ -968,45 +971,41 @@ text = "Энергия: 2 / 2"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="ProgressToggleButton" type="Button" parent="HUD/Root" unique_id=989856316]
-custom_minimum_size = Vector2(40, 44)
+[node name="ProgressPanel" type="Control" parent="HUD/Root" unique_id=1016591818]
 layout_mode = 0
-offset_left = 360.0
-offset_top = 25.0
-offset_right = 400.0
-offset_bottom = 69.0
-tooltip_text = "Свернуть панель"
-mouse_default_cursor_shape = 2
-theme_override_font_sizes/font_size = 28
-text = "<"
-
-[node name="ProgressPanel" type="PanelContainer" parent="HUD/Root" unique_id=1016591818]
-custom_minimum_size = Vector2(330, 0)
-layout_mode = 1
-offset_left = 24.0
-offset_top = 25.0
-offset_right = 354.0
-offset_bottom = 245.0
-theme_override_styles/panel = SubResource("HudLargePanelStyle")
+offset_top = 24.0
+offset_right = 46.0
+offset_bottom = 232.0
+mouse_filter = 2
 script = ExtResource("22_progress")
 
+[node name="Visual" parent="HUD/Root/ProgressPanel" instance=ExtResource("32_cigarette_progress")]
+
 [node name="Content" type="VBoxContainer" parent="HUD/Root/ProgressPanel" unique_id=1283382676]
-layout_mode = 2
+visible = false
+layout_mode = 0
+offset_left = 60.0
+offset_top = 204.0
+offset_right = 380.0
+offset_bottom = 280.0
 theme_override_constants/separation = 6
 
 [node name="DayLabel" type="Label" parent="HUD/Root/ProgressPanel/Content" unique_id=1902399305]
+visible = false
 layout_mode = 2
 theme_override_colors/font_color = Color(0.231373, 0.188235, 0.172549, 1)
 theme_override_font_sizes/font_size = 20
 text = "День: 1 / 7"
 
 [node name="QuotaLabel" type="Label" parent="HUD/Root/ProgressPanel/Content" unique_id=1481948479]
+visible = false
 layout_mode = 2
 theme_override_colors/font_color = Color(0.231373, 0.188235, 0.172549, 1)
 theme_override_font_sizes/font_size = 18
 text = "Квота 1 / 2: 200$"
 
 [node name="DeadlineLabel" type="Label" parent="HUD/Root/ProgressPanel/Content" unique_id=1700430636]
+visible = false
 layout_mode = 2
 theme_override_colors/font_color = Color(0.403922, 0.352941, 0.313725, 1)
 theme_override_font_sizes/font_size = 16
@@ -1049,6 +1048,30 @@ theme_override_styles/normal = SubResource("DeclineNormal")
 theme_override_styles/pressed = SubResource("DeclinePressed")
 theme_override_styles/hover = SubResource("DeclineHover")
 text = "Начать заново"
+
+[node name="ProgressToggleButton" type="Button" parent="HUD/Root" unique_id=989856316 groups=["button_feedback_local"]]
+z_index = 2
+layout_mode = 0
+offset_top = 24.0
+offset_right = 44.0
+offset_bottom = 232.0
+mouse_default_cursor_shape = 2
+flat = true
+theme_override_styles/normal = SubResource("ProgressEmpty")
+theme_override_styles/hover = SubResource("ProgressEmpty")
+theme_override_styles/pressed = SubResource("ProgressEmpty")
+theme_override_styles/disabled = SubResource("ProgressEmpty")
+
+[node name="ClockActionButton" type="Button" parent="HUD/Root" groups=["button_feedback_local"]]
+visible = false
+layout_mode = 0
+mouse_default_cursor_shape = 2
+flat = true
+theme_override_styles/normal = SubResource("ProgressEmpty")
+theme_override_styles/hover = SubResource("ProgressEmpty")
+theme_override_styles/pressed = SubResource("ProgressEmpty")
+theme_override_styles/disabled = SubResource("ProgressEmpty")
+theme_override_styles/focus = SubResource("ProgressEmpty")
 
 [node name="InventoryUI" parent="HUD" unique_id=1583018025 instance=ExtResource("9_cppqn")]
 offset_top = -3.0
