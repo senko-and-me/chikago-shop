@@ -12,9 +12,18 @@
 
 ### HF-146 — сверка GitHub и завершение публикации дебаг-панели
 
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-16; HF-145 DONE. Пользователь ранее запросил push, сейчас запросил сверку актуальной версии; публикация ранее не выполнена.
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-16; HF-145 DONE. Пользователь ранее запросил push, сейчас запросил сверку актуальной версии; публикация ранее не выполнена.
 
 CP-HF-146 read-set: текущий фронт, git status/diff/log/remote; готовые файлы/evidence HF-145 и сравнение с изолированной проверенной копией. Write-set: ORCHESTRATION_PLAN.md, Git index/commits/main/origin/main; точные готовые файлы HF-145: docs/GAMEPLAY.md, project.godot, scenes/UI/DebugBalanceNumberRow.tscn, scenes/UI/DebugBalancePanel.tscn, scripts/Debug/DebugBalancePanel.cs/.uid, scripts/Debug/DebugBalanceSettings.cs/.uid, scripts/Configuration/EconomyConfigProvider.cs, scripts/Configuration/SceneConfigurationDefaults.cs, scripts/Crafting/WorkshopItemCatalog.cs, scripts/Days/DayCycleController.cs, scripts/TradeScene.cs, scripts/UI/DayTransitionCard.cs, scripts/UI/EmbroideryGame.cs, scripts/UI/PolishingSurface.cs, scripts/UI/RarityPanel.cs, src/ChikagoShop.Domain/Configuration/BalanceProfile.cs, src/ChikagoShop.Domain/Days/DayUpgradeRules.cs, src/ChikagoShop.Domain/Days/DayUpgradeSession.cs, src/ChikagoShop.Domain/Days/DaySession.cs, src/ChikagoShop.Domain/Crafting/EmbroiderySession.cs, src/ChikagoShop.Domain/Crafting/PolishingSession.cs, src/ChikagoShop.Domain/Crafting/RarityItemTable.cs, tests/ChikagoShop.Domain.Tests/BalanceProfileTests.cs, tests/Integration/ProjectTest.DebugBalance.cs/.uid, tests/ProjectTest.cs. Out of scope: source/, пользовательские scenes/main_menu.tscn и scenes/trade_scene.tscn, новые изменения поведения, force push. Приёмка: fetch и сравнение истории; готовая панель опубликована обычным push; HEAD=origin/main; обе локальные сцены сохранены вне коммита. Проверки: существующие HF-145 build/domain153/rendered checks PASS, сравнение с проверенной копией, staged diff-check и итоговые refs/status.
+
+Task: HF-146
+Recommended status: REVIEW → принято координатором, DONE
+Changed: fetch подтвердил HEAD=origin/main=512b755 без новых коммитов коллег; завершена ранее запрошенная публикация готовой панели HF-145, feature commit1cbe8e2 отправлен в origin/main обычным push. Удалена только лишняя пустая строка EOF нового шаблона для staged diff-check.
+Checks: сравнение с проверенной изолированной копией PASS (TradeScene различался только окончаниями строк, документация содержит позднее описание); сохранённые build/domain153/153/debug-balance/tutorial/card-dealing/craft-localization HF-145 PASS; staged diff-check PASS; push PASS.
+Acceptance: готовая панель опубликована; пользовательские main_menu.tscn (в том числе изменение размещения меню) и trade_scene.tscn сохранены локально вне коммита.
+Read-set exception: нет.
+Risks/blocker: нет новых; два пользовательских diff сцен остаются незакоммиченными.
+Next: продолжить работу с синхронизированной main.
 
 ### HF-145 — сохраняемая отладочная панель баланса
 
