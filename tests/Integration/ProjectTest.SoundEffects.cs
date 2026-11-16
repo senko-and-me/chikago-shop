@@ -55,6 +55,7 @@ public partial class ProjectTest
 
         try
         {
+            effects.SetVolume(1);
             foreach (var (file, hash) in new[] {
                 ("sale", "82066F6DC4D74D074174197E3DDE173730735AD29AC2C521CC32F6496381406A"),
                 ("hover", "625BF751E3B374C7260413B78030CCA8BFD6A5B3FC62E72D74A448D6F43C9B0C"),
@@ -140,6 +141,44 @@ public partial class ProjectTest
             Check(sounds.Count == 0, "A new menu appearing under a stationary pointer must not play hover");
             await ClickControl(menu, "SettingsMenuContainer/Settings/LanguageRow/EnglishButton");
             OnlyActivation(SoundEffects.Cue.Click, "Ordinary main menu controls must use generic click");
+            sounds.Clear();
+            await ClickControl(menu, "SettingsMenuContainer/Settings/BackButton");
+            OnlyActivation(SoundEffects.Cue.Click, "Restored main settings Back must be clickable and sounded");
+            menu.GetNode<IntroMusicDirector>("MusicDirector").SetProcess(false);
+            menu.OnPlayPressed();
+            menu.GetNode<TextureButton>("MainMenuContainer/Menu/NewGameButton").EmitSignal(BaseButton.SignalName.Pressed);
+            await Settle();
+            var skip = menu.GetNode<TextureButton>("IntroSkipLayer/SkipButton");
+            sounds.Clear();
+            await Move(new Vector2(600, 100));
+            Vector2 skipPoint = skip.GetGlobalTransformWithCanvas() * (skip.Size / 2);
+            await Move(skipPoint);
+            await ToSignal(CreateTimer(effects.HoverDelaySeconds + 0.03), SceneTreeTimer.SignalName.Timeout);
+            Check(sounds.SequenceEqual(new[] { SoundEffects.Cue.Hover }),
+                $"Prologue Skip must support delayed hover (heard: {string.Join(",", sounds)}, target: {Root.GuiGetHoveredControl()?.GetPath()}, rect: {skip.GetGlobalRect()})");
+            sounds.Clear();
+            await Press(skipPoint);
+            OnlyActivation(SoundEffects.Cue.Click, "The manual Skip input path must play one click");
+            Check(!menu.GetNode<CanvasLayer>("IntroSkipLayer").Visible &&
+                  menu.GetNode<IntroMusicDirector>("MusicDirector").CurrentCue == "silence",
+                "A sounded Skip must still start exactly one existing fade-out transition");
+            menu.QueueFree(); menu = null;
+            await Settle();
+
+            menu = GD.Load<PackedScene>("res://scenes/main_menu.tscn").Instantiate<MainMenu>();
+            Root.AddChild(menu);
+            menu.GetNode<IntroMusicDirector>("MusicDirector").SetProcess(false);
+            menu.OnPlayPressed();
+            menu.GetNode<TextureButton>("MainMenuContainer/Menu/NewGameButton").EmitSignal(BaseButton.SignalName.Pressed);
+            await Settle();
+            skip = menu.GetNode<TextureButton>("IntroSkipLayer/SkipButton");
+            skipPoint = skip.GetGlobalTransformWithCanvas() * (skip.Size / 2);
+            sounds.Clear();
+            Root.PushInput(new InputEventMouseMotion { Position = skipPoint, GlobalPosition = skipPoint, Relative = Vector2.One }, true);
+            await Press(skipPoint);
+            await ToSignal(CreateTimer(effects.HoverDelaySeconds + 0.08), SceneTreeTimer.SignalName.Timeout);
+            Check(sounds.SequenceEqual(new[] { SoundEffects.Cue.Click }),
+                "Fast Skip must emit exactly one click and cancel hover without a late sound");
             menu.QueueFree(); menu = null;
             await Settle();
 
@@ -204,6 +243,7 @@ public partial class ProjectTest
             else if (FileAccess.FileExists(GameLocalization.SettingsPath))
                 DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(GameLocalization.SettingsPath));
             MusicSettings.Instance.LoadPreference();
+            effects.LoadPreference();
             TranslationServer.SetLocale(originalLanguage);
             if (FileAccess.FileExists(save)) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(save));
         }

@@ -3,22 +3,34 @@ using Godot;
 public partial class MusicVolumeControl : PanelContainer
 {
     [Export] public bool PlainStyle { get; set; }
+    [Export] public bool ControlsSoundEffects { get; set; }
     private HSlider _slider;
     private Label _percentage;
     private MusicSettings _settings;
+    private SoundEffects _effects;
 
     public override void _Ready()
     {
         _slider = GetNode<HSlider>("Content/Slider");
         _percentage = GetNode<Label>("Content/Header/Percentage");
         if (PlainStyle) ApplyPlainStyle();
-        _settings = MusicSettings.Instance;
-        UpdateValue(_settings.Volume);
-        _settings.VolumeChanged += UpdateValue;
+        if (ControlsSoundEffects)
+        {
+            GetNode<Label>("Content/Header/Title").Text = "Громкость звуков";
+            _effects = SoundEffects.Instance;
+            UpdateValue(_effects.Volume);
+            _effects.VolumeChanged += UpdateValue;
+        }
+        else
+        {
+            _settings = MusicSettings.Instance;
+            UpdateValue(_settings.Volume);
+            _settings.VolumeChanged += UpdateValue;
+        }
         _slider.ValueChanged += value =>
         {
-            Error error = _settings.SetVolume(value / 100);
-            if (error != Error.Ok) GD.PushWarning($"Music volume could not be saved: {error}");
+            Error error = ControlsSoundEffects ? _effects.SetVolume(value / 100) : _settings.SetVolume(value / 100);
+            if (error != Error.Ok) GD.PushWarning($"Audio volume could not be saved: {error}");
         };
     }
 
@@ -47,5 +59,6 @@ public partial class MusicVolumeControl : PanelContainer
     public override void _ExitTree()
     {
         if (GodotObject.IsInstanceValid(_settings)) _settings.VolumeChanged -= UpdateValue;
+        if (GodotObject.IsInstanceValid(_effects)) _effects.VolumeChanged -= UpdateValue;
     }
 }

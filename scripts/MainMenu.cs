@@ -114,6 +114,12 @@ public partial class MainMenu : Control
 		var settings = GetNode<VBoxContainer>("SettingsMenuContainer/Settings");
 		settings.AddChild(volume);
 		settings.MoveChild(volume, settings.GetNode("LanguageRow").GetIndex());
+		var soundVolume = GD.Load<PackedScene>("res://scenes/UI/MusicVolumeControl.tscn").Instantiate<MusicVolumeControl>();
+		soundVolume.Name = "SoundVolume";
+		soundVolume.ControlsSoundEffects = true;
+		soundVolume.CustomMinimumSize = volume.CustomMinimumSize;
+		settings.AddChild(soundVolume);
+		settings.MoveChild(soundVolume, volume.GetIndex() + 1);
 		BuildGameChoiceMenu();
 		BuildSkipButton();
 
@@ -961,7 +967,7 @@ public partial class MainMenu : Control
 
 			if (skipRect.HasPoint(mousePosition))
 			{
-				OnSkipIntroPressed();
+				_skipButton.EmitSignal(BaseButton.SignalName.Pressed);
 			}
 		}
 
@@ -986,7 +992,7 @@ public partial class MainMenu : Control
 			{
 				GetViewport().SetInputAsHandled();
 
-				OnSkipIntroPressed();
+				_skipButton.EmitSignal(BaseButton.SignalName.Pressed);
 			}
 
 			return;

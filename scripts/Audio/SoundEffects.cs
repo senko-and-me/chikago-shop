@@ -10,6 +10,8 @@ public partial class SoundEffects : Node
     public static SoundEffects Instance { get; private set; }
     [Export] public float VolumeDb { get; set; } = -6;
     [Export(PropertyHint.Range, "0.05,1,0.01")] public double HoverDelaySeconds { get; set; } = 0.15;
+    public double Volume { get; private set; } = 1;
+    public event Action<double> VolumeChanged;
     public event Action<Cue> Played;
     private readonly Dictionary<Cue, AudioStreamPlayer> _voices = new();
     private readonly Dictionary<BaseButton, Action> _buttons = new();
@@ -29,6 +31,7 @@ public partial class SoundEffects : Node
             AudioServer.SetBusName(AudioServer.BusCount - 1, BusName);
             AudioServer.SetBusSend(AudioServer.GetBusIndex(BusName), "Master");
         }
+        LoadPreference();
         foreach (var (cue, file) in new[] { (Cue.Hover, "hover"), (Cue.Click, "click"),
                      (Cue.Settings, "settings"), (Cue.Sale, "sale"), (Cue.CustomerBell, "customer_bell") })
         {
@@ -49,6 +52,36 @@ public partial class SoundEffects : Node
     {
         Attach(node);
         foreach (Node child in node.GetChildren()) AttachExisting(child);
+    }
+
+    public void LoadPreference()
+    {
+        var config = new ConfigFile();
+        double volume = 1;
+        if (config.Load(GameLocalization.SettingsPath) == Error.Ok)
+        {
+            var stored = config.GetValue("audio", "effects_volume", 1.0);
+            if (stored.VariantType is Variant.Type.Float or Variant.Type.Int) volume = stored.AsDouble();
+        }
+        ApplyVolume(volume);
+    }
+
+    public Error SetVolume(double volume)
+    {
+        ApplyVolume(volume);
+        var config = new ConfigFile();
+        config.Load(GameLocalization.SettingsPath);
+        config.SetValue("audio", "effects_volume", Volume);
+        return config.Save(GameLocalization.SettingsPath);
+    }
+
+    private void ApplyVolume(double volume)
+    {
+        Volume = double.IsFinite(volume) ? Math.Clamp(volume, 0, 1) : 1;
+        int bus = AudioServer.GetBusIndex(BusName);
+        AudioServer.SetBusMute(bus, Volume == 0);
+        AudioServer.SetBusVolumeDb(bus, Volume > 0 ? Mathf.LinearToDb((float)Volume) : -80);
+        VolumeChanged?.Invoke(Volume);
     }
 
     private void Attach(Node node)

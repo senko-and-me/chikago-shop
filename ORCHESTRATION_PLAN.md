@@ -10,6 +10,23 @@
 
 ## Текущий фронт
 
+### HF-149 — отдельная громкость эффектов и звуки пропуска пролога
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-16; HF-148 DONE, активных пересечений нет.
+CP-HF-149 read-set: текущий фронт, scripts/{MainMenu,UI/PauseMenu,UI/MusicVolumeControl,Audio/MusicSettings,Audio/SoundEffects,Dialogue/DialoguePlayer}.cs, scenes/{main_menu,UI/MusicVolumeControl,UI/DialoguePlayer}.tscn, project.godot, localization/en.tres, tests/Integration/ProjectTest.{MusicSettings,SoundEffects,IntroMusic,MenuMusic}.cs, tests/ProjectTest.cs, docs/GAMEPLAY.md, art/ui/button_back.png (только размеры). Write-set: ORCHESTRATION_PLAN.md, scripts/{MainMenu,UI/PauseMenu,UI/MusicVolumeControl,Audio/SoundEffects}.cs, scenes/main_menu.tscn (layout настроек для второй плашки/снятие ошибочных max bounds), localization/en.tres, tests/Integration/ProjectTest.{MusicSettings,SoundEffects}.cs, docs/GAMEPLAY.md; .local/checks/hf149 — изолированная проверка/evidence. Out of scope: source/, WAV/петли/уровни музыкального микса, доменная логика, commit/push/ZIP, пользовательские изменения. Приёмка: SoundVolume отдельная копия той же плашки в menu/pause (такой же стиль/ширина/отступы), audio/effects_volume сохраняется независимо от музыки/языка,0глушит все SFX без музыки; Skip реальный long-hover/click/fast-click с прежними правилами и однократным пропуском; весь экран помещается в960×540/1280×720. Проверки: build, rendered settings/SFX, intro/menu music regressions, diff-check.
+
+
+```text
+Task: HF-149
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: SoundEffects управляет пользовательской громкостью SFX через bus gain/mute и audio/effects_volume в settings.cfg, default100%, независимо от music volume/языка. MusicVolumeControl получил ControlsSoundEffects и использован повторно для SoundVolume в главном меню/паузе: те же размеры/оформление/бегунок/PlainStyle, новая RU/EN подпись. Удалены ошибочные maximum bounds Settings/BackButton, чтобы обе плашки и Back помещались на экране. Оба ручных пути Skip теперь отправляют единый Pressed signal, поэтому общий audio observer играет один click перед скрытием кнопки; hover150мс сохранён.
+Checks: build PASS (0 warnings/errors); rendered --music-settings-checks PASS (два независимых bus/mute, немедленная реакция, сохранение/загрузка, обе плашки/Back, RU/EN960×540/1280×720, mouse/keyboard); rendered --sound-effects-checks PASS (long hover Skip, real click Skip, fast Skip без отложенного hover и дубля, реальный Back, прежние SFX/lifecycle); --intro-music-checks PASS; --menu-music-checks PASS; git diff-check PASS. Визуально просмотрены menu-volume-ru-1280.png и pause-volume-en-960.png.
+Acceptance: отдельная плашка звуков оформлена точно тем же компонентом,0глушит SFX без музыки; значения переживают пересоздание меню и сохраняют язык. Skip звучит на наведении/клике и по-прежнему запускает один fade-out; кнопка Back теперь доступна мышью. Evidence: .local/checks/hf149/{build.log,music-settings*.log,sound-effects*.log,intro-music.log,menu-music.log}, project/*-volume-*.png.
+Read-set exception: ChikagoShop.csproj и изолированная копия HF-147 использованы для проверок без source/; PNG header button_settings прочитан вместе с button_back для диагностики прежней геометрии. Рабочие WAV/музыкальный код не менялись.
+Risks/blocker: прежнее сообщение root certificate store окружения при exit0; полный игровой проход не выполнялся. Commit/push/ZIP не выполнялись.
+Next: пользовательская проверка настроек и пропуска пролога.
+```
+
 ### HF-148 — коммит звуков интерфейса в feature/music
 
 Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-16; HF-145…147 DONE, пользователь подтвердил результат и запросил коммит в музыкальную ветку.

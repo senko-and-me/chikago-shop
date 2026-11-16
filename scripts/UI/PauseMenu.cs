@@ -88,6 +88,11 @@ public partial class PauseMenu : CanvasLayer
 		var volume = GD.Load<PackedScene>("res://scenes/UI/MusicVolumeControl.tscn").Instantiate<MusicVolumeControl>();
 		volume.PlainStyle = true;
 		_settings.AddChild(volume);
+		var soundVolume = GD.Load<PackedScene>("res://scenes/UI/MusicVolumeControl.tscn").Instantiate<MusicVolumeControl>();
+		soundVolume.Name = "SoundVolume";
+		soundVolume.ControlsSoundEffects = true;
+		soundVolume.PlainStyle = true;
+		_settings.AddChild(soundVolume);
 		_fullscreen.Toggled += enabled => DisplayServer.WindowSetMode(enabled
 			? DisplayServer.WindowMode.Fullscreen : DisplayServer.WindowMode.Windowed);
 		var languages = new HBoxContainer { Name = "LanguageRow" };
