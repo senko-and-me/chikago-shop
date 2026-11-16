@@ -150,8 +150,8 @@ public partial class MainMenu : Control
 
 	private void ConfigureBackButton()
 	{
-		float width = 480f;
-		float height = 144f;
+		float width = 260f;
+		float height = 78f;
 
 		if (_backRu != null)
 		{

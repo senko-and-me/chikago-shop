@@ -151,7 +151,7 @@ layout_mode = 2
 texture_normal = ExtResource("9_5dd4i")
 
 [node name="BackButton" type="TextureButton" parent="SettingsMenuContainer/Settings" unique_id=1768434549]
-custom_minimum_size = Vector2(360, 100)
+custom_minimum_size = Vector2(260, 78)
 layout_mode = 2
 mouse_default_cursor_shape = 2
 texture_normal = ExtResource("4_back")

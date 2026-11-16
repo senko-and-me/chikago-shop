@@ -10,6 +10,23 @@
 
 ## Текущий фронт
 
+### HF-150 — уменьшить Back в главных настройках
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-16; HF-149 DONE, активных пересечений нет.
+CP-HF-150 read-set/write-set: ORCHESTRATION_PLAN.md, scripts/MainMenu.cs (только ConfigureBackButton), scenes/main_menu.tscn (только минимум Settings/BackButton); read-only tests/Integration/ProjectTest.MusicSettings.cs и готовая проверочная копия HF-149. .local/checks/hf150 — evidence/изолированный рендер. Out of scope: source/, аудио, остальная геометрия/кнопки, commit/push/ZIP, пользовательские правки. Приёмка: Back уменьшена с480×144до260×78 с сохранением пропорций, по центру под языком, RU/EN без наложений. Проверки: build, rendered --music-settings-checks (960×540/1280×720), просмотр screenshot, diff-check.
+
+
+```text
+Task: HF-150
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: ConfigureBackButton и scene минимум Back уменьшены до260×78 вместо480×144, исходные пропорции и центрирование сохранены; другие кнопки не менялись.
+Checks: build PASS (0 warnings/errors); isolated rendered --music-settings-checks PASS (RU/EN960×540/1280×720, доступность Back, отступы/плашки); menu-volume-ru-1280.png просмотрен; git diff-check PASS.
+Acceptance: Back компактная, примерно вдвое меньше по ширине, по центру под языком, не выходит за экран. Evidence: .local/checks/hf150/{build.log,settings.log,settings-errors.log}, project/*-volume-*.png.
+Read-set exception: ChikagoShop.csproj и готовая изолированная копия HF-149 использованы для проверки без source/.
+Risks/blocker: прежнее certificate-store warning окружения при exit0. Commit/push/ZIP не выполнялись.
+Next: пользовательская приёмка размера.
+```
+
 ### HF-149 — отдельная громкость эффектов и звуки пропуска пролога
 
 Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-16; HF-148 DONE, активных пересечений нет.

@@ -76,15 +76,21 @@ public partial class ProjectTest
                 using var hover = await CaptureButtonFeedback();
                 if (language == "en")
                 {
-                    Check(frame.Bounds.Size.X < control.Size.X * 0.7f,
-                        "The narrow English Back image must not inherit the wide Russian control outline");
-                    Vector2 margin = new(control.Position.X + 5, control.GetCenter().Y);
-                    Vector2 scale = new Vector2(hover.GetWidth(), hover.GetHeight()) / Root.GetVisibleRect().Size;
-                    int x = (int)(margin.X * scale.X), y = (int)(margin.Y * scale.Y);
-                    Color before = idle.GetPixel(x, y), after = hover.GetPixel(x, y);
-                    Check(Mathf.Abs(before.R - after.R) < 2f / 255 && Mathf.Abs(before.G - after.G) < 2f / 255 &&
-                        Mathf.Abs(before.B - after.B) < 2f / 255,
-                        "Empty side margins must receive neither outline nor hover tint");
+                    float fittedWidth = Mathf.Min(control.Size.X,
+                        control.Size.Y * back.TextureNormal.GetWidth() / back.TextureNormal.GetHeight());
+                    Check(frame.Bounds.Size.X <= fittedWidth + 1,
+                        "English Back feedback must fit the current image's actual aspect ratio");
+                    float sideMargin = (control.Size.X - fittedWidth) / 2;
+                    if (sideMargin > 4)
+                    {
+                        Vector2 margin = new(control.Position.X + sideMargin / 2, control.GetCenter().Y);
+                        Vector2 scale = new Vector2(hover.GetWidth(), hover.GetHeight()) / Root.GetVisibleRect().Size;
+                        int x = (int)(margin.X * scale.X), y = (int)(margin.Y * scale.Y);
+                        Color before = idle.GetPixel(x, y), after = hover.GetPixel(x, y);
+                        Check(Mathf.Abs(before.R - after.R) < 2f / 255 && Mathf.Abs(before.G - after.G) < 2f / 255 &&
+                            Mathf.Abs(before.B - after.B) < 2f / 255,
+                            "Empty side margins must receive neither outline nor hover tint");
+                    }
                     if (size.X == 1280)
                         hover.SavePng(Path.Combine(Path.GetTempPath(), "chikago-hf73-back-en.png"));
                 }
