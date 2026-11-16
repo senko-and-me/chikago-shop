@@ -12,11 +12,22 @@
 
 ### HF-152 — финальная проверка, коммиты и push только feature/music
 
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-16; HF-149…151 DONE. Пользователь явно запросил перепроверку всех изменений, тематические коммиты и push музыкальной ветки, без main.
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-16; HF-149…151 DONE. Пользователь явно запросил перепроверку всех изменений, тематические коммиты и push музыкальной ветки, без main.
 
 Расширение координатором: read/write-set включает tests/Integration/ProjectTest.ButtonFeedback.cs — вместо устаревшей фиксированной границы70% для EN Back проверить фактическое aspect-fit изображения и пиксели пустых полей; scripts/Presentation/ButtonFeedbackController.cs прочитан только для диагностики. Итоговый контрольный коммит плана также включает сохранённый исторический отчёт HF-139, чтобы после публикации не оставлять локальный хвост документации; сам ZIP не публикуется.
 CP-HF-152 read-set: текущий фронт, git status/diff/log/refs/remotes, файлы и проверки HF-149…151, project.godot, tests/ProjectTest.cs, ChikagoShop.sln, tests/ChikagoShop.Domain.Tests/ChikagoShop.Domain.Tests.csproj. Write-set: файлы HF-149…151 для необходимых исправлений, ORCHESTRATION_PLAN.md (HF-149…152), Git index/objects и локальная/удалённая feature/music; .local/checks/hf152 — снимок/проверки/сообщения/индексные версии. Out of scope: main (локальная и origin/main), force-push, source/, личные настройки/исходные WAV, ZIP, несвязанный HF-139. Приёмка: build/domain и адресные rendered/audio regression PASS или подтверждённая baseline-проблема вне scope; финальное дерево проверено; логичные коммиты; обычный push feature/music; remote SHA совпадает с локальной веткой, main не изменилась. Проверки: diff-check, build/domain, isolated rendered SFX/settings/buttons, menu/intro/game music, редакторский -18dB fixture, ancestry/remote refs/staged diff/итоговый status.
 
+
+```text
+Task: HF-152
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: финальный пакет перепроверен; сохранён авторский mix Hover/CustomerBell -10dB, Click/Settings/Sale -12dB. Устаревший визуальный тест EN Back обновлён на реальный aspect-fit/свободные поля, без изменений production-подсветки. Созданы6c2bad3 (плашка SFX/Skip),55139f9 (компактная Back/актуальный visual regression),0c52951 (scene-owned SFX/авторский mix). Все ранее накопленные коммиты и новые функциональные коммиты отправлены обычным push a35e98c→0c52951 только в feature/music. Контрольный коммит плана сохраняет итог проверки/публикации и исторический отчёт HF-139.
+Checks: diff/staged diff-check PASS; build PASS (0 warnings/errors); domain141/141 PASS (на машине нет runtime.NET8, тестовый хост запущен на установленном.NET10 через DOTNET_ROLL_FORWARD=Major); isolated import PASS; rendered sound-effects/music-settings/button-feedback PASS; menu-music/intro-music/game-music PASS; отдельный editor Click=-18dB fixture PASS; runtime/code source checksums совпали с проверенной копией. Push feature/music PASS, remote SHA0c52951 совпал с локальным после функциональной публикации.
+Acceptance: пользовательские уровни и все правки интерфейса/аудио находятся в музыкальной ветке; main не получала push/merge. Локальная main осталась900e9b1. Remote main параллельно изменилась512b755→3190512 независимыми коммитами balance editor; raw-SHA fetch/ancestry подтвердил, что0c52951 не входит в неё. Финальный отчёт публикуется дополнительным обычным push той же feature/music.
+Read-set exception: tests/Integration/ProjectTest.ButtonFeedback.cs и scripts/Presentation/ButtonFeedbackController.cs диагностированы по расширению выше; сырая remote-main история прочитана для проверки отсутствия музыкального merge. Оригиналы WAV/сохранения/source/ не затронуты.
+Risks/blocker: прежние предупреждения duplicate UI UID на импорте и certificate-store в ограниченной среде; адресные проверки завершились PASS. Remote main менялась параллельно внешними операциями, с нашей стороны отправлялась только refs/heads/feature/music. Evidence: .local/checks/hf152/{build,domain,import,sound-effects*,music-settings*,button-feedback*,menu-music,intro-music,game-music,editor-volume*}.log, main-before.txt/remote-main-before.txt и файлы сообщений/индексных версий.
+Next: дальнейшие изменения или отдельный запрос на объединение с main.
+```
 
 ### HF-151 — постоянная настройка базовой громкости каждого SFX в инспекторе
 
@@ -220,6 +231,23 @@ Acceptance: новые исходные WAV не обрабатывались и
 Read-set exception: ChikagoShop.csproj и runtime-ресурсы скопированы для изолированного запуска, без source/. Прежние пользовательские удаления лишних экспортированных полей и ext_resource в main_menu.tscn сохранены; добавлен только явный MenuVolumeDb -12. Локальный отчёт HF-139 сохранён.
 Risks/blocker: исходные WAV 24-bit PCM; Godot декодирует импортированный sample в свой16-bit формат, исходные файлы остаются24-bit и неизменными. Одинаковое усиление сохраняет естественные различия исходного микса, нормализации нет. Повтор полной записи не гарантирует прежние границы по90BPM; подрезка/обработка запрещены пользователем. В среде тестов прежнее сообщение root certificate store. Commit/push и пересборка ZIP не выполнялись.
 Next: прослушать обновлённые композиции в игре.
+```
+
+### HF-139 — ZIP актуальной Windows-сборки в Downloads
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-14; HF-138 DONE; пользователь запросил отдельный архив готовой игры для отправки.
+CP-HF-139 read-set: текущий фронт, git status/HEAD/remote main, project.godot, export_presets.cfg, ChikagoShop.csproj, docs/TESTING.md, .gitignore, локальные .NET/Godot executables и export templates; tracked runtime-файлы снимка HEAD900e9b1 для экспорта (без source/). Write-set: ORCHESTRATION_PLAN.md, .local/checks/hf139 (изолированный снимок/проверки), builds/ChikagoShop-900e9b1-Windows (готовая сборка), C:/Users/artem/Downloads/ChikagoShop-900e9b1-Windows.zip. Out of scope: source/, личные сохранения/настройки, изменение игрового поведения, commit/push, перезапись существующих пользовательских архивов. Приёмка: последняя main проверена, release Windows x86_64 .NET экспорт, в ZIP все необходимые runtime-файлы без личных данных; запуск отдельно от проекта подтверждён, архив помещён в Downloads. Проверки: release export, изолированный smoke-run с логом, ZIP inventory/hash/size, git diff-check.
+
+
+```text
+Task: HF-139
+Recommended status: REVIEW (принято координатором → DONE)
+Changed: из git archive HEAD900e9b1 создан изолированный проект; из официального mono_export_templates.tpz4.7.2 скачаны HTTP Range только Windows x64 release EXE/console и извлечены Deflate-потоки с проверкой размеров. Временный export preset использует .NET-шаблон, включает config/dialogue JSON, исключает dev-ресурсы и debug symbols. Релиз содержит EXE/PCK и self-contained .NET runtime; добавлена короткая инструкция. ZIP109473514байт,190 entries скопирован в C:/Users/artem/Downloads/ChikagoShop-900e9b1-Windows.zip.
+Checks: remote main=HEAD900e9b1 PASS; release publish MSBuild завершён, экспорт PCK содержит economy.v1.json/intro.ru.json; self-contained coreclr/hostfxr/assemblies присутствуют; standalone rendered menu smoke PASS; распаковка готового ZIP и повторный запуск EXE отдельно от проекта PASS; ZIP required files/no personal saves PASS; SHA256 копии совпал:8AC91C3ACC165D34F32360A40BA7C94DC7F2C16C431A2420283ECE8E673B1783; git diff-check PASS.
+Acceptance: готовый архив для Windows x86_64 находится в Downloads, Godot/отдельный .NET получателю не нужны; EXE запускается из полностью распакованной папки, ресурсы/runtime находятся рядом. Evidence: .local/checks/hf139/{import,export,publish,smoke-menu,zip-smoke}.log,zip-inventory.txt; сборка builds/ChikagoShop-900e9b1-Windows.
+Read-set exception: scripts/Configuration/EconomyConfigProvider.cs и scripts/MainMenu.cs прочитаны для диагностики упаковки JSON/запуска; source/ не читался. Сетевые NuGet/template-загрузки и запись Downloads выполнены с разрешённым повышением прав.
+Risks/blocker: полный игровой проход экспортированной сборки не выполнялся; release бинарник не поддерживает --scene, поэтому отдельный CLI-smoke торговой сцены неприменим. Первый export без доступа NuGet не собрал .NET, повторный с доступом собрал runtime; оболочка повторного экспорта задержала завершение после готовой упаковки и была отменена, затем итоговый ZIP успешно запущен. В изолированной среде остаётся сообщение root certificate store; игрового кода ошибок при запуске нет. Исходники/сохранения пользователя и tracked export preset не менялись; commit/push не выполнялись.
+Next: отправить ZIP получателю и полностью распаковать перед запуском.
 ```
 
 ### HF-138 — коммиты музыки и объединение с main
