@@ -24,17 +24,20 @@ public sealed class PolishingSession : ICraftSession
     public int Columns { get; }
     public int Rows { get; }
     public EmbroideryState State { get; private set; }
-    public double RemainingSeconds { get; private set; } = 10;
+    public double Duration { get; }
+    public double RemainingSeconds { get; private set; }
     public int Misses { get; private set; }
     public double Progress { get; private set; }
     public double DirtProgress { get; private set; }
     public bool Complete => Progress >= 0.85;
     public int Quality => Math.Clamp((int)Math.Round(Math.Min(100, Progress / .85 * 96)
-        + RemainingSeconds / 10 * 4 - Misses * 4.5), 0, 100);
+        + RemainingSeconds / Duration * 4 - Misses * 4.5), 0, 100);
     public string Rank => Quality >= 92 ? "S" : Quality >= 78 ? "A" : Quality >= 63 ? "B" : Quality >= 42 ? "C" : "D";
 
-    public PolishingSession(byte[] alphaMask, int width = 600, int height = 480)
+    public PolishingSession(byte[] alphaMask, int width = 600, int height = 480, double duration = 10)
     {
+        if (!double.IsFinite(duration) || duration <= 0) throw new ArgumentOutOfRangeException(nameof(duration));
+        Duration = RemainingSeconds = duration;
         if (width <= 0 || height <= 0 || alphaMask.Length != checked(width * height))
             throw new ArgumentException("Mask dimensions must match its pixel data.");
         _width = width; _height = height;
@@ -66,7 +69,7 @@ public sealed class PolishingSession : ICraftSession
         }
         Progress = DirtProgress = successful ? 1 : 0;
         Misses = 0;
-        RemainingSeconds = successful ? 10 : 0;
+        RemainingSeconds = successful ? Duration : 0;
         State = EmbroideryState.Finished;
     }
     public void Tick(double delta)

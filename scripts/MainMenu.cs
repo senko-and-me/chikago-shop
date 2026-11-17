@@ -85,9 +85,8 @@ public partial class MainMenu : Control
 		_playRu = _playButton.TextureNormal;
 		_settingsRu = _settingsButton.TextureNormal;
 		_quitRu = _quitButton.TextureNormal;
-		_backRu = _backButton.TextureNormal;
+		_backRu = GD.Load<Texture2D>("res://art/ui/button_back.png");
 
-		ConfigureBackButton();
 
 		_playButton.Pressed += OnPlayPressed;
 		_settingsButton.Pressed += OnSettingsPressed;
@@ -97,10 +96,6 @@ public partial class MainMenu : Control
 		_fullscreenButton = GetNode<TextureButton>(
 			"SettingsMenuContainer/Settings/FullscreenButton");
 
-		ConfigureTextureButton(
-			_fullscreenButton,
-			new Vector2(500, 75));
-
 		_fullscreenButton.ToggleMode = true;
 
 		_fullscreenButton.SetPressedNoSignal(
@@ -108,18 +103,7 @@ public partial class MainMenu : Control
 
 		_fullscreenButton.Toggled += OnFullscreenToggled;
 
-		BuildLanguageMenu();
-		var volume = GD.Load<PackedScene>("res://scenes/UI/MusicVolumeControl.tscn").Instantiate<MusicVolumeControl>();
-		volume.CustomMinimumSize = new Vector2(_fullscreenButton.CustomMinimumSize.X, volume.CustomMinimumSize.Y);
-		var settings = GetNode<VBoxContainer>("SettingsMenuContainer/Settings");
-		settings.AddChild(volume);
-		settings.MoveChild(volume, settings.GetNode("LanguageRow").GetIndex());
-		var soundVolume = GD.Load<PackedScene>("res://scenes/UI/MusicVolumeControl.tscn").Instantiate<MusicVolumeControl>();
-		soundVolume.Name = "SoundVolume";
-		soundVolume.ControlsSoundEffects = true;
-		soundVolume.CustomMinimumSize = volume.CustomMinimumSize;
-		settings.AddChild(soundVolume);
-		settings.MoveChild(soundVolume, volume.GetIndex() + 1);
+		BindLanguageMenu();
 		BuildGameChoiceMenu();
 		BuildSkipButton();
 
@@ -148,211 +132,21 @@ public partial class MainMenu : Control
 			Control.MouseFilterEnum.Stop;
 	}
 
-	private void ConfigureBackButton()
+	private void BindLanguageMenu()
 	{
-		float width = 260f;
-		float height = 78f;
-
-		if (_backRu != null)
-		{
-			Vector2 original = _backRu.GetSize();
-
-			if (original.X > 0)
-			{
-				height = width * original.Y / original.X;
-			}
-		}
-
-		_backButton.IgnoreTextureSize = true;
-
-		_backButton.StretchMode =
-			TextureButton.StretchModeEnum.KeepAspectCentered;
-
-		_backButton.CustomMinimumSize =
-			new Vector2(width, Mathf.Round(height));
-
-		_backButton.SizeFlagsHorizontal =
-			Control.SizeFlags.ShrinkCenter;
-
-		_backButton.SizeFlagsVertical =
-			Control.SizeFlags.ShrinkCenter;
+		var row = GetNode<HBoxContainer>("SettingsMenuContainer/Settings/LanguageRow");
+		_languageLabel = row.GetNode<Label>("LanguageLabel");
+		_english = row.GetNode<Button>("EnglishButton");
+		_russian = row.GetNode<Button>("RussianButton");
+		_english.Pressed += () => SelectLanguage("en");
+		_russian.Pressed += () => SelectLanguage("ru");
 	}
 
-	private void BuildLanguageMenu()
+	private void SelectLanguage(string locale)
 	{
-		var settings = GetNode<VBoxContainer>(
-			"SettingsMenuContainer/Settings");
-
-		settings.AddThemeConstantOverride(
-			"separation", 14);
-
-		var row = new HBoxContainer
-		{
-			Name = "LanguageRow",
-			Alignment = BoxContainer.AlignmentMode.Center,
-			SizeFlagsHorizontal =
-				Control.SizeFlags.ShrinkCenter
-		};
-
-		row.AddThemeConstantOverride(
-			"separation", 12);
-
-		settings.AddChild(row);
-
-		settings.MoveChild(
-			row,
-			settings.GetNode("BackButton").GetIndex());
-
-		_languageLabel = new Label
-		{
-			Name = "LanguageLabel",
-			Text = "Язык",
-			VerticalAlignment = VerticalAlignment.Center,
-			AutoTranslateMode =
-				AutoTranslateModeEnum.Disabled
-		};
-
-		_languageLabel.AddThemeColorOverride(
-			"font_color", Colors.White);
-
-		_languageLabel.AddThemeFontSizeOverride(
-			"font_size", 22);
-
-		row.AddChild(_languageLabel);
-
-		var group = new ButtonGroup();
-
-		_english = AddLanguageButton(
-			row,
-			"EnglishButton",
-			"English",
-			"en",
-			group);
-
-		_russian = AddLanguageButton(
-			row,
-			"RussianButton",
-			"Русский",
-			"ru",
-			group);
-
-		var backSpacer = new Control
-		{
-			Name = "BackSpacer",
-			CustomMinimumSize = new Vector2(0, 20),
-			MouseFilter = Control.MouseFilterEnum.Ignore
-		};
-
-		settings.AddChild(backSpacer);
-
-		settings.MoveChild(
-			backSpacer,
-			settings.GetNode("BackButton").GetIndex());
-	}
-
-	private Button AddLanguageButton(
-		HBoxContainer row,
-		string name,
-		string text,
-		string locale,
-		ButtonGroup group)
-	{
-		var button = new Button
-		{
-			Name = name,
-			Text = text,
-			ToggleMode = true,
-			ButtonGroup = group,
-			CustomMinimumSize = new Vector2(144, 48),
-			AutoTranslateMode =
-				AutoTranslateModeEnum.Disabled
-		};
-
-		row.AddChild(button);
-
-		StyleLanguageButton(button);
-
-		button.Pressed += () =>
-		{
-			Error error =
-				GameLocalization.SelectLanguage(locale);
-
-			if (error != Error.Ok)
-			{
-				GD.PushWarning(
-					$"Language preference could not be saved: {error}");
-			}
-
-			UpdateAllTextures();
-		};
-
-		return button;
-	}
-
-	private void StyleLanguageButton(Button button)
-	{
-		Color dark =
-			new Color(0.07f, 0.07f, 0.07f);
-
-		Color paper =
-			new Color(0.96f, 0.95f, 0.93f);
-
-		Color hover =
-			new Color(0.83f, 0.82f, 0.79f);
-
-		button.AddThemeStyleboxOverride(
-			"normal",
-			CreateLanguageStyle(dark, paper));
-
-		button.AddThemeStyleboxOverride(
-			"hover",
-			CreateLanguageStyle(hover, paper));
-
-		button.AddThemeStyleboxOverride(
-			"pressed",
-			CreateLanguageStyle(paper, paper));
-
-		button.AddThemeStyleboxOverride(
-			"hover_pressed",
-			CreateLanguageStyle(paper, paper));
-
-		button.AddThemeColorOverride(
-			"font_color", Colors.White);
-
-		button.AddThemeColorOverride(
-			"font_hover_color", Colors.Black);
-
-		button.AddThemeColorOverride(
-			"font_pressed_color", Colors.Black);
-
-		button.AddThemeColorOverride(
-			"font_hover_pressed_color", Colors.Black);
-
-		button.AddThemeFontSizeOverride(
-			"font_size", 22);
-	}
-
-	private StyleBoxFlat CreateLanguageStyle(
-		Color background,
-		Color border)
-	{
-		return new StyleBoxFlat
-		{
-			BgColor = background,
-			BorderColor = border,
-			BorderWidthLeft = 2,
-			BorderWidthRight = 2,
-			BorderWidthTop = 2,
-			BorderWidthBottom = 2,
-			CornerRadiusTopLeft = 2,
-			CornerRadiusTopRight = 2,
-			CornerRadiusBottomLeft = 2,
-			CornerRadiusBottomRight = 2,
-			ContentMarginLeft = 12,
-			ContentMarginRight = 12,
-			ContentMarginTop = 6,
-			ContentMarginBottom = 6
-		};
+		Error error = GameLocalization.SelectLanguage(locale);
+		if (error != Error.Ok) GD.PushWarning($"Language preference could not be saved: {error}");
+		UpdateAllTextures();
 	}
 
 	private void BuildGameChoiceMenu()
@@ -527,11 +321,6 @@ public partial class MainMenu : Control
 			"exit.png",
 			english);
 
-		SetButtonTexture(
-			_backButton,
-			_backRu,
-			"back.png",
-			english);
 	}
 
 	private void SetButtonTexture(

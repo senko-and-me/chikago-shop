@@ -84,90 +84,174 @@ public partial class ProjectTest
 
     private async Task TestCollapsibleProgress()
     {
+        Vector2I originalSize = Root.Size;
+        string locale = TranslationServer.GetLocale();
+        MoveButtonPointer(new Vector2(600, 350));
         var game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
         game.SavePath = "";
         Root.AddChild(game);
-        await ToSignal(this, SignalName.ProcessFrame);
-        await ToSignal(this, SignalName.ProcessFrame);
-        var panel = game.GetNode<PanelContainer>("HUD/Root/ProgressPanel");
+        game.SetProcess(false);
+        game.GetNode<WorldCamera>("Camera2D").SetProcess(false);
+        var panel = game.GetNode<ProgressPanel>("HUD/Root/ProgressPanel");
         var content = panel.GetNode<Control>("Content");
         var toggle = game.GetNode<Button>("HUD/Root/ProgressToggleButton");
-        var endDay = content.GetNode<Button>("EndDayButton");
-        float compactHeight = panel.Size.Y;
-        Check(panel.Visible && toggle.Text == "<" && compactHeight < 260 &&
-              Mathf.IsEqualApprox(panel.Size.Y, panel.GetCombinedMinimumSize().Y),
-            "Progress must open compactly at its content height without blank space left by old buttons");
-        Check(Mathf.Abs(panel.GetGlobalRect().End.Y - endDay.GetGlobalRect().End.Y -
-                  panel.GetThemeStylebox("panel").GetContentMargin(Side.Bottom)) < 1,
-            "The frame must end at the normal padding immediately after End Day");
-        int day = game.CurrentDay;
-        int score = game.Score;
-        for (int i = 0; i < 3; i++)
+        var sticks = new[] { "Day", "Quota", "Deadline" }.Select(name => panel.GetNode<Control>("Visual/" + name)).ToArray();
+        Label Caption(int index) => sticks[index].GetNode<Label>("Caption");
+        async Task Settle() => await ToSignal(CreateTimer(0.75, true), SceneTreeTimer.SignalName.Timeout);
+        try
         {
-            await ClickControl(game, "HUD/Root/ProgressToggleButton");
-            Check(!panel.IsVisibleInTree() && !endDay.IsVisibleInTree() && toggle.Text == ">" &&
-                  toggle.IsVisibleInTree() && Mathf.IsEqualApprox(toggle.Position.X, panel.Position.X),
-                "Collapse must hide the entire panel and leave an accessible right arrow at the left edge");
-            Check(game.CurrentDay == day && game.Score == score,
-                "Collapsing the panel must preserve gameplay state");
-            MoveButtonPointer(new Vector2(2, Root.GetVisibleRect().Size.Y / 2));
-            // Allow both the short click flash and its fade-out to finish.
-            await ToSignal(CreateTimer(0.2, true), SceneTreeTimer.SignalName.Timeout);
-            await SettleButtonFeedback();
-            Check(!toggle.HasFocus() && ButtonFeedbackController.Instance.GetVisualFrame().Bounds != ScreenBounds(toggle),
-                $"Mouse collapse must not leave a persistent outline after the pointer leaves (focus={toggle.HasFocus()}, frame={ButtonFeedbackController.Instance.GetVisualFrame()})");
+            await Settle();
+            Check(!panel.Expanded && !content.Visible && toggle.Text == "" && panel.Visible,
+                "The old rectangle and arrow must be replaced by the collapsed pack");
+            Check(!content.GetNode<Label>("DayLabel").Visible && panel.GetNode<Control>("Visual/Pack").GetGlobalRect().Position.X < 0,
+                "Legacy bindings stay hidden and only the edge of the scene-authored pack remains on screen");
+            using (await CapturePresentation("cigarette-collapsed")) { }
+            Vector2 camera = game.GetNode<Camera2D>("Camera2D").Position;
+            int score = game.Score;
             MoveButtonPointer(ScreenBounds(toggle).GetCenter());
-            await SettleButtonFeedback();
-            Check(ButtonFeedbackController.Instance.GetVisualFrame().Bounds == ScreenBounds(toggle),
-                "The collapsed arrow must still highlight while hovered");
-            await ClickControl(game, "HUD/Root/ProgressToggleButton");
-            Check(panel.IsVisibleInTree() && toggle.Text == "<" &&
-                  toggle.GetGlobalRect().Position.X > panel.GetGlobalRect().End.X,
-                "Expand must restore the panel with its arrow outside the frame");
-            MoveButtonPointer(new Vector2(2, Root.GetVisibleRect().Size.Y / 2));
-            await ToSignal(CreateTimer(0.2, true), SceneTreeTimer.SignalName.Timeout);
-            await SettleButtonFeedback();
-            Check(!toggle.HasFocus() && ButtonFeedbackController.Instance.GetVisualFrame().Bounds != ScreenBounds(toggle),
-                "Mouse expansion must not leave a persistent outline after the pointer leaves");
-        }
-        toggle.GrabFocus();
-        foreach (bool expanded in new[] { false, true })
-        {
+            await ToSignal(CreateTimer(0.14, true), SceneTreeTimer.SignalName.Timeout);
+            Check(panel.Expanded && panel.IsAnimating && sticks[0].Position.X > sticks[2].Position.X &&
+                sticks[0].Position.X > panel.ClosedX && sticks[0].Position.X < panel.OpenX,
+                $"Real hover must animate cigarettes one at a time (expanded={panel.Expanded}, animating={panel.IsAnimating}, x={sticks[0].Position.X}/{sticks[2].Position.X}, pointer={panel.GetLocalMousePosition()}, toggle={ScreenBounds(toggle)})");
+            var pause = game.GetNode<PauseMenu>("PauseMenu");
+            pause.Open();
+            float pausedX = sticks[0].Position.X;
+            await ToSignal(CreateTimer(0.16, true), SceneTreeTimer.SignalName.Timeout);
+            Check(Mathf.IsEqualApprox(sticks[0].Position.X, pausedX), "Pause must freeze a slide in progress");
+            pause.Close();
+            await Settle();
+            Check(!content.Visible && sticks.All(stick => Mathf.IsEqualApprox(stick.Position.X, panel.OpenX)),
+                "Only the three information cigarettes appear; legacy actions and status stay hidden");
+            Vector2 cigarettePoint = ScreenBounds(sticks[0]).GetCenter();
+            MoveButtonPointer(cigarettePoint);
+            await ToSignal(this, SignalName.ProcessFrame);
+            PressButtonPointer(cigarettePoint, true);
+            Root.PushInput(new InputEventMouseMotion
+            {
+                Position = cigarettePoint + new Vector2(50, 0), GlobalPosition = cigarettePoint + new Vector2(50, 0),
+                Relative = new Vector2(50, 0), ButtonMask = MouseButtonMask.Left
+            }, true);
+            PressButtonPointer(cigarettePoint + new Vector2(50, 0), false);
+            Check(game.GetNode<Camera2D>("Camera2D").Position == camera, "Dragging the information must not pan the camera");
+            MoveButtonPointer(ScreenBounds(sticks[2]).GetCenter());
+            await Settle();
+            Check(panel.Expanded && game.Score == score && game.GetNode<Camera2D>("Camera2D").Position == camera,
+                "Moving from pack to cigarettes keeps them open without changing gameplay or camera");
+            foreach (string language in new[] { "ru", "en" })
+            foreach (Vector2I size in new[] { new Vector2I(960, 540), new Vector2I(1280, 720) })
+            {
+                Root.Size = size;
+                GameLocalization.SelectLanguage(language);
+                await ToSignal(this, SignalName.ProcessFrame);
+                await ToSignal(this, SignalName.ProcessFrame);
+                Check(Caption(0).Text.Contains("1") && Caption(1).Text.Contains("250") && Caption(2).Text.Contains("4"),
+                    "Current day, upcoming quota and inclusive countdown must be localized from live state");
+                foreach (var stick in sticks)
+                {
+                    var caption = stick.GetNode<Label>("Caption");
+                    Check(Root.GetVisibleRect().Encloses(ScreenBounds(stick)) &&
+                        caption.GetThemeFont("font").GetStringSize(caption.Text, fontSize: caption.GetThemeFontSize("font_size")).X <= caption.Size.X,
+                        "Expanded cigarettes and their RU/EN captions must fit both viewports");
+                }
+                using (await CapturePresentation($"cigarette-{language}-{size.X}")) { }
+            }
+            await ClickControl(game, "HUD/Root/ProgressPanel/Content/EndDayButton");
+            Check(game.DayStarted, "The existing Start action remains wired to the real day cycle");
+            await ClickControl(game, "HUD/Root/ProgressPanel/Content/EndDayButton");
+            Check(game.DayClosed, "The existing End Day action still closes the shop");
+            await ClickControl(game, "HUD/Root/ClockActionButton");
+            await WaitForDayCardAnimation(game);
+            var dayCard = game.GetNode<DayTransitionCard>("DayTransitionCard");
+            Check(game.CurrentDay == 2 && dayCard.IsOpen, "Clicking the closed clock must open the next day and its cards");
+            dayCard.Skip();
+            await WaitForDayCardAnimation(game);
+            await Settle();
+            Check(!content.Visible && !game.DayStarted, "Returning from cards keeps legacy controls hidden and waits for Start");
+            MoveButtonPointer(new Vector2(600, 350));
+            await Settle();
+            Check(!panel.Expanded && !content.Visible && sticks.All(stick => Mathf.IsEqualApprox(stick.Position.X, panel.ClosedX)),
+                "Leaving retracts cigarettes and mouse actions do not leave sticky keyboard focus");
+            toggle.GrabFocus();
             Root.PushInput(new InputEventKey { Pressed = true, Keycode = Key.Space }, true);
             Root.PushInput(new InputEventKey { Pressed = false, Keycode = Key.Space }, true);
+            await Settle();
+            toggle.ReleaseFocus();
+            Check(panel.Pinned && panel.Expanded, "Keyboard activation can pin the pack open");
+            await ClickControl(game, "HUD/Root/ProgressToggleButton");
+            MoveButtonPointer(new Vector2(600, 350));
+            await Settle();
+            Check(!panel.Pinned && !panel.Expanded, $"Clicking again unpins and restores hover behavior: pinned={panel.Pinned}, expanded={panel.Expanded}, focus={toggle.HasFocus()}, failed={game.Failed}");
+            game.FirstQuota = 999;
+            game.CurrentDay = 4;
+            game.RefreshDayPresentation();
             await ToSignal(this, SignalName.ProcessFrame);
-            Check(panel.Visible == expanded && toggle.HasFocus(),
-                "Keyboard activation must still toggle once and retain keyboard focus");
+            await ToSignal(this, SignalName.ProcessFrame);
+            Check(Caption(1).Text.Contains("999") && Caption(2).Text.Contains("1 day"),
+                $"Live balance and deadline refresh while closed: {Caption(1).Text}; {Caption(2).Text}");
+            game.Score = 2000;
+            game.AdvanceToNextDay();
+            await ToSignal(this, SignalName.ProcessFrame);
+            await ToSignal(this, SignalName.ProcessFrame);
+            Check(game.QuotaStage == 1 && Caption(0).Text.Contains("5") && Caption(1).Text.Contains("450") && Caption(2).Text.Contains("3 days"),
+                "Paying the first quota switches both the target and deadline to the final quota");
+            game.CurrentDay = 7;
+            game.AdvanceToNextDay();
+            await Settle();
+            Check(game.Completed && !content.Visible && Caption(1).Text == "All quotas paid" && Caption(2).Text == "Debt repaid",
+                "Victory replaces obsolete countdowns without adding any extra information");
+            game.NewGame();
+            game.CurrentDay = 4;
+            game.Score = 0;
+            game.AdvanceToNextDay();
+            await Settle();
+            Check(game.Failed && !content.Visible,
+                "Failure must not expose the old status or buttons in the pack");
+            game.GetNode<PauseMenu>("PauseMenu").Open();
+            await ClickControl(game, "PauseMenu/Root/Overlay/Center/Panel/Content/Menu/CheckpointButton");
+            Check(!game.Failed && game.CurrentDay == 1, "Checkpoint recovery remains wired");
+            game.CurrentDay = 4;
+            game.Score = 0;
+            game.AdvanceToNextDay();
+            await Settle();
+            game.GetNode<PauseMenu>("PauseMenu").Open();
+            await ClickControl(game, "PauseMenu/Root/Overlay/Center/Panel/Content/Menu/NewGameButton");
+            Check(!game.Failed && game.CurrentDay == 1 && game.Score == game.StartingMoney, "New game remains wired");
+            const string reloadPath = "user://hf150_pack_reload.json";
+            game.SavePath = reloadPath;
+            game.CurrentDay = 3;
+            game.Score = 888;
+            game.RefreshDayPresentation();
+            game.SavePath = "";
+            var restored = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
+            restored.SavePath = reloadPath;
+            try
+            {
+                Root.AddChild(restored);
+                restored.SetProcess(false);
+                await ToSignal(this, SignalName.ProcessFrame);
+                await ToSignal(this, SignalName.ProcessFrame);
+                var restoredPanel = restored.GetNode<ProgressPanel>("HUD/Root/ProgressPanel");
+                Check(restored.CurrentDay == 3 && restored.Score == 888 &&
+                    restoredPanel.GetNode<Label>("Visual/Day/Caption").Text.Contains("3") &&
+                    restoredPanel.GetNode<Label>("Visual/Deadline/Caption").Text.Contains("2 days") &&
+                    !restoredPanel.GetNode<Control>("Content").Visible,
+                    "Reload must populate the new cigarettes without showing legacy controls");
+            }
+            finally
+            {
+                restored.QueueFree();
+                DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(reloadPath));
+            }
         }
-        toggle.ReleaseFocus();
-        var status = content.GetNode<Label>("StatusLabel");
-        string shortStatus = status.Text;
-        status.Text = "Не хватает 100$ на квоту. Вернитесь к контрольной точке через меню паузы, чтобы продолжить игру с сохранённого состояния.";
-        for (int i = 0; i < 4; i++) await ToSignal(this, SignalName.ProcessFrame);
-        Check(panel.Size.Y > compactHeight && panel.GetGlobalRect().Encloses(endDay.GetGlobalRect()) &&
-              panel.GetGlobalRect().Encloses(status.GetGlobalRect()),
-            "The compact panel must grow when a longer status wraps instead of clipping text or buttons");
-        status.Text = shortStatus;
-        for (int i = 0; i < 4; i++) await ToSignal(this, SignalName.ProcessFrame);
-        Check(Mathf.IsEqualApprox(panel.Size.Y, compactHeight),
-            "The panel must shrink again when the longer status clears");
-        await ClickControl(game, "HUD/Root/ProgressToggleButton");
-        Vector2I originalSize = Root.Size;
-        Root.Size = new Vector2I(960, 540);
-        await ToSignal(this, SignalName.ProcessFrame);
-        Check(game.GetViewportRect().Encloses(toggle.GetGlobalRect()),
-            "The collapsed arrow must stay reachable after viewport resize");
-        AdvanceDayForTest(game);
-        await ClickControl(game, "HUD/Root/ProgressToggleButton");
-        Check(game.CurrentDay == day + 1 && content.GetNode<Label>("DayLabel").Text.Contains($"{day + 1}"),
-            "Hidden progress must still update and show fresh data after expansion");
-        Check(game.GetViewportRect().Encloses(panel.GetGlobalRect()) &&
-              game.GetViewportRect().Encloses(toggle.GetGlobalRect()),
-            "The expanded panel and collapse arrow must fit after resize");
-        Root.Size = originalSize;
-        game.QueueFree();
-        await ToSignal(this, SignalName.ProcessFrame);
-        GD.Print("Collapsible progress panel sizing and mouse checks passed");
+        finally
+        {
+            Paused = false;
+            Root.Size = originalSize;
+            TranslationServer.SetLocale(locale);
+            game.QueueFree();
+            await ToSignal(this, SignalName.ProcessFrame);
+        }
+        GD.Print("Cigarette pack: hover, staggered slides, localized live quotas, keyboard and recovery passed");
     }
 
     private async Task TestRarityPopupGeometry()

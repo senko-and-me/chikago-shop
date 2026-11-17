@@ -1,0 +1,41 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/UI/FullscreenToggle.cs" id="1_script"]
+[ext_resource type="Texture2D" path="res://art/ui/ru/fullscreen_off.png" id="2_ru_off"]
+[ext_resource type="Texture2D" path="res://art/ui/ru/fullscreen_on.png" id="3_ru_on"]
+[ext_resource type="Texture2D" path="res://art/ui/en/fullscreen_off.png" id="4_en_off"]
+[ext_resource type="Texture2D" path="res://art/ui/en/fullscreen_on.png" id="5_en_on"]
+
+[node name="FullscreenButton" type="TextureButton"]
+custom_minimum_size = Vector2(360, 54)
+size_flags_horizontal = 3
+mouse_default_cursor_shape = 2
+toggle_mode = true
+texture_normal = ExtResource("2_ru_off")
+ignore_texture_size = true
+stretch_mode = 0
+script = ExtResource("1_script")
+RussianOff = ExtResource("2_ru_off")
+RussianOn = ExtResource("3_ru_on")
+EnglishOff = ExtResource("4_en_off")
+EnglishOn = ExtResource("5_en_on")
+
+[node name="CaptionPaper" type="ColorRect" parent="."]
+layout_mode = 1
+anchor_left = 0.04
+anchor_top = 0.15
+anchor_right = 0.72
+anchor_bottom = 0.86
+mouse_filter = 2
+color = Color(1, 1, 1, 1)
+
+[node name="Caption" type="Label" parent="."]
+layout_mode = 1
+anchor_left = 0.045
+anchor_right = 0.72
+anchor_bottom = 1.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.08, 0.08, 0.08, 1)
+theme_override_font_sizes/font_size = 24
+text = "Полный экран"
+vertical_alignment = 1

@@ -31,6 +31,10 @@ public partial class ProjectTest
     private async Task ClickControl(Node game, string path)
     {
         if (path.StartsWith("DayTransitionCard/", StringComparison.Ordinal)) await WaitForDayCardAnimation(game);
+        // Legacy callers exercise the same public action through its current visible clock control.
+        if (path == "HUD/Root/ProgressPanel/Content/EndDayButton")
+            path = ((TradeScene)game).DayStarted || ((TradeScene)game).DayClosed
+                ? "HUD/Root/ClockActionButton" : "HUD/Root/DayTimer/StartButton";
         var control = game.GetNode<Control>(path);
         if (path.StartsWith("World/", StringComparison.Ordinal))
         {

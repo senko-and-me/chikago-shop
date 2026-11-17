@@ -44,7 +44,6 @@ public partial class MusicVolumeControl : PanelContainer
         });
         CustomMinimumSize = new Vector2(360, 0);
         SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        GetNode<Label>("Content/Header/Title").AddThemeFontSizeOverride("font_size", 20);
         _slider.CustomMinimumSize = new Vector2(0, 28);
         foreach (string icon in new[] { "grabber", "grabber_highlight", "grabber_disabled" })
             _slider.RemoveThemeIconOverride(icon);

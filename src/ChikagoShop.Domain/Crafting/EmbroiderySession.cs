@@ -13,8 +13,10 @@ public sealed class EmbroiderySession : ICraftSession
         [(420,96),(625,240),(420,384),(215,240),(420,125),(590,240),(420,355),(250,240),(420,154),(555,240),(420,326),(285,240)]
     ];
 
-    public EmbroiderySession(int pattern = 0)
+    public EmbroiderySession(int pattern = 0, double duration = 10)
     {
+        if (!double.IsFinite(duration) || duration <= 0) throw new ArgumentOutOfRangeException(nameof(duration));
+        Duration = RemainingSeconds = duration;
         if (pattern < 0 || pattern >= Patterns.Length) throw new ArgumentOutOfRangeException(nameof(pattern));
         Points = Array.AsReadOnly(Patterns[pattern]);
     }
@@ -23,9 +25,10 @@ public sealed class EmbroiderySession : ICraftSession
     public EmbroideryState State { get; private set; }
     public int Stitches { get; private set; }
     public int Misses { get; private set; }
-    public double RemainingSeconds { get; private set; } = 10;
+    public double Duration { get; }
+    public double RemainingSeconds { get; private set; }
     public bool Complete => Stitches == Points.Count;
-    public int Quality => Math.Clamp((int)Math.Round(100 - Misses * 12 - (10 - RemainingSeconds) * 1.1
+    public int Quality => Math.Clamp((int)Math.Round(100 - Misses * 12 - (Duration - RemainingSeconds) / Duration * 11
         - (State == EmbroideryState.Finished && !Complete ? (Points.Count - Stitches) * 7 : 0)), 0, 100);
     public string Rank => Quality >= 90 ? "S" : Quality >= 75 ? "A" : Quality >= 60 ? "B" : Quality >= 40 ? "C" : "D";
 
@@ -39,7 +42,7 @@ public sealed class EmbroiderySession : ICraftSession
         if (State != EmbroideryState.Playing) return;
         Stitches = successful ? Points.Count : 0;
         Misses = successful ? 0 : 10;
-        RemainingSeconds = successful ? 10 : 0;
+        RemainingSeconds = successful ? Duration : 0;
         State = EmbroideryState.Finished;
     }
 

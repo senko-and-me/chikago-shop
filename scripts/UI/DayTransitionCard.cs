@@ -30,6 +30,8 @@ public partial class DayTransitionCard : CanvasLayer
     private int _balance;
     private bool _ownsPause;
     public bool IsOpen => _root?.Visible ?? false;
+    private int Cost(DayUpgrade upgrade) => (GetParent() as TradeScene)?.DayUpgrades.CostFor(upgrade)
+        ?? DebugBalanceSettings.CardRules.Cost(upgrade);
 
     public override void _Ready()
     {
@@ -59,7 +61,7 @@ public partial class DayTransitionCard : CanvasLayer
         panel.GetNode<Label>("Content/Title").Text = title;
         panel.GetNode<Label>("Content/Description").Text = description;
         panel.GetNode<Label>("Content/Duration").Text = duration;
-        int cost = DayUpgradeSession.Cost(upgrade);
+        int cost = Cost(upgrade);
         var button = panel.GetNode<Button>("Content/Choose");
         button.Text = GameLocalization.Format("Купить за {0}$", cost);
         button.Disabled = _balance < cost;
@@ -132,7 +134,7 @@ public partial class DayTransitionCard : CanvasLayer
     {
         foreach (var button in _navigationButtons)
         {
-            button.Disabled = locked || (button != _skip && _balance < DayUpgradeSession.Cost(Options[_navigationButtons.IndexOf(button)]));
+            button.Disabled = locked || (button != _skip && _balance < Cost(Options[_navigationButtons.IndexOf(button)]));
             button.FocusMode = locked ? Control.FocusModeEnum.None : Control.FocusModeEnum.All;
         }
     }
@@ -199,7 +201,7 @@ public partial class DayTransitionCard : CanvasLayer
 
     public void Choose(DayUpgrade upgrade)
     {
-        if (_phase != Phase.Choosing || !Options.Contains(upgrade) || _balance < DayUpgradeSession.Cost(upgrade)) return;
+        if (_phase != Phase.Choosing || !Options.Contains(upgrade) || _balance < Cost(upgrade)) return;
         Leave(_cards[Options.ToList().IndexOf(upgrade)], () => Chosen?.Invoke(upgrade));
     }
 

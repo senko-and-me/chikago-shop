@@ -12,8 +12,9 @@ public sealed class DayUpgradeSession
     public int MusicLevel { get; private set; }
     public int AtelierPriceLevel { get; private set; }
     public int MusicPriceLevel { get; private set; }
-    public IReadOnlyList<DayUpgrade> Options => Enumerable.Range(0, 3)
-        .Select(offset => (DayUpgrade)(1 + (Day - 2 + offset) % 7)).ToArray();
+    public DayUpgradeRules Rules { get; set; } = new();
+    public IReadOnlyList<DayUpgrade> Options => Rules.Options(Day);
+    public int CostFor(DayUpgrade upgrade) => Rules.Cost(upgrade);
     public int EnergyCapacity => EnergyCapacityFor(2);
     public int EnergyCapacityFor(int baseline) => baseline + (Selected == DayUpgrade.Energy ? 1 : 0);
     public double Duration => DaySession.DurationSeconds + (Selected == DayUpgrade.Time ? 30 : 0);
@@ -39,7 +40,7 @@ public sealed class DayUpgradeSession
     {
         remainingBalance = balance;
         if (!Pending || !Options.Contains(upgrade)) return false;
-        int cost = Cost(upgrade);
+        int cost = CostFor(upgrade);
         if (balance < cost) return false;
         remainingBalance = balance - cost;
         Selected = upgrade;

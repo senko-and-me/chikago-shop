@@ -23,6 +23,13 @@ public partial class ProjectTest : SceneTree
                 Quit();
                 return;
             }
+            if (OS.GetCmdlineUserArgs().Contains("--debug-balance-checks"))
+            {
+                await TestDebugBalance();
+                GD.Print("DEBUG_BALANCE_CHECKS_PASS: hotkey/modal, live apply, new run, disk/reload, loot/items/craft/card prices and weights, validation and defaults");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--music-settings-checks"))
             {
                 await TestMusicSettings();
@@ -40,7 +47,7 @@ public partial class ProjectTest : SceneTree
             if (OS.GetCmdlineUserArgs().Contains("--tutorial-checks"))
             {
                 await TestFirstTradeTutorial();
-                GD.Print("TUTORIAL_CHECKS_PASS: first sale, real clicks, highlights, pause, localization, skip, replay and reload");
+                GD.Print("TUTORIAL_CHECKS_PASS: camera practice/flights, first sale, real clicks, highlights, pause, localization, skip, replay and reload");
                 Quit();
                 return;
             }
@@ -150,7 +157,7 @@ public partial class ProjectTest : SceneTree
             if (OS.GetCmdlineUserArgs().Contains("--progress-toggle-checks"))
             {
                 await TestCollapsibleProgress();
-                GD.Print("PROGRESS_TOGGLE_CHECKS_PASS: no sticky mouse selection, hover and keyboard preserved");
+                GD.Print("PROGRESS_TOGGLE_CHECKS_PASS: cigarette pack hover, animation, live quotas, keyboard and recovery");
                 Quit();
                 return;
             }

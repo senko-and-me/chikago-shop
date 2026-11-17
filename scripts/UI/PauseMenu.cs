@@ -7,7 +7,7 @@ public partial class PauseMenu : CanvasLayer
 	private VBoxContainer _settings = null!;
 	private Button _resume = null!;
 	private Button _lastHoveredMenuButton;
-	private CheckButton _fullscreen = null!;
+	private FullscreenToggle _fullscreen = null!;
 	private Button _russian = null!, _english = null!;
 	private bool _ownsPause;
 
@@ -73,17 +73,7 @@ public partial class PauseMenu : CanvasLayer
 		_settings.AddThemeConstantOverride("separation", 14);
 		content.AddChild(_settings);
 		AddTitle(_settings, "НАСТРОЙКИ");
-		_fullscreen = new CheckButton { Name = "FullscreenButton", Text = "Полный экран" };
-		_fullscreen.AddThemeColorOverride("font_color", new Color(0.23f, 0.19f, 0.17f));
-		_fullscreen.AddThemeColorOverride("font_hover_color", new Color(0.23f, 0.19f, 0.17f));
-		_fullscreen.AddThemeColorOverride("font_pressed_color", new Color(0.23f, 0.19f, 0.17f));
-		_fullscreen.AddThemeColorOverride("font_hover_pressed_color", new Color(0.23f, 0.19f, 0.17f));
-		_fullscreen.AddThemeColorOverride("font_focus_color", new Color(0.23f, 0.19f, 0.17f));
-		_fullscreen.AddThemeColorOverride("font_disabled_color", new Color(0.23f, 0.19f, 0.17f));
-		var fullscreenStyle = new StyleBoxFlat { BgColor = new Color(0.94f, 0.91f, 0.85f),
-			ContentMarginLeft = 14, ContentMarginRight = 14, ContentMarginTop = 10, ContentMarginBottom = 10 };
-		foreach (string state in new[] { "normal", "hover", "pressed", "hover_pressed", "disabled" })
-			_fullscreen.AddThemeStyleboxOverride(state, fullscreenStyle);
+		_fullscreen = GD.Load<PackedScene>("res://scenes/UI/FullscreenToggle.tscn").Instantiate<FullscreenToggle>();
 		_settings.AddChild(_fullscreen);
 		var volume = GD.Load<PackedScene>("res://scenes/UI/MusicVolumeControl.tscn").Instantiate<MusicVolumeControl>();
 		volume.PlainStyle = true;
@@ -93,8 +83,6 @@ public partial class PauseMenu : CanvasLayer
 		soundVolume.ControlsSoundEffects = true;
 		soundVolume.PlainStyle = true;
 		_settings.AddChild(soundVolume);
-		_fullscreen.Toggled += enabled => DisplayServer.WindowSetMode(enabled
-			? DisplayServer.WindowMode.Fullscreen : DisplayServer.WindowMode.Windowed);
 		var languages = new HBoxContainer { Name = "LanguageRow" };
 		languages.AddThemeConstantOverride("separation", 12);
 		_settings.AddChild(languages);
@@ -111,6 +99,11 @@ public partial class PauseMenu : CanvasLayer
 		_russian = AddLanguageButton(languages, languageGroup, "RussianButton", "Русский", "ru");
 		RefreshLanguageSelection();
 		AddButton(_settings, "BackButton", "Назад", ShowMenu);
+		// Match the fixed-size captions used by the main menu's settings.
+		languageLabel.AddThemeFontSizeOverride("font_size", 24);
+		_english.AddThemeFontSizeOverride("font_size", 24);
+		_russian.AddThemeFontSizeOverride("font_size", 24);
+		_settings.GetNode<Button>("BackButton").AddThemeFontSizeOverride("font_size", 24);
 	}
 
 	private static Button AddLanguageButton(HBoxContainer row, ButtonGroup group, string name, string text, string language)
@@ -185,8 +178,7 @@ public partial class PauseMenu : CanvasLayer
 	private void ShowSettings()
 	{
 		RefreshLanguageSelection();
-		_fullscreen.SetPressedNoSignal(DisplayServer.WindowGetMode() is
-			DisplayServer.WindowMode.Fullscreen or DisplayServer.WindowMode.ExclusiveFullscreen);
+		_fullscreen.RefreshState();
 		_menu.Hide();
 		_settings.Show();
 		_fullscreen.GrabFocus();

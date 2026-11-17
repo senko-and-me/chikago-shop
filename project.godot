@@ -21,6 +21,7 @@ MusicSettings="*res://scripts/Audio/MusicSettings.cs"
 MonochromePresentation="*res://scripts/Presentation/MonochromePresentation.cs"
 ButtonFeedback="*res://scripts/Presentation/ButtonFeedbackController.cs"
 SoundEffects="*res://scenes/Audio/SoundEffects.tscn"
+DebugBalance="*res://scenes/UI/DebugBalancePanel.tscn"
 
 [display]
 

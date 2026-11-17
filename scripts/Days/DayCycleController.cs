@@ -5,9 +5,9 @@ using Godot;
 
 public sealed class DayCycleController
 {
-	private static readonly int TotalDays = EconomyConfigProvider.Load().Days.TotalDays;
-	private static readonly int FirstQuotaDay = EconomyConfigProvider.Load().Quotas.Find(quota => quota.Id == "first").DeadlineDay;
-	public DaySession Session { get; } = new();
+	private static int TotalDays => EconomyConfigProvider.Load().Days.TotalDays;
+	private static int FirstQuotaDay => EconomyConfigProvider.Load().Quotas.Find(quota => quota.Id == "first").DeadlineDay;
+	public DaySession Session { get; } = new(5, 3630);
 	public bool Started { get; private set; }
 	public DayUpgradeSession Upgrades { get; } = new();
 	public int CheckpointAtelierLevel { get; private set; }
@@ -18,6 +18,7 @@ public sealed class DayCycleController
 	private readonly Label _timer;
 	private readonly TextureRect _clock;
 	private readonly Button _startButton;
+	private readonly Button _clockAction;
 	private readonly Texture2D _clockActive;
 	private readonly Texture2D _clockExpired;
 	private readonly Control _inventoryStrip;
@@ -32,6 +33,7 @@ public sealed class DayCycleController
 	public DayCycleController(TradeScene game)
 	{
 		_game = game;
+		Upgrades.Rules = DebugBalanceSettings.CardRules;
 		_card = GD.Load<PackedScene>("res://scenes/UI/DayTransitionCard.tscn").Instantiate<DayTransitionCard>();
 		_card.Chosen += ChooseUpgrade;
 		_card.Skipped += SkipUpgrade;
@@ -72,6 +74,17 @@ public sealed class DayCycleController
 		_startButton.MouseExited += UpdateClockFeedback;
 		_startButton.FocusEntered += UpdateClockFeedback;
 		_startButton.FocusExited += UpdateClockFeedback;
+		_clockAction = game.GetNode<Button>("HUD/Root/ClockActionButton");
+		_clockAction.Pressed += game.EndDay;
+		_clockAction.MouseEntered += UpdateClockFeedback;
+		_clockAction.MouseExited += UpdateClockFeedback;
+		_clockAction.FocusEntered += UpdateClockFeedback;
+		_clockAction.FocusExited += UpdateClockFeedback;
+		_clockAction.GuiInput += input =>
+		{
+			if (input is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true })
+				_clockAction.CallDeferred(Control.MethodName.ReleaseFocus);
+		};
 		_startButton.Pressed += StartDay;
 		_timer.AddChild(_startButton);
 		_startButton.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
@@ -81,6 +94,7 @@ public sealed class DayCycleController
 		_dayNight = new DayNightBackground(game);
 		_announcements = new DayAnnouncementOverlay();
 		game.AddChild(_announcements);
+		Session.Reset(ExpectedDuration);
 		RefreshTimer();
 		UpdateDayNightBackground();
 	}
@@ -225,6 +239,12 @@ public sealed class DayCycleController
 		UpdateDayNightBackground();
 	}
 
+	public void ApplyDebugBalance()
+	{
+		Upgrades.Rules = DebugBalanceSettings.CardRules;
+		SynchronizeRoomDuration();
+	}
+
 	private void UpdateDayNightBackground() =>
 		_dayNight.Update(Session.RemainingSeconds, Session.Duration);
 
@@ -247,6 +267,9 @@ public sealed class DayCycleController
 		int seconds = (int)Math.Ceiling(Session.RemainingSeconds);
 		_startButton.Visible = !Started && !Session.IsClosed && !_game.Failed && !_game.Completed;
 		_startButton.Disabled = Upgrades.Pending;
+		_clockAction.Visible = (Started || Session.IsClosed) && !_game.Failed && !_game.Completed;
+		_clockAction.Disabled = Upgrades.Pending || Session.IsClosed && _game.TradeActive;
+		_clockAction.TooltipText = Session.IsClosed ? "Начать следующий день" : "Завершить день";
 		UpdateClockFeedback();
 		_timer.Text = Started || Session.IsClosed ? seconds.ToString("00", System.Globalization.CultureInfo.InvariantCulture) : "";
 		bool changed = seconds != _displayedSeconds;
@@ -258,7 +281,8 @@ public sealed class DayCycleController
 	private void UpdateClockFeedback()
 	{
 		bool active = _startButton.Visible && !_startButton.Disabled &&
-			(_startButton.IsHovered() || _startButton.HasFocus());
+			(_startButton.IsHovered() || _startButton.HasFocus()) ||
+			_clockAction.Visible && !_clockAction.Disabled && (_clockAction.IsHovered() || _clockAction.HasFocus());
 		_clock.SelfModulate = active ? new Color(0.9f, 0.9f, 0.9f) : Colors.White;
 	}
 
@@ -271,6 +295,8 @@ public sealed class DayCycleController
 		_timer.OffsetRight = 6 + size;
 		_timer.OffsetTop = -6 - size;
 		_timer.OffsetBottom = -6;
+		_clockAction.Position = _timer.Position;
+		_clockAction.Size = _timer.Size;
 		_startButton?.AddThemeFontSizeOverride("font_size", Math.Max(16, (int)(size * 0.16f)));
 		int fontSize = Math.Max(18, (int)(size * 0.22f));
 		if (_timer.GetThemeFontSize("font_size") != fontSize) _timer.AddThemeFontSizeOverride("font_size", fontSize);

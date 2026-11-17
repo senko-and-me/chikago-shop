@@ -6,6 +6,12 @@ namespace ChikagoShop.Domain.Days;
 public enum EndDayAction { Closed, WaitForTrade, Advance }
 
 public sealed class DaySession {
+  private readonly double _minimumDuration, _maximumDuration;
+  public DaySession(double minimumDuration = 90, double maximumDuration = 120) {
+    if (!double.IsFinite(minimumDuration) || !double.IsFinite(maximumDuration) || minimumDuration <= 0 || maximumDuration < minimumDuration)
+      throw new ArgumentOutOfRangeException(nameof(minimumDuration));
+    _minimumDuration = minimumDuration; _maximumDuration = maximumDuration;
+  }
   public const double DurationSeconds = 90;
   public const double TwoRoomDurationSeconds = 90;
   public const double MaxDurationSeconds = 120;
@@ -101,9 +107,9 @@ public sealed class DaySession {
     return Math.Clamp(value / oldDuration * (DurationSeconds + bonus), 0, DurationSeconds + bonus);
   }
 
-  private static double ValidDuration(double durationSeconds) {
+  private double ValidDuration(double durationSeconds) {
     return double.IsFinite(durationSeconds)
-               ? Math.Clamp(durationSeconds, DurationSeconds, MaxDurationSeconds)
+               ? Math.Clamp(durationSeconds, _minimumDuration, _maximumDuration)
                : DurationSeconds;
   }
 }

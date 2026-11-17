@@ -1,0 +1,111 @@
+[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://art/ui/cigarette_pack_front.png" id="1_front"]
+[ext_resource type="Texture2D" path="res://art/ui/cigarette_pack_back.png" id="2_back"]
+[ext_resource type="Texture2D" path="res://art/ui/cigarette_stick.png" id="3_stick"]
+
+[sub_resource type="AtlasTexture" id="PackFront"]
+atlas = ExtResource("1_front")
+region = Rect2(10, 8, 1806, 1300)
+
+[sub_resource type="AtlasTexture" id="PackBack"]
+atlas = ExtResource("2_back")
+region = Rect2(138, 8, 1705, 1267)
+
+[sub_resource type="AtlasTexture" id="Cigarette"]
+atlas = ExtResource("3_stick")
+region = Rect2(10, 1335, 1763, 208)
+
+[node name="Visual" type="Control"]
+layout_mode = 0
+offset_right = 384.0
+offset_bottom = 208.0
+mouse_filter = 2
+
+[node name="Back" type="TextureRect" parent="."]
+offset_left = 42.0
+offset_top = 0.0
+offset_right = 250.0
+offset_bottom = 150.0
+rotation = 1.5707964
+mouse_filter = 2
+texture = SubResource("PackBack")
+expand_mode = 1
+
+[node name="Day" type="TextureRect" parent="."]
+offset_left = -350.0
+offset_top = 16.0
+offset_right = 8.0
+offset_bottom = 64.0
+mouse_filter = 0
+texture = SubResource("Cigarette")
+expand_mode = 1
+
+[node name="Caption" type="Label" parent="Day"]
+layout_mode = 1
+anchor_left = 0.16
+anchor_right = 0.92
+anchor_bottom = 1.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.07, 0.07, 0.07, 1)
+theme_override_font_sizes/font_size = 21
+text = "День 1"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Quota" type="TextureRect" parent="."]
+offset_left = -350.0
+offset_top = 72.0
+offset_right = 8.0
+offset_bottom = 120.0
+mouse_filter = 0
+texture = SubResource("Cigarette")
+expand_mode = 1
+
+[node name="Caption" type="Label" parent="Quota"]
+layout_mode = 1
+anchor_left = 0.16
+anchor_right = 0.92
+anchor_bottom = 1.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.07, 0.07, 0.07, 1)
+theme_override_font_sizes/font_size = 21
+text = "Следующая квота: 250$"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Deadline" type="TextureRect" parent="."]
+offset_left = -350.0
+offset_top = 128.0
+offset_right = 8.0
+offset_bottom = 176.0
+mouse_filter = 0
+texture = SubResource("Cigarette")
+expand_mode = 1
+
+[node name="Caption" type="Label" parent="Deadline"]
+layout_mode = 1
+anchor_left = 0.16
+anchor_right = 0.92
+anchor_bottom = 1.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.07, 0.07, 0.07, 1)
+theme_override_font_sizes/font_size = 21
+text = "До квоты: 4 дня"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Pack" type="Control" parent="."]
+offset_left = -108.0
+offset_right = 42.0
+offset_bottom = 208.0
+mouse_filter = 2
+
+[node name="Front" type="TextureRect" parent="Pack"]
+offset_left = 150.0
+offset_right = 358.0
+offset_bottom = 150.0
+rotation = 1.5707964
+mouse_filter = 2
+texture = SubResource("PackFront")
+expand_mode = 1
