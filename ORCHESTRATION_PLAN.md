@@ -11,12 +11,22 @@
 ## Текущий фронт
 ### HF-165 — публикация исправлений инвентаря, прилавка и обучения
 
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-18; HF-152/HF-153/HF-162/HF-163/HF-164 DONE, пользователь разрешил commit/push, активных пересечений нет.
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-18; HF-152/HF-153/HF-162/HF-163/HF-164 DONE, пользователь разрешил commit/push, активных пересечений нет.
 
 CP-HF-165 read-set: текущий фронт, Git refs/status/diff, готовые изменения и evidence HF-152/153/162/163/164; scenes/main_menu.tscn и scenes/trade_scene.tscn только diff/сохранность. Write-set: Git index/commits/main/origin/main; ORCHESTRATION_PLAN.md; публикация готовых docs/GAMEPLAY.md, localization/en.tres, scenes/UI/FirstTradeTutorial.tscn, scenes/UI/SlotUI.tscn, scripts/Audio/IntroMusicDirector.cs, scripts/Camera/WorldCamera.cs, scripts/CounterWorld.cs, scripts/MainMenu.cs, scripts/UI/FirstTradeTutorial.cs, scripts/Presentation/SceneResourceWarmup.cs/.uid, tests/Integration/ProjectTest.{IntroMusic,Inventory,Menu,Trading,Tutorial}.cs, tests/ProjectTest.cs; .local/checks/hf165 и изолированная копия .local/checks/git-review-20261118/project. Out of scope: source/, пользовательские основные сцены (сохраняются локально вне коммита), новая функциональность/баланс/schema, force push.
 
 Приёмка: полный подготовленный результат опубликован обычным push, HEAD=origin/main, пользовательские обе сцены побайтно сохранены; staged diff --check и rendered inventory-aspect/counter-item/tutorial/intro-transition на точных сценах HEAD без локального пользовательского diff; готовые build/evidence предыдущих задач PASS.
 
+```text
+Task: HF-165
+Recommended status: REVIEW → принято координатором, DONE
+Changed: готовые HF-152/153/162/163/164 опубликованы в origin/main коммитом a8c9f31 (18 файлов). Пользовательские main_menu.tscn/trade_scene.tscn остались локально вне коммита; их SHA256 совпадают со snapshot HF165. Запись завершения публикации оформляется отдельным documentation commit.
+Checks: fetch без расхождений; staged diff --check PASS; rendered inventory-aspect/counter-item/tutorial/intro-transition точного публикуемого кода с обеими сценами HEAD PASS, stderr пуст. Прежние workspace/isolated build и профильные проверки PASS. Обычный push origin main PASS, HEAD=origin/main (0/0); рабочих изменений кроме двух пользовательских сцен нет до записи этого отчёта. Evidence .local/checks/hf165; прежние backup/stash сохранены.
+Acceptance: исправлены пропорции иконок, положение предметов на прилавке, последовательные процентные шкалы камеры и быстрый пропуск пролога; тесты опубликованы, пользовательские сцены сохранены.
+Read-set exception: нет, source/ не читался.
+Risks/blocker: нет новых. Две пользовательские сцены намеренно остаются незакоммиченными локально.
+Next: пользовательская проверка опубликованной версии.
+```
 ### HF-164 — раздельные этапы камеры с процентными шкалами
 
 Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-18; HF-163 DONE, активных пересечений нет.
