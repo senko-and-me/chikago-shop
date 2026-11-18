@@ -1,7 +1,7 @@
 # Оркестровый план: «Бакалея для гангстеров»
 
 Версия плана: 1.2
-Обновлено: 2026-11-17
+Обновлено: 2026-11-18
 Стадия по реестру: `S1 — домен, конфигурация и воспроизводимость`
 
 Этот файл хранит требования, решения, стадии и текущий фронт. Рабочий протокол — в [AGENTS.md](AGENTS.md), подробные завершённые отчёты — в [архиве](docs/archive/ORCHESTRATION_HISTORY_2026-11-12.md). `source/` остаётся локальным архивом и не входит в Git.
@@ -10,6 +10,105 @@
 
 ## Текущий фронт
 
+### HF-161 — коммиты и публикация текущей версии в main
+
+Статус: `IN_PROGRESS`; координатор/исполнитель /root; READY 2026-11-18; HF154/155/157–160 DONE. CP-HF-161: .local/checks/hf161/CP-HF-161.md (точные scope/приёмка/проверки). Пользователь разрешил commit текущих фиксов и push всей main. Аудио и day/clock изменения сохраняются отдельными коммитами; main обновляется с сохранением обеих линий истории. ZIP/EXE/source/ не входят в публикацию.
+
+### HF-160 — физический клик по часам между кадрами
+
+Статус: `DONE`; координатор/исполнитель /root; READY 2026-11-18; HF-159 DONE. CP-HF-160: .local/checks/hf160/CP-HF-160.md (точные scope/приёмка/проверки). Исследуется сброс focus на mouse-down до release; регрессия с удержанием ЛКМ между кадрами и проверкой звука. ZIP/EXE не меняются.
+
+
+Task: HF-160
+Recommended status: REVIEW → принято координатором, DONE
+Changed: scripts/Days/DayCycleController.cs; tests/Integration/ProjectTest.DayStart.cs; ORCHESTRATION_PLAN.md.
+Checks: regression с реальным down/hold120ms/up между кадрами до исправления FAIL (clockClicks!=1) в baseline-errors.log; после исправления dotnet build PASS (0 warnings/errors), rendered --day-start-checks PASS: ровно1 Cue.Click, день закрыт, следующим тиком day2/cards без второго нажатия. --day-expiry-checks PASS: timeout/manual/trade/craft/pause/reload/no duplicate; --sound-effects-checks PASS. git diff-check PASS. Evidence .local/checks/hf160/{baseline-errors,build,day-start,day-expiry,sound-effects}.log.
+Acceptance: корневая причина — GuiInput(mouse-down) вызывал deferred ReleaseFocus раньше mouse-up, BaseButton отменял pending Pressed. Старые синтетические тесты down/up в одном кадре обходили defer и не воспроизводили физический ввод пользователя. ReleaseFocus теперь откладывается только после Pressed: фокус очищается после завершённого клика, звук и EndDay срабатывают один раз. Label/отступы/переход HF159 сохранены, current buyer не теряется.
+Read-set exception: read-only input WorldCamera/FirstTradeTutorial и SoundEffects для исключения перехвата, source/ не читался.
+Risks/blocker: новых блокеров нет; прежний sandbox root certificate warning. Пользовательский ZIP/EXE/Downloads не менялись, commit/push не выполнялись.
+Next: пользователь проверяет обычный клик в проекте.
+
+### HF-159 — переход после одного клика часов и отступы надписи
+
+Статус: `DONE`; координатор/исполнитель /root; READY 2026-11-18; HF-158 DONE. CP-HF-159: .local/checks/hf159/CP-HF-159.md, точные scope/приёмка/проверки в пакете. Ручное закрытие должно запускать тот же отложенный переход, что таймаут; подпись «Завершить день» с внутренними отступами. ZIP/EXE не меняются.
+
+
+Task: HF-159
+Recommended status: REVIEW → принято координатором, DONE
+Changed: scripts/Days/DayCycleController.cs; tests/Integration/ProjectTest.{DayStart,DayExpiry}.cs; ORCHESTRATION_PLAN.md.
+Checks: dotnet build ChikagoShop.sln --no-restore PASS (0 warnings/errors); isolated Godot import PASS; rendered --day-start-checks PASS: один реальный клик закрывает день и следующий тик открывает day2/cards без второго EndDay, надпись RU «Завершить день»/EN End day, hover/focus/restore seconds, font width<=46%clock and margins24%. --day-expiry-checks PASS: timeout и реальный manual clock click с активным покупателем, последний buyer сохраняется до продажи в т.ч. после reload, затем автоматический переход; craft/pause/save/no duplicate regression. --closed-reroll-checks PASS. Визуально просмотрен и сохранён .local/checks/hf159/clock-end-ru.png: две строки внутри циферблата с заметным расстоянием до ободка. git diff-check PASS. Evidence .local/checks/hf159/{build,import,day-start,day-expiry,closed-reroll}.log.
+Acceptance: причина — ручное RequestEnd возвращало Closed, но только timeout устанавливал маркер автоперехода, поэтому ручное завершение требовало второго клика. Теперь ручное Closed также устанавливает общий _advanceWhenClosed, ожидание сделки/крафта сохраняется. Текст использует существующий перевод Завершить день, ограничен внутренними52%clock с24%внешними отступами, фактическая ширина слова<=46%clock; рамка часов и текст не пересекаются. Другие звуки/изменения не затронуты.
+Read-set exception: нет, source/ не читался.
+Risks/blocker: новых блокеров нет; прежний Godot root certificate warning в sandbox. ZIP/EXE/Downloads не менялись. Commit/push не выполнялись.
+Next: пользовательская проверка одного клика и отступов в проекте.
+
+### HF-158 — надпись завершения дня при наведении на часы
+
+Статус: `DONE`; координатор/исполнитель /root; READY 2026-11-18; HF-157 DONE. CP-HF-158: .local/checks/hf158/CP-HF-158.md. Точные scope/приёмка/проверки в пакете: надпись в стиле Start только на активных часах с положительным временем, сохранение секунд после ухода мыши и прежнего EndDay; RU/EN. ZIP/EXE не меняются.
+
+
+Task: HF-158
+Recommended status: REVIEW → принято координатором, DONE
+Changed: scripts/Days/DayCycleController.cs; localization/en.tres; tests/Integration/ProjectTest.DayStart.cs; ORCHESTRATION_PLAN.md.
+Checks: dotnet build ChikagoShop.sln --no-restore PASS (0 warnings/errors); isolated Godot import PASS; rendered --day-start-checks PASS: hover/caption/no extra tooltip, same font/black style, word fits painted face, mouse exit restores seconds, keyboard focus, English, real early-close click removes caption, fresh/reloaded/new-day/start checks. --day-expiry-checks PASS: timeout/trade/craft/pause/save regression. Визуально проверен TEMP/chikago-hf67-clock-end-ru.png; первый вариант тем же размером Start выходил за нарисованный круг из-за прозрачных полей sprite, финальный размер подогнан под внутренние60%TextureRect и надпись разбита на2 строки. git diff-check PASS. Evidence .local/checks/hf158/{build,import,day-start,day-expiry}.log.
+Acceptance: наведение на активные часы с положительным временем заменяет цифры на «Закончить день», уход возвращает счётчик; Start сохранён до начала, закрытый день не показывает надпись. Шрифт/чёрный цвет/центрирование без рамки соответствуют Start, размер адаптируется по ширине слова внутри круга. Label MouseFilter Ignore не перехватывает клик; EndDay маршрут и автопереход HF157 не менялись. Английский End day.
+Read-set exception: read-only CapturePresentation helper для пути визуального evidence. source/ не читался.
+Risks/blocker: новых блокеров нет; прежний Godot certificate warning в sandbox. ZIP/EXE/Downloads не менялись, существующие музыкальные изменения сохранены; commit/push не выполнялись.
+Next: пользовательская приёмка надписи в проекте.
+
+### HF-157 — автоматический переход после истечения дня
+
+Статус: `DONE`; координатор/исполнитель /root; READY 2026-11-18; HF-156 DONE. CP-HF-157: .local/checks/hf157/CP-HF-157.md. Точные read/write-set и out of scope в пакете. Исправляется отсутствие вызова перехода при закрытии дня таймером, с ожиданием активной сделки/крафта. Досрочное завершение только исследуется, UI/ручной маршрут не меняются. Приёмка и команды — в CP.
+
+
+Task: HF-157
+Recommended status: REVIEW → принято координатором, DONE
+Changed: scripts/Days/DayCycleController.cs; tests/Integration/ProjectTest.DayExpiry.cs/.uid; tests/ProjectTest.cs; ORCHESTRATION_PLAN.md. Текущие HF154/155 audio изменения сохранены.
+Checks: новый --day-expiry-checks до исправления FAIL: день1 закрыт, day2/cards не открываются. После исправления build PASS (0 warnings/errors), isolated import PASS, rendered --day-expiry-checks PASS: автоматический переход ровно один раз, ожидание текущей продажи/крафта, pause, восстановление expired save (с покупателем и без), полный таймер дня2 до Start. Rendered --day-start-checks PASS; --closed-reroll-checks PASS (таймаут/ручное закрытие запрещают reroll, финальная продажа не потеряна). git diff-check PASS. Старый --day-timer-checks FAIL на устаревшем ожидании90 в новой игре до Start; пробная адаптация fixture выявила также устаревшие отступы layout, её изменения полностью отменены. Days.cs совпадает с HEAD, общего PASS этого старого теста не заявляется. Evidence .local/checks/hf157/{baseline-errors,build,import,day-expiry,day-start,closed-reroll,day-timer-errors}.log.
+Acceptance: таймаут помечает отложенный автоматический переход; следующий игровой тик после освобождения от сделки/мини-игры вызывает существующий EndDay/Advance/cards/проверку квоты. Reset сбрасывает маркер, Restore восстанавливает возможность перехода старого closed save без смены schema. Крафт/покупатель/пауза не прерываются, новый день после карточек ждёт Start. Domain и TradeScene не менялись. Досрочный EndDay/UI не восстанавливались и не менялись: функция DayCycleController.EndDay существует, ClockActionButton.Pressed уже связан с game.EndDay; старая EndDayButton находится в скрытом Content, скрываемом ProgressPanel.
+Read-set exception: read-only scripts/UI/ProgressPanel.cs для выяснения скрытия старой кнопки. source/ не читался. Изначально расширен scope для новой EXE-сборки вслед за предыдущей просьбой о ZIP; пользователь затем явно уточнил не менять EXE/ZIP. Сборка остановлена по точному command line hf157/release-project, упаковка и запись Downloads не выполнялись.
+Risks/blocker: исправление готово в проекте; архив Downloads остаётся прежним с SHA256=7B1824DB076557DEC4DD85E8D1B4339DD51A2AF4A38A35B6073BB453440DF5DC (readback PASS), исправления в нём пока нет по просьбе пользователя. Прежнее Godot root certificate warning в sandbox; устаревший day-timer regression требует отдельной актуализации. Новых функциональных блокеров нет.
+Next: пользователь проверяет проект; восстановление отдельной кнопки/новая EXE-сборка только по дальнейшему запросу. Commit/push не выполнялись.
+
+### HF-156 — Windows EXE и ZIP текущей музыкальной версии
+
+Статус: `DONE`; координатор/исполнитель /root; READY 2026-11-18; HF-155 DONE. CP-HF-156: .local/checks/hf156/CP-HF-156.md. Read/write-set, out of scope и проверки в пакете. Собирается текущая feature/music вместе с незакоммиченными HF-154/155; оригинальные файлы проекта и прошлые архивы сохраняются. Приёмка: self-contained release Windows x64, JSON и все runtime-файлы, запуск распакованной сборки, ZIP в Downloads; без commit/push.
+
+
+Task: HF-156
+Recommended status: REVIEW → принято координатором, DONE
+Changed: изолированный снимок текущего рабочего проекта feature/music2193924 + HF154/155; builds/ChikagoShop-2026-11-18-music-Windows; C:/Users/artem/Downloads/ChikagoShop-2026-11-18-music-Windows.zip; ORCHESTRATION_PLAN.md. Исходный export preset/csproj/игровые файлы не менялись.
+Checks: isolated dotnet build PASS (0 warnings/errors); Godot4.7.2 .NET import/export-release PASS. Временный preset с ранее загруженным официальным mono Windows release template, JSON include, исключение dev/originals, debug symbols off. Экспорт содержит новые sinister/reroll/stitch ресурсы и config/economy.v1.json/dialogue/intro.ru.json. Встроен self-contained .NET8.0.31, coreclr/hostfxr/ChikagoShop assemblies. Standalone headless menu exit0; распакованный ZIP rendered menu exit0, rendered gameplay через временный override.cfg exit0 и успешная инициализация TradeScene. Override удалён из тестовой копии; в ZIP его нет. Inventory190 entries: EXE/PCK/runtime присутствуют, нет saves/settings/tests/PDB. ZIP121328816bytes; Downloads readback SHA256=7B1824DB076557DEC4DD85E8D1B4339DD51A2AF4A38A35B6073BB453440DF5DC совпадает с исходным архивом. git diff-check PASS. Evidence .local/checks/hf156/{build,import,export,smoke-menu,zip-menu,zip-gameplay}.log,zip-inventory.txt,delivery.json.
+Acceptance: готовый архив в Downloads включает всю папку игры, получателю не нужны Godot/отдельный .NET; текущие незакоммиченные звуки включены, предыдущие архивы/пользовательские сохранения не тронуты; commit/push не выполнялись.
+Read-set exception: прочитан точный прежний HF139 export handoff/preset/templates для повторного использования имеющихся официальных шаблонов; source/ не читался. Подпись JSON source snapshot фиксируется текущими файлами, Git publish не требовался.
+Risks/blocker: блокеров нет. В sandbox smoke прежнее Failed to read root certificate store, других runtime ошибок нет. Release не поддерживает внешний --script для диагностики: проба остановлена по точному пути принадлежащего нам smoke-процесса, проверка заменена реальным запуском меню/игровой сцены распакованного EXE. Первый inventory сопоставлял slash с Windows ZIP backslash — исправлен только проверяющий код, повторная проверка PASS.
+Next: пользователь распаковывает весь архив и запускает ChikagoShop.exe.
+
+### HF-155 — случайные звуки стежков в вышивке
+
+Статус: `DONE`; координатор/исполнитель /root; READY 2026-11-17; HF-154 DONE. CP-HF-155: .local/checks/hf155/CP-HF-155.md (точные read/write-set, out of scope и проверки). Приёмка: каждый успешный стежок выбирает один из трёх WAV, общий SFX bus/редакторская громкость, без дублирующего click и звука промаха; прежние изменения сохранены.
+
+
+Task: HF-155
+Recommended status: REVIEW → принято координатором, DONE
+Changed: audio/sfx/stitch_{1,2,3}.wav/.import; scenes/Audio/SoundEffects.tscn (Stitch1/2/3); scripts/Audio/SoundEffects.cs (отдельный RNG и PlayStitch); scripts/UI/EmbroideryGame.cs (звук после успешного Hit); tests/Integration/ProjectTest.{EmbroideryTarget,SoundEffects}.cs; ORCHESTRATION_PLAN.md.
+Checks: dotnet build ChikagoShop.sln --no-restore PASS (0 warnings/errors). Isolated Godot import PASS. Rendered --embroidery-target-checks PASS на1280x720/960x540: реальные mouse/touch, ровно один вариант на успешный стежок включая последний, все3 варианта наблюдались; ready/miss/finished/release без лишнего звука; проигрыватель Playing при Paused через SFX bus, контраст/переход целей сохранены. Rendered --sound-effects-checks PASS: все10 scene-owned players сохраняют уровни/bus, прежние кнопки/Skip/продажа/bell/reroll/pause regression PASS. SHA256 всех3 WAV совпадает с Downloads; import без loop/normalize/compression. git diff-check PASS. Evidence .local/checks/hf155/{build.log,import.log,embroidery-target.log,sound-effects.log,audio-hashes.txt}.
+Acceptance: каждое попадание в активную чёрную точку случайно выбирает один из трёх оригинальных звуков. Отдельный RNG не изменяет случайную последовательность игровой логики. Громкость общая SFX, базовая редакторская -12dB у каждого Stitch player, max_polyphony4 для быстрых стежков. Generic click не добавляется, т.к. нарисованные точки обрабатывает Surface. Исходники и прежние незакоммиченные HF-154 изменения сохранены.
+Read-set exception: для диагностики существующего ввода прочитаны только указанные crafting/target/helpers тесты. source/ не читался.
+Risks/blocker: функциональных блокеров нет; прежнее предупреждение Godot Failed to read root certificate store в среде проверки. Пользовательские сохранения не затронуты, тесты в отдельном user://.
+Next: пользовательская проверка громкости; commit/push не выполнялись.
+
+### HF-154 — обновление зловещей темы и звуки смены покупателя
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-17; HF-153 DONE, пересечений нет. CP-HF-154: .local/checks/hf154/CP-HF-154.md. Точный read/write-set и out of scope в пакете. Приёмка: новая зловещая тема 90 BPM без паузы/щелчка в loop и с прежними fade; смена покупателя звучит по знаку нового предложения, без bell/дублирующего click; сохранены исходники/остальной микс. Проверки: audio analysis, build, isolated intro-music и rendered sound-effects.
+Task: HF-154
+Recommended status: REVIEW → принято координатором, DONE
+Changed: audio/music/sinister_loop.wav/.import; audio/sfx/{reroll_success,reroll_failure}.wav/.import; scenes/Audio/SoundEffects.tscn; scripts/Audio/SoundEffects.cs; scripts/TradeScene.cs (только presentation event); tests/Integration/ProjectTest.{SoundEffects,IntroMusic}.cs; ORCHESTRATION_PLAN.md.
+Checks: dotnet build ChikagoShop.sln --no-restore PASS, 0 warnings/errors. Isolated Godot import PASS. --intro-music-checks PASS: sinister 1411200 stereo frames/44100Hz/32s =12 тактов90BPM; waveform seam <0.001, RMS окна вокруг декодированного стыка без тишины/скачка; thoughtful/current mix/cues/fade/skip/exit regression PASS. Rendered --sound-effects-checks PASS: оба результата на реальных кликах, ровно один SFX по новому OfferedPrice, без click/bell; blocked/neutral/load без result; original hashes всех7 SFX совпадают, сохранены индивидуальные scene volume и отдельный SFX bus. git diff-check PASS. Evidence: .local/checks/hf154/{audio-analysis.txt,input-hashes.txt,build.log,import.log,intro-music.log,sound-effects.log}.
+Acceptance: обновлённая зловещая тема только в прологе, без изменения fade/mix. Из исходника32.171315s сохранён музыкальный период32s, оставшийся render tail исключён, первые220frames (4.989ms) плавно соединены с естественным продолжением конца; PCM24→PCM16 без нормализации/смены темпа. Исходники Downloads не менялись. Удача/неудача подключены без изменения WAV, import без сжатия, редакторские уровни обоих -12dB. BuyerOfferChanged возникает после успешного reroll/RefreshOffer/SaveProgress; аудио выбирает результат по сравнению нового предложения с обычной ценой. Смена не звонит колокольчиком и не дублирует click, предыдущий result останавливается. Нулевая наценка без результата.
+Read-set exception: локальная диагностика доступных audio tools и RIFF, без source/. Домен/правила/сохранения не менялись. Промежуточный SFX regression выявил ошибку fixture: предмет с единственной сменой отключал кнопку до тестового увеличения лимита. Fixture исправлен (лимит до первого reroll, проверка реального расхода попытки и отсутствия результата при пустом pool), финальный PASS.
+Risks/blocker: функциональных блокеров нет. В изолированных Godot запусках прежнее Failed to read root certificate store; функциональные проверки проходят. Финальный intro-music без resource leak warnings. Проверка стыка инструментальная через samples/RMS и Godot decoder, прослушивание пользователем остаётся финальной субъективной оценкой.
+Next: пользовательская проверка в feature/music; commit/push не выполнялись.
 ### HF-153 — локальная интеграция актуальной main с feature/music
 
 Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-17; CP-HF-153 в .local/checks/hf153/CP-HF-153.md. Пользователь просит загрузить main и проверить совместимость с музыкальными изменениями.

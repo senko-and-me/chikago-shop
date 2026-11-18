@@ -3,6 +3,7 @@
 [resource]
 locale = "en"
 messages = {
+&"Закончить день": &"End day",
 &"Громкость звуков": &"Sound volume",
 &"День {0}": &"Day {0}",
 &"Следующая квота: {0}$": &"Next quota: ${0}",

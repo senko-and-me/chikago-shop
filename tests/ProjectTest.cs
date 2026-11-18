@@ -16,6 +16,13 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--day-expiry-checks"))
+            {
+                await TestDayExpiry();
+                GD.Print("DAY_EXPIRY_CHECKS_PASS: automatic cards, active trade/craft, pause, reload and no duplicate advance");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--sound-effects-checks"))
             {
                 await TestSoundEffects();

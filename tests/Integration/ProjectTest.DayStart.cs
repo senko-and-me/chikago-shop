@@ -71,17 +71,66 @@ public partial class ProjectTest
             Check(start.Tr(start.Text) == "Start", "Start must have an English translation");
             TranslationServer.SetLocale("ru");
             await ClickControl(game, "HUD/Root/DayTimer/StartButton");
+            timer = game.GetNode<Label>("HUD/Root/DayTimer");
             Check(game.DayStarted && !start.Visible && game.DayRemainingSeconds == 90, "A real click must start exactly once");
+            Root.PushInput(new InputEventMouseMotion { Position = new Vector2(800, 400), Relative = Vector2.One }, true);
+            using (await CapturePresentation()) { }
             Check(game.GetNode<TextureRect>("HUD/Root/DayTimer/Clock").SelfModulate == Colors.White,
                 "Starting the day must clear the hover darkening");
             start.EmitSignal(BaseButton.SignalName.Pressed);
             game._Process(1);
             Check(game.DayRemainingSeconds == 89 && game.GetNode<Label>("HUD/Root/DayTimer").Text == "89",
                 "After Start the timer must count down in seconds");
+            var clockAction = game.GetNode<Button>("HUD/Root/ClockActionButton");
+            var endCaption = game.GetNode<Label>("HUD/Root/DayTimer/EndDayCaption");
+            Check(!endCaption.Visible, "A running clock must show seconds until hovered");
+            Vector2 endPoint = ScreenBounds(clockAction).GetCenter();
+            Root.PushInput(new InputEventMouseMotion { Position = endPoint, GlobalPosition = endPoint, Relative = Vector2.One }, true);
+            using (await CapturePresentation("clock-end-ru")) { }
+            Check(endCaption.Visible && endCaption.Text == "Завершить\nдень" && timer.Text == "" &&
+                  endCaption.GetThemeFont("font") == start.GetThemeFont("font") &&
+                  endCaption.GetThemeFontSize("font_size") <= start.GetThemeFontSize("font_size") &&
+                  endCaption.GetThemeFont("font").GetStringSize("Завершить", fontSize: endCaption.GetThemeFontSize("font_size")).X <= timer.Size.X * 0.46f &&
+                  endCaption.OffsetLeft >= timer.Size.X * 0.23f && endCaption.OffsetRight <= -timer.Size.X * 0.23f &&
+                  endCaption.GetThemeColor("font_color") == start.GetThemeColor("font_color") &&
+                  clockAction.TooltipText == "",
+                "Running clock hover must replace digits with a centered caption matching Start, without a second tooltip");
+            TranslationServer.SetLocale("en");
+            game._Process(0.01);
+            Check(endCaption.Visible && endCaption.Text == "End\nday", "The running clock caption must follow English");
+            TranslationServer.SetLocale("ru");
+            Root.PushInput(new InputEventMouseMotion { Position = new Vector2(800, 400), Relative = Vector2.One }, true);
+            using (await CapturePresentation()) { }
+            Check(!endCaption.Visible && timer.Text == "89", "Leaving the clock must restore the remaining seconds");
+            clockAction.GrabFocus();
+            Check(endCaption.Visible, "Keyboard focus must reveal the same end-day action");
+            clockAction.ReleaseFocus();
             await Reload();
-            Check(game.DayStarted && game.DayRemainingSeconds == 89, "Reload of a running day must not demand another Start");
-            game.EndDay();
-            game.EndDay();
+            Check(game.DayStarted && game.DayRemainingSeconds > 88 && game.DayRemainingSeconds <= 89, "Reload of a running day must not demand another Start");
+            clockAction = game.GetNode<Button>("HUD/Root/ClockActionButton");
+            Vector2 clickPoint = ScreenBounds(clockAction).GetCenter();
+            int clockClicks = 0;
+            void ObserveClockClick(SoundEffects.Cue cue) { if (cue == SoundEffects.Cue.Click) clockClicks++; }
+            SoundEffects.Instance.Played += ObserveClockClick;
+            try
+            {
+                Root.PushInput(new InputEventMouseMotion { Position = clickPoint, GlobalPosition = clickPoint, Relative = Vector2.One }, true);
+                await ToSignal(this, SignalName.ProcessFrame);
+                Root.PushInput(new InputEventMouseButton { Position = clickPoint, GlobalPosition = clickPoint,
+                    ButtonIndex = MouseButton.Left, Pressed = true, ButtonMask = MouseButtonMask.Left }, true);
+                // A human releases in a later frame. Same-frame synthetic clicks miss focus-reset bugs.
+                await ToSignal(CreateTimer(0.12), SceneTreeTimer.SignalName.Timeout);
+                Root.PushInput(new InputEventMouseButton { Position = clickPoint, GlobalPosition = clickPoint,
+                    ButtonIndex = MouseButton.Left, Pressed = false }, true);
+                await ToSignal(this, SignalName.ProcessFrame);
+                Check(clockClicks == 1, "A physical clock down/hold/release across frames must play exactly one click");
+            }
+            finally { SoundEffects.Instance.Played -= ObserveClockClick; }
+            Check(game.DayClosed && !game.GetNode<Label>("HUD/Root/DayTimer/EndDayCaption").Visible,
+                "A real click must close the day early and clear its hover caption");
+            game._Process(0.01);
+            Check(game.CurrentDay == 2 && game.DayTransitionOpen,
+                "One clock click must lead to the next day's cards without another EndDay press");
             await WaitForDayCardAnimation(game);
             var card = game.GetNode<DayTransitionCard>("DayTransitionCard");
             card.Skip();
