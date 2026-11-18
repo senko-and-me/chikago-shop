@@ -5,7 +5,9 @@ using Godot;
 // Presentation observer: input still belongs to the original controls and game rules.
 public partial class SoundEffects : Node
 {
-    public enum Cue { Hover, Click, Settings, Sale, CustomerBell }
+    public enum Cue { Hover, Click, Settings, Sale, CustomerBell, RerollSuccess, RerollFailure, Stitch1, Stitch2, Stitch3 }
+    private static readonly Cue[] StitchCues = { Cue.Stitch1, Cue.Stitch2, Cue.Stitch3 };
+    private readonly RandomNumberGenerator _stitchRandom = new();
     public const string BusName = "SFX";
     public static SoundEffects Instance { get; private set; }
     [Export(PropertyHint.Range, "0.05,1,0.01")] public double HoverDelaySeconds { get; set; } = 0.15;
@@ -14,7 +16,7 @@ public partial class SoundEffects : Node
     public event Action<Cue> Played;
     private readonly Dictionary<Cue, AudioStreamPlayer> _voices = new();
     private readonly Dictionary<BaseButton, Action> _buttons = new();
-    private readonly Dictionary<TradeScene, Action> _games = new();
+    private readonly Dictionary<TradeScene, (Action Arrived, Action Changed)> _games = new();
     private BaseButton _hovered, _pendingHover;
     private Vector2 _lastPointer = new(float.NaN, float.NaN);
     private bool _motionPending;
@@ -23,6 +25,7 @@ public partial class SoundEffects : Node
     public override void _Ready()
     {
         Instance = this;
+        _stitchRandom.Randomize();
         ProcessMode = ProcessModeEnum.Always;
         if (AudioServer.GetBusIndex(BusName) < 0)
         {
@@ -86,6 +89,8 @@ public partial class SoundEffects : Node
             Action activate = () =>
             {
                 if (!Interactive(button)) return;
+                // Refusal is sounded once the new offer is known, rather than as a generic click.
+                if (button.Name == "DeclineButton") return;
                 Play(button.Name.ToString() switch
                 {
                     "SettingsButton" => Cue.Settings,
@@ -99,15 +104,26 @@ public partial class SoundEffects : Node
         if (node is TradeScene game && !_games.ContainsKey(game))
         {
             Action arrived = () => Play(Cue.CustomerBell);
-            _games.Add(game, arrived);
+            Action changed = () =>
+            {
+                int baseline = game.GetItemPrice(game.ItemIndex);
+                if (game.OfferedPrice > baseline) Play(Cue.RerollSuccess);
+                else if (game.OfferedPrice < baseline) Play(Cue.RerollFailure);
+            };
+            _games.Add(game, (arrived, changed));
             game.BuyerArrived += arrived;
+            game.BuyerOfferChanged += changed;
         }
     }
 
     private void Detach(Node node)
     {
         if (node is BaseButton button && _buttons.Remove(button, out var callback)) button.Pressed -= callback;
-        if (node is TradeScene game && _games.Remove(game, out var arrived)) game.BuyerArrived -= arrived;
+        if (node is TradeScene game && _games.Remove(game, out var callbacks))
+        {
+            game.BuyerArrived -= callbacks.Arrived;
+            game.BuyerOfferChanged -= callbacks.Changed;
+        }
         if (node == _hovered) { _hovered = null; CancelHover(); }
     }
 
@@ -165,9 +181,20 @@ public partial class SoundEffects : Node
         Play(Cue.Hover);
     }
 
+    public void PlayStitch()
+    {
+        CancelHover();
+        Play(StitchCues[_stitchRandom.RandiRange(0, StitchCues.Length - 1)]);
+    }
+
     private void Play(Cue cue)
     {
-        if (cue is Cue.Click or Cue.Settings or Cue.Sale) CancelHover();
+        if (cue is Cue.Click or Cue.Settings or Cue.Sale or Cue.RerollSuccess or Cue.RerollFailure) CancelHover();
+        if (cue is Cue.RerollSuccess or Cue.RerollFailure)
+        {
+            _voices[Cue.RerollSuccess].Stop();
+            _voices[Cue.RerollFailure].Stop();
+        }
         _voices[cue].Play();
         Played?.Invoke(cue);
     }
@@ -179,7 +206,11 @@ public partial class SoundEffects : Node
         foreach (var (button, callback) in _buttons)
             if (GodotObject.IsInstanceValid(button)) button.Pressed -= callback;
         foreach (var (game, callback) in _games)
-            if (GodotObject.IsInstanceValid(game)) game.BuyerArrived -= callback;
+            if (GodotObject.IsInstanceValid(game))
+            {
+                game.BuyerArrived -= callback.Arrived;
+                game.BuyerOfferChanged -= callback.Changed;
+            }
         _buttons.Clear();
         _games.Clear();
         foreach (var player in _voices.Values)

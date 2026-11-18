@@ -59,7 +59,7 @@ public partial class ProjectTest
             var authored = GD.Load<PackedScene>("res://scenes/Audio/SoundEffects.tscn").Instantiate<SoundEffects>();
             try
             {
-                Check(authored.GetChildren().OfType<AudioStreamPlayer>().Count() == 5,
+                Check(authored.GetChildren().OfType<AudioStreamPlayer>().Count() == 10,
                     "Every effect must be authored as an editable player before the scene enters the tree");
                 foreach (var cue in Enum.GetValues<SoundEffects.Cue>())
                 {
@@ -82,7 +82,9 @@ public partial class ProjectTest
                 ("hover", "625BF751E3B374C7260413B78030CCA8BFD6A5B3FC62E72D74A448D6F43C9B0C"),
                 ("customer_bell", "B0C1B0E9BEB015260B53BC62878646DD0BB6FB1B8E0EFDED393A3B6A86808EDB"),
                 ("settings", "4610590A4D9A06C4C3764452F9479B5D02DC326E08B8B64464F586C4CCFDB66A"),
-                ("click", "2ECF9679140D66FBC0E1D243DA33BD3A7B4D6CC732074E1322F2BA168C91CBD4") })
+                ("click", "2ECF9679140D66FBC0E1D243DA33BD3A7B4D6CC732074E1322F2BA168C91CBD4"),
+                ("reroll_success", "A3781C4CF59B15C66CC3E3088188833C7E11E4A0C7F9376EF4C0FD77950FE40D"),
+                ("reroll_failure", "485ABFFB20623403A204107812EAF06F9A764BB3CE01F25058CBDAC88D7B2163") })
             {
                 string path = $"res://audio/sfx/{file}.wav";
                 Check(Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(FileAccess.GetFileAsBytes(path))) == hash,
@@ -212,8 +214,37 @@ public partial class ProjectTest
             Check(game.TradeActive && sounds.SequenceEqual(new[] { SoundEffects.Cue.CustomerBell }),
                 "A natural buyer arrival must play one bell immediately");
             sounds.Clear();
+            game.RerollsRemaining = 100;
+            int initialOffer = game.OfferedPrice;
             game.RerollCustomer();
-            Check(sounds.Count == 0, "Changing the buyer with refusal must never ring the arrival bell");
+            void CheckRerollSound(int previousOffer)
+            {
+                int baseline = game.GetItemPrice(game.ItemIndex);
+                if (game.OfferedPrice == previousOffer || game.OfferedPrice == baseline)
+                    Check(sounds.Count == 0, "An unavailable reroll or neutral offer must not play a result");
+                else
+                    OnlyActivation(game.OfferedPrice > baseline ? SoundEffects.Cue.RerollSuccess : SoundEffects.Cue.RerollFailure,
+                        "Refusal must sound the NEW offer's result without bell or duplicate click");
+            }
+            CheckRerollSound(initialOffer);
+            bool heardSuccess = false, heardFailure = false;
+            for (int attempt = 0; attempt < 80 && !(heardSuccess && heardFailure); attempt++)
+            {
+                sounds.Clear();
+                int previousOffer = game.OfferedPrice, previousRerolls = game.RerollsRemaining;
+                await ClickControl(game, "World/TradingRoom/Item/TradePanel/Content/Buttons/DeclineButton");
+                Check(game.RerollsRemaining == previousRerolls - 1, "A real refusal click must reach the existing reroll action");
+                CheckRerollSound(previousOffer);
+                heardSuccess |= sounds.Contains(SoundEffects.Cue.RerollSuccess);
+                heardFailure |= sounds.Contains(SoundEffects.Cue.RerollFailure);
+            }
+            Check(heardSuccess && heardFailure, "Real refusal clicks must exercise both profitable and unprofitable offers");
+            int remaining = game.RerollsRemaining;
+            game.RerollsRemaining = 0;
+            sounds.Clear();
+            game.RerollCustomer();
+            Check(sounds.Count == 0, "A blocked reroll must not play a result");
+            game.RerollsRemaining = remaining;
             var pause = game.GetNode<PauseMenu>("PauseMenu");
             pause.Open();
             sounds.Clear();
@@ -246,8 +277,9 @@ public partial class ProjectTest
             game.QueueFree(); game = null; await Settle();
             sounds.Clear();
             await CreateTrade();
-            Check(game.TradeActive && !sounds.Contains(SoundEffects.Cue.CustomerBell),
-                "Restoring an existing buyer from a save must not ring the bell");
+            Check(game.TradeActive && !sounds.Any(cue => cue is SoundEffects.Cue.CustomerBell or
+                      SoundEffects.Cue.RerollSuccess or SoundEffects.Cue.RerollFailure),
+                "Restoring an existing buyer must not ring or play a reroll result");
         }
         finally
         {

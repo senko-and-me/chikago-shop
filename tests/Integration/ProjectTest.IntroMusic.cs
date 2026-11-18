@@ -73,7 +73,14 @@ public partial class ProjectTest
         foreach (string id in new[] { "thoughtful", "sinister" })
         {
             var stream = GD.Load<AudioStreamWav>($"res://audio/music/{id}_loop.wav");
-            int frames = id == "thoughtful" ? 2419200 : 470400;
+            int frames = id == "thoughtful" ? 2419200 : 1411200;
+            if (id == "sinister")
+            {
+                Check(Math.Abs(stream.GetLength() - 48 * 60.0 / 90) < 1.0 / stream.MixRate,
+                    "The updated sinister recording must loop exactly twelve bars at 90 BPM");
+                CheckPreparedMusicSeam(stream);
+                GD.Print($"SINISTER_LOOP_CHECK: twelve bars, 90 BPM, length={stream.GetLength():F6}s; continuous decoded seam");
+            }
             if (id == "thoughtful")
             {
                 Check(Math.Abs(stream.GetLength() - 64 * 60.0 / 70) < 1.0 / stream.MixRate,

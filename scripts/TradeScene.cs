@@ -8,6 +8,7 @@ using Godot;
 public partial class TradeScene : Node2D
 {
 	public event Action BuyerArrived;
+	public event Action BuyerOfferChanged;
 	private static ChikagoShop.Domain.Configuration.EconomyConfig Economy => EconomyConfigProvider.Load();
 	[Export(PropertyHint.Range, "1,9999,1")]
 	public int StartingMoney { get; set; } = Economy.StartingMoney;
@@ -864,6 +865,7 @@ public partial class TradeScene : Node2D
 		_customer.SetAppearance(CustomerIndex);
 		RefreshOffer();
 		SaveProgress();
+		BuyerOfferChanged?.Invoke();
 	}
 
 	public void AcceptTrade()

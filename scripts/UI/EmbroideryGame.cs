@@ -454,11 +454,15 @@ public partial class EmbroiderySurface : Control
 				(point.Value - FabricRect.Position) /
 				FabricRect.Size * new Vector2(840, 480);
 
-			if (Game.Session.State == EmbroideryState.Playing &&
-				!Game.Session.Hit(logical.X, logical.Y))
+			if (Game.Session.State == EmbroideryState.Playing)
 			{
-				_missPoint = point.Value;
-				_missAt = Time.GetTicksMsec();
+				if (Game.Session.Hit(logical.X, logical.Y))
+					SoundEffects.Instance?.PlayStitch();
+				else
+				{
+					_missPoint = point.Value;
+					_missAt = Time.GetTicksMsec();
+				}
 			}
 
 			QueueRedraw();

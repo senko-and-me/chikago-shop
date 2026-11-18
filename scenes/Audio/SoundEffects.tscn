@@ -6,6 +6,11 @@
 [ext_resource type="AudioStream" uid="uid://6kh6h58rjjhj" path="res://audio/sfx/settings.wav" id="4_settings"]
 [ext_resource type="AudioStream" uid="uid://daudwmjegqxbe" path="res://audio/sfx/sale.wav" id="5_sale"]
 [ext_resource type="AudioStream" uid="uid://bks33ucfa2t6w" path="res://audio/sfx/customer_bell.wav" id="6_bell"]
+[ext_resource type="AudioStream" uid="uid://cq3vh4l402w3j" path="res://audio/sfx/reroll_success.wav" id="7_success"]
+[ext_resource type="AudioStream" uid="uid://cbsxp1es3mr7i" path="res://audio/sfx/reroll_failure.wav" id="8_failure"]
+[ext_resource type="AudioStream" uid="uid://b8uuinasxu335" path="res://audio/sfx/stitch_1.wav" id="9_stitch"]
+[ext_resource type="AudioStream" uid="uid://bwk0m1266ix3t" path="res://audio/sfx/stitch_2.wav" id="10_stitch"]
+[ext_resource type="AudioStream" uid="uid://of5rfd4tg0k2" path="res://audio/sfx/stitch_3.wav" id="11_stitch"]
 
 [node name="SoundEffects" type="Node" unique_id=62203458]
 process_mode = 3
@@ -33,4 +38,24 @@ max_polyphony = 4
 [node name="CustomerBell" type="AudioStreamPlayer" parent="." unique_id=710280389]
 stream = ExtResource("6_bell")
 volume_db = -10.0
+max_polyphony = 4
+
+[node name="RerollSuccess" type="AudioStreamPlayer" parent="." unique_id=606890841]
+stream = ExtResource("7_success")
+volume_db = -12.0
+
+[node name="RerollFailure" type="AudioStreamPlayer" parent="." unique_id=1137307390]
+stream = ExtResource("8_failure")
+volume_db = -12.0
+
+[node name="Stitch1" type="AudioStreamPlayer" parent="." unique_id=1420005318]
+stream = ExtResource("9_stitch")
+max_polyphony = 4
+
+[node name="Stitch2" type="AudioStreamPlayer" parent="." unique_id=544523150]
+stream = ExtResource("10_stitch")
+max_polyphony = 4
+
+[node name="Stitch3" type="AudioStreamPlayer" parent="." unique_id=1775370672]
+stream = ExtResource("11_stitch")
 max_polyphony = 4
