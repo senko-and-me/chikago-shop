@@ -26,11 +26,23 @@ border_color = Color(0.9, 0.9, 0.9, 1)
 shadow_color = Color(0, 0, 0, 1)
 shadow_size = 2
 
+[sub_resource type="StyleBoxFlat" id="ProgressBackground"]
+bg_color = Color(0.94, 0.94, 0.94, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.08, 0.08, 0.08, 1)
+
+[sub_resource type="StyleBoxFlat" id="ProgressFill"]
+bg_color = Color(0.5, 0.5, 0.5, 1)
+
 [node name="FirstTradeTutorial" type="CanvasLayer"]
 process_mode = 3
 layer = 95
 script = ExtResource("1_tutorial")
 CameraTravelSeconds = 0.8
+CameraCompletionDelaySeconds = 2.0
 
 [node name="CameraCheckpoints" type="Node2D" parent="."]
 
@@ -115,13 +127,17 @@ theme_override_colors/font_color = Color(0.13, 0.13, 0.13, 1)
 theme_override_font_sizes/font_size = 19
 autowrap_mode = 3
 
-[node name="CameraProgress" type="Label" parent="Root/Panel/Content"]
+[node name="CameraProgress" type="ProgressBar" parent="Root/Panel/Content"]
 visible = false
+custom_minimum_size = Vector2(0, 28)
 layout_mode = 2
 mouse_filter = 2
-theme_override_colors/font_color = Color(0.13, 0.13, 0.13, 1)
+theme_override_colors/font_color = Color(0.08, 0.08, 0.08, 1)
+theme_override_colors/font_outline_color = Color(1, 1, 1, 1)
+theme_override_constants/outline_size = 1
 theme_override_font_sizes/font_size = 17
-autowrap_mode = 3
+theme_override_styles/background = SubResource("ProgressBackground")
+theme_override_styles/fill = SubResource("ProgressFill")
 
 [node name="Actions" type="HBoxContainer" parent="Root/Panel/Content"]
 layout_mode = 2

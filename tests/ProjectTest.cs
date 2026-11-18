@@ -16,6 +16,21 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--counter-item-checks"))
+            {
+                await TestCounterItemPlacement();
+                GD.Print("COUNTER_ITEM_CHECKS_PASS: all item silhouettes rest on the counter, zoom/resize and visibility");
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--inventory-aspect-checks"))
+            {
+                await TestInventoryIconAspect();
+                await TestInventoryTransfers();
+                GD.Print("INVENTORY_ASPECT_CHECKS_PASS: rendered wide/tall/square icons, centered fit, resize and item transfers");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--day-expiry-checks"))
             {
                 await TestDayExpiry();
@@ -226,6 +241,13 @@ public partial class ProjectTest : SceneTree
                 await TestProgress();
                 await TestSaveCompatibility();
                 GD.Print("PERSISTENCE_CHECKS_PASS: legacy migrations, checkpoint and round trip");
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--intro-latency-checks"))
+            {
+                await TestIntroLatency();
+                GD.Print("INTRO_LATENCY_CHECKS_PASS: real skip to first game frame, immediate and after reading");
                 Quit();
                 return;
             }

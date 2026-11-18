@@ -17,6 +17,7 @@ public partial class WorldCamera : Camera2D
     private const float ZoomSmoothness = 12f;
     private Viewport _viewport = null!;
     private bool _dragging;
+    public bool IsDragging => _dragging;
     private float _targetZoom;
     private Vector2 _zoomAnchor;
     private Tween _overviewTween;

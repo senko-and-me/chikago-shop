@@ -1,4 +1,5 @@
 
+using System.Threading.Tasks;
 using Godot;
 
 public partial class MainMenu : Control
@@ -6,9 +7,11 @@ public partial class MainMenu : Control
 	private const string ProgressSavePath =
 		"user://trade_progress.json";
 
-	[Export]
-	public PackedScene GameScene { get; set; } =
-		GD.Load<PackedScene>("res://scenes/trade_scene.tscn");
+	private const string DefaultGameScenePath = "res://scenes/trade_scene.tscn";
+	[Export] public PackedScene GameScene { get; set; }
+	private Task<PackedScene> _gameSceneWarmup;
+	public bool IsGameScenePrepared => GameScene != null ||
+		_gameSceneWarmup is { IsCompletedSuccessfully: true } && _gameSceneWarmup.Result != null;
 
 	private CenterContainer _mainMenu = null!;
 	private CenterContainer _settingsMenu = null!;
@@ -112,6 +115,8 @@ public partial class MainMenu : Control
 
 		_skipMouseWasDown =
 			Input.IsMouseButtonPressed(MouseButton.Left);
+		if (GameScene == null)
+			_gameSceneWarmup = SceneResourceWarmup.LoadAsync(GetTree(), DefaultGameScenePath);
 	}
 
 	private void ConfigureTextureButton(
@@ -590,10 +595,10 @@ public partial class MainMenu : Control
 		if (_startingGame || ActiveDialogue == null)
 			return;
 
-		FinishIntroAndStartGame();
+		FinishIntroAndStartGame(skipped: true);
 	}
 
-	private async void FinishIntroAndStartGame()
+	private async void FinishIntroAndStartGame(bool skipped = false)
 	{
 		if (_startingGame || _endingIntro)
 			return;
@@ -601,7 +606,8 @@ public partial class MainMenu : Control
 		_endingIntro = true;
 		_skipLayer.Hide();
 		ActiveDialogue?.StopInteraction();
-		bool silent = await Music.FadeToSilence();
+		bool silent = await Music.FadeToSilence(skipped);
+		if (!GodotObject.IsInstanceValid(this)) return;
 		if (!silent || !IsInsideTree())
 		{
 			_endingIntro = false;
@@ -628,15 +634,22 @@ public partial class MainMenu : Control
 		EnterGame(false);
 	}
 
-	private void EnterGame(bool newGame)
+	private async void EnterGame(bool newGame)
 	{
 		if (_startingGame)
 			return;
 
-		// An empty Inspector override must not send a completed intro back to the menu.
-		GameScene ??= GD.Load<PackedScene>("res://scenes/trade_scene.tscn");
+		_startingGame = true;
 		if (GameScene == null)
 		{
+			_gameSceneWarmup ??= SceneResourceWarmup.LoadAsync(GetTree(), DefaultGameScenePath);
+			var prepared = await _gameSceneWarmup;
+			if (!GodotObject.IsInstanceValid(this) || !IsInsideTree()) return;
+			GameScene ??= prepared;
+		}
+		if (GameScene == null)
+		{
+			_startingGame = false;
 			GD.PushError("Could not load res://scenes/trade_scene.tscn");
 			ShowGameChoice();
 			return;
@@ -652,6 +665,7 @@ public partial class MainMenu : Control
 
 			if (deleteError != Error.Ok)
 			{
+				_startingGame = false;
 				GD.PushError(
 					$"Could not reset saved game: {deleteError}");
 
@@ -660,7 +674,6 @@ public partial class MainMenu : Control
 			}
 		}
 
-		_startingGame = true;
 		GetNode<AudioStreamPlayer>("MenuMusic").Stop();
 
 		_skipLayer.Hide();
@@ -765,7 +778,7 @@ public partial class MainMenu : Control
 
 	public override void _Input(InputEvent @event)
 	{
-		if (_endingIntro)
+		if (_endingIntro || _startingGame)
 		{
 			GetViewport().SetInputAsHandled();
 			return;

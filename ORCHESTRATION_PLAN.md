@@ -9,6 +9,122 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### HF-165 — публикация исправлений инвентаря, прилавка и обучения
+
+Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-18; HF-152/HF-153/HF-162/HF-163/HF-164 DONE, пользователь разрешил commit/push, активных пересечений нет.
+
+CP-HF-165 read-set: текущий фронт, Git refs/status/diff, готовые изменения и evidence HF-152/153/162/163/164; scenes/main_menu.tscn и scenes/trade_scene.tscn только diff/сохранность. Write-set: Git index/commits/main/origin/main; ORCHESTRATION_PLAN.md; публикация готовых docs/GAMEPLAY.md, localization/en.tres, scenes/UI/FirstTradeTutorial.tscn, scenes/UI/SlotUI.tscn, scripts/Audio/IntroMusicDirector.cs, scripts/Camera/WorldCamera.cs, scripts/CounterWorld.cs, scripts/MainMenu.cs, scripts/UI/FirstTradeTutorial.cs, scripts/Presentation/SceneResourceWarmup.cs/.uid, tests/Integration/ProjectTest.{IntroMusic,Inventory,Menu,Trading,Tutorial}.cs, tests/ProjectTest.cs; .local/checks/hf165 и изолированная копия .local/checks/git-review-20261118/project. Out of scope: source/, пользовательские основные сцены (сохраняются локально вне коммита), новая функциональность/баланс/schema, force push.
+
+Приёмка: полный подготовленный результат опубликован обычным push, HEAD=origin/main, пользовательские обе сцены побайтно сохранены; staged diff --check и rendered inventory-aspect/counter-item/tutorial/intro-transition на точных сценах HEAD без локального пользовательского diff; готовые build/evidence предыдущих задач PASS.
+
+### HF-164 — раздельные этапы камеры с процентными шкалами
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-18; HF-163 DONE, активных пересечений нет.
+
+CP-HF-164 read-set: текущий фронт; scripts/UI/FirstTradeTutorial.cs; scenes/UI/FirstTradeTutorial.tscn; scripts/Camera/WorldCamera.cs (события read-only); scripts/Presentation/TutorialCameraCheckpoint.cs; tests/Integration/ProjectTest.{Tutorial,Menu,Helpers,Presentation}.cs; tests/ProjectTest.cs; localization/en.tres; docs/GAMEPLAY.md. Write-set: ORCHESTRATION_PLAN.md; scripts/UI/FirstTradeTutorial.cs; scenes/UI/FirstTradeTutorial.tscn; tests/Integration/ProjectTest.Tutorial.cs; localization/en.tres; docs/GAMEPLAY.md; .local/checks/hf164 и изолированная копия .local/checks/git-review-20261118/project. Out of scope: source/, обе основные пользовательские сцены, WorldCamera/TradeScene/домен/баланс/игровая save schema, другие незакоммиченные правки/commit/push.
+
+Приёмка: сначала только передвижение, затем только масштабирование; текущая шкала0–100%, без прочерков/галочек. Реальное перемещение даёт частичный прогресс; принятые wheel шаги дают25/50/75/100%; ранний zoom не засчитывается. Передвижение100% видно до отпускания drag и короткой паузы, затем zoom0% без нового перелёта. Частичный прогресс/этап/старые cfg/reload/replay сохраняют корректность; итоговая2с пауза свободной камеры и остальной tutorial прежние. Проверки: dotnet build; rendered --tutorial-checks и --intro-transition-checks, RU/EN960×540/1280×720 screenshots и fitting; git diff --check/SHA256 чужих правок.
+
+```text
+Task: HF-164
+Recommended status: REVIEW → принято координатором, DONE
+Changed: FirstTradeTutorial теперь имеет последовательные Camera (передвижение) и CameraZoom, отдельные заголовки/инструкции и ProgressBar0–100% вместо checklist. Реальный pan постепенно заполняет64px шкалу; при100% этап ждёт release и0,6с, затем открывает zoom0 без нового перелёта. Только на zoom этапе принятые события колеса дают25/50/75/100%; раннее колесо не засчитывается. Панорамирование/масштаб свободны в обоих этапах. Частичные pan/zoom/фаза сохраняются optional полями tutorial cfg с debounce0,25с и flush при выходе; старые done-флаги сохранены. Restart сбрасывает проценты; прежняя2с handoff-пауза/модалы/skip/legacy поведение сохранены. Новые RU/EN строки, сцена шкалы и docs/GAMEPLAY обновлены. WorldCamera/игровая save schema/основные сцены не менялись.
+Checks: workspace/isolated dotnet build PASS (0 warnings/errors). Rendered --tutorial-checks PASS: pan0/частичный39/reload/100, удержание drag при100, следующий zoom0 без перелёта, раннее колесо0, zoom25/reload/50/75/100; заголовки и шкала RU/EN960×540/1280×720, свободная камера в итоговой паузе, pause/skip-confirmation не расходуют задержку, legacy handoff, полный walkthrough/продажа/finish/skip/replay/new run/reload. Rendered --intro-transition-checks PASS. stderr обеих групп пуст. Просмотрены movement-zero-ru-960, zoom-zero-en-960 и movement-partial39%; всё помещается. git diff --check PASS; SHA256 прежних локальных файлов вне write-set совпадает с before.json. Evidence .local/checks/hf164 (логи/снимки/manifest).
+Acceptance: камера изучается последовательно; на каждом этапе отображаются текущие проценты без прочерков/галочек, прогресс накапливается по реальным действиям и сохраняется.
+Read-set exception: нет; source/ не читался, тестовые сохранения изолированы.
+Risks/blocker: нет новых. Один принятый шаг wheel равен25%; при достижении zoom limit событие не поступает и шкала не меняется, нужно прокрутить обратно.
+Next: пользовательская визуальная приёмка; commit/push не выполнялись.
+```
+### HF-163 — предмет сделки на поверхности прилавка
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-18; HF-162 DONE, активных пересечений нет.
+
+CP-HF-163 read-set: текущий фронт; scripts/CounterWorld.cs, scripts/UI/ZoomResponsiveUi.cs; scenes/trade_scene.tscn (TradingRoom/Item/TradePanel/background read-only); art/rooms/cashier_closed.jpg; tests/Integration/ProjectTest.{Trading,Resources,Economy,Presentation,Helpers}.cs, tests/ProjectTest.cs; каталог art/items через точные ArtPath runtime. Write-set: ORCHESTRATION_PLAN.md; scripts/CounterWorld.cs (только положение существующих визуальных вариантов); tests/Integration/ProjectTest.Trading.cs; tests/ProjectTest.cs (отдельная группа); .local/checks/hf163 и изолированная копия .local/checks/git-review-20261118/project. Out of scope: source/, новые изображения/домен/баланс/save schema, TradeScene.cs, обе пользовательские основные сцены, предыдущие локальные правки/commit/push.
+
+Приёмка: у всех16 предметов нижний край непрозрачного изображения касается одной точки на столешнице справа от рук продавца; прозрачные поля не заставляют предмет висеть. Прежние размеры/пропорции/панель сделки и переключение видимого предмета сохранены. Проверки: dotnet build; rendered --counter-item-checks (16 вариантов, zoom/resize, снимки); real sale/sound-effects regression; git diff --check, SHA256 прежних правок.
+
+```text
+Task: HF-163
+Recommended status: REVIEW → принято координатором, DONE
+Changed: scripts/CounterWorld.cs — редакторский CounterItemContact=(930,744) в координатах фона кассы. При Ready каждый существующий вариант выравнивается по нижнему центру alpha used-rect с учётом прозрачных полей, transform фона/Item и прежнего масштаба. Root Item/TradePanel не перемещаются, пользовательская trade_scene не меняется. Tests/Integration/ProjectTest.Trading.cs и tests/ProjectTest.cs — отдельная --counter-item-checks группа.
+Checks: workspace/isolated dotnet build PASS (0 warnings/errors); rendered --counter-item-checks PASS:16 вариантов ×2 zoom ×2 window, нижний край на столешнице, прежние размеры, единственный видимый предмет, отсутствие пересечения с панелью, скрытие Item. Снимки Hat/Guitar (исторический kind для maracas)/Cello сохранены; Hat и Cello просмотрены, предмет на поверхности справа от рук продавца. Rendered --sound-effects-checks PASS включая настоящий приход покупателя/отказ/продажу/reload; stderr обеих групп пуст. SHA256 прежних локальных файлов вне write-set совпадают с before.json. git diff --check PASS. Evidence .local/checks/hf163.
+Acceptance: все предметы опираются нижним краем изображения на одну точку столешницы, без зависания на уровне груди продавца; панель/сделка сохранены.
+Read-set exception: нет; source/ не читался; user:// тестов изолирован. Использованы точные art/rooms/cashier_closed.jpg и art/items/cello.png для визуальной проверки.
+Risks/blocker: нет новых. Изменён только presentation; существующие масштабы предметов оставлены прежними.
+Next: пользовательская визуальная приёмка; commit/push не выполнялись.
+```
+### HF-162 — пропорции предметов в инвентаре
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-18; AUDIT-20261118 DONE, активных пересечений нет.
+
+CP-HF-162 read-set: текущий фронт; scenes/UI/{SlotUI,InventoryUI,ShowcaseSlot}.tscn; scripts/UI/{SlotUI,InventoryUI}.cs; scripts/Presentation/MonochromePresentation.cs; tests/Integration/ProjectTest.{Inventory,Ui,Helpers,Presentation}.cs, tests/ProjectTest.cs; ChikagoShop.csproj, .vscode/settings.json; Git status/diff для сохранности пользовательских правок. Write-set: ORCHESTRATION_PLAN.md; scenes/UI/SlotUI.tscn (режим вписывания Icon); tests/Integration/ProjectTest.Inventory.cs; tests/ProjectTest.cs (отдельная группа); .local/checks/hf162 и изолированная копия .local/checks/git-review-20261118/project. Out of scope: source/, исходные изображения, обе пользовательские основные сцены, домен/баланс/save schema, прочие локальные изменения, commit/push.
+
+Приёмка: широкие/высокие/квадратные изображения полностью вписаны по центру ячейки без растягивания/обрезки; размер ячейки не зависит от размера исходной текстуры. Rendered regression измеряет реальное изображение для разных пропорций текстуры/ячейки на 960×540 и 1280×720; прежние выбор/drag/quick transfer работают. Проверки: dotnet build; rendered --inventory-aspect-checks (новая проверка и TestInventoryTransfers); git diff --check; сохранность прежних локальных файлов.
+
+```text
+Task: HF-162
+Recommended status: REVIEW → принято координатором, DONE
+Changed: scenes/UI/SlotUI.tscn Icon stretch_mode=5 (KeepAspectCentered); tests/Integration/ProjectTest.Inventory.cs — rendered pixel regression для wide/tall/square, двух пропорций ячейки, 960×540/1280×720; tests/ProjectTest.cs — группа --inventory-aspect-checks. Прежний transfer fixture приведён к текущим предусловиям: запас ≥8 предметов независимо от items-per-craft, открытая вторая мастерская, явный Start перед ожиданием покупателя и каждым переходом; terminal fixture не предполагает ровно3 предмета за craft. Product-поведение кроме режима Icon не менялось.
+Checks: новый rendered regression до fix FAIL (800×200 растягивался в81×81 вместо81×20,25); после fix все12 комбинаций PASS, TestInventoryTransfers PASS (mouse drag/drop/cancel/stale payload/Shift/paused/terminal). Isolated/workspace dotnet build PASS, 0 warnings/errors; stderr финальной rendered группы пуст; git diff --check PASS; SHA256 прежних локальных файлов вне write-set совпадают с before.json. Evidence .local/checks/hf162/{before,after}.{out,err}, before.json.
+Acceptance: предмет полностью вписан с исходным соотношением сторон по центру, текстура не расширяет слот; выбор/перенос и ограничения сохранены.
+Read-set exception: tests/Integration/ProjectTest.Crafting.cs (CraftAtelier/FinishEmbroidery) и scripts/TradeScene.cs (AcquireItem/ItemsPerSpin/EnergyRemaining/AdvanceToNextDay) для диагностики устаревшего transfer fixture; scenes/trade_scene.tscn только rg связей SlotUI/ShowcaseSlot для проверки использования сцены. source/ не читался; основные сцены/пользовательские изменения не менялись.
+Risks/blocker: нет новых; реальные сохранения не использовались, тесты в изолированной копии проекта.
+Next: пользовательская визуальная приёмка в игре; commit/push не выполнялись.
+```
+### AUDIT-20261118 — разбор входящих коммитов и обновление main
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-18. Пользователь разрешил обновление после проверки. Зависимости: нет; активных исполнителей и пересечений нет.
+
+CP-AUDIT-20261118 read-set: текущий фронт и Git refs/status/diff для HEAD 8c78d49 → origin/main 806ef2d; точные 54 пути входящего diff, 16 путей локальных изменений из backup-manifest.json; tools/verify.ps1, .vscode/settings.json, ChikagoShop.csproj/ChikagoShop.sln, scripts/Audio/MusicSettings.cs, src/ChikagoShop.Domain/Days/DaySession.cs, tests/Integration/ProjectTest.Helpers.cs. Write-set: ORCHESTRATION_PLAN.md (эта запись); .local/checks/git-review-20261118; Git refs/index/stash и обновление отслеживаемых файлов строго входящим diff, восстановление прежних локальных правок. Out of scope: source/, новая функциональность/баланс/save schema, commit/push, реальные user:// сохранения.
+
+Приёмка: разбор runtime diff, build/domain tests/import и rendered day-expiry/day-start/sound-effects/intro-music/game-music/music-settings/intro-transition; main=origin/main обычным fast-forward, локальные правки сохранены и совместимы; повторная сборка и проверки пересечений после восстановления. Команды/evidence: логи .local/checks/git-review-20261118; git diff --check, rev-list, status; SHA256 backup-manifest. Копия origin/main имеет отдельное config/name для изоляции user://.
+```text
+Task: AUDIT-20261118
+Recommended status: REVIEW → принято координатором, DONE
+Changed: main fast-forward 8c78d49 → 806ef2d (10 incoming commits, HEAD=origin/main). Прежние 14 modified + 2 untracked восстановлены; docs/GAMEPLAY.md и localization/en.tres содержат обе добавленные части, main_menu сохраняет пользовательскую разметку/UID/отсутствие лишних overrides и получает SoundVolume. Восемь файлов без пересечения побайтно совпадают с backup-manifest; проверены diff остальных восьми. Backup: stash 8c4b2803c055d785ea8f4222537e39cb2559e176 и .local/checks/git-review-20261118/backup + local-changes.patch. Новых commit/push нет.
+Checks: origin snapshot build PASS (0 warnings/errors); dotnet test PASS 153/153; повторный import PASS (четыре прежних duplicate UID warnings); rendered day-expiry/day-start/sound-effects/intro-music/game-music/music-settings/intro-transition PASS, stderr пуст. После восстановления локальных изменений workspace/isolated build PASS; workspace/isolated import PASS (те же UID warnings); rendered intro-latency/intro-transition/intro-music/tutorial/music-settings/day-expiry/sound-effects PASS, stderr пуст. git diff --check PASS, no unmerged paths, rev-list HEAD...origin/main=0/0. Evidence .local/checks/git-review-20261118/*.out/*.err и review.md.
+Acceptance: блокирующих дефектов/опасных операций во входящем runtime diff не найдено; сохранения/schema/DialoguePlayer не менялись. Таймаут/ручное закрытие автоматически открывают следующий день после продажи текущему покупателю/закрытия крафта; отдельная шина SFX и громкость работают в паузе. Локальные быстрый skip и camera handoff сохранились и проверены вместе с incoming.
+Read-set exception: нет; source/ не читался, user:// тестов изолирован отдельным config/name. Первый cold import кратковременно жаловался на ещё не импортированный font; повторный import и runtime группы без ошибок.
+Risks/blocker: четыре прежних duplicate UID warnings UI; полная default ProjectTest-группа не запускалась, выполнены целевые группы. Два пересекающихся файла сцены/переводов объединены вручную; сохранён stash для восстановления.
+Next: пользовательская проверка обновлённой игры.
+```
+### HF-153 — пауза перед передачей камеры обучению
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-16; HF-152 DONE, активных пересечений нет.
+
+CP-HF-153 read-set: текущий фронт; scripts/UI/FirstTradeTutorial.cs, scenes/UI/FirstTradeTutorial.tscn, scripts/Camera/WorldCamera.cs, scripts/Presentation/TutorialCameraCheckpoint.cs; tests/Integration/ProjectTest.{Tutorial,Helpers,Menu}.cs, tests/ProjectTest.cs; localization/en.tres, docs/GAMEPLAY.md; main_menu.tscn/trade_scene.tscn только для сохранности. Write-set: ORCHESTRATION_PLAN.md; scripts/UI/FirstTradeTutorial.cs; scenes/UI/FirstTradeTutorial.tscn (длительность паузы в инспекторе); scripts/Camera/WorldCamera.cs (только readonly IsDragging); tests/Integration/ProjectTest.Tutorial.cs; localization/en.tres; docs/GAMEPLAY.md; .local/checks/hf153 и изолированный project HF139. Out of scope: source/, обе пользовательские сцены, незакоммиченный HF-152/другие скрипты/арт, TradeScene.cs/домен/игровая save schema/баланс/commit/push.
+
+Приёмка: после выполнения обеих задач камеры не происходит мгновенного захвата управления.2с спокойного времени камера ещё свободна, оба действия отмечены выполненными и показано объяснение предстоящего автоматического ведения. Продолжение pan/zoom продлевает паузу; удержание drag не прерывается перелётом. Пауза/skip-confirmation/модальные окна не расходуют задержку; resize/смена языка не вызывают ранний захват. Затем единственный плавный перелёт к обычному следующему этапу с прежней блокировкой камеры. Reload во время ожидания сохраняет фазу и даёт полную паузу; старые tutorial cfg без нового optional флага и более поздние этапы не заставляют повторять практику. Новая партия/replay/подтверждённый skip очищают ожидание без поздних переходов. Проверки: dotnet build; rendered --tutorial-checks и --intro-transition-checks; RU/EN960×540/1280×720 pending-state screenshot; git diff-check и сохранность остального рабочего дерева.
+
+```text
+Task: HF-153
+Recommended status: REVIEW → принято координатором, DONE
+Changed: после выполнения pan и zoom камера остаётся свободной на2с спокойного времени. Показываются обе галочки и локализованное объяснение, что дальше обучение само направит камеру. Новые принятые pan/zoom сбрасывают ожидание; удерживаемый drag, pause, skip-confirmation, mini-game/card/failure/success не расходуют его. Затем прежняя плавная передача следующему шагу и NavigationLocked. Export CameraCompletionDelaySeconds=2 задан в tutorial scene. WorldCamera получил только readonly IsDragging. В tutorial cfg добавлен optional camera_handoff_done: reload ожидания показывает success и полную паузу без нового перелёта, более поздние этапы и старые cfg с обеими выполненными задачами пропускают повторный review; restart сбрасывает фазу. Игровая save schema/TradeScene и незакоммиченный HF152 не менялись.
+Checks: local/isolated dotnet build PASS (0 warnings/errors). Rendered --tutorial-checks PASS: реальные drag/wheel, обе галочки без мгновенного lock; reload pending; RU/EN960×540/1280×720 fitting; zoom/pan продолжают работать после выполнения; pause дольше задержки не передаёт управление; skip-confirmation дольше задержки не передаёт управление, cancel возвращает свободную камеру без refocus; удержание drag дольше задержки не прерывается, после release/оставшейся паузы единственный переход Start и обычная блокировка остальных этапов. Legacy cfg без нового флага восстанавливает Select без повторного ожидания; весь прежний walkthrough/продажа/finish/skip/replay/new run/reload PASS. Rendered --intro-transition-checks PASS: natural/skip/null fallback/Continue и новая практика. stderr обеих групп пуст. Просмотрен tutorial-camera-complete-ru-960.png, UI помещается; снимки всех4 комбинаций сохранены в TEMP. git diff-check PASS; SHA256 всех прежних изменённых файлов вне write-set совпадает с snapshot HF153, включая обе пользовательские сцены и код/тесты ускорения пролога. Evidence .local/checks/hf153.
+Acceptance: игрок видит успех и предупреждение, успевает закончить жест перед автоматическим ведением камеры; пауза/модалы/загрузка/старый прогресс работают.
+Read-set exception: нет; source/ не читался. Проверки в изолированном user:// HF139, реальные сохранения не затрагивались.
+Risks/blocker: нет новых.
+Next: пользовательская приёмка; commit/push не выполнялись.
+```
+
+### HF-152 — быстрый переход после пропуска пролога
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-16; HF-151 DONE, активных пересечений нет.
+
+CP-HF-152 read-set: текущий фронт; scripts/MainMenu.cs, scripts/Audio/IntroMusicDirector.cs, scripts/Dialogue/DialoguePlayer.cs; scenes/main_menu.tscn (GameScene/MusicDirector read-only, пользовательские изменения сохраняются), scenes/trade_scene.tscn (только сохранность); tests/Integration/ProjectTest.{Menu,IntroMusic,Helpers}.cs, tests/ProjectTest.cs; ChikagoShop.csproj, project.godot, docs/GAMEPLAY.md, локальная GodotSharp API reference (ResourceLoader). Write-set: ORCHESTRATION_PLAN.md, scripts/MainMenu.cs (preload/вход после intro/continue, без изменения разметки), scripts/Audio/IntroMusicDirector.cs (отдельный короткий fade пропуска), новый scripts/Presentation/SceneResourceWarmup.cs/.uid при необходимости; tests/Integration/ProjectTest.{Menu,IntroMusic}.cs, tests/ProjectTest.cs (отдельная latency-группа), docs/GAMEPLAY.md; .local/checks/hf152 и изолированный project HF139. Out of scope: source/, обе пользовательские сцены, TradeScene.cs/новая доменная логика, баланс/save schema/арт/прочие музыкальные переходы/commit/push.
+
+Диагностика: skip сейчас ждёт1,5с ExitFadeSeconds, после чего EnterGame синхронно GD.Load при сериализованном GameScene=null. Приёмка: короткое мягкое затухание по skip, естественное завершение сохраняет прежнее затухание; игровая сцена готовится фоном, fade/loading идут совместно, ожидание не блокирует UI. Нет двойного входа/повторного сброса сохранения при спаме; Continue и пустой override работают; удаление меню/отмена не дают позднего входа; прежние уровни/crossfade/RU-EN/обучение сохраняются. Наблюдаемая проверка: замер от настоящего skip до первого игрового кадра до/после, холодный и подготовленный путь; музыка завершает fade до запуска игры. Команды: dotnet build, rendered --intro-latency-checks, --intro-transition-checks, --intro-music-checks, --music-settings-checks; git diff-check и hash пользовательских сцен.
+
+```text
+Task: HF-152
+Recommended status: REVIEW → принято координатором, DONE
+Changed: пропуск пролога использует отдельный плавный fade0,18с вместо обязательных1,5с; естественное завершение сохраняет1,5с. MainMenu больше не загружает trade_scene синхронно в инициализаторе/после skip: SceneResourceWarmup запускает ResourceLoader.LoadThreadedRequest в Ready меню и проверяет status по кадрам, забирая PackedScene только после Loaded. Ресурс готовится одновременно с меню/диалогом/fade, инстанцирование остаётся на основном потоке. EnterGame асинхронно дожидается готовности и ставит _startingGame до await, чтобы не было повторного входа/сброса save. Прекращение жизни меню отменяет вход; фоновый request завершается без обращения к удалённому меню. Явный PackedScene override и Continue сохранены. Интерфейс/сцены/доменные правила не менялись.
+Checks: local/isolated build PASS (0 warnings/errors); local import PASS (прежние4 duplicate UI UID warnings). Rendered --intro-latency-checks PASS: настоящий skip → первый игровой кадр, немедленный пропуск и после0,8с чтения; готовность в фоне, отсутствие второго входа, новый день со стартовыми ресурсами и ожидающим стартом, удаление меню во время fade не вызывает поздний вход. До:1,886с/1,624с; после:0,852с/0,310с на этом ПК (первый/подготовленный путь). Rendered --intro-transition-checks PASS: natural/skip с реальным и пустым override, Continue сохранённой партии и новое обучение. Rendered --intro-music-checks PASS: прежние уровни/cues/crossfades, плавность обеих половин короткого skip fade из3 стадий, спам skip/Play, natural fade, cancel/выход. Rendered --music-settings-checks PASS: menu/pause/громкость/языки/раскладка. stderr всех4 групп пуст. SHA256 обеих пользовательских сцен совпадает с snapshot HF152; git diff-check PASS. Evidence .local/checks/hf152.
+Acceptance: задержка заметно уменьшена в замере, подготовленная сцена открывается после короткого затухания; обычный конец пролога/Continue/сохранения/обучение и музыкальные переходы работают.
+Read-set exception: нет; использована локальная GodotSharp.xml reference из SDK4.7.2 для threaded API. source/ и пользовательские сохранения не читались; тесты в изолированном user:// HF139.
+Risks/blocker: время холодного чтения/первого кадра зависит от ПК, полностью устранить его нельзя; новых блокеров нет. Прежние4 duplicate UID warnings чужих кнопок.
+Next: пользовательская приёмка; ускорение не коммитилось и не пушилось. Предыдущая задача HF150 опубликована в HF151 (771f173; report8c78d49).
+```
 
 ### HF-161 — коммиты и публикация текущей версии в main
 

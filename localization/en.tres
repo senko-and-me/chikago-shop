@@ -3,8 +3,14 @@
 [resource]
 locale = "en"
 messages = {
+&"Передвижение камеры": &"Camera movement",
+&"Масштабирование": &"Zooming",
+&"Зажмите ЛКМ на свободном фоне и двигайте мышь, чтобы осмотреть магазин. Заполните шкалу передвижения до 100%.": &"Hold the left mouse button on the background and move the mouse to explore the shop. Fill the movement bar to 100%.",
+&"Передвижение освоено! Теперь перейдём к масштабированию.": &"Movement mastered! Next, let us practice zooming.",
+&"Прокрутите колесо мыши, чтобы приблизить или отдалить магазин. Заполните шкалу масштабирования до 100%.": &"Scroll the mouse wheel to zoom in or out of the shop. Fill the zoom bar to 100%.",
 &"Закончить день": &"End day",
 &"Громкость звуков": &"Sound volume",
+&"Отлично! Движение и масштабирование освоены. Через пару секунд продолжим обучение. Дальше камера будет сама показывать нужные места.": &"Great! You have learned to move and zoom. The tutorial will continue in a couple of seconds. After that, the camera will guide you to the relevant places.",
 &"День {0}": &"Day {0}",
 &"Следующая квота: {0}$": &"Next quota: ${0}",
 &"До квоты: {0} день": &"Quota due in {0} day",

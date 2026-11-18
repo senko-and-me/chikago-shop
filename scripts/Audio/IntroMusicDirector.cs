@@ -19,6 +19,7 @@ public partial class IntroMusicDirector : Node
     [Export] public double IntroFadeSeconds { get; set; } = 4;
     [Export] public double CrossfadeSeconds { get; set; } = 2.5;
     [Export] public double ExitFadeSeconds { get; set; } = 1.5;
+    [Export] public double SkipFadeSeconds { get; set; } = 0.18;
 
     public string CurrentCue { get; private set; } = "menu";
     public bool IsSilent => _voices.All(v => !v.Player.Playing);
@@ -108,11 +109,11 @@ public partial class IntroMusicDirector : Node
         }
     }
 
-    public Task<bool> FadeToSilence()
+    public Task<bool> FadeToSilence(bool skipped = false)
     {
         if (_silence != null) return _silence.Task;
         CurrentCue = "silence";
-        foreach (var voice in _voices) Ramp(voice, 0, ExitFadeSeconds);
+        foreach (var voice in _voices) Ramp(voice, 0, skipped ? SkipFadeSeconds : ExitFadeSeconds);
         _silence = new TaskCompletionSource<bool>();
         if (IsSilent) CompleteSilence();
         return _silence?.Task ?? Task.FromResult(true);

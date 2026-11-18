@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Threading.Tasks;
 using Godot;
 
@@ -26,13 +27,13 @@ public partial class ProjectTest
         void MouseButtonAt(Vector2 point, MouseButton button, bool pressed) => Root.PushInput(new InputEventMouseButton
         { Position = point, GlobalPosition = point, ButtonIndex = button, Pressed = pressed,
             ButtonMask = pressed && button == MouseButton.Left ? MouseButtonMask.Left : 0 }, true);
-        async Task PanCamera()
+        async Task PanCamera(int segments = 4)
         {
             Vector2 point = new(30, Root.Size.Y * 0.55f);
             Root.PushInput(new InputEventMouseMotion { Position = point, GlobalPosition = point }, true);
             await Frame();
             MouseButtonAt(point, MouseButton.Left, true);
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < segments; i++)
             {
                 point += new Vector2(25, 0);
                 Root.PushInput(new InputEventMouseMotion { Position = point, GlobalPosition = point,
@@ -84,6 +85,26 @@ public partial class ProjectTest
         }
         void Step(FirstTradeTutorial.Step expected) => Check(tutorial.IsActive && tutorial.IsShowing && tutorial.CurrentStep == expected,
             $"Tutorial must follow actual gameplay state: expected {expected}, got {tutorial.CurrentStep}");
+        ProgressBar CameraBar() => tutorial.GetNode<ProgressBar>("Root/Panel/Content/CameraProgress");
+        async Task CheckPracticeLayout(string stage)
+        {
+            foreach (Vector2I viewport in new[] { new Vector2I(960, 540), new Vector2I(1280, 720) })
+            foreach (string language in new[] { "en", "ru" })
+            {
+                Root.Size = viewport;
+                TranslationServer.SetLocale(language);
+                await Frame();
+                var panel = tutorial.GetNode<Control>("Root/Panel");
+                var title = tutorial.GetNode<Label>("Root/Panel/Content/Title");
+                Check(Root.GetVisibleRect().Encloses(panel.GetGlobalRect()) &&
+                    panel.GetGlobalRect().Encloses(CameraBar().GetGlobalRect()) && CameraBar().ShowPercentage &&
+                    title.Tr(title.Text) == (tutorial.CurrentStep == FirstTradeTutorial.Step.Camera
+                        ? language == "en" ? "Camera movement" : "Передвижение камеры"
+                        : language == "en" ? "Zooming" : "Масштабирование"),
+                    "Each camera stage must show its own localized title and a fitted percentage bar");
+                using (await CapturePresentation($"tutorial-{stage}-{language}-{viewport.X}")) { }
+            }
+        }
         void Highlight()
         {
             var outline = tutorial.GetNode<Control>("Root/Highlight");
@@ -110,6 +131,15 @@ public partial class ProjectTest
                 "An intermediate camera frame must move smoothly without completing the manual practice");
             await CameraSettled();
             Check(!initialCamera.NavigationLocked, "Practice must allow manual camera movement");
+            Check(CameraBar().Value == 0, "Movement must start at zero percent");
+            await CheckPracticeLayout("movement-zero");
+            await CameraSettled();
+            Vector2 earlyWheelPoint = new(30, Root.Size.Y * 0.55f);
+            MouseButtonAt(earlyWheelPoint, MouseButton.WheelUp, true);
+            MouseButtonAt(earlyWheelPoint, MouseButton.WheelUp, false);
+            await Frame();
+            Check(tutorial.CameraZoomProgress == 0 && !tutorial.CameraZoomDone,
+                "Zooming before its separate stage must not complete or accumulate zoom progress");
             using (var image = await CapturePresentation("tutorial-camera")) { }
             var panelRect = tutorial.GetNode<Control>("Root/Panel").GetGlobalRect();
             Vector2 uiPoint = panelRect.Position + new Vector2(20, 20);
@@ -119,17 +149,114 @@ public partial class ProjectTest
             MouseButtonAt(uiPoint + new Vector2(90, 0), MouseButton.Left, false);
             await Frame();
             Check(!tutorial.CameraPanDone && !tutorial.CameraZoomDone, "Dragging a tutorial panel must not count as world navigation");
+            await PanCamera(1);
+            Check(CameraBar().Value > 0 && CameraBar().Value < 100 && !tutorial.CameraPanDone,
+                "A short real drag must show partial movement progress instead of a binary marker");
+            float partialPan = tutorial.CameraPanProgress;
+            using (await CapturePresentation("tutorial-movement-partial")) { }
+            await Reload();
+            Check(Mathf.IsEqualApprox(tutorial.CameraPanProgress, partialPan), "Partial movement percent must survive reload");
+            await CameraSettled();
             await PanCamera();
             Check(tutorial.CameraPanDone && !tutorial.CameraZoomDone, "Real left-button background drag must complete only movement");
-            await Reload();
             Step(FirstTradeTutorial.Step.Camera);
+            Check(CameraBar().Value == 100, "The completed movement stage must display 100% before advancing");
+            var movementCamera = game.GetNode<WorldCamera>("Camera2D");
+            Vector2 movementPosition = movementCamera.Position, movementZoom = movementCamera.Zoom;
+            Vector2 holdPoint = new(30, Root.Size.Y * 0.55f);
+            MouseButtonAt(holdPoint, MouseButton.Left, true);
+            await ToSignal(CreateTimer(0.7), SceneTreeTimer.SignalName.Timeout);
+            Step(FirstTradeTutorial.Step.Camera);
+            Check(movementCamera.IsDragging && CameraBar().Value == 100,
+                "Movement at 100% must remain on its stage until the player releases the drag");
+            MouseButtonAt(holdPoint, MouseButton.Left, false);
+            await ToSignal(CreateTimer(0.7), SceneTreeTimer.SignalName.Timeout);
+            Step(FirstTradeTutorial.Step.CameraZoom);
+            Check(CameraBar().Value == 0 && !movementCamera.IsFocusing &&
+                movementCamera.Position.IsEqualApprox(movementPosition) && movementCamera.Zoom.IsEqualApprox(movementZoom),
+                "Zoom must start at 0% without another automatic camera flight");
+            await CheckPracticeLayout("zoom-zero");
+            await Reload();
+            Step(FirstTradeTutorial.Step.CameraZoom);
             Check(tutorial.CameraPanDone && !tutorial.CameraZoomDone, "Partial camera practice must survive reload");
             await CameraSettled();
             Vector2 wheelPoint = new(30, Root.Size.Y * 0.55f);
             MouseButtonAt(wheelPoint, MouseButton.WheelUp, true);
             MouseButtonAt(wheelPoint, MouseButton.WheelUp, false);
             await Frame();
-            Check(tutorial.CameraZoomDone, "A real wheel input must complete zoom practice");
+            Check(tutorial.CameraZoomProgress == 25 && CameraBar().Value == 25 && !tutorial.CameraZoomDone,
+                "One accepted wheel step must show 25% in the separate zoom stage");
+            using (await CapturePresentation("tutorial-zoom-partial")) { }
+            await Reload();
+            Step(FirstTradeTutorial.Step.CameraZoom);
+            Check(tutorial.CameraZoomProgress == 25, "Partial zoom percent must survive reload");
+            await CameraSettled();
+            for (int i = 0; i < 3; i++)
+            {
+                MouseButtonAt(wheelPoint, MouseButton.WheelUp, true);
+                MouseButtonAt(wheelPoint, MouseButton.WheelUp, false);
+                await Frame();
+                Check(CameraBar().Value == (i + 2) * 25, "Each accepted wheel step must advance zoom by 25%");
+            }
+            Check(tutorial.CameraZoomDone, "Four accepted wheel inputs must complete zoom practice");
+            Step(FirstTradeTutorial.Step.CameraZoom);
+            Check(tutorial.IsCameraCompletionPending && !game.GetNode<WorldCamera>("Camera2D").NavigationLocked &&
+                CameraBar().Value == 100,
+                "Completed zoom must show 100% and keep control during the grace period");
+            await Reload();
+            Step(FirstTradeTutorial.Step.CameraZoom);
+            Check(tutorial.IsCameraCompletionPending && !game.GetNode<WorldCamera>("Camera2D").IsFocusing,
+                "Reload during the grace period must restore its success message without taking over the camera");
+            foreach (Vector2I viewport in new[] { new Vector2I(960, 540), new Vector2I(1280, 720) })
+            foreach (string language in new[] { "en", "ru" })
+            {
+                Root.Size = viewport;
+                TranslationServer.SetLocale(language);
+                await Frame();
+                var body = tutorial.GetNode<Label>("Root/Panel/Content/Body");
+                var panel = tutorial.GetNode<Control>("Root/Panel");
+                Check(body.Tr(body.Text).StartsWith(language == "en" ? "Great!" : "Отлично!") &&
+                    Root.GetVisibleRect().Encloses(panel.GetGlobalRect()) && panel.GetGlobalRect().Encloses(body.GetGlobalRect()),
+                    "The handoff explanation must be localized and fit both viewports");
+                using (await CapturePresentation($"tutorial-camera-complete-{language}-{viewport.X}")) { }
+            }
+            var reviewCamera = game.GetNode<WorldCamera>("Camera2D");
+            game.GetNode<PauseMenu>("PauseMenu").Open();
+            await ToSignal(CreateTimer(tutorial.CameraCompletionDelaySeconds + 0.1, true), SceneTreeTimer.SignalName.Timeout);
+            Check(tutorial.IsCameraCompletionPending, "Pause must not consume the camera handoff delay");
+            game.GetNode<PauseMenu>("PauseMenu").Close();
+            await Frame();
+            Check(!reviewCamera.NavigationLocked && !reviewCamera.IsFocusing,
+                "Resuming the grace period must preserve free control without replaying a camera flight");
+            await ClickControl(game, "FirstTradeTutorial/Root/Panel/Content/Actions/Skip");
+            await ToSignal(CreateTimer(tutorial.CameraCompletionDelaySeconds + 0.1, true), SceneTreeTimer.SignalName.Timeout);
+            Check(tutorial.IsCameraCompletionPending && tutorial.IsSkipConfirmationOpen,
+                "Skip confirmation must not consume the handoff delay or trigger a flight behind the modal");
+            await ClickControl(game, "FirstTradeTutorial/Root/SkipConfirmation/Center/Panel/Content/Actions/Cancel");
+            Check(!reviewCamera.NavigationLocked && !reviewCamera.IsFocusing && tutorial.IsCameraCompletionPending,
+                "Cancelling Skip must restore the remaining grace period with free camera control");
+            reviewCamera.SetProcess(true);
+            MouseButtonAt(wheelPoint, MouseButton.WheelUp, true);
+            MouseButtonAt(wheelPoint, MouseButton.WheelUp, false);
+            await ToSignal(CreateTimer(0.15), SceneTreeTimer.SignalName.Timeout);
+            Vector2 reviewPosition = reviewCamera.Position;
+            await PanCamera();
+            Check(!reviewCamera.Position.IsEqualApprox(reviewPosition) && tutorial.IsCameraCompletionPending,
+                "The player must still be able to zoom and pan after the objectives are complete");
+            reviewCamera.SetProcess(false);
+            await ToSignal(CreateTimer(tutorial.CameraCompletionDelaySeconds * 0.6), SceneTreeTimer.SignalName.Timeout);
+            Step(FirstTradeTutorial.Step.CameraZoom);
+            MouseButtonAt(wheelPoint, MouseButton.Left, true);
+            await ToSignal(CreateTimer(tutorial.CameraCompletionDelaySeconds + 0.1), SceneTreeTimer.SignalName.Timeout);
+            Check(reviewCamera.IsDragging && !reviewCamera.NavigationLocked && tutorial.IsCameraCompletionPending,
+                "A held drag must never be interrupted by the automatic handoff");
+            MouseButtonAt(wheelPoint, MouseButton.Left, false);
+            ulong reviewDeadline = Time.GetTicksMsec() + (ulong)((tutorial.CameraCompletionDelaySeconds + 2) * 1000);
+            while (tutorial.IsCameraCompletionPending)
+            {
+                Check(Time.GetTicksMsec() < reviewDeadline, "The handoff must happen after a calm delay and release");
+                await Frame();
+            }
             Step(FirstTradeTutorial.Step.Start);
             await CheckCameraLocked();
             Check(!tutorial.HasNode("Root/Panel/Content/Navigation"), "Later steps must not repeat manual navigation instructions");
@@ -151,8 +278,13 @@ public partial class ProjectTest
             Step(FirstTradeTutorial.Step.Select);
             await CheckCameraLocked();
             Highlight();
+            var legacyTutorial = new ConfigFile();
+            Check(legacyTutorial.Load(progress) == Error.Ok, "Tutorial fixture must be saved");
+            legacyTutorial.EraseSectionKey("tutorial", "camera_handoff_done");
+            legacyTutorial.Save(progress);
             await Reload();
             Step(FirstTradeTutorial.Step.Select);
+            Check(!tutorial.IsCameraCompletionPending, "An older save with completed navigation must not replay the new handoff delay");
             await CameraSettled();
             var slots = game.GetNode<InventoryUI>("HUD/InventoryUI").Container;
             await ClickControl(game, "HUD/InventoryUI/ScrollContainer/HBoxContainer/" + slots.GetChild(0).Name);
@@ -300,6 +432,8 @@ public partial class ProjectTest
             Step(FirstTradeTutorial.Step.Camera);
             Check(!tutorial.CameraPanDone && !tutorial.CameraZoomDone,
                 "A new run must reset a previous skip and both camera-practice flags");
+            Check(tutorial.CameraPanProgress == 0 && tutorial.CameraZoomProgress == 0 && CameraBar().Value == 0,
+                "A new run must clear both fractional camera progress values and the displayed percentage");
             await ClickControl(game, "FirstTradeTutorial/Root/Panel/Content/Actions/Skip");
             game.NewGame();
             await Frame();

@@ -4,8 +4,11 @@ using Godot;
 // Observes gameplay during practice and resets the practice run through the existing NewGame action on exit.
 public partial class FirstTradeTutorial : CanvasLayer
 {
-    public enum Step { Camera, Start, Craft, Select, Place, WaitBuyer, Offer, Summary }
+    public enum Step { Camera, Start, Craft, Select, Place, WaitBuyer, Offer, Summary, CameraZoom }
+    private const float PanGoal = 64;
+    private const int ZoomGoal = 4;
     [Export] public double CameraTravelSeconds { get; set; } = 0.8;
+    [Export] public double CameraCompletionDelaySeconds { get; set; } = 2;
     public Step CurrentStep { get; private set; }
     public bool IsActive { get; private set; }
     public bool IsShowing => _root?.Visible == true;
@@ -13,6 +16,9 @@ public partial class FirstTradeTutorial : CanvasLayer
     public Control Target { get; private set; }
     public bool CameraPanDone { get; private set; }
     public bool CameraZoomDone { get; private set; }
+    public float CameraPanProgress => CameraPanDone ? 100 : _panDistance / PanGoal * 100;
+    public float CameraZoomProgress => CameraZoomDone ? 100 : _zoomSteps * 100f / ZoomGoal;
+    public bool IsCameraCompletionPending => IsActive && _cameraZoomStarted && CameraPanDone && CameraZoomDone && !_cameraHandoffDone;
     public bool IsSkipConfirmationOpen => _confirmation?.Visible == true;
     private TradeScene _game;
     private Control _root;
@@ -25,7 +31,13 @@ public partial class FirstTradeTutorial : CanvasLayer
     private bool _sawSale;
     private int _lastAccepted;
     private WorldCamera _camera;
-    private Label _cameraProgress;
+    private ProgressBar _cameraProgress;
+    private Label _title;
+    private int _zoomSteps;
+    private bool _cameraZoomStarted;
+    private double _panCompletionElapsed;
+    private bool _progressDirty;
+    private double _progressSaveElapsed;
     private Step? _appliedCameraStep;
     private bool _ownsOverview;
     private float _panDistance;
@@ -33,6 +45,8 @@ public partial class FirstTradeTutorial : CanvasLayer
     private Control _confirmation;
     private bool _ownsConfirmationPause;
     private bool _finishing;
+    private bool _cameraHandoffDone;
+    private double _cameraCompletionElapsed;
 
     public override void _Ready()
     {
@@ -42,7 +56,8 @@ public partial class FirstTradeTutorial : CanvasLayer
         _highlight = GetNode<Panel>("Root/Highlight");
         _body = GetNode<Label>("Root/Panel/Content/Body");
         _done = GetNode<Button>("Root/Panel/Content/Actions/Done");
-        _cameraProgress = GetNode<Label>("Root/Panel/Content/CameraProgress");
+        _cameraProgress = GetNode<ProgressBar>("Root/Panel/Content/CameraProgress");
+        _title = GetNode<Label>("Root/Panel/Content/Title");
         _camera = _game.GetNode<WorldCamera>("Camera2D");
         _camera.UserPanned += OnUserPanned;
         _camera.UserZoomed += OnUserZoomed;
@@ -65,6 +80,15 @@ public partial class FirstTradeTutorial : CanvasLayer
         bool finished = restored && config.GetValue("tutorial", "finished", false).AsBool();
         CameraPanDone = restored && config.GetValue("tutorial", "camera_pan_done", false).AsBool();
         CameraZoomDone = restored && config.GetValue("tutorial", "camera_zoom_done", false).AsBool();
+        float storedPan = restored ? config.GetValue("tutorial", "camera_pan_distance", 0f).AsSingle() : 0;
+        _panDistance = CameraPanDone ? PanGoal : float.IsFinite(storedPan) ? Mathf.Clamp(storedPan, 0, PanGoal) : 0;
+        _zoomSteps = CameraZoomDone ? ZoomGoal : restored ? Mathf.Clamp(config.GetValue("tutorial", "camera_zoom_steps", 0).AsInt32(), 0, ZoomGoal) : 0;
+        CameraPanDone |= _panDistance >= PanGoal;
+        CameraZoomDone |= _zoomSteps >= ZoomGoal;
+        _cameraZoomStarted = CameraPanDone && config.GetValue("tutorial", "camera_zoom_started", true).AsBool();
+        // Older saves with both actions done have already moved on from camera practice.
+        _cameraHandoffDone = CameraPanDone && CameraZoomDone &&
+            config.GetValue("tutorial", "camera_handoff_done", true).AsBool();
         _initialized = true;
         // Empty SavePath is a transient scene preview/test; explicit Restart still works there.
         if (!finished && !string.IsNullOrEmpty(ProgressPath) && (restored || _game.CurrentDay == 1))
@@ -90,7 +114,12 @@ public partial class FirstTradeTutorial : CanvasLayer
         CloseConfirmation();
         StopCamera();
         CameraPanDone = CameraZoomDone = false;
+        _cameraHandoffDone = false;
+        _cameraCompletionElapsed = 0;
         _panDistance = 0;
+        _zoomSteps = 0;
+        _cameraZoomStarted = false;
+        _panCompletionElapsed = 0;
         IsActive = true;
         _acceptedAtStart = _game.Accepted;
         _lastAccepted = _game.Accepted;
@@ -172,13 +201,42 @@ public partial class FirstTradeTutorial : CanvasLayer
         config.SetValue("tutorial", "accepted_at_start", _acceptedAtStart);
         config.SetValue("tutorial", "camera_pan_done", CameraPanDone);
         config.SetValue("tutorial", "camera_zoom_done", CameraZoomDone);
+        config.SetValue("tutorial", "camera_handoff_done", _cameraHandoffDone);
+        config.SetValue("tutorial", "camera_pan_distance", _panDistance);
+        config.SetValue("tutorial", "camera_zoom_steps", _zoomSteps);
+        config.SetValue("tutorial", "camera_zoom_started", _cameraZoomStarted);
         Error error = config.Save(ProgressPath);
         if (error != Error.Ok) GD.PushWarning($"Tutorial progress could not be saved: {error}");
+        _progressDirty = false;
+        _progressSaveElapsed = 0;
     }
 
     public override void _Process(double delta)
     {
         if (!_initialized || !IsActive) return;
+        if (_progressDirty && (_progressSaveElapsed += delta) >= 0.25) Save(false);
+        if (CameraPanDone && !_cameraZoomStarted && IsShowing && !GetTree().Paused && !IsSkipConfirmationOpen &&
+            !_game.CraftMiniGameOpen && !_game.DayTransitionOpen && !_game.Failed && !_game.Completed &&
+            !_camera.IsDragging && !_camera.IsFocusing && !_camera.IsReturningToOverview)
+        {
+            _panCompletionElapsed += delta;
+            if (_panCompletionElapsed >= 0.6)
+            {
+                _cameraZoomStarted = true;
+                Save(false);
+            }
+        }
+        if (IsCameraCompletionPending && !GetTree().Paused && !IsSkipConfirmationOpen &&
+            !_game.CraftMiniGameOpen && !_game.DayTransitionOpen && !_game.Failed && !_game.Completed &&
+            !_camera.IsDragging && !_camera.IsFocusing && !_camera.IsReturningToOverview)
+        {
+            _cameraCompletionElapsed += delta;
+            if (_cameraCompletionElapsed >= CameraCompletionDelaySeconds)
+            {
+                _cameraHandoffDone = true;
+                Save(false);
+            }
+        }
         if (_game.Accepted < _lastAccepted) { _acceptedAtStart = _game.Accepted; _sawSale = false; Save(false); }
         _lastAccepted = _game.Accepted;
         _sawSale |= _game.Accepted > _acceptedAtStart;
@@ -205,8 +263,16 @@ public partial class FirstTradeTutorial : CanvasLayer
         if (_viewportSize != size) { StopCamera(); _viewportSize = size; }
         _root.Show();
         Target = null;
-        if (!CameraPanDone || !CameraZoomDone) SetStep(Step.Camera,
-            "Осмотритесь: зажмите ЛКМ на свободном фоне и подвигайте камеру. Затем измените масштаб колесом мыши. Выполните оба действия, чтобы продолжить.", null);
+        if (!_cameraHandoffDone)
+        {
+            if (!_cameraZoomStarted) SetStep(Step.Camera,
+                CameraPanDone ? "Передвижение освоено! Теперь перейдём к масштабированию."
+                    : "Зажмите ЛКМ на свободном фоне и двигайте мышь, чтобы осмотреть магазин. Заполните шкалу передвижения до 100%.", null);
+            else SetStep(Step.CameraZoom,
+                IsCameraCompletionPending
+                    ? "Отлично! Движение и масштабирование освоены. Через пару секунд продолжим обучение. Дальше камера будет сама показывать нужные места."
+                    : "Прокрутите колесо мыши, чтобы приблизить или отдалить магазин. Заполните шкалу масштабирования до 100%.", null);
+        }
         else if (_sawSale) SetStep(Step.Summary, "Первая продажа готова! Следите за энергией и суммой квоты в панели дня. К сроку на счёте должна быть нужная сумма. Нажмите «Понятно», чтобы начать первый день заново со стартовыми ресурсами.",
             _game.GetNode<Control>("HUD/Root/ProgressPanel"));
         else if (_game.TradeActive) SetStep(Step.Offer,
@@ -241,36 +307,51 @@ public partial class FirstTradeTutorial : CanvasLayer
 
     private void SetStep(Step step, string message, Control target)
     {
+        bool cameraStep = step is Step.Camera or Step.CameraZoom;
+        bool continuingPractice = (_appliedCameraStep is Step.Camera or Step.CameraZoom) && cameraStep;
         CurrentStep = step;
-        _camera.NavigationLocked = step != Step.Camera;
+        _camera.NavigationLocked = !cameraStep;
         _body.Text = message;
         Target = target;
         _done.Visible = step == Step.Summary;
-        _cameraProgress.Visible = step == Step.Camera;
-        _cameraProgress.Text = GameLocalization.Format("Перемещение: {0}  •  Масштаб: {1}",
-            CameraPanDone ? "✓" : "—", CameraZoomDone ? "✓" : "—");
+        _title.Text = step == Step.Camera ? "Передвижение камеры" : step == Step.CameraZoom ? "Масштабирование" : "Первая продажа";
+        _cameraProgress.Visible = cameraStep;
+        _cameraProgress.Value = step == Step.Camera ? CameraPanProgress : CameraZoomProgress;
         if (_appliedCameraStep != step && !_game.DayTransitionOpen)
         {
-            GetNode<TutorialCameraCheckpoint>("CameraCheckpoints/" + step).MoveCamera(_game, _camera, CameraTravelSeconds);
-            _ownsOverview = GetNode<TutorialCameraCheckpoint>("CameraCheckpoints/" + step).Overview;
+            // Resuming/resize during the grace period must preserve the player's view.
+            if (!IsCameraCompletionPending && !continuingPractice)
+            {
+                string checkpoint = "CameraCheckpoints/" + (cameraStep ? Step.Camera : step);
+                GetNode<TutorialCameraCheckpoint>(checkpoint).MoveCamera(_game, _camera, CameraTravelSeconds);
+                _ownsOverview = GetNode<TutorialCameraCheckpoint>(checkpoint).Overview;
+            }
             _appliedCameraStep = step;
         }
     }
 
-    private bool Practicing => IsActive && IsShowing && CurrentStep == Step.Camera && !GetTree().Paused;
+    private bool Practicing => IsActive && IsShowing && (CurrentStep is Step.Camera or Step.CameraZoom) && !GetTree().Paused;
 
     private void OnUserPanned(Vector2 displacement)
     {
-        if (!Practicing || CameraPanDone) return;
-        _panDistance += displacement.Length();
-        if (_panDistance < 64) return;
+        if (!Practicing) return;
+        _cameraCompletionElapsed = 0;
+        if (CameraPanDone) return;
+        _panDistance = Mathf.Min(PanGoal, _panDistance + displacement.Length());
+        _progressDirty = true;
+        if (_panDistance < PanGoal) return;
         CameraPanDone = true;
         Save(false);
     }
 
     private void OnUserZoomed()
     {
-        if (!Practicing || CameraZoomDone) return;
+        if (!Practicing) return;
+        _cameraCompletionElapsed = 0;
+        if (CurrentStep != Step.CameraZoom || CameraZoomDone) return;
+        _zoomSteps++;
+        _progressDirty = true;
+        if (_zoomSteps < ZoomGoal) return;
         CameraZoomDone = true;
         Save(false);
     }
@@ -287,6 +368,7 @@ public partial class FirstTradeTutorial : CanvasLayer
 
     public override void _ExitTree()
     {
+        if (IsActive && _progressDirty) Save(false);
         CloseConfirmation();
         if (GodotObject.IsInstanceValid(_game)) _game.NewGameStarted -= OnNewGameStarted;
         if (!GodotObject.IsInstanceValid(_camera)) return;

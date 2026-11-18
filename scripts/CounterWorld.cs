@@ -4,6 +4,8 @@ using System.Linq;
 
 public partial class CounterWorld : Node2D
 {
+    // Contact point in the cashier background's pixel coordinates, on the clear part of the counter.
+    [Export] public Vector2 CounterItemContact { get; set; } = new(930, 744);
     private Node2D _item = null!;
     private string _itemKind = "hat";
     private bool _itemVisible = false;
@@ -43,6 +45,19 @@ public partial class CounterWorld : Node2D
                 Name = item.Kind, Texture = texture, Scale = Vector2.One * scale,
                 Position = new Vector2(64, -48), Visible = false
             });
+        }
+        var background = GetNode<Sprite2D>("TradingRoom/TradingRoomBackground");
+        Vector2 contact = _item.ToLocal(background.ToGlobal(CounterItemContact));
+        foreach (var sprite in _item.GetChildren().OfType<Sprite2D>())
+        {
+            if (sprite.Texture == null) continue;
+            using var image = sprite.Texture.GetImage();
+            Rect2I ink = image.GetUsedRect();
+            if (ink.Size == Vector2I.Zero) continue;
+            // Align the artwork itself: transparent padding differs between catalogue items.
+            Vector2 bottomCenter = (Vector2)ink.Position + new Vector2(ink.Size.X / 2f, ink.Size.Y);
+            Vector2 localContact = sprite.GetRect().Position + bottomCenter;
+            sprite.Position = contact - sprite.Transform.BasisXform(localContact);
         }
         RefreshItem();
     }

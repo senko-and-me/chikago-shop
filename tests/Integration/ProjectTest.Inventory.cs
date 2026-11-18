@@ -7,6 +7,65 @@ using ChikagoShop.Domain.Days;
 // Subsystem checks share the ProjectTest runner and fixture helpers.
 public partial class ProjectTest
 {
+    private async Task TestInventoryIconAspect()
+    {
+        Vector2I originalSize = Root.Size;
+        var layer = new CanvasLayer { Layer = 500 };
+        Root.AddChild(layer);
+        var slot = GD.Load<PackedScene>("res://scenes/UI/SlotUI.tscn").Instantiate<SlotUI>();
+        layer.AddChild(slot);
+        slot.Position = new Vector2(200, 180);
+        slot.MouseFilter = Control.MouseFilterEnum.Ignore;
+        using var background = new StyleBoxFlat { BgColor = Colors.Black };
+        foreach (string state in new[] { "normal", "hover", "pressed", "focus", "disabled" })
+            slot.AddThemeStyleboxOverride(state, background);
+        var icon = slot.GetNode<TextureRect>("Icon");
+        icon.TextureFilter = CanvasItem.TextureFilterEnum.Nearest;
+        try
+        {
+            foreach (var window in new[] { new Vector2I(960, 540), new Vector2I(1280, 720) })
+            foreach (var cell in new[] { new Vector2(108, 108), new Vector2(108, 72) })
+            foreach (var source in new[] { new Vector2I(800, 200), new Vector2I(200, 800), new Vector2I(800, 800) })
+            {
+                Root.Size = window;
+                slot.Size = cell;
+                using var pixels = Image.CreateEmpty(source.X, source.Y, false, Image.Format.Rgba8);
+                pixels.Fill(Colors.White);
+                using var texture = ImageTexture.CreateFromImage(pixels);
+                slot.SetItemTexture(texture);
+                using var frame = await CapturePresentation();
+                Check(slot.Size == cell, "Source texture dimensions must not expand an inventory cell");
+                Vector2 viewportScale = new Vector2(frame.GetWidth(), frame.GetHeight()) / Root.GetVisibleRect().Size;
+                Rect2 bounds = ScreenBounds(icon);
+                Vector2 topLeft = bounds.Position * viewportScale, size = bounds.Size * viewportScale;
+                int left = frame.GetWidth(), right = -1, top = frame.GetHeight(), bottom = -1;
+                for (int y = (int)Mathf.Ceil(topLeft.Y); y < (int)(topLeft.Y + size.Y); y++)
+                for (int x = (int)Mathf.Ceil(topLeft.X); x < (int)(topLeft.X + size.X); x++)
+                {
+                    if (frame.GetPixel(x, y).R < 0.95f) continue;
+                    left = Math.Min(left, x); right = Math.Max(right, x);
+                    top = Math.Min(top, y); bottom = Math.Max(bottom, y);
+                }
+                float fit = Mathf.Min(size.X / source.X, size.Y / source.Y);
+                Vector2 expected = new Vector2(source.X, source.Y) * fit;
+                Check(right >= left && Math.Abs(right - left + 1 - expected.X) <= 2 &&
+                      Math.Abs(bottom - top + 1 - expected.Y) <= 2,
+                    $"Inventory artwork must fit without distortion or cropping: source={source}, cell={cell}, window={window}, drawn={right-left+1}x{bottom-top+1}, expected={expected}");
+                Vector2 center = new((left + right + 1) / 2f, (top + bottom + 1) / 2f);
+                Check(center.DistanceTo(topLeft + size / 2) <= 2,
+                    "Fitted inventory artwork must remain centered after resizing");
+                slot.SetItemTexture(null);
+            }
+        }
+        finally
+        {
+            slot.SetItemTexture(null);
+            layer.QueueFree();
+            Root.Size = originalSize;
+            await ToSignal(this, SignalName.ProcessFrame);
+        }
+    }
+
     private async Task TestLockedRoomDrag()
     {
         var game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
@@ -141,10 +200,16 @@ public partial class ProjectTest
         game.SetProcess(false);
         game.GetNode<WorldCamera>("Camera2D").SetProcess(false);
         game.Score = 10000;
-        CraftAtelier(game);
-        CraftAtelier(game);
-        AdvanceDayForTest(game);
-        CraftAtelier(game);
+        game.TryUnlockMusicWorkshop(); // Both showrooms are exercised by Shift-transfer below.
+        // Transfers need a stock of items, independent of the current items-per-craft balance.
+        while (game.StoredItems.Length < 8)
+        {
+            game.EnergyRemaining = game.EnergyCapacity;
+            int previousCount = game.StoredItems.Length;
+            CraftAtelier(game);
+            Check(game.StoredItems.Length > previousCount, "Transfer fixture crafting must produce items");
+        }
+        game.EndDay(); // Start the waiting day so that showcased items can attract buyers.
         await ToSignal(this, SignalName.ProcessFrame);
         var inventory = game.GetNode<InventoryUI>("HUD/InventoryUI");
         var first = game.GetNode<Button>("World/ShowroomLeft/Showcases/Slot1");
@@ -273,9 +338,13 @@ public partial class ProjectTest
         game.NewGame();
         CraftAtelier(game);
         game.Score = 0;
-        for (int i = 0; i < 4 && !game.Failed; i++) AdvanceDayForTest(game);
+        for (int i = 0; i < 7 && !game.Failed; i++)
+        {
+            if (!game.DayStarted) game.EndDay();
+            AdvanceDayForTest(game);
+        }
         before = game.StoredItems;
-        Check(game.Failed && before.Length == 3, "Terminal transfer checks need a failed game with remaining items");
+        Check(game.Failed && before.Length > 0, "Terminal transfer checks need a failed game with remaining items");
         var remainingSlot = (SlotUI)inventory.Container.GetChild(0);
         Check(remainingSlot.CreateDragData(0).VariantType == Variant.Type.Nil,
             "A terminal game must reject item drags");

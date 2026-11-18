@@ -7,6 +7,70 @@ using ChikagoShop.Domain.Days;
 // Subsystem checks share the ProjectTest runner and fixture helpers.
 public partial class ProjectTest
 {
+    private async Task TestCounterItemPlacement()
+    {
+        var game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
+        game.SavePath = "";
+        game.GetNode<FirstTradeTutorial>("FirstTradeTutorial").ProgressPath = "";
+        var item = game.GetNode<Node2D>("World/TradingRoom/Item");
+        var authoredScales = item.GetChildren().OfType<Sprite2D>().ToDictionary(sprite => sprite, sprite => sprite.Scale);
+        Vector2I originalWindow = Root.Size;
+        Root.AddChild(game);
+        game.SetProcess(false);
+        var camera = game.GetNode<WorldCamera>("Camera2D");
+        camera.SetProcess(false);
+        var world = game.GetNode<CounterWorld>("World");
+        var background = game.GetNode<Sprite2D>("World/TradingRoom/TradingRoomBackground");
+        var panel = item.GetNode<Control>("TradePanel");
+        Vector2 panelPosition = panel.Position;
+        try
+        {
+            world.ItemVisible = true;
+            panel.Show();
+            foreach (var window in new[] { new Vector2I(960, 540), new Vector2I(1280, 720) })
+            foreach (float zoom in new[] { 0.7f, 1.4f })
+            {
+                Root.Size = window;
+                camera.Zoom = Vector2.One * zoom;
+                camera.Position = background.ToGlobal(new Vector2(700, 590));
+                camera.ForceUpdateScroll();
+                foreach (var sprite in authoredScales.Keys)
+                {
+                    world.ItemKind = sprite.Name.ToString().ToLowerInvariant();
+                    Check(sprite.Visible && item.GetChildren().OfType<Sprite2D>().Count(value => value.Visible) == 1,
+                        "Changing the trade item must show exactly one catalogue variant");
+                    using var image = sprite.Texture.GetImage();
+                    Rect2I ink = image.GetUsedRect();
+                    Vector2 localBottom = sprite.GetRect().Position + (Vector2)ink.Position +
+                        new Vector2(ink.Size.X / 2f, ink.Size.Y);
+                    Vector2 actual = sprite.ToGlobal(localBottom);
+                    Vector2 expected = background.ToGlobal(new Vector2(930, 744));
+                    Check(actual.DistanceTo(expected) < 0.1f,
+                        $"{sprite.Name}: the visible bottom edge must touch the cashier countertop, actual={actual}, expected={expected}");
+                    Check(sprite.Scale == authoredScales[sprite] && panel.Position == panelPosition,
+                        "Counter alignment must preserve artwork scale and the independent trade panel position");
+                    Rect2 visibleBounds = sprite.GlobalTransform * new Rect2(sprite.GetRect().Position + (Vector2)ink.Position, ink.Size);
+                    Check(!panel.GetGlobalRect().Intersects(visibleBounds), "The trade panel must leave the counter item visible");
+                    if (window.X == 1280 && zoom > 1 && sprite.Name.ToString().ToLowerInvariant() is "hat" or "guitar" or "cello")
+                    {
+                        await ToSignal(CreateTimer(0.08), SceneTreeTimer.SignalName.Timeout);
+                        Check(sprite.IsVisibleInTree(), "The sampled counter item must stay visible while rendering");
+                        using var frame = await CapturePresentation();
+                        frame.SavePng(System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"chikago-hf163-{sprite.Name}.png"));
+                    }
+                }
+            }
+            world.ItemVisible = false;
+            Check(!item.Visible, "Ending item presentation must still hide the item and its trade panel together");
+        }
+        finally
+        {
+            game.QueueFree();
+            Root.Size = originalWindow;
+            await ToSignal(this, SignalName.ProcessFrame);
+        }
+    }
+
     private async Task TestTradeScene()
     {
         var scene = GD.Load<PackedScene>("res://scenes/trade_scene.tscn")

@@ -7,6 +7,58 @@ using ChikagoShop.Domain.Days;
 // Subsystem checks share the ProjectTest runner and fixture helpers.
 public partial class ProjectTest
 {
+    private async Task TestIntroLatency()
+    {
+        Check(OS.GetUserDataDir().Contains("ChikagoShopStartupSmoke"), "Latency checks require isolated player saves");
+        var scene = GD.Load<PackedScene>("res://scenes/main_menu.tscn");
+        foreach (double readingSeconds in new[] { 0.0, 0.8 })
+        {
+            var menu = scene.Instantiate<MainMenu>();
+            menu.GameScene = null;
+            Root.AddChild(menu);
+            CurrentScene = menu;
+            menu.OnPlayPressed();
+            menu.GetNode<TextureButton>("MainMenuContainer/Menu/NewGameButton").EmitSignal(BaseButton.SignalName.Pressed);
+            await ToSignal(this, SignalName.ProcessFrame);
+            if (readingSeconds > 0)
+                await ToSignal(CreateTimer(readingSeconds), SceneTreeTimer.SignalName.Timeout);
+            if (readingSeconds > 0)
+                Check(menu.IsGameScenePrepared, "Reading the intro must prepare the game before Skip");
+            ulong began = Time.GetTicksMsec();
+            await ClickControl(menu, "IntroSkipLayer/SkipButton");
+            // Repeated input during loading/fade must not create another run.
+            if (GodotObject.IsInstanceValid(menu) && menu.IsInsideTree()) menu.OnPlayPressed();
+            while (CurrentScene is not TradeScene)
+            {
+                Check(Time.GetTicksMsec() - began < 10000, "Skip must reach gameplay without a stuck transition");
+                await ToSignal(this, SignalName.ProcessFrame);
+            }
+            Check(CurrentScene is TradeScene && !Paused, "Measured skip must enter the actual game");
+            await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+            double elapsed = (Time.GetTicksMsec() - began) / 1000.0;
+            GD.Print($"INTRO_SKIP_LATENCY reading={readingSeconds:F1}s click-to-first-game-frame={elapsed:F3}s");
+            Check(elapsed < (readingSeconds > 0 ? 1.0 : 3.0),
+                "Prepared Skip must avoid the old mandatory 1.5-second wait; cold loading must also stay bounded");
+            var game = (TradeScene)CurrentScene;
+            Check(game.CurrentDay == 1 && !game.DayStarted && game.Score == game.StartingMoney,
+                "A fast transition still creates exactly one fresh, unstarted day");
+            game.QueueFree();
+            CurrentScene = null;
+            await ToSignal(this, SignalName.ProcessFrame);
+        }
+        var cancelled = scene.Instantiate<MainMenu>();
+        cancelled.GameScene = null;
+        Root.AddChild(cancelled);
+        CurrentScene = cancelled;
+        cancelled.OnPlayPressed();
+        cancelled.GetNode<TextureButton>("MainMenuContainer/Menu/NewGameButton").EmitSignal(BaseButton.SignalName.Pressed);
+        cancelled.GetNode<TextureButton>("IntroSkipLayer/SkipButton").EmitSignal(BaseButton.SignalName.Pressed);
+        cancelled.QueueFree();
+        CurrentScene = null;
+        await ToSignal(CreateTimer(0.5), SceneTreeTimer.SignalName.Timeout);
+        Check(CurrentScene == null && !Paused, "Leaving during warmup/fade must not enter a game later");
+    }
+
     private async Task TestIntroTransition()
     {
         Check(OS.GetUserDataDir().Contains("ChikagoShopStartupSmoke"),
@@ -70,6 +122,7 @@ public partial class ProjectTest
         CurrentScene = continueMenu;
         continueMenu.OnPlayPressed();
         continueMenu.GetNode<TextureButton>("MainMenuContainer/Menu/ContinueButton").EmitSignal(BaseButton.SignalName.Pressed);
+        await WaitForIntroMusicExit(continueMenu);
         await ToSignal(this, SignalName.ProcessFrame);
         await ToSignal(this, SignalName.ProcessFrame);
         Check(CurrentScene is TradeScene continued && continued.LoadedSavedGame &&
@@ -97,7 +150,8 @@ public partial class ProjectTest
             Check(gameFont.HasChar(letter), $"The game font must include English and Russian letters: {letter}");
         Check(menu.GetNode<CheckButton>("SettingsMenuContainer/Settings/FullscreenButton").GetThemeFont("font") == gameFont,
             "Explicit menu fonts must use the same completed font as the global UI theme");
-        Check(menu.GameScene.ResourcePath == "res://scenes/trade_scene.tscn", "Play must open the trade scene");
+        Check(menu.GameScene == null || menu.GameScene.ResourcePath == "res://scenes/trade_scene.tscn",
+            "The game scene may prepare asynchronously while the menu remains usable");
         foreach (string path in new[]
         {
             "MainMenuContainer/Menu/PlayButton", "MainMenuContainer/Menu/SettingsButton",
@@ -270,8 +324,17 @@ public partial class ProjectTest
 
     private async Task WaitForIntroMusicExit(MainMenu menu)
     {
-        var music = menu.GetNode<IntroMusicDirector>("MusicDirector");
-        if (music.CurrentCue == "silence") music._Process(music.ExitFadeSeconds);
+        if (GodotObject.IsInstanceValid(menu) && menu.IsInsideTree())
+        {
+            var music = menu.GetNode<IntroMusicDirector>("MusicDirector");
+            if (music.CurrentCue == "silence") music._Process(music.ExitFadeSeconds);
+        }
+        ulong began = Time.GetTicksMsec();
+        while (CurrentScene == menu || CurrentScene == null)
+        {
+            Check(Time.GetTicksMsec() - began < 5000, "Music exit and asynchronous scene preparation must finish");
+            await ToSignal(this, SignalName.ProcessFrame);
+        }
         await ToSignal(this, SignalName.ProcessFrame);
     }
 

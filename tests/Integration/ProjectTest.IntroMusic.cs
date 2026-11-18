@@ -223,12 +223,21 @@ public partial class ProjectTest
                 if (stage != "base") director.ApplyIntroCue(stage);
                 director._Process(0.2);
                 var skip = menu.GetNode<TextureButton>("IntroSkipLayer/SkipButton");
+                float[] gains = menu.FindChildren("*", "AudioStreamPlayer", true, false)
+                    .Cast<AudioStreamPlayer>().Select(player => player.VolumeLinear).ToArray();
+                Check(director.SkipFadeSeconds > 0 && director.SkipFadeSeconds <= 0.25 &&
+                    director.SkipFadeSeconds < director.ExitFadeSeconds, "Skip must use its own short, smooth fade");
                 skip.EmitSignal(BaseButton.SignalName.Pressed);
                 skip.EmitSignal(BaseButton.SignalName.Pressed);
                 menu.OnPlayPressed();
                 Check(CurrentScene == menu && director.CurrentCue == "silence",
                     "Skip, including repeated input during a crossfade, must wait for silence");
-                director._Process(director.ExitFadeSeconds);
+                Check(gains.SequenceEqual(menu.FindChildren("*", "AudioStreamPlayer", true, false)
+                    .Cast<AudioStreamPlayer>().Select(player => player.VolumeLinear)),
+                    "Skip must ramp from current gains without abruptly cutting or resetting a crossfade");
+                director._Process(director.SkipFadeSeconds / 2);
+                Check(CurrentScene == menu && !director.IsSilent, "The first half of a fast fade must still be smooth");
+                director._Process(director.SkipFadeSeconds / 2);
                 await ToSignal(this, SignalName.ProcessFrame);
                 await ToSignal(this, SignalName.ProcessFrame);
                 Check(CurrentScene.Name == "IntroMusicGameplay", "Skip must enter gameplay once after the fade");
