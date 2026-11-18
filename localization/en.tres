@@ -40,7 +40,7 @@ messages = {
 &"Повторить обучение": &"Replay tutorial",
 &"Понятно": &"Got it",
 &"Колесо — масштаб. Зажмите ЛКМ на фоне, чтобы двигать камеру.": &"Scroll to zoom. Hold the left mouse button on the background to move the camera.",
-&"Первая продажа готова! Следите за энергией и квотой. Нажмите «Понятно», чтобы начать заново.": &"First sale done! Watch your energy and quota. Click Got it to start fresh.",
+&"Наведите мышь на пачку сигарет: там день и квота. Затем нажмите «Понятно».": &"Hover over the cigarette pack to see the day and quota. Then click Got it.",
 &"«✓» — продать. «×» — сменить покупателя за попытку; цена может упасть. Продайте предмет.": &"✓ sells. × spends a reroll to change buyers; the price may drop. Sell the item.",
 &"Магазин закрыт. Завершите текущую сделку — начнётся следующий день.": &"Shop closed. Finish the sale to advance to the next day.",
 &"Нажмите «Начать» на часах, чтобы запустить день.": &"Press Start on the clock to begin the day.",

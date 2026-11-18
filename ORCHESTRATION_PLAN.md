@@ -9,6 +9,50 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### HF-171 — публикация жёлтой рамки, ручной пачки и pan3000
+
+Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-18; HF-169/HF-170 DONE, пользователь разрешил commit/push; активных пересечений нет.
+
+CP-HF-171 read-set: текущий фронт; Git refs/status/diff; готовые изменения и evidence HF169/HF170; обе пользовательские сцены только hash. Write-set: Git index/commits/main/origin/main; ORCHESTRATION_PLAN.md; публикация готовых docs/GAMEPLAY.md, localization/en.tres, scenes/UI/FirstTradeTutorial.tscn, scripts/Presentation/MonochromePresentation.cs, scripts/UI/{FirstTradeTutorial,ProgressPanel}.cs, shaders/monochrome.gdshader, tests/Integration/ProjectTest.{Presentation,Tutorial}.cs; .local/checks/hf171. Out of scope: source/, пользовательские main_menu.tscn/trade_scene.tscn, новая функциональность/баланс/schema/force push.
+
+Приёмка: готовые проверенные изменения опубликованы обычным push, HEAD=origin/main; пользовательские сцены побайтно сохранены локально. Проверки: совпадение runtime/test/scene/shader/localization с tested isolated copy; прежние build/tutorial/progress-toggle/presentation PASS; staged diff --check, push/ref/status/hash readback.
+
+### HF-170 — порог передвижения3000px
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-18; HF-169 DONE, активных пересечений нет.
+
+CP-HF-170 read-set: текущий фронт; scripts/UI/FirstTradeTutorial.cs; tests/Integration/ProjectTest.Tutorial.cs; docs/GAMEPLAY.md; Git status/hash для сохранности прежних изменений. Write-set: ORCHESTRATION_PLAN.md; scripts/UI/FirstTradeTutorial.cs (только PanGoal); tests/Integration/ProjectTest.Tutorial.cs (проверки3000px); docs/GAMEPLAY.md (число); .local/checks/hf170 и изолированная копия .local/checks/git-review-20261118/project. Out of scope: source/, остальные предыдущие изменения и пользовательские сцены, zoom/тексты/сохранения/тайминги/commit/push.
+
+Приёмка: шкала движения заполняется за3000 принятых экранных пикселей;300px=10%, partial reload сохраняет10%,2975px ещё не завершает этап,3000px завершает. Остальной tutorial работает. Проверки: build, rendered --tutorial-checks, git diff --check, SHA256 файлов вне write-set.
+
+```text
+Task: HF-170
+Recommended status: REVIEW → принято координатором, DONE
+Changed: PanGoal512→3000; docs/GAMEPLAY.md обновлено; regression проверяет300px=10%, reload10%,2975px<100%,3000px=100%. Остальные настройки/предыдущие изменения сохранены.
+Checks: local/isolated dotnet build PASS (0 warnings/errors); rendered --tutorial-checks PASS: новая точная граница/сохранение partial, zoom16/instant transition, полный walkthrough/продажа/skip/replay/new run/reload, ручное наведение на пачку и жёлтая рамка. stderr пуст; git diff --check PASS; SHA256 прежних изменённых файлов вне write-set совпадают с before.json. Evidence .local/checks/hf170.
+Acceptance: шкала передвижения требует3000 реальных принятых экранных пикселей.
+Read-set exception: нет, source/ не читался; test user:// изолирован.
+Risks/blocker: нет новых.
+Next: пользовательская проверка; commit/push не выполнялись.
+```
+### HF-169 — ручное наведение на пачку, жёлтая рамка и более длинный pan
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-18; HF-168 DONE, активных пересечений нет.
+
+CP-HF-169 read-set: текущий фронт; scripts/UI/{ProgressPanel,FirstTradeTutorial}.cs; scripts/Presentation/MonochromePresentation.cs; shaders/monochrome.gdshader; scenes/UI/{FirstTradeTutorial,CigaretteProgress}.tscn; scenes/trade_scene.tscn только HUD Progress/Toggle read-only; tests/Integration/ProjectTest.{Tutorial,Ui,Presentation,Helpers}.cs; localization/en.tres; docs/GAMEPLAY.md. Write-set: ORCHESTRATION_PLAN.md; scripts/UI/ProgressPanel.cs (убрать tutorial auto-expand); scripts/UI/FirstTradeTutorial.cs (pan512 и Summary hint/target); scenes/UI/FirstTradeTutorial.tscn (жёлтый Outline/group); scripts/Presentation/MonochromePresentation.cs и shaders/monochrome.gdshader (сохранить цвет только рамки); tests/Integration/ProjectTest.{Tutorial,Presentation}.cs (в Presentation только Start в clock fixture и ожидание menu warmup перед shutdown для shader regression); localization/en.tres; docs/GAMEPLAY.md; .local/checks/hf169 и изолированная копия .local/checks/git-review-20261118/project. Out of scope: source/, обе основные пользовательские сцены, домен/баланс/schema/WorldCamera, zoom16 и отсутствие итоговой задержки, прочие локальные изменения/commit/push.
+
+Приёмка: Summary не раскрывает пачку автоматически, подсказка просит навести мышь и выделяет её кнопку; настоящее наведение раскрывает, уход закрывает как раньше. Рамка жёлтая в финальном monochrome render, её центр и остальной мир не получают цвет от исключения; pause/modal скрывают её. Pan512px вместо256; zoom/сохранения/остальной tutorial работают. Проверки: build; rendered --tutorial-checks/--progress-toggle-checks/--presentation-checks; pixel yellow и screenshots; git diff --check, SHA256 основных сцен.
+
+```text
+Task: HF-169
+Recommended status: REVIEW → принято координатором, DONE
+Changed: ProgressPanel больше не раскрывает пачку из-за Summary; настоящее наведение/клавиатура/закрепление работают как прежде. Summary просит навести мышь и выделяет ProgressToggleButton вместо всей панели. PanGoal256→512px, zoom16 и немедленный handoff прежние. Outline жёлтый (1;0,85;0), помечен группой; monochrome shader сохраняет только3px границу, её середина не получает новое цветовое исключение. При modal/hidden рамка не сохраняется. Tests/Tutorial —512px, отсутствие auto-expand/reload, hover/leave и pixel yellow/gray-center probe. Tests/Presentation — явный Start перед clock expiry и bounded wait фонового warmup меню перед shutdown; прежний fixture не запускал день и прерывал background load при Quit.
+Checks: local/isolated dotnet build PASS (0 warnings/errors). Rendered --tutorial-checks PASS:300px теперь58,59%, partial reload/full512, zoom16/instant handoff, весь walkthrough; жёлтая рамка Start/pack и grayscale red probe в центре pack; Summary остаётся свёрнутым до настоящего mouse motion, раскрывается и закрывается по hover/leave, reload не раскрывает. Rendered --progress-toggle-checks PASS: анимации/языки/клавиатура/победа/проигрыш/reload/recovery. Rendered --presentation-checks PASS после актуализации fixture: grayscale/menu/world/clock alpha/table colors/pause/craft/cards/resize/cleanup; stderr финальных трёх групп пуст. Просмотрены tutorial-yellow-start и tutorial-yellow-pack. git diff --check PASS; SHA256 пользовательских основных сцен совпадают со snapshot. Evidence .local/checks/hf169.
+Acceptance: игрок сам наводится на пачку в обучении, указатель жёлтый в финальном рендере, перемещение заполняет шкалу вдвое медленнее.
+Read-set exception: нет; write-set Presentation fixture расширен координатором для валидной общей проверки shader после диагностики устаревшего теста. source/ не читался, test user:// изолирован.
+Risks/blocker: нет новых. Прежние явное закрепление/клавиатура и раскрытие при терминальном исходе вне обучения сохранены.
+Next: пользовательская визуальная приёмка; commit/push не выполнялись.
+```
 ### HF-168 — публикация светлых мини-игр и обновлённого обучения
 
 Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-18; HF-166/HF-167 DONE, пользователь разрешил commit/push; активных пересечений нет.

@@ -5,7 +5,7 @@ using Godot;
 public partial class FirstTradeTutorial : CanvasLayer
 {
     public enum Step { Camera, Start, Craft, Select, Place, WaitBuyer, Offer, Summary, CameraZoom }
-    private const float PanGoal = 256;
+    private const float PanGoal = 3000;
     private const int ZoomGoal = 16;
     [Export] public double CameraTravelSeconds { get; set; } = 0.8;
     public Step CurrentStep { get; private set; }
@@ -264,8 +264,8 @@ public partial class FirstTradeTutorial : CanvasLayer
             else SetStep(Step.CameraZoom,
                 "Крутите колесо в обе стороны до 100%.", null);
         }
-        else if (_sawSale) SetStep(Step.Summary, "Первая продажа готова! Следите за энергией и квотой. Нажмите «Понятно», чтобы начать заново.",
-            _game.GetNode<Control>("HUD/Root/ProgressPanel"));
+        else if (_sawSale) SetStep(Step.Summary, "Наведите мышь на пачку сигарет: там день и квота. Затем нажмите «Понятно».",
+            _game.GetNode<Control>("HUD/Root/ProgressToggleButton"));
         else if (_game.TradeActive) SetStep(Step.Offer,
             "«✓» — продать. «×» — сменить покупателя за попытку; цена может упасть. Продайте предмет.",
             _game.GetNode<Control>("World/TradingRoom/Item/TradePanel"));

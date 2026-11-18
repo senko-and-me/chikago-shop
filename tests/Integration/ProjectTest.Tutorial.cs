@@ -27,7 +27,7 @@ public partial class ProjectTest
         void MouseButtonAt(Vector2 point, MouseButton button, bool pressed) => Root.PushInput(new InputEventMouseButton
         { Position = point, GlobalPosition = point, ButtonIndex = button, Pressed = pressed,
             ButtonMask = pressed && button == MouseButton.Left ? MouseButtonMask.Left : 0 }, true);
-        async Task PanCamera(int segments = 12)
+        async Task PanCamera(int segments = 24)
         {
             Vector2 point = new(30, Root.Size.Y * 0.55f);
             Root.PushInput(new InputEventMouseMotion { Position = point, GlobalPosition = point }, true);
@@ -115,6 +115,37 @@ public partial class ProjectTest
             Check(outline.MouseFilter == Control.MouseFilterEnum.Ignore && tutorial.GetNode<Control>("Root").MouseFilter == Control.MouseFilterEnum.Ignore,
                 "Tutorial highlights and full-screen root must leave gameplay input available");
         }
+        async Task CheckYellowHighlight(string name)
+        {
+            var outline = tutorial.GetNode<Control>("Root/Highlight");
+            using (var image = await CapturePresentation(name))
+            {
+                Vector2 scale = new Vector2(image.GetWidth(), image.GetHeight()) / Root.GetVisibleRect().Size;
+                Rect2 rect = ScreenBounds(outline);
+                int yellow = 0;
+                for (int y = (int)(rect.Position.Y * scale.Y); y < (int)(rect.End.Y * scale.Y); y++)
+                for (int x = (int)(rect.Position.X * scale.X); x < (int)(rect.End.X * scale.X); x++)
+                {
+                    Color pixel = image.GetPixel(x, y);
+                    if (pixel.R > 0.8f && pixel.G > 0.6f && pixel.B < 0.25f) yellow++;
+                }
+                Check(yellow > 10, "The tutorial frame must render yellow through the monochrome filter");
+            }
+            // The clock already preserves its original color; use the pack to isolate the new frame exception.
+            if (tutorial.Target.Name != "ProgressToggleButton") return;
+            var probe = new ColorRect { Color = Colors.Red, Size = new Vector2(12, 12),
+                Position = outline.Size / 2 - new Vector2(6, 6), MouseFilter = Control.MouseFilterEnum.Ignore };
+            outline.AddChild(probe);
+            using (var image = await CapturePresentation())
+            {
+                Vector2 scale = new Vector2(image.GetWidth(), image.GetHeight()) / Root.GetVisibleRect().Size;
+                Vector2 center = ScreenBounds(probe).GetCenter() * scale;
+                Color pixel = image.GetPixel((int)center.X, (int)center.Y);
+                Check(!HasChroma(pixel), "The tutorial exception must leave its hollow center grayscale");
+            }
+            probe.QueueFree();
+            await Frame();
+        }
         try
         {
             foreach (string path in new[] { save, progress }) if (FileAccess.FileExists(path)) DirAccess.RemoveAbsolute(path);
@@ -150,15 +181,20 @@ public partial class ProjectTest
             MouseButtonAt(uiPoint + new Vector2(90, 0), MouseButton.Left, false);
             await Frame();
             Check(!tutorial.CameraPanDone && !tutorial.CameraZoomDone, "Dragging a tutorial panel must not count as world navigation");
-            await PanCamera(4);
+            await PanCamera(12);
             Check(CameraBar().Value > 0 && CameraBar().Value < 100 && !tutorial.CameraPanDone,
-                "The old movement distance must now show partial progress, requiring four times as much movement");
+                "A short drag must accumulate partial progress without ending movement practice");
+            Check(Mathf.IsEqualApprox(tutorial.CameraPanProgress, 10),
+                "300 accepted screen pixels must fill exactly 10% of the 3000px goal");
             float partialPan = tutorial.CameraPanProgress;
             using (await CapturePresentation("tutorial-movement-partial")) { }
             await Reload();
             Check(Mathf.IsEqualApprox(tutorial.CameraPanProgress, partialPan), "Partial movement percent must survive reload");
             await CameraSettled();
-            await PanCamera();
+            await PanCamera(107);
+            Check(!tutorial.CameraPanDone && Mathf.IsEqualApprox(tutorial.CameraPanProgress, 2975f / 3000 * 100),
+                "2975px must remain below completion after restoring partial movement");
+            await PanCamera(1);
             Check(tutorial.CameraPanDone && !tutorial.CameraZoomDone, "Real left-button background drag must complete only movement");
             Step(FirstTradeTutorial.Step.Camera);
             Check(CameraBar().Value == 100, "The completed movement stage must display 100% before advancing");
@@ -209,6 +245,7 @@ public partial class ProjectTest
             await CheckCameraLocked();
             Check(!tutorial.HasNode("Root/Panel/Content/Navigation"), "Later steps must not repeat manual navigation instructions");
             Highlight();
+            await CheckYellowHighlight("tutorial-yellow-start");
             Check(!Paused && !game.DayStarted && game.Score == game.StartingMoney && game.StoredItems.Length == 0,
                 "Starting the tutorial must not pause gameplay, spend money or generate items");
             await ClickControl(game, "HUD/Root/DayTimer/StartButton");
@@ -282,8 +319,25 @@ public partial class ProjectTest
             Step(FirstTradeTutorial.Step.Summary);
             await CheckCameraLocked();
             Check(game.Score == cash + offer && game.Accepted == 1, "The guided sale must apply exactly the normal reward once");
+            var pack = game.GetNode<ProgressPanel>("HUD/Root/ProgressPanel");
+            var toggle = game.GetNode<Control>("HUD/Root/ProgressToggleButton");
+            Root.PushInput(new InputEventMouseMotion { Position = new Vector2(800, 400), GlobalPosition = new Vector2(800, 400) }, true);
+            await ToSignal(CreateTimer(0.6), SceneTreeTimer.SignalName.Timeout);
+            Check(!pack.Expanded && tutorial.Target == toggle,
+                "Summary must highlight the pack without automatically opening it");
+            Highlight();
+            await CheckYellowHighlight("tutorial-yellow-pack");
+            Vector2 packPoint = ScreenBounds(toggle).GetCenter();
+            Root.PushInput(new InputEventMouseMotion { Position = packPoint, GlobalPosition = packPoint }, true);
+            await ToSignal(CreateTimer(0.6), SceneTreeTimer.SignalName.Timeout);
+            Check(pack.Expanded, "Only the player's real hover must reveal the tutorial pack information");
+            Root.PushInput(new InputEventMouseMotion { Position = new Vector2(800, 400), GlobalPosition = new Vector2(800, 400) }, true);
+            await ToSignal(CreateTimer(0.6), SceneTreeTimer.SignalName.Timeout);
+            Check(!pack.Expanded, "Leaving the pack during Summary must retract it normally");
             await Reload();
             Step(FirstTradeTutorial.Step.Summary);
+            Check(!game.GetNode<ProgressPanel>("HUD/Root/ProgressPanel").Expanded,
+                "Reloading Summary must not open the pack without player input");
             await ClickControl(game, "FirstTradeTutorial/Root/Panel/Content/Actions/Done");
             Check(!tutorial.IsActive && !tutorial.IsShowing, "Acknowledging the summary must complete onboarding");
             CheckFreshRun();

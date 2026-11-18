@@ -101,6 +101,7 @@ public partial class ProjectTest
             game.TryUnlockMusicWorkshop();
             game.DayUpgrades.Restore(false, DayUpgrade.None, 2, 1, 1, 1, 1);
             var clock = game.GetNode<TextureRect>("HUD/Root/DayTimer/Clock");
+            game.EndDay(); // Start the waiting day before advancing its clock to expiry.
             game._Process(91);
             Check(clock.Texture.ResourcePath.EndsWith("day_timer_expired.png"), "Expired clock must use its special red sprite");
             using (var image = await CapturePresentation("world"))
@@ -181,6 +182,13 @@ public partial class ProjectTest
             menu = GD.Load<PackedScene>("res://scenes/main_menu.tscn").Instantiate<MainMenu>();
             Root.AddChild(menu);
             using (var image = await CapturePresentation()) CheckRenderedGray(image);
+            // Finish the menu's background load before the test runner tears down the SceneTree.
+            ulong warmupDeadline = Time.GetTicksMsec() + 5000;
+            while (!menu.IsGameScenePrepared)
+            {
+                Check(Time.GetTicksMsec() < warmupDeadline, "Menu scene warmup must finish before shutdown");
+                await ToSignal(this, SignalName.ProcessFrame);
+            }
         }
         finally
         {

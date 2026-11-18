@@ -7,6 +7,7 @@ public partial class MonochromePresentation : CanvasLayer
     private const string ClockGroup = "presentation_color_clock";
     private const string TableGroup = "presentation_color_table";
     private const string ModalGroup = "presentation_covering_modal";
+    private const string TutorialHighlightGroup = "presentation_tutorial_highlight";
     private ShaderMaterial _material;
 
     public static void PreserveClock(TextureRect clock) => clock.AddToGroup(ClockGroup);
@@ -42,8 +43,21 @@ public partial class MonochromePresentation : CanvasLayer
         _material.SetShaderParameter("clock_rect", Vector4.Zero);
         _material.SetShaderParameter("table_rect_0", Vector4.Zero);
         _material.SetShaderParameter("table_rect_1", Vector4.Zero);
+        _material.SetShaderParameter("tutorial_rect", Vector4.Zero);
         foreach (var node in GetTree().GetNodesInGroup(ModalGroup))
             if (node is Control modal && modal.IsVisibleInTree()) return;
+
+        foreach (var node in GetTree().GetNodesInGroup(TutorialHighlightGroup))
+        {
+            if (node is not Panel outline || !outline.IsVisibleInTree()) continue;
+            var style = (StyleBoxFlat)outline.GetThemeStylebox("panel");
+            Vector2 screen = GetViewport().GetVisibleRect().Size;
+            if (screen.X <= 0 || screen.Y <= 0) continue;
+            _material.SetShaderParameter("tutorial_rect", Normalize(outline.GetGlobalTransformWithCanvas() * new Rect2(Vector2.Zero, outline.Size)));
+            _material.SetShaderParameter("tutorial_border", new Vector2(style.BorderWidthLeft, style.BorderWidthTop) *
+                outline.GetGlobalTransformWithCanvas().Scale.Abs() / screen);
+            break;
+        }
 
         foreach (var node in GetTree().GetNodesInGroup(ClockGroup))
         {

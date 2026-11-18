@@ -62,11 +62,9 @@ public partial class ProgressPanel : Control
         Vector2 pointer = _pointer.HasValue ? GetGlobalTransformWithCanvas().AffineInverse() * _pointer.Value : GetLocalMousePosition();
         bool onPack = new Rect2(0, 0, 46, 208).HasPoint(pointer);
         bool onOpen = Expanded && new Rect2(0, 0, 384, 208).HasPoint(pointer);
-        var tutorial = _game.GetNode<FirstTradeTutorial>("FirstTradeTutorial");
-        bool guided = tutorial.IsActive && (tutorial.CurrentStep == FirstTradeTutorial.Step.Summary);
         Control focused = GetViewport().GuiGetFocusOwner();
         bool wanted = onPack || onOpen || Pinned || _toggle.HasFocus() ||
-            focused != null && (focused == _content || _content.IsAncestorOf(focused)) || _game.Failed || _game.Completed || guided;
+            focused != null && (focused == _content || _content.IsAncestorOf(focused)) || _game.Failed || _game.Completed;
         _leaveTime = wanted ? 0 : _leaveTime + delta;
         if (wanted) SetExpanded(true);
         else if (_leaveTime >= 0.18) SetExpanded(false);

@@ -6,6 +6,8 @@ uniform sampler2D clock_texture : repeat_disable, filter_linear;
 uniform vec4 clock_rect = vec4(0.0);
 uniform vec4 table_rect_0 = vec4(0.0);
 uniform vec4 table_rect_1 = vec4(0.0);
+uniform vec4 tutorial_rect = vec4(0.0);
+uniform vec2 tutorial_border = vec2(0.0);
 uniform vec4 button_rect = vec4(0.0);
 uniform vec4 button_accent : source_color = vec4(1.0);
 uniform float button_strength = 0.0;
@@ -27,6 +29,11 @@ void fragment() {
     }
     if (inside(SCREEN_UV, table_rect_0) || inside(SCREEN_UV, table_rect_1)) {
         preserve = 1.0;
+    }
+    if (inside(SCREEN_UV, tutorial_rect)) {
+        // Preserve only the tutorial frame, leaving the artwork in its hollow center grayscale.
+        vec2 edge = min(SCREEN_UV - tutorial_rect.xy, tutorial_rect.xy + tutorial_rect.zw - SCREEN_UV);
+        if (edge.x < tutorial_border.x || edge.y < tutorial_border.y) preserve = 1.0;
     }
     COLOR = vec4(mix(vec3(luminance), source.rgb, preserve), source.a);
     if (button_strength > 0.0 && inside(SCREEN_UV, button_rect)) {
