@@ -11,12 +11,22 @@
 ## Текущий фронт
 ### HF-168 — публикация светлых мини-игр и обновлённого обучения
 
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-18; HF-166/HF-167 DONE, пользователь разрешил commit/push; активных пересечений нет.
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-18; HF-166/HF-167 DONE, пользователь разрешил commit/push; активных пересечений нет.
 
 CP-HF-168 read-set: текущий фронт; Git status/diff/refs; готовый write-set/evidence HF166/HF167; обе пользовательские сцены только hash. Write-set: Git index/commits/main/origin/main; ORCHESTRATION_PLAN.md; публикация готовых docs/GAMEPLAY.md, localization/en.tres, scenes/UI/FirstTradeTutorial.tscn, scripts/UI/EmbroideryGame.cs, scripts/UI/FirstTradeTutorial.cs, tests/Integration/ProjectTest.Crafting.cs, tests/Integration/ProjectTest.Tutorial.cs, tests/ProjectTest.cs; .local/checks/hf168. Out of scope: source/, пользовательские main_menu.tscn/trade_scene.tscn, новая функциональность/баланс/schema/force push.
 
 Приёмка: подготовленный проверенный код опубликован обычным push, HEAD=origin/main; только две пользовательские сцены остаются незакоммиченными с прежними SHA256. Проверки: прежние build/craft-contrast/embroidery-target/tutorial/intro-transition PASS; совпадение публикуемых runtime/test файлов с проверенной isolated копией; staged diff --check, refs/status/hash readback.
 
+```text
+Task: HF-168
+Recommended status: REVIEW → принято координатором, DONE
+Changed: готовые HF166/HF167 опубликованы коммитом7b87ecd в origin/main; светлые мини-игры/чёрные подписи и шкала, сложность учебных шкал×4, короткие RU/EN подсказки, немедленный переход после zoom. Две пользовательские основные сцены вне коммита.
+Checks: fetch0/0; публикуемые runtime/test/scene/localization SHA256 совпадают с проверенной isolated копией HF166/HF167; прежние build и rendered craft-contrast/embroidery-target/tutorial/intro-transition PASS. Staged diff --check PASS; обычный push PASS; HEAD=origin/main0/0; пользовательские сцены сохранены по SHA256. Новых behavioral изменений при публикации нет. Запись завершения публикуется отдельным documentation commit.
+Acceptance: проверенные изменения и тесты доступны в main, пользовательские сцены сохранены локально.
+Read-set exception: нет; source/ не читался.
+Risks/blocker: нет новых.
+Next: пользовательская проверка опубликованной игры.
+```
 ### HF-167 — сложнее шкалы, короче подсказки, без ожидания после zoom
 
 Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-18; HF-164/HF-166 DONE, активных пересечений нет.
