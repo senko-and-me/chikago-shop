@@ -12,7 +12,17 @@
 
 ### HF-161 — коммиты и публикация текущей версии в main
 
-Статус: `IN_PROGRESS`; координатор/исполнитель /root; READY 2026-11-18; HF154/155/157–160 DONE. CP-HF-161: .local/checks/hf161/CP-HF-161.md (точные scope/приёмка/проверки). Пользователь разрешил commit текущих фиксов и push всей main. Аудио и day/clock изменения сохраняются отдельными коммитами; main обновляется с сохранением обеих линий истории. ZIP/EXE/source/ не входят в публикацию.
+Статус: `DONE`; координатор/исполнитель /root; READY 2026-11-18; HF154/155/157–160 DONE. CP-HF-161: .local/checks/hf161/CP-HF-161.md (точные scope/приёмка/проверки). Пользователь разрешил commit текущих фиксов и push всей main. Аудио и day/clock изменения сохраняются отдельными коммитами; main обновляется с сохранением обеих линий истории. ZIP/EXE/source/ не входят в публикацию.
+
+
+Task: HF-161
+Recommended status: REVIEW → принято координатором, DONE
+Changed: новые коммиты26bfe68 (зловещая тема90BPM, reroll и3 stitch SFX) иa10ca34 (автопереход дней, подпись/отступы часов, физический клик после focus fix, регрессии). main fast-forward8c78d49→a10ca34 через существующий merge2193924, сохранены обе линии истории. Обычный git push origin main выполнен успешно, удалённая вершинаa10ca340907522a188be00d58f00c0b5b1941c16 подтверждена ls-remote. Все текущие runtime изменения включены; ZIP/EXE/source/ игнорируются и не опубликованы.
+Checks: fetch origin/main PASS, расхождение0/0 до объединения; diff-check/staged check PASS; сохранённые HF154 intro-music, HF155 embroidery-target, HF160 day-start/day-expiry/sound-effects PASS и build0warnings/errors подтверждены перед commit; ancestry main→feature/music и ff-only PASS; push/readback HEAD=origin/main=ls-remote PASS; рабочее дерево чистое после функциональной публикации. Повторные runtime тесты без новых правок не запускались. Прежний устаревший day-timer regression HF157 не заявляется прошедшим.
+Acceptance: пользовательские изменения сохранены логическими коммитами, вся локальная main опубликована без force. feature/music содержит оба новых функциональных коммита локально; отдельный push этой ветки не запрошен и не выполнен. Открытая ветка main.
+Read-set exception: нет; source/ не читался.
+Risks/blocker: блокеров публикации нет. EXE/ZIP в Downloads остались прежними по просьбе пользователя и ещё не включают последующие day/clock фиксы.
+Next: зафиксировать этот итоговый протокол в main, обычный push и финальная сверка refs/status.
 
 ### HF-160 — физический клик по часам между кадрами
 
