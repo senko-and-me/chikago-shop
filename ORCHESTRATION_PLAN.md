@@ -9,6 +9,50 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### HF-168 — публикация светлых мини-игр и обновлённого обучения
+
+Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-18; HF-166/HF-167 DONE, пользователь разрешил commit/push; активных пересечений нет.
+
+CP-HF-168 read-set: текущий фронт; Git status/diff/refs; готовый write-set/evidence HF166/HF167; обе пользовательские сцены только hash. Write-set: Git index/commits/main/origin/main; ORCHESTRATION_PLAN.md; публикация готовых docs/GAMEPLAY.md, localization/en.tres, scenes/UI/FirstTradeTutorial.tscn, scripts/UI/EmbroideryGame.cs, scripts/UI/FirstTradeTutorial.cs, tests/Integration/ProjectTest.Crafting.cs, tests/Integration/ProjectTest.Tutorial.cs, tests/ProjectTest.cs; .local/checks/hf168. Out of scope: source/, пользовательские main_menu.tscn/trade_scene.tscn, новая функциональность/баланс/schema/force push.
+
+Приёмка: подготовленный проверенный код опубликован обычным push, HEAD=origin/main; только две пользовательские сцены остаются незакоммиченными с прежними SHA256. Проверки: прежние build/craft-contrast/embroidery-target/tutorial/intro-transition PASS; совпадение публикуемых runtime/test файлов с проверенной isolated копией; staged diff --check, refs/status/hash readback.
+
+### HF-167 — сложнее шкалы, короче подсказки, без ожидания после zoom
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-18; HF-164/HF-166 DONE, активных пересечений нет.
+
+CP-HF-167 read-set: текущий фронт; scripts/UI/FirstTradeTutorial.cs, scenes/UI/FirstTradeTutorial.tscn; scripts/Camera/WorldCamera.cs read-only (события); tests/Integration/ProjectTest.{Tutorial,Menu,Helpers,Presentation}.cs; localization/en.tres; docs/GAMEPLAY.md. Write-set: ORCHESTRATION_PLAN.md; scripts/UI/FirstTradeTutorial.cs; scenes/UI/FirstTradeTutorial.tscn; tests/Integration/ProjectTest.Tutorial.cs; localization/en.tres; docs/GAMEPLAY.md; .local/checks/hf167 и изолированная копия .local/checks/git-review-20261118/project. Out of scope: source/, пользовательские основные сцены, незакоммиченный HF166 и прочие файлы, WorldCamera/TradeScene/домен/баланс/schema, commit/push.
+
+Приёмка: pan256px вместо64, zoom16 принятых шагов вместо4 (6,25% каждый); раннее колесо не засчитывается, предельное колесо не даёт прогресс. Подсказки короче RU/EN. После последнего zoom без таймера начинается прежний плавный переход; pause/modal/held drag не прерываются, завершённые legacy cfg и partial reload работают. Проверки: build; rendered --tutorial-checks/--intro-transition-checks, fitting RU/EN960×540/1280×720, git diff --check и SHA256 всех чужих правок.
+
+```text
+Task: HF-167
+Recommended status: REVIEW → принято координатором, DONE
+Changed: PanGoal64→256px, ZoomGoal4→16 событий (6,25% каждый); ProgressBar step0,01 для точных долей. Все основные подсказки tutorial сокращены RU/EN, сохранены риск реролла/цена+энергия/сброс после обучения. Удалены CameraCompletionDelaySeconds и счётчик2с; при выполненном zoom сразу на ближайшем свободном кадре начинается прежний плавный перелёт. Защиты pause/modal/удерживаемого drag остаются, промежуточный этап pan100→zoom0 с0,6с после release сохранён. Старые done-флаги/частичные счётчики совместимы, сохранённая старая фаза ожидания больше не ждёт. Docs обновлены.
+Checks: local/isolated build PASS (0 warnings/errors). Rendered --tutorial-checks PASS: прежнее движение100px теперь частичное, pan256/full/reload, zoom1=6,25%/reload и16 событий в обе стороны, немедленный Start+camera tween после16-го события без timer; RU/EN960×540/1280×720 fitting; восстановление старого pending cfg сразу к актуальному шагу; legacy cfg безhandoff; полный walkthrough/продажа/finish/skip/replay/new run/reload и сброс дробного прогресса. Rendered --intro-transition-checks PASS; stderr обеих групп пуст. Просмотрен zoom-zero-ru-960: короткая фраза и шкала помещаются. git diff --check PASS; SHA256 всех прежних изменённых файлов вне write-set совпадает с before.json, включая HF166 и обе пользовательские сцены. Evidence .local/checks/hf167.
+Acceptance: обе шкалы требуют в4раза больше действий, тексты короче, дополнительное ожидание после масштабирования убрано.
+Read-set exception: нет, source/ не читался; test user:// изолирован.
+Risks/blocker: нет новых. На пределах камеры нужно менять направление колеса, поскольку учитываются только принятые шаги.
+Next: пользовательская визуальная приёмка; commit/push не выполнялись.
+```
+### HF-166 — светлые мини-игры с чёрным текстом и контрастной шкалой
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-18; HF-165 DONE, активных пересечений нет.
+
+CP-HF-166 read-set: текущий фронт; scripts/UI/EmbroideryGame.cs, scripts/UI/PolishingSurface.cs; art/minigames/rank_empty.png и rank_full.png; src/ChikagoShop.Domain/Crafting/{EmbroiderySession,PolishingSession}.cs (контракт качества read-only); tests/Integration/ProjectTest.{Crafting,EmbroideryTarget,Presentation,Helpers}.cs; tests/ProjectTest.cs; Git status/hash обеих пользовательских сцен. Write-set: ORCHESTRATION_PLAN.md; scripts/UI/EmbroideryGame.cs (только палитра общего интерфейса/шкалы); tests/Integration/ProjectTest.Crafting.cs (контраст); tests/ProjectTest.cs (отдельная группа); .local/checks/hf166 и изолированная копия .local/checks/git-review-20261118/project. Out of scope: source/, обе пользовательские сцены, исходные изображения/доменные правила/баланс/schema/тайминги, прочие локальные изменения/commit/push.
+
+Приёмка: общий интерфейс вышивки/полировки светлый; заголовки/счётчики/проценты/кнопки чёрные, rank S–D и чёрная заливка различимы на светлом фоне. Состояния Ready/Playing/timeout/success, RU/EN960×540/1280×720, button hover/focus/pressed; шкала отличает пустую и заполненную часть. Проверки: build; rendered --craft-contrast-checks, --embroidery-target-checks; screenshots/пиксельный контраст/реальные cancel/collect, git diff --check и SHA256 сохранности сцен.
+
+```text
+Task: HF-166
+Recommended status: REVIEW → принято координатором, DONE
+Changed: scripts/UI/EmbroideryGame.cs — общий светлый фон вышивки/полировки и белые карточки статистики, чёрные заголовки/значения/подсказки/проценты, светлые кнопки с чёрной надписью для normal/hover/pressed/hover_pressed/focus/disabled. Focus сохраняет контур без заливки. Исходная rank-текстура/буквы S–D теперь лежат на светлом фоне; пустая часть и чёрная заливка различимы. Fallback-шкала приведена к тем же white/black цветам. Только presentation, механика и изображения не менялись. Tests/Integration/ProjectTest.Crafting.cs + tests/ProjectTest.cs — --craft-contrast-checks.
+Checks: workspace/isolated dotnet build PASS (0 warnings/errors). Rendered --craft-contrast-checks PASS:2 мини-игры ×2 языка ×2 окна ×4 состояния (ready/playing/timeout/success), реальные pixels светлого фона/карточек/чёрных букв и заполнения шкалы, все font states кнопок black, реальные cancel/collect без дублирования предметов. Rendered --embroidery-target-checks PASS: прежний контраст целей, mouse/touch стежки, все варианты SFX/ready/miss/finished. stderr обеих групп пуст. Просмотрены timeout-снимки вышивки54%/полировки0% в960×540: буквы рангов, пустая/полная часть шкалы и проценты отчётливо видны. git diff --check PASS; SHA256 обеих пользовательских сцен совпадают со snapshot. Evidence .local/checks/hf166.
+Acceptance: весь текст мини-игр чёрный на светлом фоне; шкала больше не сливается с панелью, общий стиль двух мини-игр согласован.
+Read-set exception: нет; source/ не читался; тесты с изолированным user://.
+Risks/blocker: нет новых. Полный default ProjectTest не запускался; проверены профильные rendered группы.
+Next: пользовательская визуальная приёмка; commit/push не выполнялись.
+```
 ### HF-165 — публикация исправлений инвентаря, прилавка и обучения
 
 Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-18; HF-152/HF-153/HF-162/HF-163/HF-164 DONE, пользователь разрешил commit/push, активных пересечений нет.

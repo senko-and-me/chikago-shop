@@ -70,8 +70,8 @@ public partial class EmbroideryGame : CanvasLayer
 			};
 			card.AddThemeStyleboxOverride("panel", new StyleBoxFlat
 			{
-				BgColor = new Color("171d1e"),
-				BorderColor = new Color("5e594a"),
+				BgColor = Colors.White,
+				BorderColor = Colors.Black,
 				BorderWidthLeft = 1,
 				BorderWidthRight = 1,
 				BorderWidthTop = 1,
@@ -93,7 +93,8 @@ public partial class EmbroideryGame : CanvasLayer
 				MouseFilter = Control.MouseFilterEnum.Ignore
 			};
 			heading.AddThemeFontSizeOverride("font_size", 12);
-			heading.AddThemeColorOverride("font_color", new Color("c9ae7f"));
+			heading.AddThemeColorOverride("font_color", Colors.Black);
+			heading.AddThemeConstantOverride("outline_size", 0);
 			card.AddChild(heading);
 			_statHeadings[i] = heading;
 
@@ -105,7 +106,8 @@ public partial class EmbroideryGame : CanvasLayer
 				MouseFilter = Control.MouseFilterEnum.Ignore
 			};
 			value.AddThemeFontSizeOverride("font_size", 22);
-			value.AddThemeColorOverride("font_color", new Color("fff1d8"));
+			value.AddThemeColorOverride("font_color", Colors.Black);
+			value.AddThemeConstantOverride("outline_size", 0);
 			card.AddChild(value);
 			_statValues[i] = value;
 		}
@@ -124,16 +126,23 @@ public partial class EmbroideryGame : CanvasLayer
 		foreach (var button in new[] { _action, _cancel })
 		{
 			button.AddThemeFontSizeOverride("font_size", 20);
-			var style = new StyleBoxFlat
+			foreach (string state in new[] { "normal", "hover", "pressed", "hover_pressed", "focus", "disabled" })
 			{
-				BgColor = new Color("aa824a"),
-				CornerRadiusTopLeft = 6,
-				CornerRadiusTopRight = 6,
-				CornerRadiusBottomLeft = 6,
-				CornerRadiusBottomRight = 6
-			};
-			button.AddThemeStyleboxOverride("normal", style);
-			button.AddThemeColorOverride("font_color", new Color("191d20"));
+				var style = new StyleBoxFlat
+				{
+					BgColor = state is "pressed" or "hover_pressed" ? new Color("c4c4c4") :
+						state == "hover" ? new Color("dedede") : new Color("eeeeee"),
+					BorderColor = Colors.Black,
+					BorderWidthLeft = 1, BorderWidthRight = 1, BorderWidthTop = 1, BorderWidthBottom = 1,
+					CornerRadiusTopLeft = 6, CornerRadiusTopRight = 6,
+					CornerRadiusBottomLeft = 6, CornerRadiusBottomRight = 6,
+					DrawCenter = state != "focus"
+				};
+				button.AddThemeStyleboxOverride(state, style);
+			}
+			foreach (string color in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color", "font_disabled_color" })
+				button.AddThemeColorOverride(color, Colors.Black);
+			button.AddThemeConstantOverride("outline_size", 0);
 		}
 
 		_action.Pressed += Activate;
@@ -149,7 +158,8 @@ public partial class EmbroideryGame : CanvasLayer
 			VerticalAlignment = VerticalAlignment.Center,
 			MouseFilter = Control.MouseFilterEnum.Ignore
 		};
-		label.AddThemeColorOverride("font_color", new Color("f5e8d0"));
+		label.AddThemeColorOverride("font_color", Colors.Black);
+		label.AddThemeConstantOverride("outline_size", 0);
 		label.AddThemeFontSizeOverride("font_size", size);
 		_surface.AddChild(label);
 		return label;
@@ -390,8 +400,8 @@ public partial class EmbroiderySurface : Control
 
 	private readonly StyleBoxFlat _panelStyle = new()
 	{
-		BgColor = new Color("252a2b"),
-		BorderColor = new Color("8e7953"),
+		BgColor = new Color("f5f5f2"),
+		BorderColor = Colors.Black,
 		BorderWidthLeft = 1,
 		BorderWidthRight = 1,
 		BorderWidthTop = 1,
@@ -584,14 +594,15 @@ public partial class EmbroiderySurface : Control
 		}
 		else
 		{
-			DrawRect(track, new Color("151515"));
+			DrawRect(track, Colors.White);
 			DrawRect(
 				new Rect2(
 					track.Position.X,
 					track.End.Y - track.Size.Y * fill,
 					track.Size.X,
 					track.Size.Y * fill),
-				Colors.White);
+				Colors.Black);
+			DrawRect(track, Colors.Black, false, 2);
 		}
 
 		if (!Game.IsPolishing &&

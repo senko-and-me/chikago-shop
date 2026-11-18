@@ -42,7 +42,6 @@ process_mode = 3
 layer = 95
 script = ExtResource("1_tutorial")
 CameraTravelSeconds = 0.8
-CameraCompletionDelaySeconds = 2.0
 
 [node name="CameraCheckpoints" type="Node2D" parent="."]
 
@@ -138,6 +137,7 @@ theme_override_constants/outline_size = 1
 theme_override_font_sizes/font_size = 17
 theme_override_styles/background = SubResource("ProgressBackground")
 theme_override_styles/fill = SubResource("ProgressFill")
+step = 0.01
 
 [node name="Actions" type="HBoxContainer" parent="Root/Panel/Content"]
 layout_mode = 2

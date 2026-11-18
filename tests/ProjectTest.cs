@@ -16,6 +16,13 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--craft-contrast-checks"))
+            {
+                await TestCraftContrast();
+                GD.Print("CRAFT_CONTRAST_CHECKS_PASS: light panels, black text, visible quality fill, both minigames/states/locales/sizes");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--counter-item-checks"))
             {
                 await TestCounterItemPlacement();

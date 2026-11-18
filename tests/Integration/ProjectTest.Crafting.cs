@@ -7,6 +7,95 @@ using ChikagoShop.Domain.Days;
 // Subsystem checks share the ProjectTest runner and fixture helpers.
 public partial class ProjectTest
 {
+    private async Task TestCraftContrast()
+    {
+        Vector2I originalSize = Root.Size;
+        string originalLocale = TranslationServer.GetLocale();
+        var game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
+        game.SavePath = "";
+        Root.AddChild(game);
+        game.SetProcess(false);
+        try
+        {
+            foreach (Vector2I size in new[] { new Vector2I(960, 540), new Vector2I(1280, 720) })
+            foreach (string locale in new[] { "ru", "en" })
+            foreach (string name in new[] { "EmbroideryGame", "PolishingGame" })
+            foreach (string state in new[] { "ready", "playing", "timeout", "success" })
+            {
+                Root.Size = size;
+                TranslationServer.SetLocale(locale);
+                game.NewGame();
+                game.Score = 10000;
+                if (name == "PolishingGame") game.TryUnlockMusicWorkshop();
+                var craft = game.GetNode<EmbroideryGame>(name);
+                craft.Open();
+                craft.SetProcess(false);
+                if (state != "ready") craft.Activate();
+                if (state == "timeout")
+                {
+                    if (!craft.IsPolishing)
+                        for (int i = 0; i < craft.Session.Points.Count / 2; i++)
+                        {
+                            var point = craft.Session.Points[i];
+                            craft.Session.Hit(point.X, point.Y);
+                        }
+                    craft._Process(craft.ActiveSession.RemainingSeconds + 0.1);
+                }
+                if (state == "success") craft.FinishForTesting(true);
+                var surface = craft.GetNode<EmbroiderySurface>("Surface");
+                using var frame = await CapturePresentation();
+                Vector2 scale = new Vector2(frame.GetWidth(), frame.GetHeight()) / Root.GetVisibleRect().Size;
+                Color Pixel(Vector2 point)
+                {
+                    Vector2 p = surface.GetGlobalTransformWithCanvas() * point * scale;
+                    return frame.GetPixel(Mathf.RoundToInt(p.X), Mathf.RoundToInt(p.Y));
+                }
+                Check(Pixel(surface.PanelRect.Position + new Vector2(20, 20)).R > 0.9f,
+                    "Both craft modal backgrounds must stay light, including timeout and success screens");
+                foreach (var label in surface.FindChildren("*", "Label", true, false).Cast<Label>().Where(value => value.IsVisibleInTree() && value.Text.Length > 0))
+                {
+                    Check(label.GetThemeColor("font_color") == Colors.Black, "Every craft label must use black text");
+                    Rect2 rect = ScreenBounds(label);
+                    int dark = 0;
+                    for (int y = (int)(rect.Position.Y * scale.Y); y < (int)(rect.End.Y * scale.Y); y++)
+                    for (int x = (int)(rect.Position.X * scale.X); x < (int)(rect.End.X * scale.X); x++)
+                        if (frame.GetPixel(x, y).R < 0.25f) dark++;
+                    Check(dark > 2, $"Rendered {name}/{label.Name} text must remain visibly dark ({state}, {locale}, {size})");
+                }
+                foreach (string stat in new[] { "Time", "Stitches", "Misses" })
+                    Check(Pixel(surface.GetNode<Control>("Stat" + stat).Position + new Vector2(5, 5)).R > 0.9f,
+                        "Statistics must have light cards behind their black headings and values");
+                var track = surface.QualityTrackRect;
+                foreach (float depth in new[] { 0.15f, 0.35f, 0.65f, 0.85f })
+                {
+                    float luminance = Pixel(track.Position + track.Size * new Vector2(0.75f, depth)).R;
+                    bool filled = depth > 1 - craft.ActiveSession.Quality / 100f;
+                    Check(filled ? luminance < 0.15f : luminance > 0.9f,
+                        $"The quality meter must distinguish black fill from its light empty part ({name}, {state}, quality={craft.ActiveSession.Quality})");
+                }
+                foreach (string buttonName in new[] { "Action", "Cancel" })
+                foreach (string color in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color", "font_disabled_color" })
+                    Check(surface.GetNode<Button>(buttonName).GetThemeColor(color) == Colors.Black,
+                        "Craft buttons must keep black lettering in every interaction state");
+                if (locale == "ru" && size.X == 960 && state == "timeout")
+                    frame.SavePng(System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"chikago-hf166-{name}.png"));
+                int items = game.StoredItems.Length;
+                if (state == "playing") craft.FinishForTesting(false);
+                await ClickControl(game, name + "/Surface/" + (state == "ready" ? "Cancel" : "Action"));
+                Check(!craft.IsOpen && !Paused && game.StoredItems.Length == items,
+                    "Restyled cancel/collect controls must close the minigame without duplicating items");
+            }
+        }
+        finally
+        {
+            Paused = false;
+            game.QueueFree();
+            Root.Size = originalSize;
+            TranslationServer.SetLocale(originalLocale);
+            await ToSignal(this, SignalName.ProcessFrame);
+        }
+    }
+
     private async Task TestEmbroidery()
     {
         var game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();

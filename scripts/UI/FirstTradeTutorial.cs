@@ -5,10 +5,9 @@ using Godot;
 public partial class FirstTradeTutorial : CanvasLayer
 {
     public enum Step { Camera, Start, Craft, Select, Place, WaitBuyer, Offer, Summary, CameraZoom }
-    private const float PanGoal = 64;
-    private const int ZoomGoal = 4;
+    private const float PanGoal = 256;
+    private const int ZoomGoal = 16;
     [Export] public double CameraTravelSeconds { get; set; } = 0.8;
-    [Export] public double CameraCompletionDelaySeconds { get; set; } = 2;
     public Step CurrentStep { get; private set; }
     public bool IsActive { get; private set; }
     public bool IsShowing => _root?.Visible == true;
@@ -46,7 +45,6 @@ public partial class FirstTradeTutorial : CanvasLayer
     private bool _ownsConfirmationPause;
     private bool _finishing;
     private bool _cameraHandoffDone;
-    private double _cameraCompletionElapsed;
 
     public override void _Ready()
     {
@@ -115,7 +113,6 @@ public partial class FirstTradeTutorial : CanvasLayer
         StopCamera();
         CameraPanDone = CameraZoomDone = false;
         _cameraHandoffDone = false;
-        _cameraCompletionElapsed = 0;
         _panDistance = 0;
         _zoomSteps = 0;
         _cameraZoomStarted = false;
@@ -230,12 +227,8 @@ public partial class FirstTradeTutorial : CanvasLayer
             !_game.CraftMiniGameOpen && !_game.DayTransitionOpen && !_game.Failed && !_game.Completed &&
             !_camera.IsDragging && !_camera.IsFocusing && !_camera.IsReturningToOverview)
         {
-            _cameraCompletionElapsed += delta;
-            if (_cameraCompletionElapsed >= CameraCompletionDelaySeconds)
-            {
-                _cameraHandoffDone = true;
-                Save(false);
-            }
+            _cameraHandoffDone = true;
+            Save(false);
         }
         if (_game.Accepted < _lastAccepted) { _acceptedAtStart = _game.Accepted; _sawSale = false; Save(false); }
         _lastAccepted = _game.Accepted;
@@ -266,41 +259,39 @@ public partial class FirstTradeTutorial : CanvasLayer
         if (!_cameraHandoffDone)
         {
             if (!_cameraZoomStarted) SetStep(Step.Camera,
-                CameraPanDone ? "Передвижение освоено! Теперь перейдём к масштабированию."
-                    : "Зажмите ЛКМ на свободном фоне и двигайте мышь, чтобы осмотреть магазин. Заполните шкалу передвижения до 100%.", null);
+                CameraPanDone ? "Готово. Дальше — масштаб."
+                    : "Зажмите ЛКМ на фоне и двигайте мышь до 100%.", null);
             else SetStep(Step.CameraZoom,
-                IsCameraCompletionPending
-                    ? "Отлично! Движение и масштабирование освоены. Через пару секунд продолжим обучение. Дальше камера будет сама показывать нужные места."
-                    : "Прокрутите колесо мыши, чтобы приблизить или отдалить магазин. Заполните шкалу масштабирования до 100%.", null);
+                "Крутите колесо в обе стороны до 100%.", null);
         }
-        else if (_sawSale) SetStep(Step.Summary, "Первая продажа готова! Следите за энергией и суммой квоты в панели дня. К сроку на счёте должна быть нужная сумма. Нажмите «Понятно», чтобы начать первый день заново со стартовыми ресурсами.",
+        else if (_sawSale) SetStep(Step.Summary, "Первая продажа готова! Следите за энергией и квотой. Нажмите «Понятно», чтобы начать заново.",
             _game.GetNode<Control>("HUD/Root/ProgressPanel"));
         else if (_game.TradeActive) SetStep(Step.Offer,
-            "Покупатель предлагает цену. Кнопка «✓» продаёт товар. Кнопка «×» меняет покупателя и тратит попытку: новая цена может стать ниже. Продайте первый предмет.",
+            "«✓» — продать. «×» — сменить покупателя за попытку; цена может упасть. Продайте предмет.",
             _game.GetNode<Control>("World/TradingRoom/Item/TradePanel"));
         else if (_game.DayClosed) SetStep(Step.Start,
-            "Магазин закрыт. Продайте оставшийся товар, если покупатель уже у кассы, затем нажмите на часы, чтобы перейти к следующему дню.",
+            "Магазин закрыт. Завершите текущую сделку — начнётся следующий день.",
             _game.GetNode<Control>("HUD/Root/ClockActionButton"));
         else if (!_game.DayStarted) SetStep(Step.Start,
-            "Нажмите «Начать» на часах. Пока день не начат, время не идёт. После запуска на торговлю отведена короткая смена.",
+            "Нажмите «Начать» на часах, чтобы запустить день.",
             _game.GetNode<Control>("HUD/Root/DayTimer/StartButton"));
         else if (_game.ShowcaseItems.Any(item => item >= 0)) SetStep(Step.WaitBuyer,
-            "Товар уже на витрине. Покупатель подойдёт сам через несколько секунд. Его предложение появится у кассы.",
+            "Ждите покупателя. Цена появится у кассы.",
             _game.GetNode<Control>("World/ShowroomLeft/Showcases/Slot1"));
         else if (_game.StoredItems.Length > 0)
         {
             if (_game.SelectedInventoryIndex < 0) SetStep(Step.Select,
-                "Предмет готов. Нажмите на него в нижней панели инвентаря. Наведение покажет его редкость и стоимость.",
+                "Выберите предмет внизу. Наведите мышь, чтобы узнать цену и редкость.",
                 _game.GetNode<InventoryUI>("HUD/InventoryUI").Container.GetChild<Control>(0));
             else SetStep(Step.Place,
-                "Нажмите на свободную витрину в левой торговой комнате. Можно также перетащить предмет из инвентаря на витрину.",
+                "Нажмите на свободную витрину слева или перетащите туда предмет.",
                 _game.GetNode<Control>("World/ShowroomLeft/Showcases/Slot1"));
         }
         else if (_game.EnergyRemaining <= 0) SetStep(Step.Start,
-            "Энергия закончилась. Нажмите на часы, чтобы завершить день, затем ещё раз для перехода к следующему. Непроданные вещи сохраняются.",
+            "Нет энергии. Завершите день нажатием на часы. Предметы сохранятся.",
             _game.GetNode<Control>("HUD/Root/ClockActionButton"));
         else SetStep(Step.Craft,
-            "Нажмите «Создать предметы» в ателье и выполните мини-игру. Производство стоит денег и энергии; цена указана у кнопки.",
+            "Нажмите «Создать предметы» в ателье. Мини-игра тратит деньги и энергию.",
             _game.GetNode<Control>("World/Atelier/GetItemButton"));
         Layout();
     }
@@ -319,7 +310,7 @@ public partial class FirstTradeTutorial : CanvasLayer
         _cameraProgress.Value = step == Step.Camera ? CameraPanProgress : CameraZoomProgress;
         if (_appliedCameraStep != step && !_game.DayTransitionOpen)
         {
-            // Resuming/resize during the grace period must preserve the player's view.
+            // Restoring completed practice must not replay its entry flight before handing off.
             if (!IsCameraCompletionPending && !continuingPractice)
             {
                 string checkpoint = "CameraCheckpoints/" + (cameraStep ? Step.Camera : step);
@@ -335,7 +326,6 @@ public partial class FirstTradeTutorial : CanvasLayer
     private void OnUserPanned(Vector2 displacement)
     {
         if (!Practicing) return;
-        _cameraCompletionElapsed = 0;
         if (CameraPanDone) return;
         _panDistance = Mathf.Min(PanGoal, _panDistance + displacement.Length());
         _progressDirty = true;
@@ -347,7 +337,6 @@ public partial class FirstTradeTutorial : CanvasLayer
     private void OnUserZoomed()
     {
         if (!Practicing) return;
-        _cameraCompletionElapsed = 0;
         if (CurrentStep != Step.CameraZoom || CameraZoomDone) return;
         _zoomSteps++;
         _progressDirty = true;
