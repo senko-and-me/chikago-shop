@@ -11,12 +11,22 @@
 ## Текущий фронт
 ### HF-171 — публикация жёлтой рамки, ручной пачки и pan3000
 
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-18; HF-169/HF-170 DONE, пользователь разрешил commit/push; активных пересечений нет.
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-18; HF-169/HF-170 DONE, пользователь разрешил commit/push; активных пересечений нет.
 
 CP-HF-171 read-set: текущий фронт; Git refs/status/diff; готовые изменения и evidence HF169/HF170; обе пользовательские сцены только hash. Write-set: Git index/commits/main/origin/main; ORCHESTRATION_PLAN.md; публикация готовых docs/GAMEPLAY.md, localization/en.tres, scenes/UI/FirstTradeTutorial.tscn, scripts/Presentation/MonochromePresentation.cs, scripts/UI/{FirstTradeTutorial,ProgressPanel}.cs, shaders/monochrome.gdshader, tests/Integration/ProjectTest.{Presentation,Tutorial}.cs; .local/checks/hf171. Out of scope: source/, пользовательские main_menu.tscn/trade_scene.tscn, новая функциональность/баланс/schema/force push.
 
 Приёмка: готовые проверенные изменения опубликованы обычным push, HEAD=origin/main; пользовательские сцены побайтно сохранены локально. Проверки: совпадение runtime/test/scene/shader/localization с tested isolated copy; прежние build/tutorial/progress-toggle/presentation PASS; staged diff --check, push/ref/status/hash readback.
 
+```text
+Task: HF-171
+Recommended status: REVIEW → принято координатором, DONE
+Changed: HF169/HF170 опубликованы коммитом f87a7ae в origin/main: ручное наведение на пачку, жёлтая рамка с узким shader exception, pan3000 и regression tests. Пользовательские основные сцены вне коммита; запись завершения публикуется отдельным documentation commit.
+Checks: fetch0/0; SHA256 публикуемых runtime/test/scene/shader/localization совпадают с tested isolated copy. Прежние build/tutorial/progress-toggle/presentation PASS. Staged diff --check PASS; обычный push origin main PASS; HEAD=origin/main0/0; SHA256 пользовательских сцен совпадает со snapshot HF171.
+Acceptance: проверенные изменения доступны на GitHub в main, обе пользовательские сцены сохранены локально.
+Read-set exception: нет; source/ не читался.
+Risks/blocker: нет новых.
+Next: пользовательская проверка опубликованной версии.
+```
 ### HF-170 — порог передвижения3000px
 
 Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-18; HF-169 DONE, активных пересечений нет.
