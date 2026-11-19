@@ -261,8 +261,8 @@ public partial class ProjectTest : SceneTree
             }
             if (OS.GetCmdlineUserArgs().Contains("--presentation-checks"))
             {
-                await TestMonochromePresentation();
-                GD.Print("PRESENTATION_CHECKS_PASS: grayscale scenes, clock/table colors, modal masking and resize");
+                await TestNativeColorPresentation();
+                GD.Print("PRESENTATION_CHECKS_PASS: native source colors, energy artwork, absent screen filter, craft/pause and resize");
                 Quit();
                 return;
             }

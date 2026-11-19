@@ -18,6 +18,7 @@
 [ext_resource type="Script" uid="uid://bdswgixl6srw1" path="res://scripts/UI/ZoomResponsiveUi.cs" id="21_zoom_ui"]
 [ext_resource type="Script" uid="uid://dqhunfpycjxyp" path="res://scripts/UI/ProgressPanel.cs" id="22_progress"]
 [ext_resource type="PackedScene" path="res://scenes/UI/CigaretteProgress.tscn" id="32_cigarette_progress"]
+[ext_resource type="PackedScene" path="res://scenes/UI/EnergyPanel.tscn" id="33_energy_panel"]
 [ext_resource type="Script" uid="uid://cnnctojfahevu" path="res://scripts/Camera/WorldCamera.cs" id="23_world_camera"]
 [ext_resource type="Script" uid="uid://moiorwdg8bcp" path="res://scripts/Presentation/RoomDoorwayPresentation.cs" id="24_doorways"]
 [ext_resource type="Texture2D" uid="uid://cog2ypvb6uqtj" path="res://art/ui/panel_inverted.png" id="25_inverted"]
@@ -950,26 +951,8 @@ text = "Счёт: 220$"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="EnergyPanel" type="PanelContainer" parent="HUD/Root" unique_id=1528501494]
+[node name="EnergyPanel" parent="HUD/Root" instance=ExtResource("33_energy_panel")]
 layout_mode = 1
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -204.0
-offset_top = 100.0
-offset_right = -24.0
-offset_bottom = 164.0
-grow_horizontal = 0
-mouse_filter = 2
-theme_override_styles/panel = SubResource("HudSmallPanelStyle")
-
-[node name="EnergyLabel" type="Label" parent="HUD/Root/EnergyPanel" unique_id=1794758590]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.231373, 0.188235, 0.172549, 1)
-theme_override_font_sizes/font_size = 22
-text = "Энергия: 2 / 2"
-horizontal_alignment = 1
-vertical_alignment = 1
 
 [node name="ProgressPanel" type="Control" parent="HUD/Root" unique_id=1016591818]
 layout_mode = 0

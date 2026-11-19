@@ -33,7 +33,6 @@ public partial class RarityPanel : Control
 
 		_layer = GetNode<CanvasLayer>("PopupLayer");
 		_panel = _layer.GetNode<PanelContainer>("Panel");
-		MonochromePresentation.PreserveTable(_panel);
 		_values = _panel.GetNode<GridContainer>("Values");
 		_button = GetParent().GetNode<Control>("GetItemButton");
 		_game = GetParent().GetParent().GetParent();

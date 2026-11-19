@@ -9,6 +9,37 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### HF-193 — убрать общий ЧБ-фильтр и опубликовать готовые сцены энергии
+
+Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-19; HF192 DONE; пользователь разрешил push, затем добавил удаление ЧБ-шейдера.
+
+CP-HF-193 read-set: текущий фронт; project.godot; scripts/Presentation/MonochromePresentation.cs; shaders/monochrome.gdshader; scripts/{Days/DayCycleController,UI/DayTransitionCard,UI/EmbroideryGame,UI/PauseMenu,UI/RarityPanel}.cs только filter registration; tests/ProjectTest.cs; tests/Integration/ProjectTest.{Presentation,EnergyBulbs,ButtonFeedback}.cs (filter expectations); готовые diff/evidence HF192; Git status/refs; docs/GAMEPLAY.md presentation mentions; основные сцены snapshots/hash. Write-set: project.godot (убрать autoload); удалить scripts/Presentation/MonochromePresentation.cs/uid и shaders/monochrome.gdshader/uid; перечисленные runtime registration вызовы; ProjectTest.cs/ProjectTest.Presentation.cs/ProjectTest.EnergyBulbs.cs (native-color regression); HF192 готовые6файлов + scenes/trade_scene.tscn ТОЛЬКО EnergyPanelblock/extresource в index; ORCHESTRATION_PLAN.md; .local/checks/hf193; isolatedsame. Out of scope: source/, пользовательские основные сцены вне EnergyPanel, баланс/schema/прочий gameplay, force push.
+
+Приёмка: общий screen filter отсутствует, source цвета сохраняются в меню/игре/минииграх/pause; nativeцвет лампочек сохранён, scene-authored HF192 работает. Проверки: build; rendered presentation/energy/card checks; partial stagedscene создан из HEAD+EnergyPanel-only, пользовательский workingtree побайтно сохранён; exactstagedlist/diffcheck/push/refreadback.
+
+Уточнение write-set HF193: docs/GAMEPLAY.md (описание nativeцветов и scene-authored энергии), tests/Integration/ProjectTest.Tutorial.cs (hollow highlight сохраняет sourcecolour вместо прежнего grayscale). Старая регистрация shaderexceptions удалена из пяти runtime файлов; сам шейдер/класс и autoload удалены полностью.
+
+### HF-192 — энергия видна и настраивается в сцене Godot
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-19; HF191 DONE; пользователь явно запросил scene-authored компоновку. Первоначальный исполнитель energy_bulbs передал дизайн, дальнейший код выполняет /root после недоступности субагента. Единственный владелец EnergyPanel subtree в trade_scene.tscn — /root.
+
+CP-HF-192 read-set: текущий фронт; scripts/Presentation/EnergyBulbsPresentation.cs; scripts/UI/ZoomResponsiveUi.cs; tests/Integration/ProjectTest.{EnergyBulbs,Helpers,Presentation}.cs; tests/ProjectTest.cs runner; scenes/trade_scene.tscn только EnergyPanel/связанные ресурсы; art/ui/energy_bulb.png/import; targeted EnergyCapacity/config только для диагностики; пользовательский screenshot. Write-set: EnergyBulbsPresentation.cs; ZoomResponsiveUi.cs (убратьbootstrap); scenes/UI/EnergyPanel.tscn и/или EnergyBulbs.tscn/EnergyBulb.tscn после уточнения исполнителем; scenes/trade_scene.tscn только EnergyPanel subtree/минимальные ext_resource; ProjectTest.EnergyBulbs.cs; .local/checks/hf192 и isolated same paths; plan только координатор. Out of scope: source/, main_menu.tscn, прочие пользовательские правки trade_scene.tscn, прочий UI/часы/карты/баланс/schema, commit/push.
+
+Приёмка: лампочки/арт/отступы/стиль заданы в сцене и видны до запуска; код только обновляет количество/состояние/tooltip. Сохранены RU/EN/3…7capacity/resize/pause/craft, доступны Inspector настройки. Snapshot обеих основных сцен в .local/checks/hf192/*.before.tscn; исключая явно изменённый EnergyPanel/его ext_resource, пользовательская сцена сохранена побайтно. Проверки: preReady ownership/resource checks, local/isolated build, rendered --energy-bulbs-checks/--card-dealing-checks, scene diff outside scope/hash main_menu.
+
+Уточнение write-set: новые scenes/UI/{EnergyPanel,EnergyBulb}.tscn;7готовых TextureRect через HBoxContainer, первые3видимы в editorpreview; AtlasTexture/отступы/размеры/цвет spent экспортированы/заданы сценой. Debug capacity>7 добавляет экземпляр той же PackedScene, без создания geometry в коде.
+
+```text
+Task: HF-192
+Recommended status: REVIEW → принято координатором, DONE
+Changed: reusable EnergyPanel.tscn задаёт панель/стиль/расположение/hidden numeric label/HBoxContainer/7лампочек; первые3visible без запуска. EnergyBulb.tscn задаёт TextureRect с AtlasTexture и размером/KeepAspectCentered/size flags. Main scene заменяет только прежний EnergyPanel+EnergyLabel subtree на PackedScene instance и один ext_resource. EnergyBulbsPresentation теперь HBoxContainer: только remaining/capacity/visibility/brightness/tooltip, export template дляdebugcapacity>7; _Draw/BulbRect/Attach и runtime styles/геометрия удалены. ZoomResponsiveUi больше не создаёт панель.
+Checks: local/isolated dotnetbuild PASS0warnings/errors; rendered --energy-bulbs-checks PASS: узлы/ресурсы/3visible preview доReady, standalone scene реально рисуется без TradeScene, триразмера/RUEN/3-6-7capacity/full-mid-zero/pause/upgrade/realcraft; actualpixelscontrast/gray иbounds. --card-dealing-checks PASS (fade/restore/reload/resize). Финальныеstderrпусты. Просмотрен editor-preview.png: nativeyellowbulbs уже видны безruntimebootstrap, runtime сохраняет общий grayscale. Evidence .local/checks/hf192. git diff--check PASS. Bytecompare snapshot: main_menu полностью прежний, trade_scene вне EnergyPanelblock+единственныйext_resource полностью совпадает.
+Acceptance: лампочки видны/редактируются через сцены Godot, код обновляет только состояние энергии.
+Read-set exception: нет новых; source/ не читался.
+Risks/blocker: нет новых; commit/push не выполнялись. Несвязанные пользовательские правки основных сцен сохранены.
+Next: пользователь открывает scenes/UI/EnergyPanel.tscn для настройки панели и EnergyBulb.tscn для отдельной лампочки.
+```
+
 ### HF-191 — публикация свежего арта, точной награды полировки и энергии-лампочек
 
 Статус: `DONE`; координатор `/root`; READY 2026-11-19; HF188/HF189/HF190 DONE; пользователь разрешил push и субагентов; пересечений нет.

@@ -45,7 +45,6 @@ public partial class DayTransitionCard : CanvasLayer
         _deck = GetNode<PokerCardBack>("Root/Deck");
         _animation = new DayCardDealAnimator(this);
         _sceneTransition = new DayCardSceneTransition(this);
-        MonochromePresentation.CoverExceptions(_root);
         _skip.Pressed += Skip;
         _root.Resized += OnResize;
         Layout();

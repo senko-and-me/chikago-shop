@@ -48,154 +48,62 @@ public partial class ProjectTest
         return count;
     }
 
-    private async Task TestMonochromePresentation()
+    private async Task TestNativeColorPresentation()
     {
-        Check(DisplayServer.GetName() != "headless", "Use the GPU renderer for presentation pixel checks");
+        Check(!ProjectSettings.HasSetting("autoload/MonochromePresentation") && !Root.HasNode("MonochromePresentation"),
+            "The monochrome screen filter must not be loaded");
         Vector2I originalSize = Root.Size;
-        var presentation = Root.GetNode<MonochromePresentation>("MonochromePresentation");
-        var filter = presentation.GetNode<ColorRect>("Filter");
-        Check(filter.MouseFilter == Control.MouseFilterEnum.Ignore && filter.FocusMode == Control.FocusModeEnum.None,
-            "The final presentation pass must not intercept mouse or keyboard input");
-        MainMenu menu = null;
-        TradeScene game = null;
+        var game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
+        game.SavePath = "";
+        var probe = new CanvasLayer { Layer = 150 };
+        var swatch = new ColorRect { Position = new Vector2(24, 24), Size = new Vector2(64, 64),
+            Color = new Color(0.9f, 0.1f, 0.4f), MouseFilter = Control.MouseFilterEnum.Ignore };
+        probe.AddChild(swatch);
+        Root.AddChild(probe);
+        Root.AddChild(game);
+        game.SetProcess(false);
+        async Task CheckColor(string state)
+        {
+            using var image = await CapturePresentation("native-color-" + state);
+            Vector2 scale = new Vector2(image.GetWidth(), image.GetHeight()) / Root.GetVisibleRect().Size;
+            Color pixel = image.GetPixelv((Vector2I)(new Vector2(56, 56) * scale));
+            Check(Mathf.Abs(pixel.R - swatch.Color.R) < 0.025f && Mathf.Abs(pixel.G - swatch.Color.G) < 0.025f &&
+                Mathf.Abs(pixel.B - swatch.Color.B) < 0.025f, "Source colors must survive the final render in " + state);
+        }
         try
         {
-            Root.Size = new Vector2I(1280, 720);
-            menu = GD.Load<PackedScene>("res://scenes/main_menu.tscn").Instantiate<MainMenu>();
-            Root.AddChild(menu);
-            // A deterministic color probe proves that rendered pixels are actually transformed,
-            // even when the menu artwork itself is already monochrome.
-            var probe = new CanvasLayer { Layer = 150 };
-            probe.AddChild(new ColorRect
-            {
-                Position = new Vector2(24, 24), Size = new Vector2(64, 64), Color = new Color(0.9f, 0.1f, 0.4f),
-                MouseFilter = Control.MouseFilterEnum.Ignore
-            });
-            menu.AddChild(probe);
-            filter.Hide();
-            using (var original = await CapturePresentation("probe-original"))
-                Check(CountRenderedColor(original, Root.GetVisibleRect()) > 100, "The test must start with actual colored source pixels");
-            filter.Show();
-            using (var image = await CapturePresentation()) CheckRenderedGray(image);
-            probe.QueueFree();
-            using (var image = await CapturePresentation("menu")) CheckRenderedGray(image);
-            menu.OnSettingsPressed();
-            using (var image = await CapturePresentation()) CheckRenderedGray(image);
-            menu.OnBackPressed();
-            menu.OnPlayPressed();
-            menu.GetNode<TextureButton>("MainMenuContainer/Menu/NewGameButton").EmitSignal(BaseButton.SignalName.Pressed);
-            await ToSignal(this, SignalName.ProcessFrame);
-            Check(menu.ActiveDialogue != null, "The intro must open for its presentation check");
-            using (var image = await CapturePresentation("dialogue")) CheckRenderedGray(image);
-            menu.QueueFree();
-            menu = null;
-            await ToSignal(this, SignalName.ProcessFrame);
-
-            game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
-            game.SavePath = ""; // Never load or write player progress.
-            Root.AddChild(game);
-            game.SetProcess(false);
-            game.GetNode<Camera2D>("Camera2D").SetProcess(false);
-            game.NewGame();
-            game.Score = 1000;
-            game.TryUnlockMusicWorkshop();
-            game.DayUpgrades.Restore(false, DayUpgrade.None, 2, 1, 1, 1, 1);
-            var clock = game.GetNode<TextureRect>("HUD/DayClock/Root/DayTimer/Clock");
-            game.EndDay(); // Start the waiting day before advancing its clock to expiry.
-            game._Process(91);
-            Check(clock.Texture.ResourcePath.EndsWith("day_timer_expired.png"), "Expired clock must use its special red sprite");
-            using (var image = await CapturePresentation("world"))
-            {
-                CheckRenderedGray(image, ScreenBounds(clock));
-                Check(CountRenderedColor(image, ScreenBounds(clock)) > 20, "The actual red clock sprite must retain color");
-            }
-
-            // A color patch behind the sprite catches accidental rectangular holes around its alpha.
-            var timer = clock.GetParent<Control>();
-            var patch = new ColorRect
-            {
-                Position = timer.Position, Size = timer.Size, Color = new Color(0.9f, 0.1f, 0.4f),
-                MouseFilter = Control.MouseFilterEnum.Ignore
-            };
-            timer.GetParent().AddChild(patch);
-            timer.GetParent().MoveChild(patch, timer.GetIndex());
-            filter.Hide();
-            using (var original = await CapturePresentation())
-            {
-                Vector2 corner = ScreenBounds(clock).Position + new Vector2(4, 4);
-                Vector2 scale = new Vector2(original.GetWidth(), original.GetHeight()) / Root.GetVisibleRect().Size;
-                Check(HasChroma(original.GetPixel((int)(corner.X * scale.X), (int)(corner.Y * scale.Y))),
-                    "The transparent clock corner must reveal the test patch before filtering");
-            }
-            filter.Show();
-            using (var image = await CapturePresentation())
-            {
-                Vector2 corner = ScreenBounds(clock).Position + new Vector2(4, 4);
-                Vector2 scale = new Vector2(image.GetWidth(), image.GetHeight()) / Root.GetVisibleRect().Size;
-                Check(!HasChroma(image.GetPixel((int)(corner.X * scale.X), (int)(corner.Y * scale.Y))),
-                    "Transparent clock corners must not preserve colored world pixels");
-                Check(CountRenderedColor(image, ScreenBounds(clock)) > 20, "Opaque clock pixels must stay colored");
-            }
-            patch.QueueFree();
-
             foreach (Vector2I size in new[] { new Vector2I(960, 540), new Vector2I(1280, 720) })
-            foreach (string room in new[] { "Atelier", "MusicWorkshop" })
             {
                 Root.Size = size;
-                game.GetNode<Camera2D>("Camera2D").Zoom = Vector2.One * (size.X == 960 ? 0.25f : 1.8f);
-                var popup = game.GetNode<RarityPanel>($"World/{room}/RarityPanel");
-                popup.Show();
-                using (var image = await CapturePresentation(size.X == 1280 ? room.ToLowerInvariant() : null))
+                game.NewGame();
+                game.EndDay();
+                game.Score = 10000;
+                game.TryUnlockMusicWorkshop();
+                await CheckColor("world-" + size.X);
+                var bulb = game.GetNode<TextureRect>("HUD/Root/EnergyPanel/EnergyBulbs/Bulb1");
+                using (var image = await CapturePresentation())
+                    Check(CountRenderedColor(image, ScreenBounds(bulb)) > 15,
+                        "Actual energy artwork must retain its original yellow color");
+                var pause = game.GetNode<PauseMenu>("PauseMenu");
+                pause.Open();
+                await CheckColor("pause-" + size.X);
+                pause.Close();
+                foreach (string name in new[] { "EmbroideryGame", "PolishingGame" })
                 {
-                    CheckRenderedGray(image, ScreenBounds(clock), ScreenBounds(popup.Popup));
-                    Check(CountRenderedColor(image, ScreenBounds(popup.Popup)) > 20,
-                        "Both chance/category price tables must preserve their colored values");
+                    var craft = game.GetNode<EmbroideryGame>(name);
+                    craft.Open();
+                    craft.SetProcess(false);
+                    Check(craft.IsOpen, "The fixture must open both craft modals");
+                    await CheckColor(name + "-" + size.X);
+                    craft.GetNode<Button>("Surface/Cancel").EmitSignal(Button.SignalName.Pressed);
                 }
-                popup.Hide();
-            }
-
-            var table = game.GetNode<RarityPanel>("World/Atelier/RarityPanel");
-            table.Show();
-            game.GetNode<PauseMenu>("PauseMenu").Open();
-            using (var image = await CapturePresentation("pause")) CheckRenderedGray(image);
-            game.GetNode<PauseMenu>("PauseMenu").Close();
-            table.Hide();
-            game.NewGame();
-            game.Score = 1000;
-            game.TryUnlockMusicWorkshop();
-            foreach (string crafting in new[] { "EmbroideryGame", "PolishingGame" })
-            {
-                var miniGame = game.GetNode<EmbroideryGame>(crafting);
-                miniGame.Open();
-                Check(miniGame.IsOpen, "The real crafting overlay must open");
-                using (var image = await CapturePresentation(crafting.ToLowerInvariant())) CheckRenderedGray(image);
-                miniGame._Input(new InputEventKey { Pressed = true, Keycode = Key.Escape });
-            }
-            var card = game.GetNode<DayTransitionCard>("DayTransitionCard");
-            card.Open(1, 2, new[] { DayUpgrade.Cash, DayUpgrade.Energy, DayUpgrade.Time }, 1000);
-            using (var image = await CapturePresentation("day-card")) CheckRenderedGray(image);
-            card.Skip();
-            game.QueueFree();
-            game = null;
-            await ToSignal(this, SignalName.ProcessFrame);
-            // Freed scene exceptions must not leave holes in the next menu.
-            menu = GD.Load<PackedScene>("res://scenes/main_menu.tscn").Instantiate<MainMenu>();
-            Root.AddChild(menu);
-            using (var image = await CapturePresentation()) CheckRenderedGray(image);
-            // Finish the menu's background load before the test runner tears down the SceneTree.
-            ulong warmupDeadline = Time.GetTicksMsec() + 5000;
-            while (!menu.IsGameScenePrepared)
-            {
-                Check(Time.GetTicksMsec() < warmupDeadline, "Menu scene warmup must finish before shutdown");
-                await ToSignal(this, SignalName.ProcessFrame);
             }
         }
         finally
         {
-            filter.Show();
             Paused = false;
-            if (menu != null && GodotObject.IsInstanceValid(menu)) menu.QueueFree();
-            if (game != null && GodotObject.IsInstanceValid(game)) game.QueueFree();
+            game.QueueFree();
+            probe.QueueFree();
             Root.Size = originalSize;
         }
         await ToSignal(this, SignalName.ProcessFrame);

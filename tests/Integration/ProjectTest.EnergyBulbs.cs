@@ -10,6 +10,53 @@ public partial class ProjectTest
         string locale = TranslationServer.GetLocale();
         Vector2I originalSize = Root.Size;
         var game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
+        var authoredPanel = game.GetNode<PanelContainer>("HUD/Root/EnergyPanel");
+        var authoredBulbs = authoredPanel.GetNode<EnergyBulbsPresentation>("EnergyBulbs");
+        Check(authoredPanel.SceneFilePath == "res://scenes/UI/EnergyPanel.tscn" &&
+            authoredBulbs.GetChildCount() == 7 && !authoredPanel.GetNode<Label>("EnergyLabel").Visible,
+            "The packed trade scene must already contain the reusable energy panel and seven authored slots before Ready");
+        for (int index = 0; index < 7; index++)
+        {
+            var slot = authoredBulbs.GetChild<TextureRect>(index);
+            Check(slot.Visible == (index < 3) && slot.SceneFilePath == "res://scenes/UI/EnergyBulb.tscn" &&
+                slot.Texture is AtlasTexture art && art.Region == new Rect2(526, 213, 984, 1612) &&
+                slot.CustomMinimumSize == new Vector2(14, 46),
+                "Editor preview must have three visible bulbs with scene-authored texture crop and sizing");
+        }
+        Check(authoredBulbs.GetThemeConstant("separation") == 5 &&
+            authoredPanel.GetThemeStylebox("panel").ContentMarginLeft == 10,
+            "Spacing and panel style must be authored in the scene rather than changed by runtime code");
+        // Preview the reusable scene on its own, without TradeScene or its startup hooks.
+        var preview = new SubViewport { Size = new Vector2I(240, 100), TransparentBg = true,
+            World2D = new World2D(), RenderTargetUpdateMode = SubViewport.UpdateMode.Always };
+        Root.AddChild(preview);
+        try
+        {
+            var panel = GD.Load<PackedScene>("res://scenes/UI/EnergyPanel.tscn").Instantiate<PanelContainer>();
+            preview.AddChild(panel);
+            panel.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.TopLeft);
+            panel.Position = new Vector2(30, 18);
+            panel.Size = new Vector2(180, 64);
+            using (await CapturePresentation()) { }
+            using var pixels = preview.GetTexture().GetImage();
+            foreach (var child in panel.GetNode("EnergyBulbs").GetChildren())
+            {
+                var bulb = (TextureRect)child;
+                if (!bulb.Visible) continue;
+                Color pixel = pixels.GetPixelv((Vector2I)(bulb.GlobalPosition + bulb.Size * new Vector2(0.5f, 0.25f)));
+                Check(pixel.A > 0.9f && pixel.R > 0.5f,
+                    "The standalone scene must render visible bulbs without the game's runtime bootstrap");
+            }
+            pixels.SavePng(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "chikago-hf192-editor-preview.png"));
+        }
+        finally { preview.QueueFree(); }
+        Rect2 ArtworkRect(int index)
+        {
+            var slot = authoredBulbs.GetChild<TextureRect>(index);
+            Vector2 textureSize = slot.Texture.GetSize();
+            Vector2 drawn = textureSize * Mathf.Min(slot.Size.X / textureSize.X, slot.Size.Y / textureSize.Y);
+            return new Rect2(slot.Position + (slot.Size - drawn) / 2, drawn);
+        }
         game.SavePath = "";
         Root.AddChild(game);
         game.SetProcess(false);
@@ -53,14 +100,14 @@ public partial class ProjectTest
                     Vector2 pixels = new Vector2(image.GetWidth(), image.GetHeight()) / Root.GetVisibleRect().Size;
                     for (int index = 0; index < capacity; index++)
                     {
-                        Rect2 rect = bulbs.BulbRect(index);
+                        Rect2 rect = ArtworkRect(index);
                         Check(area.Encloses(rect) && rect.Size.Y >= 24 && rect.Size.X >= 14,
                             "Every bulb must fit the HUD panel with readable proportions, including seven energy");
-                        if (index > 0) Check(rect.Position.X - bulbs.BulbRect(index - 1).End.X >= 4,
+                        if (index > 0) Check(rect.Position.X - ArtworkRect(index - 1).End.X >= 4,
                             "Energy bulbs must retain distinct spacing");
                         Vector2 sample = bulbs.GetGlobalTransformWithCanvas() * (rect.Position + rect.Size * new Vector2(0.5f, 0.25f));
                         Color color = image.GetPixelv(new Vector2I((int)(sample.X * pixels.X), (int)(sample.Y * pixels.Y)));
-                        Check(!HasChroma(color), "Energy artwork must preserve the game's monochrome presentation");
+                        Check(HasChroma(color), "Energy artwork must retain its native yellow color without a grayscale filter");
                         Check(index < remaining ? color.R > 0.65f : color.R < 0.4f,
                             "Remaining bulbs must be visibly bright and spent bulbs visibly dark");
                     }

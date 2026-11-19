@@ -69,7 +69,6 @@ public sealed class DayCycleController
 			MouseFilter = Control.MouseFilterEnum.Ignore, ShowBehindParent = true
 		};
 		_timer.AddChild(_clock);
-		MonochromePresentation.PreserveClock(_clock);
 		_clock.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
 		_startButton = new Button
 		{

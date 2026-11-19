@@ -165,7 +165,8 @@ public partial class ProjectTest
                 Vector2 scale = new Vector2(image.GetWidth(), image.GetHeight()) / Root.GetVisibleRect().Size;
                 Vector2 center = ScreenBounds(probe).GetCenter() * scale;
                 Color pixel = image.GetPixel((int)center.X, (int)center.Y);
-                Check(!HasChroma(pixel), "The tutorial exception must leave its hollow center grayscale");
+                Check(HasChroma(pixel) && pixel.R > 0.8f && pixel.G < 0.2f,
+                    "The hollow tutorial highlight must leave source colors unchanged without a screen filter");
             }
             probe.QueueFree();
             await Frame();

@@ -1,0 +1,67 @@
+[gd_scene format=3 uid="uid://wged5cxnn4t5"]
+
+[ext_resource type="Script" uid="uid://byewenergy190" path="res://scripts/Presentation/EnergyBulbsPresentation.cs" id="1_state"]
+[ext_resource type="PackedScene" path="res://scenes/UI/EnergyBulb.tscn" id="2_bulb"]
+[ext_resource type="Texture2D" uid="uid://bf1y5qehuwoj" path="res://art/ui/panel_small.png" id="3_paper"]
+
+[sub_resource type="StyleBoxTexture" id="EnergyPanelStyle"]
+content_margin_left = 10.0
+content_margin_top = 6.0
+content_margin_right = 10.0
+content_margin_bottom = 6.0
+texture = ExtResource("3_paper")
+
+[node name="EnergyPanel" type="PanelContainer" unique_id=1048889908]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -204.0
+offset_top = 100.0
+offset_right = -24.0
+offset_bottom = 164.0
+grow_horizontal = 0
+mouse_filter = 1
+theme_override_styles/panel = SubResource("EnergyPanelStyle")
+
+[node name="EnergyLabel" type="Label" parent="." unique_id=1594650676]
+visible = false
+layout_mode = 2
+text = "Энергия: 3 / 3"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="EnergyBulbs" type="HBoxContainer" parent="." unique_id=527170990]
+process_mode = 3
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 5
+alignment = 1
+script = ExtResource("1_state")
+BulbScene = ExtResource("2_bulb")
+SpentColor = Color(0.28, 0.28, 0.28, 1)
+
+[node name="Bulb1" parent="EnergyBulbs" unique_id=1051246530 instance=ExtResource("2_bulb")]
+layout_mode = 2
+
+[node name="Bulb2" parent="EnergyBulbs" unique_id=859947622 instance=ExtResource("2_bulb")]
+layout_mode = 2
+
+[node name="Bulb3" parent="EnergyBulbs" unique_id=818495257 instance=ExtResource("2_bulb")]
+layout_mode = 2
+
+[node name="Bulb4" parent="EnergyBulbs" unique_id=1961134364 instance=ExtResource("2_bulb")]
+visible = false
+layout_mode = 2
+
+[node name="Bulb5" parent="EnergyBulbs" unique_id=76440257 instance=ExtResource("2_bulb")]
+visible = false
+layout_mode = 2
+
+[node name="Bulb6" parent="EnergyBulbs" unique_id=909443126 instance=ExtResource("2_bulb")]
+visible = false
+layout_mode = 2
+
+[node name="Bulb7" parent="EnergyBulbs" unique_id=1534541317 instance=ExtResource("2_bulb")]
+visible = false
+layout_mode = 2
