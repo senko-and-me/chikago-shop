@@ -16,6 +16,12 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--room-focus-checks"))
+            {
+                await TestRoomDoubleClickFocus();
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--craft-contrast-checks"))
             {
                 await TestCraftContrast();

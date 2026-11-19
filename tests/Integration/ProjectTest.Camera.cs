@@ -7,6 +7,109 @@ using ChikagoShop.Domain.Days;
 // Subsystem checks share the ProjectTest runner and fixture helpers.
 public partial class ProjectTest
 {
+    private async Task TestRoomDoubleClickFocus()
+    {
+        Vector2I originalSize = Root.Size;
+        var game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
+        game.SavePath = "";
+        Root.AddChild(game);
+        game.SetProcess(false);
+        var camera = game.GetNode<WorldCamera>("Camera2D");
+        int navigationEvents = 0;
+        camera.UserPanned += _ => navigationEvents++;
+        camera.UserZoomed += () => navigationEvents++;
+        void Click(Vector2 point, bool twice = true)
+        {
+            MoveButtonPointer(point);
+            Root.PushInput(new InputEventMouseButton { Position = point, GlobalPosition = point,
+                ButtonIndex = MouseButton.Left, Pressed = true, DoubleClick = twice, ButtonMask = MouseButtonMask.Left }, true);
+            Root.PushInput(new InputEventMouseButton { Position = point, GlobalPosition = point,
+                ButtonIndex = MouseButton.Left, Pressed = false }, true);
+        }
+        async Task Settle()
+        {
+            ulong deadline = Time.GetTicksMsec() + 2000;
+            while (camera.IsFocusing)
+            {
+                Check(Time.GetTicksMsec() < deadline, "Room focus must finish within its bounded transition");
+                await ToSignal(this, SignalName.ProcessFrame);
+            }
+            await ToSignal(this, SignalName.ProcessFrame);
+        }
+        try
+        {
+            foreach (Vector2I size in new[] { new Vector2I(1280, 720), new Vector2I(960, 540) })
+            {
+                Root.Size = size;
+                await ToSignal(this, SignalName.ProcessFrame);
+                foreach (string room in new[] { "Atelier", "Corridor", "TradingRoom", "ShowroomLeft", "MusicWorkshop", "Showroom" })
+                {
+                    camera.ResetToOverview();
+                    await ToSignal(this, SignalName.ProcessFrame);
+                    var frame = game.GetNode<Control>($"World/{room}/RoomFrame");
+                    Rect2 bounds = frame.GetGlobalTransform() * new Rect2(Vector2.Zero, frame.Size);
+                    Vector2 worldPoint = bounds.Position + bounds.Size * new Vector2(0.1f, 0.4f);
+                    Vector2 point = Root.GetCanvasTransform() * worldPoint;
+                    Vector2 startPosition = camera.Position;
+                    float startZoom = camera.Zoom.X;
+                    Click(point, twice: false);
+                    Check(!camera.IsFocusing && camera.Position == startPosition && camera.Zoom.X == startZoom,
+                        "A single room click must retain the current view");
+                    Click(point);
+                    Check(camera.IsFocusing && !camera.IsDragging && camera.Position == startPosition,
+                        $"Double-clicking {room} must begin a smooth focus, without a drag or an instant jump");
+                    if (room == "TradingRoom" && size.X == 1280)
+                    {
+                        game.GetNode<PauseMenu>("PauseMenu").Open();
+                        Vector2 pausedPosition = camera.Position;
+                        Vector2 pausedZoom = camera.Zoom;
+                        await ToSignal(CreateTimer(0.12, true), SceneTreeTimer.SignalName.Timeout);
+                        Check(camera.Position == pausedPosition && camera.Zoom == pausedZoom, "Pause must freeze a room focus flight");
+                        game.GetNode<PauseMenu>("PauseMenu").Close();
+                    }
+                    await Settle();
+                    Check(camera.Position.DistanceTo(bounds.GetCenter()) < 0.1f && camera.Zoom.X > startZoom,
+                        $"Double click must center and enlarge the actual {room} geometry at {size}");
+                    if (room == "TradingRoom") using (await CapturePresentation($"room-double-click-{size.X}")) { }
+                }
+            }
+            camera.ResetToOverview();
+            await ToSignal(this, SignalName.ProcessFrame);
+            Vector2 originalPosition = camera.Position;
+            float originalZoom = camera.Zoom.X;
+            var pack = game.GetNode<Control>("HUD/Root/ProgressToggleButton");
+            Click(ScreenBounds(pack).GetCenter());
+            Check(!camera.IsFocusing && camera.Position == originalPosition && camera.Zoom.X == originalZoom,
+                "A double click on HUD controls must never focus a room behind them");
+            var slot = game.GetNode<Control>("World/ShowroomLeft/Showcases/Slot1");
+            Click(ScreenBounds(slot).GetCenter());
+            Check(!camera.IsFocusing, "Interactive showcase slots must consume double clicks instead of focusing their room");
+            var targetFrame = game.GetNode<Control>("World/Corridor/RoomFrame");
+            Vector2 targetPoint = ScreenBounds(targetFrame).GetCenter();
+            camera.NavigationLocked = true;
+            Click(targetPoint);
+            Check(!camera.IsFocusing, "Tutorial navigation lock must block double-click focus");
+            camera.NavigationLocked = false;
+            game.GetNode<PauseMenu>("PauseMenu").Open();
+            Click(targetPoint);
+            Check(!camera.IsFocusing, "Pause must block a new double-click focus");
+            game.GetNode<PauseMenu>("PauseMenu").Close();
+            game.GetNode<EmbroideryGame>("EmbroideryGame").Open();
+            Click(targetPoint);
+            Check(!camera.IsFocusing, "A crafting modal must consume double clicks before world navigation");
+            await PressEscapeForTest();
+            Check(navigationEvents == 0, "Room flights must not count as manual tutorial pan or wheel input");
+        }
+        finally
+        {
+            Paused = false;
+            Root.Size = originalSize;
+            game.QueueFree();
+            await ToSignal(this, SignalName.ProcessFrame);
+        }
+        GD.Print("ROOM_FOCUS_CHECKS_PASS: six rooms, both sizes, smooth center/zoom, single click, GUI/modal/lock/pause");
+    }
+
     private async Task TestPauseHotkey()
     {
         var game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();

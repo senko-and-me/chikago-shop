@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Godot;
 
 // Owns navigation only. The scene supplies world bounds through an explicit reference.
@@ -23,6 +24,7 @@ public partial class WorldCamera : Camera2D
     private Tween _overviewTween;
     private Tween _focusTween;
     private bool _navigationLocked;
+    private readonly List<(Control Cover, Control.GuiInputEventHandler Handler)> _roomCoverHandlers = new();
     public bool NavigationLocked
     {
         get => _navigationLocked;
@@ -69,6 +71,20 @@ public partial class WorldCamera : Camera2D
     {
         _viewport = GetViewport();
         _viewport.SizeChanged += OnViewportSizeChanged;
+        // Closed-room covers consume GUI input; their background can still focus the room.
+        foreach (Node room in BoundsSource.GetParent().GetChildren())
+        {
+            var cover = room.GetNodeOrNull<Control>("LockedOverlay");
+            if (cover == null || cover.MouseFilter != Control.MouseFilterEnum.Stop) continue;
+            Control.GuiInputEventHandler handler = input =>
+            {
+                if (GetTree().Paused || IsReturningToOverview || IsFocusing || NavigationLocked) return;
+                if (input is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true, DoubleClick: true } click &&
+                    TryFocusRoom(cover.GetGlobalTransformWithCanvas() * click.Position)) cover.AcceptEvent();
+            };
+            cover.GuiInput += handler;
+            _roomCoverHandlers.Add((cover, handler));
+        }
         ResetToOverview();
     }
 
@@ -154,6 +170,9 @@ public partial class WorldCamera : Camera2D
 
     public override void _ExitTree()
     {
+        foreach (var (cover, handler) in _roomCoverHandlers)
+            if (GodotObject.IsInstanceValid(cover)) cover.GuiInput -= handler;
+        _roomCoverHandlers.Clear();
         CancelFocusTransition();
         CancelOverviewTransition();
         if (_viewport != null) _viewport.SizeChanged -= OnViewportSizeChanged;
@@ -207,8 +226,30 @@ public partial class WorldCamera : Camera2D
     public override void _UnhandledInput(InputEvent @event)
     {
         if (GetTree().Paused || IsReturningToOverview || IsFocusing || NavigationLocked) return;
-        if (@event is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true })
-            _dragging = true;
+        if (@event is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true } click)
+        {
+            if (click.DoubleClick && TryFocusRoom(click.Position))
+                _viewport.SetInputAsHandled();
+            else _dragging = true;
+        }
+    }
+
+    private bool TryFocusRoom(Vector2 screenPosition)
+    {
+        Vector2 worldPosition = _viewport.GetCanvasTransform().AffineInverse() * screenPosition;
+        // Room frames are authored in the scene; do not duplicate their geometry in navigation code.
+        foreach (Node room in BoundsSource.GetParent().GetChildren())
+        {
+            var frame = room.GetNodeOrNull<Control>("RoomFrame");
+            if (frame == null || !frame.IsVisibleInTree()) continue;
+            Rect2 bounds = frame.GetGlobalTransform() * new Rect2(Vector2.Zero, frame.Size);
+            if (!bounds.HasPoint(worldPosition)) continue;
+            Vector2 view = HasReference && CloseupSize.X > 0 && CloseupSize.Y > 0
+                ? CloseupSize : HasReference ? bounds.Size / WorldBounds.Size * ReferenceSize : bounds.Size;
+            FocusOn(bounds.GetCenter(), view, 0.45);
+            return true;
+        }
+        return false;
     }
 
     private void ZoomAt(Vector2 mousePosition, float factor)

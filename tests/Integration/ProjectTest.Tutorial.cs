@@ -73,6 +73,8 @@ public partial class ProjectTest
             game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
             game.SavePath = save;
             Root.AddChild(game);
+            // A new panel has no cached pointer; keep the fixture independent of the OS cursor after reload.
+            MoveButtonPointer(new Vector2(800, 400));
             game.SetProcess(false);
             game.GetNode<WorldCamera>("Camera2D").SetProcess(false);
             tutorial = game.GetNode<FirstTradeTutorial>("FirstTradeTutorial");

@@ -7,7 +7,7 @@ public partial class ProgressPanel : Control
 {
     [Export] public double SlideSeconds { get; set; } = 0.32;
     [Export] public double StaggerSeconds { get; set; } = 0.065;
-    [Export] public float ClosedX { get; set; } = -350;
+    [Export] public float ClosedX { get; set; } = -286;
     [Export] public float OpenX { get; set; } = 22;
     public bool Expanded { get; private set; }
     public bool Pinned { get; private set; }
@@ -22,6 +22,7 @@ public partial class ProgressPanel : Control
     private bool _wasVisible = true;
     private string _lastText;
     private Vector2? _pointer;
+    private float _collapsedWidth;
 
     public override void _Ready()
     {
@@ -30,6 +31,9 @@ public partial class ProgressPanel : Control
         _content = GetNode<Control>("Content");
         _sticks = new[] { "Day", "Quota", "Deadline" }.Select(name => GetNode<TextureRect>("Visual/" + name)).ToArray();
         _captions = _sticks.Select(stick => stick.GetNode<Label>("Caption")).ToArray();
+        foreach (var caption in _captions) caption.Hide();
+        _collapsedWidth = Mathf.Max(_toggle.Size.X, ClosedX + _sticks.Max(stick => stick.Size.X) + 2);
+        _toggle.Size = new Vector2(_collapsedWidth, _toggle.Size.Y);
         _toggle.Pressed += () => { Pinned = !Pinned; SetExpanded(Pinned); };
         _toggle.GuiInput += input =>
         {
@@ -58,9 +62,9 @@ public partial class ProgressPanel : Control
             return;
         }
         _wasVisible = true;
-        Size = new Vector2(Expanded ? 384 : 46, 208);
+        Size = new Vector2(Expanded ? 384 : _collapsedWidth, 208);
         Vector2 pointer = _pointer.HasValue ? GetGlobalTransformWithCanvas().AffineInverse() * _pointer.Value : GetLocalMousePosition();
-        bool onPack = new Rect2(0, 0, 46, 208).HasPoint(pointer);
+        bool onPack = new Rect2(0, 0, _collapsedWidth, 208).HasPoint(pointer);
         bool onOpen = Expanded && new Rect2(0, 0, 384, 208).HasPoint(pointer);
         Control focused = GetViewport().GuiGetFocusOwner();
         bool wanted = onPack || onOpen || Pinned || _toggle.HasFocus() ||
@@ -101,6 +105,7 @@ public partial class ProgressPanel : Control
     {
         if (Expanded == expanded && !immediate) return;
         Expanded = expanded;
+        foreach (var caption in _captions) caption.Visible = expanded;
         if (_slide?.IsValid() == true) _slide.Kill();
         if (immediate)
         {

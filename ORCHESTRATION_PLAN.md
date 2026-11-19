@@ -9,6 +9,68 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### HF-175 — публикация пачки и двойного клика комнаты
+
+Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-19; HF172/HF173/HF174 DONE, пользователь разрешил commit/push; пересечений нет.
+
+CP-HF-175 read-set: текущий фронт; Git status/diff/refs; готовые изменения и evidence HF172/HF173/HF174; scenes/{main_menu,trade_scene}.tscn только hash. Write-set: Git index/commits/main/origin/main; ORCHESTRATION_PLAN.md; публикация готовых docs/GAMEPLAY.md, scenes/UI/CigaretteProgress.tscn, scripts/Camera/WorldCamera.cs, scripts/UI/ProgressPanel.cs, tests/Integration/ProjectTest.{Camera,Tutorial,Ui}.cs, tests/ProjectTest.cs; .local/checks/hf175. Out of scope: source/, пользовательские основные сцены, новые изменения поведения/баланса/schema, force push.
+
+Приёмка: готовые проверенные файлы опубликованы обычным push, HEAD=origin/main; пользовательские основные сцены побайтно сохранены локально вне коммита. Проверки: SHA256 runtime/test/docs с tested isolated copy; прежние build/progress/tutorial/room-focus/camera-limits PASS; staged diff --check, push/ref/status/hash readback.
+
+### HF-174 — наведение камеры по двойному клику комнаты
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-19; HF-173 DONE, пересечений нет.
+
+CP-HF-174 read-set: текущий фронт; scripts/Camera/WorldCamera.cs; scenes/trade_scene.tscn (World/комнаты/RoomFrame/Camera2D read-only); scripts/Presentation/RoomDoorwayPresentation.cs; scripts/UI/FirstTradeTutorial.cs; tests/Integration/ProjectTest.{Camera,CameraLimits,RoomFrames,Helpers,Presentation}.cs; tests/ProjectTest.cs; .vscode/settings.json; ChikagoShop.csproj; project.godot; docs/GAMEPLAY.md (управление); scenes/main_menu.tscn только hash. Write-set: ORCHESTRATION_PLAN.md; scripts/Camera/WorldCamera.cs; tests/Integration/ProjectTest.Camera.cs; tests/ProjectTest.cs; docs/GAMEPLAY.md; .local/checks/hf174; изолированный .local/checks/git-review-20261118/project (те же runtime/test/docs файлы). Out of scope: source/, пользовательские сцены/прежние изменения, TradeScene/домен/баланс/schema/арт/commit/push.
+
+Приёмка: двойной левый клик по фону комнаты плавно центрирует и приближает камеру до существующего CloseupSize; все6 комнат определяются по реальным scene bounds, клики по UI/кнопкам не наводят камеру. Одиночный клик/drag/wheel прежние; pause/modal/NavigationLocked блокируют; resize и границы камеры сохраняются. Проверки: local/isolated dotnet build; rendered --room-focus-checks/--camera-limits-checks/--tutorial-checks; screenshot review; git diff --check; SHA256 пользовательских сцен.
+
+```text
+Task: HF-174
+Recommended status: REVIEW → принято координатором, DONE
+Changed: scripts/Camera/WorldCamera.cs — double-left-click в unhandled world input ищет видимую RoomFrame по реальным world bounds, плавно FocusOn(center, CloseupSize,0,45с). Для закрытой витрины Stop-overlay обрабатывается только double-click его фона через GuiInput; кнопки/drag фильтруются прежним GUI. Подписки снимаются в ExitTree. tests/Integration/ProjectTest.Camera.cs — six-room regression, два viewport, плавность/центр/zoom, настоящий hover/click, одиночный клик, HUD и showcase UI, pause-flight, navigation lock, modal и отсутствие ложных tutorial pan/zoom событий; tests/ProjectTest.cs — --room-focus-checks; docs/GAMEPLAY.md — управление.
+Checks: local/isolated dotnet build PASS (0 warnings/errors). Rendered --room-focus-checks PASS для всех6 комнат включая закрытые в1280×720/960×540. Rendered --camera-limits-checks PASS: standalone camera, cursor zoom anchor, drag, GUI isolation, pause lifecycle, limits/resize. Rendered --tutorial-checks PASS: полный walkthrough/practice/flights/пауза/reload. Все verified stderr пусты. git diff --check PASS; SHA256 обеих пользовательских основных сцен сохранены. Просмотрен cashier-1280: фокус соответствует пользовательскому примеру; evidence .local/checks/hf174.
+Acceptance: двойной клик по фону любой из6 комнат за0,45с приближает и центрирует камеру; одиночный клик не меняет ракурс, UI/modal/пауза/tutorial lock сохранены, ручной drag/wheel и границы камеры работают.
+Read-set exception: для проверки команды закрытия crafting fixture прочитаны только сигнатуры scripts/UI/EmbroideryGame.cs; тест использует прежний Escape helper. source/ не читался.
+Risks/blocker: нет новых; commit/push не выполнялись.
+Next: пользовательская проверка двойного клика в игре.
+```
+### HF-173 — исходная ориентация пачки по пользовательскому образцу
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-19; HF-172 DONE; пересечений нет.
+
+CP-HF-173 read-set: текущий фронт и CP-HF-172; scenes/UI/CigaretteProgress.tscn; scripts/UI/ProgressPanel.cs; tests/Integration/ProjectTest.{Ui,Presentation,Helpers}.cs; tests/ProjectTest.cs; art/ui/cigarette_{pack_front,pack_back,stick}.png; две пользовательские картинки в чате; .vscode/settings.json; project.godot; ChikagoShop.csproj; scenes/{main_menu,trade_scene}.tscn только hash. Write-set: ORCHESTRATION_PLAN.md; scenes/UI/CigaretteProgress.tscn; scripts/UI/ProgressPanel.cs; tests/Integration/ProjectTest.{Ui,Tutorial}.cs (в Tutorial только начальная позиция мыши fixture); .local/checks/hf173; изолированный .local/checks/git-review-20261118/project (те же runtime/test файлы). Out of scope: source/, изменение PNG, пользовательские основные сцены, домен/TradeScene/schema/баланс/commit/push.
+
+Приёмка: убрать поворот90°; обе части без искажения пропорций совмещены по координатам общего исходного canvas; белый фасад и верхняя грань слева, чёрная боковина справа; сигареты между слоями, кончики немного выходят за чёрную боковину. Hover доступен по всем видимым кончикам; подписи скрыты в покое, читаемы при раскрытии; прежние hover/pin/pause/локали/размеры/обучение работают. Проверки: local/isolated dotnet build; rendered --progress-toggle-checks/--tutorial-checks; screenshot review; git diff --check; hash пользовательских сцен.
+
+```text
+Task: HF-173
+Recommended status: REVIEW → принято координатором, DONE
+Changed: scenes/UI/CigaretteProgress.tscn — поворот90° убран у обеих частей; общий масштаб0,16 и единый origin исходного canvas, верхняя грань сверху и чёрная боковина справа. Сигареты y32/88/144, кончики x72 выступают за заднюю часть x50,32. scripts/UI/ProgressPanel.cs — ClosedX -286, область hover/toggle автоматически включает кончики; подписи скрыты в покое. tests/Integration/ProjectTest.Ui.cs — регрессия исходной ориентации/aspect/canvas alignment, выступающих кончиков/пикселей, hover по кончикам и видимости подписей. tests/Integration/ProjectTest.Tutorial.cs — явная стартовая позиция мыши при создании/reload fixture.
+Checks: local/isolated dotnet build PASS (0 warnings/errors); rendered --progress-toggle-checks PASS: orientation/aspect/source alignment, pixel tips/black side, hover на выступающих кончиках, stagger/pause/pin/keyboard/локали/размеры/recovery/reload. Rendered --tutorial-checks PASS после детерминированной инициализации мыши fixture; final stderr пуст. git diff --check PASS; SHA256 обеих пользовательских основных сцен совпадает с before-scenes.json. Просмотрены full-pack-render/collapsed-detail/expanded; evidence .local/checks/hf173.
+Acceptance: геометрия соответствует второму пользовательскому изображению: белый фасад и верхняя грань не повёрнуты, чёрная боковина справа, сигареты между слоями, кончики выступают за боковину; прежний узкий край пачки слева экрана сохранён.
+Read-set exception: для диагностики cursor-dependent tutorial failure прочитаны tests/Integration/ProjectTest.{Tutorial,ButtonFeedback}.cs; координатор расширил write-set только на инициализацию мыши Tutorial fixture. source/ не читался.
+Risks/blocker: нет новых; commit/push не выполнялись.
+Next: пользовательская визуальная проверка ориентации.
+```
+### HF-172 — глубина пачки и видимые кончики сигарет
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-19; HF-171 DONE, активных пересечений нет.
+
+CP-HF-172 read-set: текущий фронт и HF150/151; scenes/UI/CigaretteProgress.tscn; scripts/UI/ProgressPanel.cs; tests/Integration/ProjectTest.{Ui,Presentation,Helpers}.cs; tests/ProjectTest.cs; project.godot; ChikagoShop.csproj; .vscode/settings.json; scenes/trade_scene.tscn только ProgressPanel/Toggle и hash; scenes/main_menu.tscn только hash; art/ui/cigarette_{pack_front,pack_back,stick}.png; публичная Drive-папка 1uVwhfIKYE4L8Hfqf5yk1l9oS-C8EOQnX и её три PNG. Write-set: ORCHESTRATION_PLAN.md; scenes/UI/CigaretteProgress.tscn; scripts/UI/ProgressPanel.cs; tests/Integration/ProjectTest.Ui.cs; .local/checks/hf172; изолированная копия .local/checks/git-review-20261118/project (только те же runtime/test файлы). Out of scope: source/, пиксели PNG, пользовательские основные сцены, TradeScene/домен/баланс/schema, commit/push.
+
+Приёмка: сверить три исходника с Drive; передняя часть закрывает основания сигарет, задняя чёрная часть создаёт глубину за ними; в покое кончики немного выступают из отверстия, при hover три сигареты последовательно выходят из него и возвращаются; подписи читаемы только при раскрытии. Сохраняются hover/pin/keyboard/pause, RU/EN и 960×540/1280×720. Проверки: dotnet build ChikagoShop.csproj; rendered --progress-toggle-checks в изолированном user://; screenshot review; git diff --check; SHA256 пользовательских сцен до/после.
+
+```text
+Task: HF-172
+Recommended status: REVIEW → принято координатором, DONE
+Changed: scenes/UI/CigaretteProgress.tscn — передняя кромка x24, задняя x46; три сигареты в покое заканчиваются на x38 внутри чёрного промежутка. scripts/UI/ProgressPanel.cs — ClosedX -320 синхронно со сценой. tests/Integration/ProjectTest.Ui.cs — draw order, совпадение высоты слоёв, глубина проёма, видимые кончики, перекрытие основания раскрытых сигарет и pixel-проверка каждого кончика на чёрном фоне.
+Checks: local/isolated dotnet build PASS (0 warnings/errors); rendered --progress-toggle-checks PASS включая pixel probes, hover/stagger/pause/pin/keyboard, RU/EN960×540/1280×720 и recovery/reload; rendered --tutorial-checks PASS; stderr обеих групп пуст. git diff --check PASS; SHA256 двух пользовательских основных сцен сохранены. Все три Drive PNG скачаны и SHA256 совпадают с локальными PNG. Screenshot review collapsed-detail, expanded RU960/EN1280 PASS. Evidence .local/checks/hf172.
+Acceptance: основания сигарет перекрыты передней частью, задняя чёрная часть видна за кончиками; в покое три кончика слегка выступают, при наведении сигареты выходят через проём без отрыва от пачки.
+Read-set exception: публичная папка Drive прочитана через Invoke-WebRequest после отказа web-просмотрщика; source/ не читался. Для поиска доступа прочитан plugin-management skill; подключение не понадобилось.
+Risks/blocker: нет новых; commit/push не выполнялись.
+Next: пользовательская визуальная проверка пачки.
+```
 ### HF-171 — публикация жёлтой рамки, ручной пачки и pan3000
 
 Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-18; HF-169/HF-170 DONE, пользователь разрешил commit/push; активных пересечений нет.

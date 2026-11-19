@@ -105,10 +105,67 @@ public partial class ProjectTest
                 "The old rectangle and arrow must be replaced by the collapsed pack");
             Check(!content.GetNode<Label>("DayLabel").Visible && panel.GetNode<Control>("Visual/Pack").GetGlobalRect().Position.X < 0,
                 "Legacy bindings stay hidden and only the edge of the scene-authored pack remains on screen");
-            using (await CapturePresentation("cigarette-collapsed")) { }
+            var visual = panel.GetNode<Control>("Visual");
+            var front = visual.GetNode<TextureRect>("Pack/Front");
+            var back = visual.GetNode<TextureRect>("Back");
+            Rect2 frontBounds = ScreenBounds(front);
+            Rect2 backBounds = ScreenBounds(back);
+            Check(back.GetIndex() < sticks[0].GetIndex() &&
+                sticks.All(stick => stick.GetIndex() < visual.GetNode<Control>("Pack").GetIndex()),
+                "The back, cigarettes and front must draw in that order to form a pocket");
+            var frontAtlas = (AtlasTexture)front.Texture;
+            var backAtlas = (AtlasTexture)back.Texture;
+            Vector2 frontScale = front.Size / frontAtlas.Region.Size;
+            Vector2 backScale = back.Size / backAtlas.Region.Size;
+            Check(Mathf.IsZeroApprox(front.Rotation) && Mathf.IsZeroApprox(back.Rotation) &&
+                Mathf.IsEqualApprox(frontScale.X, frontScale.Y) && frontScale.IsEqualApprox(backScale) &&
+                (frontBounds.Position - frontAtlas.Region.Position * frontScale).IsEqualApprox(
+                    backBounds.Position - backAtlas.Region.Position * backScale),
+                "Both pack layers must keep the original landscape orientation, aspect ratio and shared source canvas alignment");
+            Check(backBounds.End.X > frontBounds.End.X + 3 &&
+                Mathf.IsEqualApprox(backBounds.Position.Y, frontBounds.Position.Y),
+                "The black back must form the right side behind the unrotated front");
+            foreach (var stick in sticks)
+            {
+                Rect2 bounds = ScreenBounds(stick);
+                Check(Mathf.IsEqualApprox(stick.Position.X, panel.ClosedX) &&
+                    bounds.Position.X < frontBounds.End.X && bounds.End.X > backBounds.End.X + 12 &&
+                    bounds.End.X < backBounds.End.X + 28 && !Caption(Array.IndexOf(sticks, stick)).Visible &&
+                    bounds.Position.Y > backBounds.Position.Y && bounds.End.Y < backBounds.End.Y,
+                    "A resting cigarette must overlap the pack, protrude slightly beyond its black side and hide its caption");
+            }
+            using (var image = await CapturePresentation("cigarette-collapsed"))
+            {
+                Vector2 pixelScale = new Vector2(image.GetWidth(), image.GetHeight()) / Root.GetVisibleRect().Size;
+                foreach (var stick in sticks)
+                {
+                    Rect2 bounds = ScreenBounds(stick);
+                    float middle = bounds.GetCenter().Y;
+                    Color recess = image.GetPixel((int)((backBounds.End.X - 3) * pixelScale.X),
+                        (int)((bounds.Position.Y - 4) * pixelScale.Y));
+                    bool visibleTip = false;
+                    for (float x = backBounds.End.X + 2; x < bounds.End.X - 2; x++)
+                    {
+                        Color tip = image.GetPixel((int)(x * pixelScale.X), (int)(middle * pixelScale.Y));
+                        visibleTip |= tip.R > recess.R + 0.08f;
+                    }
+                    Check(recess.R < 0.1f && visibleTip,
+                        "Each resting cigarette tip must visibly protrude past the black side of the pack");
+                }
+            }
+            Vector2 authoredVisualPosition = visual.Position;
+            try
+            {
+                // Bring the off-screen body into view for comparison with the source artwork.
+                visual.Position += new Vector2(300, 240);
+                using (await CapturePresentation("cigarette-pack-reference")) { }
+            }
+            finally { visual.Position = authoredVisualPosition; }
             Vector2 camera = game.GetNode<Camera2D>("Camera2D").Position;
             int score = game.Score;
-            MoveButtonPointer(ScreenBounds(toggle).GetCenter());
+            Vector2 restingTip = new(ScreenBounds(sticks[0]).End.X - 4, ScreenBounds(sticks[0]).GetCenter().Y);
+            Check(ScreenBounds(toggle).HasPoint(restingTip), "The pack hover target must include protruding tips");
+            MoveButtonPointer(restingTip);
             await ToSignal(CreateTimer(0.14, true), SceneTreeTimer.SignalName.Timeout);
             Check(panel.Expanded && panel.IsAnimating && sticks[0].Position.X > sticks[2].Position.X &&
                 sticks[0].Position.X > panel.ClosedX && sticks[0].Position.X < panel.OpenX,
@@ -120,8 +177,12 @@ public partial class ProjectTest
             Check(Mathf.IsEqualApprox(sticks[0].Position.X, pausedX), "Pause must freeze a slide in progress");
             pause.Close();
             await Settle();
-            Check(!content.Visible && sticks.All(stick => Mathf.IsEqualApprox(stick.Position.X, panel.OpenX)),
+            Check(!content.Visible && sticks.All(stick => Mathf.IsEqualApprox(stick.Position.X, panel.OpenX)) &&
+                Enumerable.Range(0, sticks.Length).All(index => Caption(index).Visible),
                 "Only the three information cigarettes appear; legacy actions and status stay hidden");
+            Check(sticks.All(stick => ScreenBounds(stick).Position.X < frontBounds.End.X &&
+                ScreenBounds(stick).End.X > backBounds.End.X),
+                "Extended cigarettes must emerge through the opening while their bases remain behind the front");
             Vector2 cigarettePoint = ScreenBounds(sticks[0]).GetCenter();
             MoveButtonPointer(cigarettePoint);
             await ToSignal(this, SignalName.ProcessFrame);
