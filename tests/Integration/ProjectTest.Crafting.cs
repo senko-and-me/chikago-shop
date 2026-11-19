@@ -18,7 +18,7 @@ public partial class ProjectTest
         game.SetProcess(false);
         try
         {
-            foreach (Vector2I size in new[] { new Vector2I(960, 540), new Vector2I(1280, 720) })
+            foreach (Vector2I size in new[] { new Vector2I(960, 540), new Vector2I(1280, 720), new Vector2I(1000, 800) })
             foreach (string locale in new[] { "ru", "en" })
             foreach (string name in new[] { "EmbroideryGame", "PolishingGame" })
             foreach (string state in new[] { "ready", "playing", "timeout", "success" })
@@ -67,6 +67,29 @@ public partial class ProjectTest
                 foreach (string stat in new[] { "Time", "Stitches", "Misses" })
                     Check(Pixel(surface.GetNode<Control>("Stat" + stat).Position + new Vector2(5, 5)).R > 0.9f,
                         "Statistics must have light cards behind their black headings and values");
+                Rect2 panel = surface.PanelRect, fabric = surface.FabricRect;
+                var title = surface.GetNode<Label>("Title");
+                var firstStat = surface.GetNode<Control>("StatTime");
+                var lastStat = surface.GetNode<Control>("StatMisses");
+                var dayHeading = surface.GetNode<Label>("DayHeading");
+                var dayTimer = surface.GetNode<Label>("DayTimer");
+                var hint = surface.GetNode<Label>("Hint");
+                Check(title.GetRect().End.X + 8 <= firstStat.Position.X &&
+                    lastStat.GetRect().End.X + 8 <= dayHeading.Position.X &&
+                    firstStat.GetRect().End.Y + 20 <= fabric.Position.Y,
+                    "Title, three statistics and labeled day timer must share a separated header above the workspace");
+                Check(panel.Encloses(fabric.Grow(7)) && fabric.End.Y + 7 <= hint.Position.Y &&
+                    surface.QualityTrackRect.Position.X >= fabric.End.X + 16 &&
+                    surface.GetNode<Label>("Quality").GetRect().End.Y <= fabric.End.Y + 1,
+                    "Workspace, quality sidebar and footer must stay separated inside the modal");
+                Check(panel.Encloses(dayTimer.GetRect()) && panel.Encloses(dayHeading.GetRect()) &&
+                    dayHeading.GetRect().End.Y <= dayTimer.Position.Y &&
+                    dayHeading.Text == (locale == "ru" ? "ДО КОНЦА ДНЯ" : "DAY ENDS IN"),
+                    "Day countdown must have a translated heading instead of an unexplained number");
+                if (state is "ready" or "playing")
+                    Check(hint.Text.Length > 0, "Instructions must remain visible while playing");
+                if (state == "playing" && locale == "ru" && size.X == 960)
+                    frame.SavePng(System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"chikago-hf183-{name}-playing.png"));
                 var track = surface.QualityTrackRect;
                 foreach (float depth in new[] { 0.15f, 0.35f, 0.65f, 0.85f })
                 {
@@ -102,7 +125,9 @@ public partial class ProjectTest
                 if (state == "ready" && locale == "ru" && size.X == 960)
                 {
                     int money = game.Score, energy = game.EnergyRemaining, count = game.StoredItems.Length;
+                    Rect2 beforeStart = surface.FabricRect;
                     await ClickControl(game, name + "/Surface/Action");
+                    Check(surface.FabricRect == beforeStart, "Starting must keep the workspace and hit targets in place");
                     Check(craft.ActiveSession.State == EmbroideryState.Playing && !action.Visible && !cancel.Visible &&
                         game.Score < money && game.EnergyRemaining == energy - 1 && game.StoredItems.Length == count + 1,
                         "The highlighted left Start must begin the real game, charge once and hide both buttons");

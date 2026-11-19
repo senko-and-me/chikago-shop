@@ -201,10 +201,20 @@ public partial class ProjectTest
         var toggle = game.GetNode<Button>("HUD/Root/ProgressToggleButton");
         var sticks = new[] { "Day", "Quota", "Deadline" }.Select(name => panel.GetNode<Control>("Visual/" + name)).ToArray();
         Label Caption(int index) => sticks[index].GetNode<Label>("Caption");
+        Vector2[] captionOffsets = null;
+        void CheckAttachedCaptions()
+        {
+            for (int i = 0; i < sticks.Length; i++)
+                Check(Caption(i).Visible && Caption(i).GetParent() == sticks[i] &&
+                    Caption(i).Position.IsEqualApprox(captionOffsets[i]) && Mathf.IsEqualApprox(Caption(i).Modulate.A, 1),
+                    "Each caption must stay visible and fixed to its cigarette throughout opening and retraction");
+        }
         async Task Settle() => await ToSignal(CreateTimer(0.75, true), SceneTreeTimer.SignalName.Timeout);
         try
         {
             await Settle();
+            captionOffsets = Enumerable.Range(0, sticks.Length).Select(i => Caption(i).Position).ToArray();
+            CheckAttachedCaptions();
             Check(!panel.Expanded && !content.Visible && toggle.Text == "" && panel.Visible,
                 "The old rectangle and arrow must be replaced by the collapsed pack");
             Check(!content.GetNode<Label>("DayLabel").Visible && panel.GetNode<Control>("Visual/Pack").GetGlobalRect().Position.X < 0,
@@ -234,9 +244,9 @@ public partial class ProjectTest
                 Rect2 bounds = ScreenBounds(stick);
                 Check(Mathf.IsEqualApprox(stick.Position.X, panel.ClosedX) &&
                     bounds.Position.X < frontBounds.End.X && bounds.End.X > backBounds.End.X + 12 &&
-                    bounds.End.X < backBounds.End.X + 28 && !Caption(Array.IndexOf(sticks, stick)).Visible &&
+                    bounds.End.X < backBounds.End.X + 28 && Caption(Array.IndexOf(sticks, stick)).Visible &&
                     bounds.Position.Y > backBounds.Position.Y && bounds.End.Y < backBounds.End.Y,
-                    "A resting cigarette must overlap the pack, protrude slightly beyond its black side and hide its caption");
+                    "A resting cigarette must overlap the pack, protrude slightly beyond its black side and retain its caption");
             }
             using (var image = await CapturePresentation("cigarette-collapsed"))
             {
@@ -274,6 +284,7 @@ public partial class ProjectTest
             Check(panel.Expanded && panel.IsAnimating && sticks[0].Position.X > sticks[2].Position.X &&
                 sticks[0].Position.X > panel.ClosedX && sticks[0].Position.X < panel.OpenX,
                 $"Real hover must animate cigarettes one at a time (expanded={panel.Expanded}, animating={panel.IsAnimating}, x={sticks[0].Position.X}/{sticks[2].Position.X}, pointer={panel.GetLocalMousePosition()}, toggle={ScreenBounds(toggle)})");
+            CheckAttachedCaptions();
             var pause = game.GetNode<PauseMenu>("PauseMenu");
             pause.Open();
             float pausedX = sticks[0].Position.X;
@@ -332,10 +343,24 @@ public partial class ProjectTest
             await WaitForDayCardAnimation(game);
             await Settle();
             Check(!content.Visible && !game.DayStarted, "Returning from cards keeps legacy controls hidden and waits for Start");
+            MoveButtonPointer(ScreenBounds(toggle).GetCenter());
+            await Settle();
             MoveButtonPointer(new Vector2(600, 350));
+            ulong retractDeadline = Time.GetTicksMsec() + 1500;
+            while (panel.Expanded || !panel.IsAnimating || sticks[2].Position.X >= panel.OpenX)
+            {
+                Check(Time.GetTicksMsec() < retractDeadline, "Leaving the reopened pack must begin retraction");
+                CheckAttachedCaptions();
+                await ToSignal(this, SignalName.ProcessFrame);
+            }
+            Check(!panel.Expanded && panel.IsAnimating && sticks[2].Position.X < panel.OpenX &&
+                sticks[2].Position.X > panel.ClosedX, "The caption regression must sample a real retraction in progress");
+            CheckAttachedCaptions();
+            using (await CapturePresentation("cigarette-caption-retract")) { }
             await Settle();
             Check(!panel.Expanded && !content.Visible && sticks.All(stick => Mathf.IsEqualApprox(stick.Position.X, panel.ClosedX)),
                 "Leaving retracts cigarettes and mouse actions do not leave sticky keyboard focus");
+            CheckAttachedCaptions();
             toggle.GrabFocus();
             Root.PushInput(new InputEventKey { Pressed = true, Keycode = Key.Space }, true);
             Root.PushInput(new InputEventKey { Pressed = false, Keycode = Key.Space }, true);

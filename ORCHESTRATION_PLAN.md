@@ -9,6 +9,51 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### HF-184 — публикация подписей сигарет и компоновки мини-игр
+
+Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-19; HF182/HF183 DONE; пользователь разрешил commit/push; пересечений нет.
+
+CP-HF-184 read-set: текущий фронт, готовые diff/evidence HF182/HF183, Git status/refs, основные сцены только hash. Write-set: Git index/commits/main/origin/main; ORCHESTRATION_PLAN.md; публикация localization/en.tres, scripts/UI/{EmbroideryGame,ProgressPanel}.cs, tests/Integration/ProjectTest.{Crafting,Ui}.cs. Out of scope: source/, пользовательские основные сцены, новые изменения поведения, force push.
+
+Приёмка: проверенные изменения HF182/HF183 опубликованы в origin/main, refs совпадают; пользовательские сцены сохранены вне коммита. Проверки: fetch/ref, hash пяти файлов с tested isolated copy, готовые build/rendered checks, staged diff --check, push/readback/hash сцен.
+
+### HF-183 — компоновка вышивки и полировки
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-19; HF-182 DONE; пересечений нет.
+
+CP-HF-183 read-set: текущий фронт; scripts/UI/EmbroideryGame.cs; tests/Integration/ProjectTest.{Crafting,Helpers,Presentation}.cs; tests/ProjectTest.cs (runner); localization/en.tres; пользовательский screenshot; scenes/{main_menu,trade_scene}.tscn только hash. Write-set: ORCHESTRATION_PLAN.md; scripts/UI/EmbroideryGame.cs (presentation); tests/Integration/ProjectTest.Crafting.cs; localization/en.tres (подписи); .local/checks/hf183; изолированный .local/checks/git-review-20261118/project (те же файлы). Out of scope: source/, gameplay/баланс/schema/арт/основные сцены/предыдущие правки/commit/push.
+
+Приёмка: компактная общая строка названия и статистики, подписанные время дня и качество, увеличенное поле без скачка при старте, подсказка во время игры; Start слева выделен, Collect по центру. RU/EN, обе мини-игры, ready/playing/timeout/success и разные размеры окна: читаемый текст, без пересечений. Проверки: local/isolated build; rendered --craft-contrast-checks; screenshots; git diff --check; SHA256 основных сцен.
+
+```text
+Task: HF-183
+Recommended status: REVIEW → принято координатором, DONE
+Changed: scripts/UI/EmbroideryGame.cs — общая верхняя строка названия/трёх карточек/подписанного времени дня, увеличенное поле, компактная шкала с заголовком и процентом, согласованный footer с подсказкой и действиями. Геометрия поля постоянна при старте; подсказка остаётся во время игры. Заголовки показателей увеличены для читаемости. localization/en.tres — два перевода. ProjectTest.Crafting.cs — границы/отступы/header/footer/перевод/стабильность поля и третий размер окна.
+Checks: local/isolated dotnet build PASS (0 warnings/errors); rendered --craft-contrast-checks PASS: обе мини-игры × RU/EN ×960×540/1280×720/1000×800 ×ready/playing/timeout/success; реальные Start/Cancel/Collect, контраст текста/кнопок/шкалы и отсутствие повторной выдачи. Финальный stderr пуст. Просмотрены embroidery-ready-ru и polishing-playing-ru; screenshots/logs в .local/checks/hf183. git diff --check PASS; SHA256 двух пользовательских сцен совпадают с исходным snapshot.
+Acceptance: единая компактная компоновка обеих мини-игр, понятные подписи, больше полезного поля, нет прежней большой пустоты во время игры.
+Read-set exception: нет; source/ не читался.
+Risks/blocker: нет новых; предыдущие правки и пользовательские сцены сохранены; commit/push не выполнялись.
+Next: пользовательская проверка нового вида мини-игр.
+```
+
+### HF-182 — постоянный текст на сигаретах при движении
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-19; HF-181 DONE; пересечений нет.
+
+CP-HF-182 read-set: текущий фронт; scripts/UI/ProgressPanel.cs; scenes/UI/CigaretteProgress.tscn; tests/Integration/ProjectTest.{Ui,Presentation,Helpers}.cs; tests/ProjectTest.cs (focused checks); scenes/{main_menu,trade_scene}.tscn только hash. Write-set: ORCHESTRATION_PLAN.md; scripts/UI/ProgressPanel.cs (только visibility captions); tests/Integration/ProjectTest.Ui.cs (progress caption regression); .local/checks/hf182; изолированный .local/checks/git-review-20261118/project (те же runtime/test файлы). Out of scope: source/, геометрия/арт/сцены/скорость анимации, квоты/баланс/schema/прочие изменения/commit/push.
+
+Приёмка: Caption постоянно видим как дочерний элемент сигареты, без отдельного Hide/Show при готовности/hover/уходе; в закрытом виде естественно перекрывается передней частью пачки/границей экрана. Во время выдвижения и возврата текст остаётся на прежнем месте относительно каждой сигареты. RU/EN, текущие значения/пауза/hover/pin/reload сохраняются. Проверки: local/isolated build; rendered --progress-toggle-checks/--quota-countdown-checks/--tutorial-checks; screenshot движения; git diff --check; SHA256 основных сцен.
+
+```text
+Task: HF-182
+Recommended status: REVIEW → принято координатором, DONE
+Changed: scripts/UI/ProgressPanel.cs — удалены Caption.Hide в Ready и Caption.Visible=expanded в SetExpanded; подписи постоянно остаются дочерними элементами сигарет и естественно перекрываются передней частью пачки при возврате. tests/Integration/ProjectTest.Ui.cs — постоянная видимость, parent/локальное положение/alpha в покое/выдвижении/реальном возврате/после возврата; fixture явно раскрывает пачку перед проверкой ретракции и ждёт наблюдаемое промежуточное положение.
+Checks: local/isolated dotnet build PASS (0 warnings/errors); rendered --progress-toggle-checks PASS: caption attachment во всех фазах, RU/EN, hover/stagger/pin/keyboard/pause/reload/recovery; --quota-countdown-checks PASS; --tutorial-checks PASS. Финальные stderr пусты. Просмотрен captions-during-retraction.png: текст виден на движущихся сигаретах. git diff --check PASS; SHA256 обеих пользовательских основных сцен сохранён. Evidence .local/checks/hf182.
+Acceptance: текст не отключается при начале возврата или в закрытой пачке; всегда двигается вместе с соответствующей сигаретой.
+Read-set exception: нет; source/ не читался.
+Risks/blocker: нет новых; commit/push не выполнялись.
+Next: пользовательская проверка текста при выдвижении и возврате сигарет.
+```
 ### HF-181 — публикация изменений до старта дня, квот и интерфейса комнат
 
 Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-19; HF176/HF177/HF178/HF179/HF180 DONE; пользователь разрешил commit/push; пересечений нет.

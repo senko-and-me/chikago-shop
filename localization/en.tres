@@ -3,6 +3,8 @@
 [resource]
 locale = "en"
 messages = {
+&"ДО КОНЦА ДНЯ": &"DAY ENDS IN",
+&"КАЧЕСТВО": &"QUALITY",
 &"Срок квоты истёк": &"Quota deadline passed",
 &"Квота: сейчас": &"Quota due now",
 &"Квота: сегодня": &"Quota due today",

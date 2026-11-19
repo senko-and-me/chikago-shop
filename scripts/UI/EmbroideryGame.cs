@@ -14,6 +14,7 @@ public partial class EmbroideryGame : CanvasLayer
 	public bool IsOpen => _surface != null && _surface.Visible;
 	private EmbroiderySurface _surface = null!;
 	private Label _title = null!, _hint = null!, _quality = null!, _dayTimer = null!;
+	private Label _dayHeading = null!, _qualityHeading = null!;
 	private readonly Control[] _statCards = new Control[3];
 	private readonly Label[] _statValues = new Label[3];
 	private readonly Label[] _statHeadings = new Label[3];
@@ -57,7 +58,10 @@ public partial class EmbroideryGame : CanvasLayer
 		}
 
 		_title = AddLabel("Title", 28);
-		_dayTimer = AddLabel("DayTimer", 24);
+		_dayTimer = AddLabel("DayTimer", 22);
+		_dayHeading = AddLabel("DayHeading", 14);
+		_qualityHeading = AddLabel("QualityHeading", 14);
+		_title.HorizontalAlignment = HorizontalAlignment.Left;
 
 		string[] statNames = ["Time", "Stitches", "Misses"];
 		string[] statTitles = ["ВРЕМЯ", "СТЕЖКИ", "ПРОМАХИ"];
@@ -93,7 +97,7 @@ public partial class EmbroideryGame : CanvasLayer
 				Size = new Vector2(76, 18),
 				MouseFilter = Control.MouseFilterEnum.Ignore
 			};
-			heading.AddThemeFontSizeOverride("font_size", 12);
+			heading.AddThemeFontSizeOverride("font_size", 14);
 			heading.AddThemeColorOverride("font_color", Colors.Black);
 			heading.AddThemeConstantOverride("outline_size", 0);
 			card.AddChild(heading);
@@ -113,7 +117,7 @@ public partial class EmbroideryGame : CanvasLayer
 			_statValues[i] = value;
 		}
 
-		_hint = AddLabel("Hint", 18);
+		_hint = AddLabel("Hint", 16);
 		_quality = AddLabel("Quality", 25);
 		_action = new Button
 		{
@@ -310,7 +314,7 @@ public partial class EmbroideryGame : CanvasLayer
 			GameLocalization.Text(IsPolishing ? "ОЧИЩЕНО" : "СТЕЖКИ");
 		_statHeadings[2].Text = GameLocalization.Text("ПРОМАХИ");
 
-		_hint.Text = ready
+		_hint.Text = ready || playing
 			? GameLocalization.Text(IsPolishing
 				? "Зажми и протирай туда-сюда"
 				: "Нажимай на светящиеся точки")
@@ -326,42 +330,32 @@ public partial class EmbroideryGame : CanvasLayer
 		_dayTimer.Text =
 			GetParent().GetNode<Label>("HUD/Root/DayTimer").Text;
 
-		Place(_title, new Rect2(
-			panel.Position + new Vector2(120, 14),
-			new Vector2(panel.Size.X - 240, 40)));
-
-		Place(_dayTimer, new Rect2(
-			new Vector2(panel.End.X - 112, panel.Position.Y + 14),
-			new Vector2(88, 40)));
-
+		_dayHeading.Text = GameLocalization.Text("ДО КОНЦА ДНЯ");
+		_qualityHeading.Text = GameLocalization.Text("КАЧЕСТВО");
+		Place(_title, new Rect2(panel.Position + new Vector2(24, 24),
+			new Vector2(panel.Size.X - 492, 60)));
+		float statsX = panel.End.X - 456;
 		for (int i = 0; i < _statCards.Length; i++)
-		{
-			Place(_statCards[i], new Rect2(
-				new Vector2(panel.GetCenter().X - 166 + i * 114,
-					panel.Position.Y + 62),
+			Place(_statCards[i], new Rect2(new Vector2(statsX + i * 116, panel.Position.Y + 24),
 				new Vector2(104, 60)));
-		}
+		Place(_dayHeading, new Rect2(new Vector2(panel.End.X - 112, panel.Position.Y + 28),
+			new Vector2(96, 18)));
+		Place(_dayTimer, new Rect2(new Vector2(panel.End.X - 104, panel.Position.Y + 49),
+			new Vector2(80, 30)));
 
 		Rect2 track = _surface.QualityTrackRect;
-		Place(_quality, new Rect2(
-			new Vector2(panel.End.X - 104, track.End.Y + 10),
-			new Vector2(88, 36)));
-
-		Place(_hint, new Rect2(
-			panel.Position + new Vector2(16, panel.Size.Y - 100),
-			new Vector2(panel.Size.X - 32, 30)));
-
-		Place(_action, new Rect2(
-			new Vector2(panel.GetCenter().X - 148, panel.End.Y - 58),
-			new Vector2(144, 42)));
-
-		Place(_cancel, new Rect2(
-			new Vector2(panel.GetCenter().X + 4, panel.End.Y - 58),
-			new Vector2(144, 42)));
-
+		Place(_qualityHeading, new Rect2(new Vector2(track.Position.X - 8, _surface.FabricRect.Position.Y),
+			new Vector2(88, 20)));
+		Place(_quality, new Rect2(new Vector2(track.Position.X - 8, track.End.Y + 8),
+			new Vector2(88, 30)));
+		Place(_hint, new Rect2(new Vector2(panel.Position.X + 24, panel.End.Y - (playing ? 67 : 82)),
+			new Vector2(panel.Size.X - 48, playing ? 40 : 24)));
+		Place(_action, new Rect2(new Vector2(panel.GetCenter().X - 150, panel.End.Y - 54),
+			new Vector2(144, 40)));
+		Place(_cancel, new Rect2(new Vector2(panel.GetCenter().X + 6, panel.End.Y - 54),
+			new Vector2(144, 40)));
 		if (!ready)
-			_action.Position =
-				new Vector2(panel.GetCenter().X - 72, _action.Position.Y);
+			_action.Position = new Vector2(panel.GetCenter().X - 72, _action.Position.Y);
 
 		if (IsPolishing)
 		{
@@ -448,12 +442,12 @@ public partial class EmbroiderySurface : Control
 			Mathf.Min(600, Size.Y - 32)));
 
 	public Rect2 FabricRect => new(
-		PanelRect.Position + new Vector2(24, 140),
-		PanelRect.Size - new Vector2(136, 254));
+		PanelRect.Position + new Vector2(24, 112),
+		PanelRect.Size - new Vector2(144, 202));
 
 	public Rect2 QualityTrackRect => new(
-		new Vector2(PanelRect.End.X - 100, FabricRect.Position.Y),
-		new Vector2(72, FabricRect.Size.Y));
+		new Vector2(PanelRect.End.X - 96, FabricRect.Position.Y + 28),
+		new Vector2(72, FabricRect.Size.Y - 66));
 
 	public Vector2 ScreenPoint(int index)
 	{

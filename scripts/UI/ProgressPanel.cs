@@ -31,7 +31,6 @@ public partial class ProgressPanel : Control
         _content = GetNode<Control>("Content");
         _sticks = new[] { "Day", "Quota", "Deadline" }.Select(name => GetNode<TextureRect>("Visual/" + name)).ToArray();
         _captions = _sticks.Select(stick => stick.GetNode<Label>("Caption")).ToArray();
-        foreach (var caption in _captions) caption.Hide();
         _collapsedWidth = Mathf.Max(_toggle.Size.X, ClosedX + _sticks.Max(stick => stick.Size.X) + 2);
         _toggle.Size = new Vector2(_collapsedWidth, _toggle.Size.Y);
         _toggle.Pressed += () => { Pinned = !Pinned; SetExpanded(Pinned); };
@@ -108,7 +107,6 @@ public partial class ProgressPanel : Control
     {
         if (Expanded == expanded && !immediate) return;
         Expanded = expanded;
-        foreach (var caption in _captions) caption.Visible = expanded;
         if (_slide?.IsValid() == true) _slide.Kill();
         if (immediate)
         {
