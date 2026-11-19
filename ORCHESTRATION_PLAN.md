@@ -11,12 +11,22 @@
 ## Текущий фронт
 ### HF-175 — публикация пачки и двойного клика комнаты
 
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-19; HF172/HF173/HF174 DONE, пользователь разрешил commit/push; пересечений нет.
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-19; HF172/HF173/HF174 DONE, пользователь разрешил commit/push; пересечений нет.
 
 CP-HF-175 read-set: текущий фронт; Git status/diff/refs; готовые изменения и evidence HF172/HF173/HF174; scenes/{main_menu,trade_scene}.tscn только hash. Write-set: Git index/commits/main/origin/main; ORCHESTRATION_PLAN.md; публикация готовых docs/GAMEPLAY.md, scenes/UI/CigaretteProgress.tscn, scripts/Camera/WorldCamera.cs, scripts/UI/ProgressPanel.cs, tests/Integration/ProjectTest.{Camera,Tutorial,Ui}.cs, tests/ProjectTest.cs; .local/checks/hf175. Out of scope: source/, пользовательские основные сцены, новые изменения поведения/баланса/schema, force push.
 
 Приёмка: готовые проверенные файлы опубликованы обычным push, HEAD=origin/main; пользовательские основные сцены побайтно сохранены локально вне коммита. Проверки: SHA256 runtime/test/docs с tested isolated copy; прежние build/progress/tutorial/room-focus/camera-limits PASS; staged diff --check, push/ref/status/hash readback.
 
+```text
+Task: HF-175
+Recommended status: REVIEW → принято координатором, DONE
+Changed: HF172/HF173/HF174 опубликованы коммитом77e78ea в origin/main: исходная ориентация и совмещение слоёв пачки, выступающие кончики, hover по ним и плавное наведение на6 комнат по двойному клику, regression tests и gameplay docs. Основные пользовательские сцены вне коммита. Запись завершения публикуется отдельным documentation commit.
+Checks: fetch0/0; SHA256 всех8 runtime/test/docs файлов совпадает с tested isolated copy. Прежние build/progress-toggle/tutorial/room-focus/camera-limits PASS. Staged diff --check PASS; обычный push origin main PASS; refs0/0; две пользовательские сцены сохранены по SHA256 snapshot HF175; только они остаются изменёнными.
+Acceptance: проверенные изменения доступны в main на GitHub; локальные пользовательские main_menu/trade_scene сохранены.
+Read-set exception: нет; source/ не читался.
+Risks/blocker: нет новых.
+Next: пользовательская проверка опубликованной версии.
+```
 ### HF-174 — наведение камеры по двойному клику комнаты
 
 Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-19; HF-173 DONE, пересечений нет.
