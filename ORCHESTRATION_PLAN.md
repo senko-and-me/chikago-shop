@@ -11,13 +11,24 @@
 ## Текущий фронт
 ### HF-193 — убрать общий ЧБ-фильтр и опубликовать готовые сцены энергии
 
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-19; HF192 DONE; пользователь разрешил push, затем добавил удаление ЧБ-шейдера.
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-19; HF192 DONE; пользователь разрешил push, затем добавил удаление ЧБ-шейдера.
 
 CP-HF-193 read-set: текущий фронт; project.godot; scripts/Presentation/MonochromePresentation.cs; shaders/monochrome.gdshader; scripts/{Days/DayCycleController,UI/DayTransitionCard,UI/EmbroideryGame,UI/PauseMenu,UI/RarityPanel}.cs только filter registration; tests/ProjectTest.cs; tests/Integration/ProjectTest.{Presentation,EnergyBulbs,ButtonFeedback}.cs (filter expectations); готовые diff/evidence HF192; Git status/refs; docs/GAMEPLAY.md presentation mentions; основные сцены snapshots/hash. Write-set: project.godot (убрать autoload); удалить scripts/Presentation/MonochromePresentation.cs/uid и shaders/monochrome.gdshader/uid; перечисленные runtime registration вызовы; ProjectTest.cs/ProjectTest.Presentation.cs/ProjectTest.EnergyBulbs.cs (native-color regression); HF192 готовые6файлов + scenes/trade_scene.tscn ТОЛЬКО EnergyPanelblock/extresource в index; ORCHESTRATION_PLAN.md; .local/checks/hf193; isolatedsame. Out of scope: source/, пользовательские основные сцены вне EnergyPanel, баланс/schema/прочий gameplay, force push.
 
 Приёмка: общий screen filter отсутствует, source цвета сохраняются в меню/игре/минииграх/pause; nativeцвет лампочек сохранён, scene-authored HF192 работает. Проверки: build; rendered presentation/energy/card checks; partial stagedscene создан из HEAD+EnergyPanel-only, пользовательский workingtree побайтно сохранён; exactstagedlist/diffcheck/push/refreadback.
 
 Уточнение write-set HF193: docs/GAMEPLAY.md (описание nativeцветов и scene-authored энергии), tests/Integration/ProjectTest.Tutorial.cs (hollow highlight сохраняет sourcecolour вместо прежнего grayscale). Старая регистрация shaderexceptions удалена из пяти runtime файлов; сам шейдер/класс и autoload удалены полностью.
+
+```text
+Task: HF-193
+Recommended status: REVIEW → принято координатором, DONE
+Changed: 0009e39 опубликован в origin/main: scene-authoredEnergyPanel/EnergyBulb и минимальная инстанциация вtrade_scene; удалены общий grayscale autoload/class/shader/UID и5registrationcalls. Обновлены nativecolour regression/energy/tutorial tests и docs. Main scene staged blob построен изHEAD плюс только EnergyPanel subtree/extresource, исходный рабочий файл не перезаписывался. Новая EnergyPanel была пересохранена редактором сUID/nodeids; сохранены эти данные, scriptUID исправлен на существующийbyewenergy190 и rerenderPASS.
+Checks: local/isolated build PASS0warnings/errors; rendered --presentation-checks PASS (sourceprobe actualRGB иyellowbulb, craft/pause/resize), --energy-bulbs-checks PASS, --card-dealing-checks PASS, --tutorial-checks PASS; финальный staged-energy повторяет PASS сcommittedscene без пользовательских изменений. Всеstderrпусты, evidence .local/checks/hf193. SHA256 runtime/test совпали сtestedcopy. Staged exact21files/diffcheck PASS, push/refreadback0/0. Workingtree trade_sceneSHA совпал соsnapshotпередstaging; main_menu побайтно совпадает сHF192snapshot; прочие пользовательские изменения остались локально.
+Acceptance: фильтр удалён, исходные цвета отображаются; лампочки задаются сценами и правки доступны в main.
+Read-set exception: нет новых; source/ не читался.
+Risks/blocker: нет новых; исторические проверки старого grayscale button-feedback pipeline не входят в новую native-colour приёмку.
+Next: пользовательская проверка редактора сцены и исходных цветов игры.
+```
 
 ### HF-192 — энергия видна и настраивается в сцене Godot
 
