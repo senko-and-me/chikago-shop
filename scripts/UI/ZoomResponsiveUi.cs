@@ -14,6 +14,7 @@ public partial class ZoomResponsiveUi : Node
     public override void _Ready()
     {
         var game = GetParent();
+        EnergyBulbsPresentation.Attach((TradeScene)game);
         _camera = game.GetNode<WorldCamera>("Camera2D");
         GetViewport().SizeChanged += InvalidateLayout;
         string[] rooms = ["Atelier", "MusicWorkshop", "Showroom", "ShowroomLeft", "TradingRoom"];

@@ -57,6 +57,12 @@ public static class WorkshopItemCatalog
     public static int CraftCost(string workshop) => Config.Workshops.Single(entry => entry.Id == workshop).SpinCost;
     public static int DayDurationSeconds => Config.Days.DurationSeconds;
     public static int Roll(string workshop, int ticket, DayUpgradeSession upgrades = null) => Table(workshop, upgrades).Select(ticket);
+    public static (int ItemIndex, string InstrumentKind) PreparePolishing(int ticket, DayUpgradeSession upgrades = null)
+    {
+        int index = Roll("music", ticket, upgrades);
+        // Legacy save kinds do not always match the pictured instrument (for example guitar is maracas).
+        return (index, System.IO.Path.GetFileNameWithoutExtension(Items[index].ArtPath));
+    }
     public static int BaselineWeight(string rarityId) => Config.Rarities.Single(rarity => rarity.Id == rarityId).Weight;
     public static int RarityWeight(string workshop, string rarityId, DayUpgradeSession upgrades = null) =>
         upgrades?.Weight(workshop, rarityId, BaselineWeight(rarityId), BaselineWeight("common")) ?? BaselineWeight(rarityId);

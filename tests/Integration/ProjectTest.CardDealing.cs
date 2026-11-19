@@ -17,6 +17,7 @@ public partial class ProjectTest
             var instance = scene.Instantiate<TradeScene>();
             instance.StartingMoney = 220; instance.FirstQuota = 250; instance.SecondQuota = 450;
             instance.SavePath = save;
+            instance.GetNode<FirstTradeTutorial>("FirstTradeTutorial").ProgressPath = "";
             Root.AddChild(instance);
             instance.SetProcess(false);
             instance.GetNode<Camera2D>("Camera2D").SetProcess(false);
@@ -55,6 +56,7 @@ public partial class ProjectTest
                 card.Choose(DayUpgrade.Cash); card.Skip();
                 Check(game.Score == 220 && game.DayUpgrades.Pending, "Early input must not commit a choice during dealing");
                 var hud = game.GetNode<Control>("HUD/Root");
+                var clock = game.GetNode<Control>("HUD/DayClock/Root");
                 var deck = card.GetNode<Control>("Root/Deck");
                 Check(camera.IsReturningToOverview && camera.Position == closeupPosition && hud.Visible && deck.Modulate.A == 0,
                     "The camera return must begin before hiding UI or revealing the deck, with no initial jump");
@@ -67,7 +69,7 @@ public partial class ProjectTest
                     hud.Modulate.A < 1 && hud.Modulate.A > 0 && deck.Modulate.A == 0,
                     "Only after reaching the NewGame overview may UI begin fading out");
                 await ToSignal(CreateTimer(0.3, true), SceneTreeTimer.SignalName.Timeout);
-                Check(!hud.Visible && !game.GetNode<Control>("HUD/InventoryUI").Visible &&
+                Check(!hud.Visible && !clock.Visible && !game.GetNode<Control>("HUD/InventoryUI").Visible &&
                     !game.GetNode<Control>("World/Atelier/GetItemButton").Visible &&
                     game.GetNode<Control>("World/MusicWorkshop/LockedOverlay/LockedCurtain").IsVisibleInTree() &&
                     deck.Position.Y > Root.GetVisibleRect().Size.Y - deck.Size.Y - 28,
@@ -77,6 +79,10 @@ public partial class ProjectTest
                 Check(card.IsAnimating && first.GetNode<Control>("Back").Visible && first.Scale.X < 1 &&
                     card.GetNode<Control>("Root/Deck").IsVisibleInTree(),
                     "Cards must fly from the visible deck with backs showing before they flip");
+                using (var backArt = GD.Load<Texture2D>("res://art/ui/card_back.png").GetImage())
+                    Check(backArt.GetSize() == new Vector2I(1391, 1991) && backArt.GetPixel(695, 995).R < 0.2f &&
+                        backArt.GetPixel(0, 0).A == 0,
+                        "The deck and flying backs must load the original textured, transparent card art");
                 if (language == "ru" && size.X == 1280) await Capture("dealing");
                 await WaitForDayCardAnimation(card);
                 Check(Root.GuiGetFocusOwner() == null && game.DayRemainingSeconds == 90,
@@ -88,9 +94,17 @@ public partial class ProjectTest
                         !face.GetNode<Control>("Back").Visible && Root.GetVisibleRect().Encloses(face.GetGlobalRect()) &&
                         face.Size.Y > face.Size.X,
                         "Settled portrait cards must fit the viewport in both languages and sizes");
+                    Check(face.GetThemeStylebox("panel") is StyleBoxTexture faceArt &&
+                        faceArt.Texture.ResourcePath == "res://art/ui/card_face.png",
+                        "Every upgrade face must reuse the original hand-drawn card art");
                     foreach (string name in new[] { "Amount", "Title", "Description", "Duration", "Choose" })
-                        Check(Root.GetVisibleRect().Encloses(face.GetNode<Control>("Content/" + name).GetGlobalRect()),
-                            "Every card label and button must remain inside the screen");
+                    {
+                        var entry = face.GetNode<Control>("Content/" + name);
+                        Check(Root.GetVisibleRect().Encloses(entry.GetGlobalRect()) &&
+                            face.GetGlobalRect().GrowIndividual(-face.Size.X * 0.07f, -face.Size.Y * 0.04f,
+                                -face.Size.X * 0.07f, -face.Size.Y * 0.04f).Encloses(entry.GetGlobalRect()),
+                            "Every card label and button must remain within the artwork's white interior");
+                    }
                 }
                 await Capture("ready-" + language + "-" + size.X);
                 bool buy = language == "ru";
@@ -107,7 +121,7 @@ public partial class ProjectTest
                 Check(!card.IsOpen && !Paused && !game.DayUpgrades.Pending && game.CurrentDay == 2 &&
                     game.Score == (buy ? 250 : 220) && game.DayUpgrades.Selected == (buy ? DayUpgrade.Cash : DayUpgrade.None),
                     "Exactly one purchase or free skip must apply after exit and resume the new day");
-                Check(hud.Visible && hud.Modulate == Colors.White && game.GetNode<Control>("HUD/InventoryUI").Visible &&
+                Check(hud.Visible && clock.Visible && clock.Modulate == Colors.White && hud.Modulate == Colors.White && game.GetNode<Control>("HUD/InventoryUI").Visible &&
                     game.GetNode<Control>("World/Atelier/GetItemButton").Visible,
                     "Leaving the cards must restore gameplay UI and its full opacity");
             }

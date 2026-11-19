@@ -9,6 +9,85 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### HF-191 — публикация свежего арта, точной награды полировки и энергии-лампочек
+
+Статус: `IN_PROGRESS`; координатор `/root`; READY 2026-11-19; HF188/HF189/HF190 DONE; пользователь разрешил push и субагентов; пересечений нет.
+
+CP-HF-191 read-set: текущий фронт; готовые diff/evidence HF188/HF189/HF190; Git status/refs; основные сцены только hash. Write-set: Git index/commits/main/origin/main; ORCHESTRATION_PLAN.md; art/fonts/game.ttf, art/ui/{camera_frame,card_back,card_face,energy_bulb}.png и новые imports; docs/{ASSET_AUDIT,GAMEPLAY}.md; scenes/UI/DayUpgradeCard.tscn; scripts/Crafting/WorkshopItemCatalog.cs; scripts/Presentation/{DayCardSceneTransition,EnergyBulbsPresentation}.cs и новый uid; scripts/TradeScene.cs; scripts/UI/{DayTransitionCard,EmbroideryGame,PokerCardBack,ZoomResponsiveUi}.cs; tests/ProjectTest.cs; tests/Integration/ProjectTest.{CardDealing,Crafting,Resources,RoomFrames,EnergyBulbs}.cs и новый uid; .local/checks/hf191. Out of scope: source/, пользовательские main_menu/trade_scene.tscn, новые изменения поведения, force push.
+
+Приёмка: все проверенные изменения HF188…190 доступны в origin/main, refs совпадают, пользовательские сцены побайтно сохранены вне коммита. Проверки: local/isolated build; финальные совместные rendered craft-contrast/card-dealing/tutorial PASS; прежние frame/resource/reward/energy PASS; SHA256 с tested isolated copy и original Drive; staged exact filelist/diffcheck/push/readback.
+
+### HF-190 — лампочки вместо числовой плашки энергии
+
+Статус: `DONE`; координатор `/root`, art/design исполнитель `/root/energy_bulbs`; READY 2026-11-19; HF187 DONE; пользователь явно запросил лампочки/субагентов; write-set не пересекается с HF188/HF189.
+
+CP-HF-190 read-set: текущий фронт; scripts/UI/ZoomResponsiveUi.cs; scripts/TradeScene.cs только EnergyRemaining/Capacity/RefreshScore; scenes/trade_scene.tscn только EnergyPanel read-only/hash; .local/checks/hf188/energy.png; tests/Integration/ProjectTest.{Ui,Presentation,Helpers}.cs; tests/ProjectTest.cs entrypoints read-only. Write-set: scripts/UI/ZoomResponsiveUi.cs (presentation bootstrap), scripts/Presentation/EnergyBulbsPresentation.cs и uid при необходимости, art/ui/energy_bulb.png/import, tests/Integration/ProjectTest.Ui.cs либо новый ProjectTest.EnergyBulbs.cs/uid; runner только после согласования; .local/checks/hf190, isolatedsame; plan только координатор. Out of scope: source/, пользовательские сцены, TradeScene, баланс/schema/прочий gameplay, commit/push (координатор после всех checks).
+
+Приёмка: EnergyCapacity лампочек, оставшиеся светлые/потраченные затемнены, апгрейд учитывается; нет прежней числовой плашки, tooltip чисел/RU/EN, resize/pause/craft/карты без лишней видимости и помех вводу; original Drive art. Проверки: build/focused rendered checks/screenshots.
+
+Уточнение HF190: read-set дополнен scripts/Presentation/MonochromePresentation.cs, scripts/Days/DayCycleController.cs и src/ChikagoShop.Domain/Days/DayUpgradeSession.cs для диагностики lifecycle/энергии. Write-set новый tests/Integration/ProjectTest.EnergyBulbs.cs/uid и tests/ProjectTest.cs (--energy-bulbs-checks); runner передан агенту после завершения runner edits HF189. Реализация/test files других задач не пересекаются.
+
+```text
+Task: HF-190
+Recommended status: REVIEW → принято координатором, DONE
+Changed: original Drive energy_bulb.png/import; EnergyBulbsPresentation.cs/uid рисует ряд capacity лампочек, светлые remaining/тёмные spent, скрывает прежнюю надпись, сохраняет локализованный numeric tooltip, использует отдельную копию стиля. ZoomResponsiveUi только bootstrap; новый EnergyBulbs test/uid и runner entrypoint. Source bitmap не редактировался, rendering crop задаётся в коде.
+Checks: local/isolated build PASS0warnings/errors; rendered --energy-bulbs-checks PASS: RU/EN×960/1280/1000×800×3/6/7capacity×full/partial/zero, grayscale actual pixels и отступы, pause, реальная покупка Energy upgrade, немедленный расход одной лампочки при Start. Stderr пуст. Координатор осмотрел .local/checks/hf190/energy-bulbs.png; все7 различимы. SHA256 PNG совпадает с Drive; основные сцены не менялись.
+Acceptance: текстовая плашка заменена лампочками с актуальным состоянием и числовой подсказкой.
+Read-set exception: DayUpgradeRules.cs дополнительно для диагностики настоящей покупки в fixture; source/ не читался.
+Risks/blocker: только прежние import duplicateUID menu buttons, новых предупреждений/runtime ошибок нет.
+Next: HF191 — совместная проверка и публикация.
+```
+
+### HF-189 — выдача именно полируемого инструмента
+
+Статус: `DONE`; координатор `/root`, исполнитель `/root/polishing_reward`; READY 2026-11-19; HF187 DONE; пользователь явно разрешил субагентов. Параллельно HF188 с непересекающимися write-set.
+
+CP-HF-189 read-set: текущий фронт; scripts/UI/{EmbroideryGame,PolishingSurface}.cs; targeted craft/acquisition/catalog runtime и tests/Integration/ProjectTest.Crafting.cs; tests/ProjectTest.cs. Write-set: EmbroideryGame.cs, PolishingSurface.cs, ProjectTest.Crafting.cs; дополнительные файлы только после согласования координатором; .local/checks/hf189 и isolated same files. Out of scope: source/, сцены, арт/карты/рамка/DayCycleController/localization/plan (меняет координатор), commit/push (делает координатор после HF188/HF189).
+
+Приёмка: тип инструмента на полировке совпадает с выдаваемым предметом, исходные стоимость/количество/качество/finish и отсутствие дублей сохранены. Проверки: build и meaningful focused regression на реальные варианты полировки.
+
+Расширение CP-HF-189 координатором: scripts/Crafting/WorkshopItemCatalog.cs (подготовка weighted index); scripts/TradeScene.cs только plumbing callback/optional prepared index в существующий AcquireItem, без новой domain logic; tests/ProjectTest.cs focused runner. Выбор инструмента до показа по прежним rarity/upgrades весам, оплаченная партия того же видимого типа. Другие агенты эти файлы не меняют.
+
+Read/write-set HF189 дополнен docs/GAMEPLAY.md (только актуальное правило выбора инструмента/наград); документ обновляет координатор, не исполнитель. Прежнее описание равновероятных8 cosmetic вариантов более не применимо к полировке.
+
+```text
+Task: HF-189
+Recommended status: REVIEW → принято координатором, DONE
+Changed: Catalog.PreparePolishing выбирает weighted music index и изображённый instrument из ArtPath (legacy kind может отличаться); EmbroideryGame до показа фиксирует будущий предмет, бесплатный Cancel сохраняет preview, Start передаёт index в существующий AcquireItem через минимальный TradeScene plumbing. Вся прежняя партия содержит показанный тип; стоимость/количество/качество/сохранение прежние. NewGameStarted сбрасывает preview, ExitTree снимает подписку. Crafting tests/runner/docs обновлены.
+Checks: local/isolated build PASS0warnings/errors; --polishing-reward-checks PASS, stderr пуст (.local/checks/hf189/reward-reset.*). Все8 инструментов×baseline/3upgrades, exact histogram прежних rarity weights, реальные Cancel/Start/Collect, success/timeout/качество/no duplicate/reload; paid/unpaid preview сбрасывается при NewGame. Координатор просмотрел diff: TradeScene только callback/optional index/fallback, новая доменная логика туда не добавлена.
+Acceptance: игрок получает именно тот инструмент, который полировал; прежняя экономика сохранена.
+Read-set exception: targeted acquisition/catalog/DayUpgradeSession диагностика согласована координатором; source/ и сцены не менялись.
+Risks/blocker: неоплаченный preview runtime-only и после перезапуска приложения выбирается заново, save schema не изменена.
+Next: HF191 — публикация вместе с артом и энергией.
+```
+
+### HF-188 — аудит свежего Drive-арта, рамка комнат и оформление карт
+
+Статус: `DONE`; координатор/исполнитель и art/design-исполнитель `/root`, /root/card_art — карты; READY 2026-11-19; HF187 DONE; пересечений нет.
+
+CP-HF-188 read-set: текущий фронт; публичная Drive папка17ntZUHFM_HplXZsQJTUuufh4bYPu5M4q и вложенные metadata/assets; art/ui (имена и выбранные изображения), art/rooms (имена); scripts/UI/{DayTransitionCard,PokerCardBack}.cs; scenes/UI/{DayTransitionCard,DayUpgradeCard,CraftButton}.tscn; scripts/Presentation/{DayCardSceneTransition,DayCardDealAnimator,MonochromePresentation}.cs; tests/Integration/ProjectTest.{CardDealing,Resources,Presentation,Helpers}.cs; tests/ProjectTest.cs; scenes/trade_scene.tscn только RoomFrame/atlas references read-only и hash; scenes/main_menu.tscn только hash; старые .local/checks/hf{115,150,172} Drive evidence только явно названные html/manifest; source/ не читается. Write-set: ORCHESTRATION_PLAN.md; .local/checks/hf188 (аудит/загрузки/скрипты/evidence); дальнейшие asset/runtime/test изменения конкретизирует координатор после аудита. Out of scope: source/, пользовательские основные сцены, баланс/schema/механики, commit/push, перезапись арта без сравнения/проверки.
+
+Параллельный art/design исполнитель /root/card_art владеет scripts/UI/{PokerCardBack,DayTransitionCard}.cs, scenes/UI/DayUpgradeCard.tscn, scripts/Presentation/DayCardSceneTransition.cs, art/ui/card_{back,face}.png и imports, tests/Integration/ProjectTest.CardDealing.cs, .local/checks/hf188/cards* и isolated same paths. Read-set дополнен art/ui/{panel_large,panel_small}.png. Координатор /root владеет аудитом Drive и рамками; source/ не читается.
+
+Расширение CP-HF-188 координатором: read-set tests/Integration/ProjectTest.RoomFrames.cs и art/fonts/game.ttf (сравнение с Drive); write-set art/ui/camera_frame.png (замена исходным новым PNG без обработки), tests/Integration/ProjectTest.RoomFrames.cs (полный pixel regression чёрного RGB/alpha), isolated same paths. Новая рамка имеет прежний2048px холст/совместима с существующим atlas; пользовательские сцены не меняются. Шрифт/прочие assets не заменять без подтверждённого улучшения и glyph coverage.
+
+Подтверждённое обновление шрифта: Drive Myfont-RU-EN.ttf содержит172 glyphs против170, добавлены ✓/✗; все170 прежних outlines и вертикальные метрики побайтно/структурно совпадают, потерь кириллицы/латиницы нет. Write-set HF188 дополнен art/fonts/game.ttf (original remote font), tests/Integration/ProjectTest.Resources.cs (coverage ✓/✗); isolatedsame. Это исключает fallback символов кнопок и сохраняет прежний layout.
+
+Read/write-set HF188 дополнен docs/ASSET_AUDIT.md для датированного аудита и источников новых assets; предыдущий аудит сохраняется как история.
+
+Приёмка: рекурсивный аудит Drive с датами обновления и сопоставлением текущих файлов; новая чёрная рамка найдена/проверена и подключена без белых пикселей; карты используют подходящий существующий арт; проверены внешний вид/читаемость/анимация/ввод/разные размеры и RU/EN; сохранены пользовательские сцены. Команды: local/isolated build; focused rendered card/resource/presentation checks по изменениям; diff/hash.
+
+```text
+Task: HF-188
+Recommended status: REVIEW → принято координатором, DONE
+Changed: аудит36nested folders/116files,8selected originals, даты Moscow UTC+3 в docs/ASSET_AUDIT.md. New black frame оригинальным PNG заменил camera_frame.png без сцены/geometry edits. Original card_back/card_face используются для deck/flying backs/face StyleBoxTexture, текст внутри белой области; CardSceneTransition скрывает/восстанавливает также новый DayClock. Новейший font добавляет ✓/✗ без изменения170старых outlines/metrics. RoomFrames/Resources/CardDealing regressions включены. Картами владел только card_art.
+Checks: root/isolated imports и builds PASS; --room-frame-checks PASS: full source allvisibleRGB0, transparentcenter/AA; six rendered frames/strokes/corners/day-night preserved. --resource-checks PASS: полный RU/EN и ✓✗, resource loading/menu. --card-dealing-checks PASS: RU/EN960/1280, deck/deal/flip/choose/skip/reset/reload, bounds и DayClockfade/restore. Runtime stderr пусты. Координатор осмотрел cards-ready RU1280/EN960 и actual frame output; originals SHA совпали. Evidence .local/checks/hf188. Основные сцены прежние.
+Acceptance: новая чисто чёрная рамка, готовый рисованный арт обеих сторон карт и свежий полный шрифт используются в игре.
+Read-set exception: card agent targeted DayStart/FirstTradeTutorial API/config для fixture; root docs/ASSET_AUDIT добавлен вCP; source/ не читался. Plugin management skill использован для поиска Drive-коннектора, не подключён; публичный HTTP доступ оказался достаточен для полного аудита.
+Risks/blocker: прежние duplicateUID четырёх menu localization images при editor import; новых runtime ошибок нет.
+Next: HF191 — финальная совместная проверка и push всех готовых задач.
+```
+
 ### HF-187 — публикация учебной блокировки и общих часов
 
 Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-19; HF185/HF186 DONE; пользователь разрешил commit/push; пересечений нет.

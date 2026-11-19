@@ -6,6 +6,23 @@ public partial class ProjectTest
     private async Task TestRoomFrames()
     {
         Check(DisplayServer.GetName() != "headless", "Camera frame checks require rendering");
+        using (var source = GD.Load<Texture2D>("res://art/ui/camera_frame.png").GetImage())
+        {
+            source.Convert(Image.Format.Rgba8);
+            byte[] rgba = source.GetData();
+            int painted = 0, translucent = 0;
+            for (int pixel = 0; pixel < rgba.Length; pixel += 4)
+            {
+                if (rgba[pixel + 3] == 0) continue;
+                Check(rgba[pixel] == 0 && rgba[pixel + 1] == 0 && rgba[pixel + 2] == 0,
+                    "The supplied room-frame source must contain only black visible pixels, without white flecks hidden by tint");
+                painted++;
+                if (rgba[pixel + 3] < 255) translucent++;
+            }
+            Check(source.GetSize() == new Vector2I(2048, 2048) && painted > 250000 && translucent > 10000 &&
+                source.GetPixel(1024, 1024).A == 0 && source.GetPixel(0, 0).A == 0,
+                "The new frame must preserve its canvas, transparent center and antialiased ink contour");
+        }
         Vector2I originalSize = Root.Size;
         var game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
         // Inspect the packed scene before _Ready: an editor must see the complete background already.

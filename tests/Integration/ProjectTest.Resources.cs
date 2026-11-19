@@ -375,7 +375,7 @@ public partial class ProjectTest
         var font = GD.Load<FontFile>("res://art/fonts/game.ttf");
         Check(font != null, "The canonical game font must load");
         string supported = font.GetSupportedChars();
-        string alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789" +
+        string alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789✓✗" +
             "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя";
         foreach (char character in alphabet)
             Check(supported.Contains(character), $"Game font must contain its own glyph for {character}");

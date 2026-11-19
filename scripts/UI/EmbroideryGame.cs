@@ -22,6 +22,10 @@ public partial class EmbroideryGame : CanvasLayer
 	private readonly Action _acquire;
 	private bool _ownsPause;
 	private bool? _primaryAction;
+	public int? PreparedItemIndex { get; private set; }
+	private string _preparedInstrument;
+	private bool _preparedItemClaimed;
+	private TradeScene _game = null!;
 
 	public EmbroideryGame(Action acquire, bool polishing = false)
 	{
@@ -35,6 +39,8 @@ public partial class EmbroideryGame : CanvasLayer
 		Name = IsPolishing ? "PolishingGame" : "EmbroideryGame";
 		Layer = 110;
 		ProcessMode = ProcessModeEnum.Always;
+		_game = GetParent<TradeScene>();
+		_game.NewGameStarted += ResetPreparedItem;
 
 		_surface = new EmbroiderySurface
 		{
@@ -183,8 +189,15 @@ public partial class EmbroideryGame : CanvasLayer
 
 		if (IsPolishing)
 		{
-			var instruments = PolishingSurface.InstrumentKinds;
-			Polishing = _polishingSurface.Begin(instruments[_variants.Next(Math.Min(GD.Randf(), 0.99999994f))],
+			if (!PreparedItemIndex.HasValue || _preparedItemClaimed)
+			{
+				var prepared = WorkshopItemCatalog.PreparePolishing(GD.RandRange(0,
+					WorkshopItemCatalog.TotalWeight("music", game.DayUpgrades) - 1), game.DayUpgrades);
+				PreparedItemIndex = prepared.ItemIndex;
+				_preparedInstrument = prepared.InstrumentKind;
+				_preparedItemClaimed = false;
+			}
+			Polishing = _polishingSurface.Begin(_preparedInstrument,
 				DebugBalanceSettings.Number("craft.music.seconds"));
 		}
 		else
@@ -216,6 +229,7 @@ public partial class EmbroideryGame : CanvasLayer
 
 			ActiveSession.Start();
 			_acquire();
+			_preparedItemClaimed = true;
 		}
 		else if (ActiveSession.State == EmbroideryState.Finished)
 		{
@@ -254,8 +268,17 @@ public partial class EmbroideryGame : CanvasLayer
 
 	public override void _ExitTree()
 	{
+		if (GodotObject.IsInstanceValid(_game))
+			_game.NewGameStarted -= ResetPreparedItem;
 		if (_ownsPause)
 			GetTree().Paused = false;
+	}
+
+	private void ResetPreparedItem()
+	{
+		PreparedItemIndex = null;
+		_preparedInstrument = null;
+		_preparedItemClaimed = false;
 	}
 
 	public override void _Input(InputEvent @event)

@@ -90,9 +90,9 @@ public partial class DayTransitionCard : CanvasLayer
                 label.AddThemeFontSizeOverride("font_size", (int)(entry.Item2 * _layoutScale));
                 label.CustomMinimumSize = new Vector2(0, entry.Item3 * _layoutScale);
             }
-            var cardStyle = (StyleBoxFlat)card.GetThemeStylebox("panel");
-            cardStyle.ContentMarginLeft = cardStyle.ContentMarginRight = 18 * _layoutScale;
-            cardStyle.ContentMarginTop = cardStyle.ContentMarginBottom = 16 * _layoutScale;
+            var cardStyle = card.GetThemeStylebox("panel");
+            cardStyle.ContentMarginLeft = cardStyle.ContentMarginRight = 30 * _layoutScale;
+            cardStyle.ContentMarginTop = cardStyle.ContentMarginBottom = 26 * _layoutScale;
             content.GetNode<Button>("Choose").CustomMinimumSize = new Vector2(0, 44 * _layoutScale);
         }
     }

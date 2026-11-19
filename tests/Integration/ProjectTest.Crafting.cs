@@ -8,6 +8,141 @@ using ChikagoShop.Domain.Crafting;
 // Subsystem checks share the ProjectTest runner and fixture helpers.
 public partial class ProjectTest
 {
+    private async Task TestPolishingReward()
+    {
+        var scene = GD.Load<PackedScene>("res://scenes/trade_scene.tscn");
+        var game = scene.Instantiate<TradeScene>();
+        game.SavePath = "";
+        Root.AddChild(game);
+        game.SetProcess(false);
+        await ToSignal(this, SignalName.ProcessFrame);
+        const string savePath = "user://polishing_reward_test.json";
+        try
+        {
+            var craft = game.GetNode<EmbroideryGame>("PolishingGame");
+            craft.SetProcess(false);
+            var board = craft.GetNode<PolishingSurface>("Surface/Polishing");
+            int[] music = WorkshopItemCatalog.Items.Select((item, index) => (item, index))
+                .Where(entry => entry.item.WorkshopId == "music").Select(entry => entry.index).ToArray();
+            foreach (int level in new[] { 0, 3 })
+            {
+                var upgrades = new DayUpgradeSession();
+                upgrades.Restore(false, DayUpgrade.None, musicLevel: level);
+                int total = WorkshopItemCatalog.TotalWeight("music", upgrades);
+                var counts = Enumerable.Range(0, total).Select(ticket => WorkshopItemCatalog.PreparePolishing(ticket, upgrades))
+                    .GroupBy(prepared => WorkshopItemCatalog.Items[prepared.ItemIndex].RarityId)
+                    .ToDictionary(group => group.Key, group => group.Count());
+                var rarities = EconomyConfigProvider.Load().Rarities;
+                int weights = rarities.Sum(rarity => WorkshopItemCatalog.RarityWeight("music", rarity.Id, upgrades));
+                foreach (var rarity in rarities)
+                    Check((counts.TryGetValue(rarity.Id, out int amount) ? amount : 0) * weights ==
+                        total * WorkshopItemCatalog.RarityWeight("music", rarity.Id, upgrades),
+                        "Preparing the visible reward must preserve exact rarity probabilities, including music upgrades");
+            }
+            int iteration = 0;
+            foreach (int level in new[] { 0, 3 })
+            foreach (int expected in music)
+            {
+                game.NewGame();
+                Check(!craft.PreparedItemIndex.HasValue, "A new run must clear the previous paid polishing selection");
+                game.EndDay();
+                game.Score = 10000;
+                game.TryUnlockMusicWorkshop();
+                game.DayUpgrades.Restore(false, DayUpgrade.None, musicLevel: level);
+                int total = WorkshopItemCatalog.TotalWeight("music", game.DayUpgrades);
+                ulong seed = 1;
+                for (; seed < 100000; seed++)
+                {
+                    GD.Seed(seed);
+                    int ticket = GD.RandRange(0, total - 1);
+                    if (WorkshopItemCatalog.Roll("music", ticket, game.DayUpgrades) == expected) break;
+                }
+                Check(seed < 100000, "Every music rarity and instrument must remain reachable with existing weighted rolls");
+                GD.Seed(seed);
+                craft.Open();
+                string expectedArt = System.IO.Path.GetFileNameWithoutExtension(WorkshopItemCatalog.Items[expected].ArtPath);
+                Check(craft.IsOpen && craft.PreparedItemIndex == expected && board.InstrumentKind == expectedArt,
+                    $"Weighted item {expected} must display its actual art, including legacy catalog kinds");
+                int money = game.Score, energy = game.EnergyRemaining, count = game.StoredItems.Length;
+                await ClickControl(game, "PolishingGame/Surface/Cancel");
+                Check(!craft.IsOpen && !Paused && game.Score == money && game.EnergyRemaining == energy && game.StoredItems.Length == count,
+                    "Cancelling an unstarted polishing preview must remain free");
+                GD.Seed(seed + 1000);
+                craft.Open();
+                Check(craft.PreparedItemIndex == expected && board.InstrumentKind == expectedArt,
+                    "Free cancellation must not reroll the preview into a rarer paid reward");
+                await ClickControl(game, "PolishingGame/Surface/Action");
+                int batch = EconomyConfigProvider.Load().Days.ItemsPerCraft;
+                Check(game.Score == money - WorkshopItemCatalog.CraftCost("music") && game.EnergyRemaining == energy - 1 &&
+                    game.StoredItems.Length == count + batch && game.StoredItems.Skip(count).All(index => index == expected),
+                    "Starting must charge the configured cost and energy once and grant exactly the displayed instrument for the configured batch");
+                craft.Activate();
+                Check(game.Score == money - WorkshopItemCatalog.CraftCost("music") && game.StoredItems.Length == count + batch,
+                    "Repeated start while playing must not pay or grant twice");
+                bool success = iteration++ % 2 == 0;
+                if (success) craft.FinishForTesting(true);
+                else craft._Process(craft.ActiveSession.RemainingSeconds + .1);
+                int quality = craft.ActiveSession.Quality;
+                Check(craft.ActiveSession.State == EmbroideryState.Finished &&
+                    craft.GetNode<Label>("Surface/Quality").Text == $"{quality}%" &&
+                    game.StoredItems.Skip(count).All(index => index == expected),
+                    "Success and timeout must preserve the polished item and report the session quality");
+                await ClickControl(game, "PolishingGame/Surface/Action");
+                craft.Activate();
+                Check(!craft.IsOpen && !Paused && game.StoredItems.Length == count + batch &&
+                    game.Score == money - WorkshopItemCatalog.CraftCost("music") && game.EnergyRemaining == energy - 1,
+                    "Collect and repeated activation after close must not change the paid batch or resources");
+            }
+
+            craft.Open();
+            int unpaid = craft.PreparedItemIndex.Value;
+            await ClickControl(game, "PolishingGame/Surface/Cancel");
+            game.NewGame();
+            Check(!craft.PreparedItemIndex.HasValue, "A new run must also clear an unpaid cancelled polishing preview");
+            game.EndDay();
+            game.Score = 10000;
+            game.TryUnlockMusicWorkshop();
+            int nextTotal = WorkshopItemCatalog.TotalWeight("music", game.DayUpgrades);
+            ulong nextSeed = 1;
+            int nextExpected;
+            do
+            {
+                GD.Seed(nextSeed++);
+                nextExpected = WorkshopItemCatalog.Roll("music", GD.RandRange(0, nextTotal - 1), game.DayUpgrades);
+            } while (nextExpected == unpaid);
+            GD.Seed(nextSeed - 1);
+            craft.Open();
+            Check(craft.PreparedItemIndex == nextExpected &&
+                board.InstrumentKind == System.IO.Path.GetFileNameWithoutExtension(WorkshopItemCatalog.Items[nextExpected].ArtPath),
+                "The new run must prepare its own weighted item instead of reusing the old unpaid preview");
+            craft.FinishForTesting(true);
+            await ClickControl(game, "PolishingGame/Surface/Action");
+            Check(game.StoredItems.All(index => index == nextExpected), "The reset preview must remain the exact paid reward");
+
+            game.SavePath = savePath;
+            game.PersistProgress();
+            int[] saved = game.StoredItems;
+            int savedMoney = game.Score, savedEnergy = game.EnergyRemaining;
+            game.QueueFree();
+            await ToSignal(this, SignalName.ProcessFrame);
+            game = scene.Instantiate<TradeScene>();
+            game.SavePath = savePath;
+            Root.AddChild(game);
+            game.SetProcess(false);
+            await ToSignal(this, SignalName.ProcessFrame);
+            Check(game.StoredItems.SequenceEqual(saved) && game.Score == savedMoney && game.EnergyRemaining == savedEnergy &&
+                !game.CraftMiniGameOpen && !Paused, "Reload must preserve the exact polished item without duplicating its batch");
+        }
+        finally
+        {
+            Paused = false;
+            GD.Randomize();
+            if (GodotObject.IsInstanceValid(game)) game.QueueFree();
+            if (FileAccess.FileExists(savePath)) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(savePath));
+            await ToSignal(this, SignalName.ProcessFrame);
+        }
+    }
+
     private async Task TestCraftContrast()
     {
         Vector2I originalSize = Root.Size;

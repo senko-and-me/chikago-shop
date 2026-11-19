@@ -30,6 +30,7 @@ public sealed class DayCardSceneTransition(Node owner)
         WorldUi(game.GetNode("World"));
         foreach (Node child in game.GetNode("HUD").GetChildren())
             if (child is CanvasItem item) Remember(item);
+        Remember(game.GetNode<Control>("HUD/DayClock/Root"));
         Remember(game.GetNode<InventoryUI>("HUD/InventoryUI").ItemPopup);
         Remember(game.GetNode<Control>("DayAnnouncements/Root"));
         _camera.ReturnToOverview(CameraDuration);

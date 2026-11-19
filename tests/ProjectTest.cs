@@ -16,6 +16,20 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--energy-bulbs-checks"))
+            {
+                await TestEnergyBulbs();
+                GD.Print("ENERGY_BULBS_CHECKS_PASS: remaining, depleted, unlocked/upgraded capacity, localized tooltips, pause and three window sizes");
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--polishing-reward-checks"))
+            {
+                await TestPolishingReward();
+                GD.Print("POLISHING_REWARD_CHECKS_PASS: all instruments, weighted previews, free cancel, exact reward, payment, quality, timeout and reload");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--room-title-checks"))
             {
                 await TestRoomTitles();

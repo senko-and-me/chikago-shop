@@ -344,7 +344,7 @@ public partial class TradeScene : Node2D
 		AddChild(_embroidery);
 
 		_polishing = new EmbroideryGame(
-			() => AcquireItem("music", MusicSpinCost),
+			() => AcquireItem("music", MusicSpinCost, _polishing.PreparedItemIndex),
 			polishing: true);
 
 		AddChild(_polishing);
@@ -553,7 +553,7 @@ public partial class TradeScene : Node2D
 		SaveProgress();
 	}
 
-	private void AcquireItem(string workshop, int cost)
+	private void AcquireItem(string workshop, int cost, int? preparedItemIndex = null)
 	{
 		if (!RequireStartedDay()) return;
 		if (Failed ||
@@ -569,7 +569,7 @@ public partial class TradeScene : Node2D
 			 itemNumber < ItemsPerSpin;
 			 itemNumber++)
 		{
-			int index = WorkshopItemCatalog.Roll(
+			int index = preparedItemIndex ?? WorkshopItemCatalog.Roll(
 				workshop,
 				_rng.RandiRange(
 					0,
