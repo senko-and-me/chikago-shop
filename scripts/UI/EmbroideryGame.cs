@@ -20,6 +20,7 @@ public partial class EmbroideryGame : CanvasLayer
 	private Button _action = null!, _cancel = null!;
 	private readonly Action _acquire;
 	private bool _ownsPause;
+	private bool? _primaryAction;
 
 	public EmbroideryGame(Action acquire, bool polishing = false)
 	{
@@ -168,6 +169,7 @@ public partial class EmbroideryGame : CanvasLayer
 	public void Open()
 	{
 		var game = GetParent<TradeScene>();
+		if (!game.RequireStartedDay()) return;
 
 		if (IsOpen || GetTree().Paused || game.Failed || game.Completed ||
 			game.EnergyRemaining <= 0 ||
@@ -318,6 +320,7 @@ public partial class EmbroideryGame : CanvasLayer
 		_action.Text = GameLocalization.Text(ready ? "Начать" : "Забрать");
 		_action.Visible = !playing;
 		_cancel.Visible = ready;
+		StyleAction(ready);
 
 		Rect2 panel = _surface.PanelRect;
 		_dayTimer.Text =
@@ -349,11 +352,11 @@ public partial class EmbroideryGame : CanvasLayer
 			new Vector2(panel.Size.X - 32, 30)));
 
 		Place(_action, new Rect2(
-			new Vector2(panel.GetCenter().X + 4, panel.End.Y - 58),
+			new Vector2(panel.GetCenter().X - 148, panel.End.Y - 58),
 			new Vector2(144, 42)));
 
 		Place(_cancel, new Rect2(
-			new Vector2(panel.GetCenter().X - 148, panel.End.Y - 58),
+			new Vector2(panel.GetCenter().X + 4, panel.End.Y - 58),
 			new Vector2(144, 42)));
 
 		if (!ready)
@@ -373,6 +376,25 @@ public partial class EmbroideryGame : CanvasLayer
 	{
 		control.Position = rect.Position;
 		control.Size = rect.Size;
+	}
+
+	private void StyleAction(bool primary)
+	{
+		if (_primaryAction == primary) return;
+		_primaryAction = primary;
+		foreach (string state in new[] { "normal", "hover", "pressed", "hover_pressed", "focus", "disabled" })
+		{
+			var style = (StyleBoxFlat)_action.GetThemeStylebox(state);
+			style.BgColor = primary
+				? state is "pressed" or "hover_pressed" ? new Color("404040") :
+					state == "hover" ? new Color("282828") : Colors.Black
+				: state is "pressed" or "hover_pressed" ? new Color("c4c4c4") :
+					state == "hover" ? new Color("dedede") : new Color("eeeeee");
+			style.BorderColor = primary && state == "focus" ? new Color("777777") : Colors.Black;
+			style.BorderWidthLeft = style.BorderWidthRight = style.BorderWidthTop = style.BorderWidthBottom = primary ? 2 : 1;
+		}
+		foreach (string color in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color", "font_disabled_color" })
+			_action.AddThemeColorOverride(color, primary ? Colors.White : Colors.Black);
 	}
 }
 

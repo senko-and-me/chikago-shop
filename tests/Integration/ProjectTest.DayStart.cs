@@ -147,6 +147,7 @@ public partial class ProjectTest
             Check(!game.DayStarted && game.GetNode<Button>("HUD/Root/DayTimer/StartButton").Visible,
                 "New Game must show Start again");
             game.Score = 1000;
+            game.EndDay(); // The unlock layout fixture requires an explicitly started day.
             game.TryUnlockMusicWorkshop();
             Root.Size = new Vector2I(1000, 800);
             using (var image = await CapturePresentation()) { }

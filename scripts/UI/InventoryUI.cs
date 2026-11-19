@@ -156,6 +156,7 @@ public partial class InventoryUI : Control
 	private bool CanTransfer(int index)
 	{
 		return _tradeScene != null &&
+			_tradeScene.DayStarted &&
 			!IsExpanding &&
 			!GetTree().Paused &&
 			!_tradeScene.Failed &&

@@ -57,6 +57,7 @@ public partial class WorldCamera : Camera2D
             return Mathf.Max(ratio.X, ratio.Y);
         }
     }
+    public float OverviewZoom => MinZoom;
     private float ZoomLimit
     {
         get

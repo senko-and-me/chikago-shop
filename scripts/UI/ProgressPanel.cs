@@ -76,16 +76,19 @@ public partial class ProgressPanel : Control
 
     private void RefreshCaptions()
     {
-        if (_captions == null) return;
+        if (_captions == null || !_game.IsNodeReady()) return;
         var config = EconomyConfigProvider.Load();
         int deadline = _game.QuotaStage == 0 ? config.Quotas.Single(quota => quota.Id == "first").DeadlineDay : config.Days.TotalDays;
-        int days = Math.Max(0, deadline - _game.CurrentDay + 1);
+        int days = Math.Max(0, deadline - _game.CurrentDay + (_game.DayClosed ? 0 : 1));
         string day = GameLocalization.Format("День {0}", _game.CurrentDay);
         string quota = _game.Completed ? GameLocalization.Text("Все квоты выплачены") :
             GameLocalization.Format("Следующая квота: {0}$", _game.QuotaStage == 0 ? _game.FirstQuota : _game.SecondQuota);
         string key = days % 10 == 1 && days % 100 != 11 ? "До квоты: {0} день" :
             days % 10 is >= 2 and <= 4 && days % 100 is not (>= 12 and <= 14) ? "До квоты: {0} дня" : "До квоты: {0} дней";
-        string remaining = _game.Completed ? GameLocalization.Text("Долг погашен") : GameLocalization.Format(key, days);
+        string remaining = _game.Completed ? GameLocalization.Text("Долг погашен") :
+            _game.Failed ? GameLocalization.Text("Срок квоты истёк") :
+            days == 0 ? GameLocalization.Text("Квота: сейчас") :
+            _game.CurrentDay == deadline ? GameLocalization.Text("Квота: сегодня") : GameLocalization.Format(key, days);
         string signature = day + "|" + quota + "|" + remaining;
         if (_lastText == signature) return;
         _lastText = signature;

@@ -7,6 +7,86 @@ using ChikagoShop.Domain.Days;
 // Subsystem checks share the ProjectTest runner and fixture helpers.
 public partial class ProjectTest
 {
+    private async Task TestRoomTitles()
+    {
+        Vector2I originalSize = Root.Size;
+        string originalLocale = TranslationServer.GetLocale();
+        var game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
+        game.SavePath = "";
+        var entries = new[] { "Atelier", "MusicWorkshop", "ShowroomLeft", "Showroom" }.Select(room =>
+        {
+            var node = game.GetNode("World/" + room);
+            var plate = node.GetNodeOrNull<Control>("Header") ?? node.GetNode<Control>("ShowroomHeader");
+            var title = node.GetNodeOrNull<Label>("NameLabel") ?? node.GetNode<Label>("ShowroomLabel");
+            var subtitle = node.GetNodeOrNull<Control>("HintLabel") ?? node.GetNode<Control>("ShowroomHint");
+            return (Room: room, Plate: plate, Title: title, Subtitle: subtitle,
+                Width: plate.Size.X * plate.Scale.X, Center: plate.Position + plate.Size * plate.Scale / 2);
+        }).ToArray();
+        Root.AddChild(game);
+        game.SetProcess(false);
+        var camera = game.GetNode<WorldCamera>("Camera2D");
+        camera.SetProcess(false);
+        var ui = game.GetNode<ZoomResponsiveUi>("ZoomResponsiveUi");
+        async Task Frame() { await ToSignal(this, SignalName.ProcessFrame); await ToSignal(this, SignalName.ProcessFrame); }
+        try
+        {
+            await Frame();
+            game.EndDay();
+            game.Score = 10000;
+            game.TryUnlockMusicWorkshop();
+            foreach (Vector2I size in new[] { new Vector2I(960, 540), new Vector2I(1280, 720), new Vector2I(1000, 800) })
+            foreach (string language in new[] { "ru", "en" })
+            {
+                Root.Size = size;
+                TranslationServer.SetLocale(language);
+                await Frame();
+                camera.ResetToOverview();
+                await Frame();
+                Check(entries.All(entry => !entry.Plate.Visible && !entry.Title.Visible && !entry.Subtitle.Visible),
+                    "The real maximum overview must hide all room headings, plates and subtitles in every viewport");
+                if (size.X == 1280 && language == "ru") using (await CapturePresentation("room-titles-overview")) { }
+                camera.Zoom = Vector2.One * camera.OverviewZoom * 1.2f;
+                ui.UpdateForZoom(camera.Zoom.X);
+                Check(entries.All(entry => !entry.Title.Visible && Mathf.IsZeroApprox(entry.Title.Modulate.A)),
+                    "Titles must stay hidden through twenty percent zoom above overview");
+                camera.Zoom = Vector2.One * camera.OverviewZoom * 1.4f;
+                ui.UpdateForZoom(camera.Zoom.X);
+                Check(entries.All(entry => entry.Title.Visible && entry.Title.Modulate.A > 0 && entry.Title.Modulate.A < 1 && !entry.Subtitle.Visible),
+                    "Only titles and plates must smoothly fade in between the relative zoom thresholds");
+                foreach (var entry in entries)
+                {
+                    var frame = game.GetNode<Control>($"World/{entry.Room}/RoomFrame");
+                    Rect2 bounds = frame.GetGlobalTransform() * new Rect2(Vector2.Zero, frame.Size);
+                    camera.FocusOn(bounds.GetCenter(), camera.CloseupSize, 0.01);
+                    await ToSignal(CreateTimer(0.06), SceneTreeTimer.SignalName.Timeout);
+                    await Frame();
+                    Rect2 plateRect = entry.Plate.GetTransform() * new Rect2(Vector2.Zero, entry.Plate.Size);
+                    Rect2 titleRect = entry.Title.GetTransform() * new Rect2(Vector2.Zero, entry.Title.Size);
+                    float textWidth = entry.Title.GetThemeFont("font").GetStringSize(entry.Title.Tr(entry.Title.Text),
+                        fontSize: entry.Title.GetThemeFontSize("font_size")).X;
+                    Check(entry.Title.Visible && Mathf.IsEqualApprox(entry.Title.Modulate.A, 1) && !entry.Subtitle.Visible &&
+                        plateRect.Size.X <= entry.Width * 0.66f && plateRect.Size.Y <= 161 &&
+                        plateRect.GetCenter().DistanceTo(entry.Center) < 0.1f && plateRect.Encloses(titleRect) && textWidth <= entry.Title.Size.X,
+                        $"The compact {entry.Room} plate must retain its center and fit its {language} title without a subtitle at {size}");
+                    if (size.X == 1280)
+                        using (await CapturePresentation($"room-title-{entry.Room}-{language}")) { }
+                }
+                game.RefreshDayPresentation();
+                await Frame();
+                Check(entries.All(entry => !entry.Subtitle.Visible), "Game state refresh must not reveal removed subtitles");
+            }
+        }
+        finally
+        {
+            camera.CancelFocusTransition();
+            game.QueueFree();
+            Root.Size = originalSize;
+            TranslationServer.SetLocale(originalLocale);
+            await Frame();
+        }
+        GD.Print("ROOM_TITLE_CHECKS_PASS: compact centered titles, no subtitles, overview/fade/closeup, RU/EN and three viewports");
+    }
+
     private async Task TestRoomDoubleClickFocus()
     {
         Vector2I originalSize = Root.Size;
@@ -94,7 +174,10 @@ public partial class ProjectTest
             Click(targetPoint);
             Check(!camera.IsFocusing, "Pause must block a new double-click focus");
             game.GetNode<PauseMenu>("PauseMenu").Close();
+            if (!game.DayStarted) game.EndDay();
             game.GetNode<EmbroideryGame>("EmbroideryGame").Open();
+            Check(game.CraftMiniGameOpen,
+                $"Modal fixture must open after Start: started={game.DayStarted}, closed={game.DayClosed}, paused={Paused}, money={game.Score}, energy={game.EnergyRemaining}, failed={game.Failed}");
             Click(targetPoint);
             Check(!camera.IsFocusing, "A crafting modal must consume double clicks before world navigation");
             await PressEscapeForTest();
@@ -261,23 +344,24 @@ public partial class ProjectTest
         var ui = game.GetNode<ZoomResponsiveUi>("ZoomResponsiveUi");
         var panel = game.GetNode<Control>("World/TradingRoom/Item/TradePanel");
         var hud = game.GetNode<Control>("HUD/Root/ProgressPanel");
-        var headers = new[] { "Atelier/Header", "Atelier/NameLabel", "Atelier/HintLabel",
-            "MusicWorkshop/Header", "MusicWorkshop/NameLabel", "MusicWorkshop/HintLabel",
-            "Showroom/ShowroomHeader", "Showroom/ShowroomLabel", "Showroom/ShowroomHint",
-            "ShowroomLeft/ShowroomHeader", "ShowroomLeft/ShowroomLabel", "ShowroomLeft/ShowroomHint"
+        var headers = new[] { "Atelier/Header", "Atelier/NameLabel",
+            "MusicWorkshop/Header", "MusicWorkshop/NameLabel",
+            "Showroom/ShowroomHeader", "Showroom/ShowroomLabel",
+            "ShowroomLeft/ShowroomHeader", "ShowroomLeft/ShowroomLabel"
             }.Select(path => game.GetNode<CanvasItem>("World/" + path)).ToArray();
         Check(!game.HasNode("World/TradingRoom/SalesRoomLabel"), "The trading room heading must be removed");
-        ui.UpdateForZoom(0.23f);
+        float overviewZoom = game.GetNode<WorldCamera>("Camera2D").OverviewZoom;
+        ui.UpdateForZoom(overviewZoom * 1.2f);
         Check(headers.All(header => !header.Visible && Mathf.IsZeroApprox(header.Modulate.A)),
-            "All room titles, descriptions and backplates must disappear at zoom 0.23");
+            "All room titles and backplates must disappear near the current overview");
         Check(panel.Scale.X > 1 && panel.Scale.X <= 1.2f && hud.Scale == Vector2.One,
             "Small world UI must grow moderately on zoom-out while HUD stays fixed");
-        ui.UpdateForZoom(0.29f);
+        ui.UpdateForZoom(overviewZoom * 1.4f);
         Check(headers.All(header => header.Visible && header.Modulate.A > 0 && header.Modulate.A < 1),
-            "Room headings must fade in gradually above 0.23");
-        ui.UpdateForZoom(0.35f);
+            "Room headings must fade in gradually above overview");
+        ui.UpdateForZoom(overviewZoom * 1.6f);
         Check(headers.All(header => header.Visible && Mathf.IsEqualApprox(header.Modulate.A, 1)),
-            "Room headings must reach full opacity at 0.35");
+            "Room headings must reach full opacity after zooming in sixty percent from overview");
         ui.UpdateForZoom(0.1f);
         Check(Mathf.IsEqualApprox(panel.Scale.X, 1.2f), "Trade panel zoom compensation must be capped");
         foreach (float zoom in new[] { 1f, 1.8f })

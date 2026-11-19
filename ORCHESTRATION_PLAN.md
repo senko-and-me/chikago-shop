@@ -9,6 +9,104 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### HF-181 — публикация изменений до старта дня, квот и интерфейса комнат
+
+Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-19; HF176/HF177/HF178/HF179/HF180 DONE; пользователь разрешил commit/push; пересечений нет.
+
+CP-HF-181 read-set: текущий фронт; Git status/diff/refs; готовые изменения и evidence HF176…HF180; scenes/{main_menu,trade_scene}.tscn только hash. Write-set: Git index/commits/main/origin/main; ORCHESTRATION_PLAN.md; публикация готовых docs/GAMEPLAY.md, localization/en.tres, scripts/Camera/WorldCamera.cs, scripts/Days/DayCycleController.cs, scripts/Presentation/RoomDoorwayPresentation.cs, scripts/TradeScene.cs, scripts/UI/{DayStartGate.cs/.uid,EmbroideryGame.cs,InventoryUI.cs,ProgressPanel.cs,ZoomResponsiveUi.cs}, tests/ProjectTest.cs, tests/Integration/ProjectTest.{Camera,Crafting,DayStart,DayStartGate,Inventory,Resources,Ui}.cs и ProjectTest.DayStartGate.cs.uid; .local/checks/hf181. Out of scope: source/, пользовательские основные сцены, новые изменения поведения/баланса/schema, force push.
+
+Приёмка: все готовые проверенные правки опубликованы обычным push в origin/main; HEAD=origin/main; пользовательские сцены побайтно сохранены вне коммита. Проверки: SHA25619 runtime/test/docs файлов совпадают с tested isolated copy,2 новых UID валидны; прежние build/gate/inventory/doorway/quota/craft/titles/focus/tutorial PASS; staged diff --check, push/ref/status/hash readback.
+
+### HF-180 — компактные названия комнат без подзаголовков, скрытие в общем ракурсе
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-19; HF-179 DONE; пересечений нет.
+
+CP-HF-180 read-set: текущий фронт; scripts/UI/ZoomResponsiveUi.cs; scripts/Camera/WorldCamera.cs; scenes/trade_scene.tscn только Header/NameLabel/HintLabel/ShowroomHeader/ShowroomLabel/ShowroomHint read-only и hash; scripts/TradeScene.cs только RefreshCraftLabels/RefreshShowcases read-only; tests/Integration/ProjectTest.{Camera,Helpers,Presentation,Ui}.cs; tests/ProjectTest.cs; docs/GAMEPLAY.md; пользовательский screenshot; scenes/main_menu.tscn только hash. Write-set: ORCHESTRATION_PLAN.md; scripts/UI/ZoomResponsiveUi.cs; scripts/Camera/WorldCamera.cs (только публичное readonly OverviewZoom); tests/Integration/ProjectTest.Camera.cs; tests/ProjectTest.cs; docs/GAMEPLAY.md; .local/checks/hf180; изолированный .local/checks/git-review-20261118/project (те же runtime/test/docs файлы). Out of scope: source/, пользовательские основные сцены/позиции комнат/арт, баланс/schema/новый gameplay/прочие предыдущие изменения/commit/push.
+
+Приёмка: названия и подложки всех существующих комнат скрыты в общем ракурсе, проявляются при приближении относительно актуального overview (1,2→1,6×) при разных размерах окна; подзаголовки всегда скрыты, включая language/reload/refresh. Плашки уже/ниже, центр сохранён, RU/EN название без обрезки; цена остаётся в hover подсказке кнопки. Камера/кнопки/пауза/обучение прежние. Проверки: build; rendered --room-title-checks/--room-focus-checks/--tutorial-checks; screenshots; git diff --check; SHA256 пользовательских сцен.
+
+```text
+Task: HF-180
+Recommended status: REVIEW → принято координатором, DONE
+Changed: scripts/UI/ZoomResponsiveUi.cs — подзаголовки исключены из reveal и постоянно скрыты; плашки под локализованный текст+96px padding, максимум65% прежней ширины,160px высота в local room units, центр сохранён. Layout обновляется при языке/resize, без накопленного уменьшения; существующий PriceHint не изменён. Заголовки/фон скрываются до1,2× актуального OverviewZoom и плавно появляются к1,6×. WorldCamera — readonly OverviewZoom поверх существующего MinZoom. Новый --room-title-checks и обновлён старый zoom contract; docs описывают управление/цену/пороги.
+Checks: local/isolated dotnet build PASS (0 warnings/errors); rendered --room-title-checks PASS:4 room headings × RU/EN ×960×540/1280×720/1000×800, реальный overview скрывает, середина fade частичная, closeup непрозрачен; ширина<=66%, высота<=161, центр/границы/весь локализованный текст помещаются; refresh не показывает subtitle. --room-focus-checks PASS для6 комнат, UI/pause/modal; --tutorial-checks PASS. Все stderr пусты. Просмотрены atelier-ru и overview, сохранён music-en. git diff --check PASS; SHA256 обеих пользовательских основных сцен сохранён. Evidence .local/checks/hf180.
+Acceptance: на отдалении названия исчезают при всех проверенных размерах окна, вблизи показываются компактные плашки без подзаголовков. Цена остаётся в hover подсказке у создания.
+Read-set exception: нет; source/ не читался.
+Risks/blocker: нет новых; предыдущие изменения сохранены; commit/push не выполнялись.
+Next: пользовательская проверка общего ракурса и приближения к ателье.
+```
+### HF-179 — «Начать» слева и контрастное выделение в мини-играх
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-19; HF-178 DONE; пересечений нет.
+
+CP-HF-179 read-set: текущий фронт; scripts/UI/EmbroideryGame.cs; scripts/Presentation/ButtonFeedbackController.cs (локальный feedback); tests/Integration/ProjectTest.Crafting.cs; tests/Integration/ProjectTest.{Helpers,Presentation}.cs; tests/ProjectTest.cs (craft checks entrypoint); пользовательский screenshot; scenes/{main_menu,trade_scene}.tscn только hash. Write-set: ORCHESTRATION_PLAN.md; scripts/UI/EmbroideryGame.cs (только порядок/стили кнопок); tests/Integration/ProjectTest.Crafting.cs (craft contrast/layout/input tests); .local/checks/hf179; изолированный .local/checks/git-review-20261118/project (те же runtime/test файлы). Out of scope: source/, игровые правила/цены/время/schema/переводы/пользовательские сцены/предыдущие изменения/commit/push.
+
+Приёмка: перед стартом «Начать» слева, «Назад» справа, Start заметно выделен чёрной заливкой с белой надписью в grayscale; hover/press/focus читаемы, начальный keyboard focus остаётся на Start. Во время игры кнопки скрыты; итоговое «Забрать» как прежде по центру и нейтральное. Общий интерфейс вышивки/полировки согласован, RU/EN960×540/1280×720 без обрезки. Реальный Start начинает/списывает один раз, Cancel бесплатно закрывает, collect не дублирует предмет. Проверки: build; rendered --craft-contrast-checks и --tutorial-checks; pixel before/after/buttons и screenshots; git diff --check; SHA256 основных сцен.
+
+```text
+Task: HF-179
+Recommended status: REVIEW → принято координатором, DONE
+Changed: scripts/UI/EmbroideryGame.cs — Start слева/Back справа в общем ready layout вышивки и полировки. Start выделен чёрной заливкой, белым текстом,2px рамкой и различимыми hover/press/focus; стили переключаются только при смене ready state, на collect возвращается прежний нейтральный стиль/центр. tests/Integration/ProjectTest.Crafting.cs — проверка порядка/focus/bounds/цветов во всех состояниях и actual grayscale pixels, реальный левый Start запускает мини-игру и списывает один раз, Cancel/Collect прежние; screenshots ready RU/EN.
+Checks: local/isolated dotnet build PASS (0 warnings/errors); rendered --craft-contrast-checks PASS: обе мини-игры, RU/EN960×540/1280×720, ready/playing/timeout/success, black fill/white Start, порядок/фокус, реальные Start/Cancel/Collect, без дублирования предметов; --tutorial-checks PASS; stderr обеих групп пусты. Просмотрен embroidery-ready-ru, сохранён polishing-ready-en. git diff --check PASS; SHA256 двух пользовательских основных сцен сохранён. Evidence .local/checks/hf179.
+Acceptance: Start слева и визуально основной, Back справа; использование мыши/клавиатуры и сценарии мини-игр сохранены.
+Read-set exception: нет; source/ не читался.
+Risks/blocker: нет новых; предыдущие изменения сохранены; commit/push не выполнялись.
+Next: пользовательская проверка кнопок перед стартом мини-игры.
+```
+### HF-178 — корректный срок квоты при окончании дня и проигрыше
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-19; HF-177 DONE; пересечений нет.
+
+CP-HF-178 read-set: текущий фронт; scripts/UI/ProgressPanel.cs; scripts/TradeScene.cs (AdvanceToNextDay read-only); scripts/Days/DayCycleController.cs (Tick/EndDay read-only); tests/Integration/ProjectTest.{Ui,Helpers,Presentation}.cs; tests/ProjectTest.cs; localization/en.tres; docs/GAMEPLAY.md; config/economy.v1.json только quota/days; scenes/{main_menu,trade_scene}.tscn только hash. Write-set: ORCHESTRATION_PLAN.md; scripts/UI/ProgressPanel.cs; tests/Integration/ProjectTest.Ui.cs; tests/ProjectTest.cs (quota-countdown entrypoint); localization/en.tres; docs/GAMEPLAY.md; .local/checks/hf178; изолированный .local/checks/git-review-20261118/project (те же runtime/test/localization/docs файлы). Out of scope: source/, сумма/даты квоты/баланс/порядок списания/TradeScene/схема/пользовательские сцены/прочие незакоммиченные изменения/commit/push.
+
+Приёмка: первый/финальный deadline во время доступного последнего дня обозначен «сегодня», на00:00 нет обещания ещё одного дня, проигрыш явно сообщает истёкший срок и корректен после reload; следующий этап/победа/checkpoint/new game сбрасывают прежний статус; более ранние дни сохраняют счётчик включая текущий пока он доступен, закрытый день не учитывается. RU/EN. Проверки: build; rendered --quota-countdown-checks/--progress-toggle-checks/--tutorial-checks; screenshots; git diff --check; hash основных сцен.
+
+```text
+Task: HF-178
+Recommended status: REVIEW → принято координатором, DONE
+Changed: scripts/UI/ProgressPanel.cs — закрытый день не добавляется к числу доступных дней; последний доступный день подписан «Квота: сегодня», закрытый deadline «Квота: сейчас», проигрыш «Срок квоты истёк». RefreshCaptions ждёт Ready родителя перед чтением DayClosed. localization/en.tres —3 перевода. tests/Integration/ProjectTest.Ui.cs — обновлены deadline/failure ожидания; добавлен полный lifecycle обеих квот и custom first quota1000; tests/ProjectTest.cs — --quota-countdown-checks. Docs объясняют сроки.
+Checks: local/isolated dotnet build PASS (0 warnings/errors). Rendered --quota-countdown-checks PASS: первый и финальный сроки, живой предпоследний день2/закрытый1, последний день «сегодня» до последней0,01с,00:00 «сейчас», реальный проигрыш без дополнительного дня, RU/EN, failed reload/checkpoint, final payment/victory/new run. Rendered --progress-toggle-checks PASS; --tutorial-checks PASS; успешные stderr пусты. Просмотрены first-quota-expired-ru и final-quota-expired-en. git diff --check PASS; hash двух пользовательских основных сцен сохранён. Evidence .local/checks/hf178.
+Acceptance: пример пользователя больше не показывает ещё1день после поражения; во время дня4 явно обозначен сегодняшний срок. Суммы/даты/правила оплаты не менялись; иные прежние изменения сохранены.
+Read-set exception: нет; source/ не читался.
+Risks/blocker: нет новых; commit/push не выполнялись.
+Next: пользовательская проверка подписи квоты в последний день и после проигрыша.
+```
+### HF-177 — приглушённые шторы закрытых комнат
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-19; HF-176 DONE; пересечений нет.
+
+CP-HF-177 read-set: текущий фронт; scripts/Presentation/RoomDoorwayPresentation.cs; tests/Integration/ProjectTest.Resources.cs (только TestRoomDoorways); tests/Integration/ProjectTest.Presentation.cs (capture/bounds helpers); tests/ProjectTest.cs (room-doorway entrypoint); пользовательский screenshot; scenes/{main_menu,trade_scene}.tscn только hash. Write-set: ORCHESTRATION_PLAN.md; scripts/Presentation/RoomDoorwayPresentation.cs; tests/Integration/ProjectTest.Resources.cs (только TestRoomDoorways); .local/checks/hf177; изолированный .local/checks/git-review-20261118/project (те же runtime/test файлы). Out of scope: source/, пиксели арта/пользовательские сцены, предыдущие HF176 изменения, gameplay/баланс/schema/commit/push.
+
+Приёмка: обе закрытые шторы заметно темнее, фактура читается; затемнение только текстуры, кнопка открытия и остальной мир прежние; нет нового перехвата ввода; unlock скрывает шторы, new game/checkpoint/reload возвращают тёмные. Проверки: local/isolated build; rendered --room-doorway-checks с pixel before/after и lifecycle; --room-focus-checks; screenshot review; git diff --check; hash пользовательских сцен.
+
+```text
+Task: HF-177
+Recommended status: REVIEW → принято координатором, DONE
+Changed: scripts/Presentation/RoomDoorwayPresentation.cs — SelfModulate0,55 у обеих LockedCurtain, эквивалент45% чёрного затемнения только ткани без нового перехватчика ввода/изменения кнопок. tests/Integration/ProjectTest.Resources.cs — runtime tint/lifecycle assertion, rendered before/after pixel check обеих штор; unlock fixtures явно начинают день по новому HF176 правилу.
+Checks: local/isolated dotnet build PASS (0 warnings/errors); rendered --room-doorway-checks PASS: >100 потемневших светлых пикселей у каждой шторы, фактура видима, исходное закрытие/неуспешный и успешный unlock/reload/checkpoint/new game. --room-focus-checks PASS:6 комнат/2 размера/pause/modal/GUI. Оба stderr пусты. Просмотрен curtains-darkened.png. git diff --check PASS; SHA256 обеих пользовательских основных сцен сохранены. Evidence .local/checks/hf177.
+Acceptance: обе шторы приглушены приблизительно на45%; кнопка открытия остаётся прежней, после открытия шторы исчезают, при восстановлении закрытых комнат снова тёмные. Двойной клик/ввод работают.
+Read-set exception: rg по tests/Integration только для поиска TestRoomDoorways после отсутствующего предполагаемого имени файла; source/ не читался.
+Risks/blocker: нет новых; прежние HF176 изменения сохранены; commit/push не выполнялись.
+Next: пользовательская визуальная проверка затемнения.
+```
+### HF-176 — блокировка действий до начала дня и подсказка
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-19; HF-175 DONE; пересечений нет.
+
+CP-HF-176 read-set: текущий фронт; scripts/TradeScene.cs (action adapters/Ready); scripts/Days/DayCycleController.cs; scripts/UI/{EmbroideryGame,InventoryUI,SlotUI,FirstTradeTutorial}.cs; scripts/Camera/WorldCamera.cs; tests/ProjectTest.cs; tests/Integration/ProjectTest.{Helpers,DayStart,Crafting,Camera,Tutorial,Inventory,Presentation}.cs; localization/en.tres; docs/GAMEPLAY.md; ChikagoShop.csproj; .vscode/settings.json; scenes/{main_menu,trade_scene}.tscn только hash. Write-set: ORCHESTRATION_PLAN.md; новый scripts/UI/DayStartGate.cs/.uid; scripts/Days/DayCycleController.cs (инициализация gate/делегат); scripts/TradeScene.cs (только тонкие вызовы gate в action adapters, без новой доменной логики); scripts/UI/{EmbroideryGame,InventoryUI}.cs; tests/ProjectTest.cs; новый tests/Integration/ProjectTest.DayStartGate.cs/.uid; tests/Integration/ProjectTest.{DayStart,Crafting,Camera,Inventory}.cs (актуализация fixtures явным Start); localization/en.tres; docs/GAMEPLAY.md; .local/checks/hf176; изолированный .local/checks/git-review-20261118/project (те же новые/изменённые runtime/test/localization/docs файлы). Out of scope: source/, пользовательские основные сцены, предыдущие изменения/баланс/schema/TradeScene domain extraction/commit/push.
+
+Приёмка: до Start ни создание/открытие мини-игры, ни unlock, ни выбор/перенос/drag предмета, ни продажа/reroll не меняют состояние; прямые публичные вызовы также защищены. Реальные клики (включая disabled controls)/клавиатура/drag показывают короткую RU/EN подсказку нажать Start на часах; повтор не создаёт копии. После Start gate и сообщение снимаются, обычные действия доступны. Камера/двойной клик/zoom, пауза/настройки/информация доступны. Новый день/checkpoint/reload учитывают Started. Проверки: build; rendered --day-start-gate-checks/--day-start-checks/--tutorial-checks/--room-focus-checks и затронутые crafting checks; screenshots RU/EN960/1280; git diff --check, SHA256 пользовательских сцен.
+
+```text
+Task: HF-176
+Recommended status: REVIEW → принято координатором, DONE
+Changed: новый scripts/UI/DayStartGate.cs — общий gate по DayStarted, перехват действий через mouse/keyboard с учётом foreground GUI, включая disabled кнопки и inventory; единая неперехватывающая ввод подсказка3,5с над инвентарём. DayCycleController создаёт gate, делегирует проверку и немедленно скрывает сообщение при Start/reset. TradeScene содержит только тонкие вызовы RequireStartedDay в adapters craft/acquire/unlock/select/place/reroll/accept; новая доменная логика туда не добавлена. EmbroideryGame.Open и InventoryUI.CanTransfer защищены. RU/EN translation/docs обновлены. Новый --day-start-gate-checks; fixtures DayStart/Crafting/Camera/Inventory явно запускают день перед разрешёнными действиями, повторный EndDay не закрывает уже запущенный fixture день.
+Checks: local/isolated dotnet build PASS (0 warnings/errors). Rendered --day-start-gate-checks PASS: прямые вызовы/настоящие клики по craft/unlock/disabled showcase/inventory, keyboard Space/F, запрет drag, неизменность money/energy/items/time, RU/EN960×540/1280×720, отсутствие перекрытия tutorial, foreground GUI поверх world button, timeout/Start dismiss, работа после Start и running reload, повторный gate на новом дне/checkpoint; навигация/пауза доступны. --day-start-checks PASS; финальный --tutorial-checks PASS; --room-focus-checks PASS на6 комнатах в2 размерах; --craft-contrast-checks PASS; --inventory-aspect-checks PASS включая реальные drag/drop/cancel/stale payload/Shift-transfer после старта. stderr успешных проверок пуст. Просмотрены notice RU960/EN1280. git diff --check PASS; SHA256 обеих пользовательских основных сцен сохранены. Evidence .local/checks/hf176.
+Acceptance: до Start разрешена навигация и служебный UI, игровые действия не меняют состояние и объясняют, как начать день. После Start действия доступны без повторной загрузки. Новый день/reload/checkpoint сохраняют нужный gate.
+Read-set exception: проверена сцена scenes/UI/FirstTradeTutorial.tscn (только header/layer) для диагностики перекрытия подсказки; source/ не читался. Координатор расширил write-set Inventory fixture для явного Start перед unlock и предотвращения повторного EndDay после подготовки предметов.
+Risks/blocker: нет новых; commit/push не выполнялись.
+Next: пользовательская проверка попытки создания до «Начать».
+```
 ### HF-175 — публикация пачки и двойного клика комнаты
 
 Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-19; HF172/HF173/HF174 DONE, пользователь разрешил commit/push; пересечений нет.

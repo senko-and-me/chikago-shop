@@ -28,6 +28,7 @@ public sealed class DayCycleController
 	private readonly DayTransitionCard _card;
 	private readonly DayNightBackground _dayNight;
 	private readonly DayAnnouncementOverlay _announcements;
+	private readonly DayStartGate _actionGate;
 	private double ExpectedDuration => WorkshopItemCatalog.DayDurationSeconds
 		+ (Upgrades.Selected == DayUpgrade.Time ? 30 : 0);
 	public bool TransitionOpen => _card.IsOpen;
@@ -107,17 +108,21 @@ public sealed class DayCycleController
 		_dayNight = new DayNightBackground(game);
 		_announcements = new DayAnnouncementOverlay();
 		game.AddChild(_announcements);
+		_actionGate = new DayStartGate { Name = "DayStartGate" };
+		game.AddChild(_actionGate);
 		Session.Reset(ExpectedDuration);
 		RefreshTimer();
 		UpdateDayNightBackground();
 	}
 
 	public bool CanReceiveBuyers => Started && Session.CanReceiveBuyers && !_game.Failed && !_game.Completed;
+	public bool RequireStartedDay() => _actionGate.AllowAction();
 
 	public void StartDay()
 	{
 		if (Started || Session.IsClosed || Upgrades.Pending || _game.GetTree().Paused || _game.Failed || _game.Completed) return;
 		Started = true;
+		_actionGate.Dismiss();
 		_announcements.Observe(Session.RemainingSeconds, Session.Duration, false, _game.CurrentDay, TotalDays, FirstQuotaDay);
 		RefreshTimer();
 		_game.SynchronizeDayState();
@@ -186,6 +191,7 @@ public sealed class DayCycleController
 
 	public void Reset(bool preserveCategories = false)
 	{
+		_actionGate.Dismiss();
 		_advanceWhenClosed = false;
 		_card.Close();
 		Upgrades.Reset(preserveCategories);

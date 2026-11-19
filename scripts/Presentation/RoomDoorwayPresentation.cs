@@ -9,6 +9,10 @@ public partial class RoomDoorwayPresentation : Node
 
     public override void _Ready()
     {
+        // Equivalent to a 45% black veil over the fabric, without dimming the unlock button.
+        foreach (string room in new[] { "MusicWorkshop", "Showroom" })
+            GetNode<TextureRect>($"../World/{room}/LockedOverlay/LockedCurtain").SelfModulate =
+                new Color(0.55f, 0.55f, 0.55f, 1);
         _corridor = GetNode<Sprite2D>("../World/Corridor/CorridorBackground");
         _cashier = GetNode<Sprite2D>("../World/TradingRoom/TradingRoomBackground");
         _corridorOpen = GD.Load<Texture2D>("res://art/rooms/upper_corridor.jpg");

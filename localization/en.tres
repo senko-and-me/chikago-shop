@@ -3,6 +3,10 @@
 [resource]
 locale = "en"
 messages = {
+&"Срок квоты истёк": &"Quota deadline passed",
+&"Квота: сейчас": &"Quota due now",
+&"Квота: сегодня": &"Quota due today",
+&"Сначала начните день — нажмите «Начать» на часах.": &"Start the day first — click Start on the clock.",
 &"Передвижение камеры": &"Camera movement",
 &"Масштабирование": &"Zooming",
 &"Зажмите ЛКМ на фоне и двигайте мышь до 100%.": &"Hold the left mouse button on the background and drag to 100%.",

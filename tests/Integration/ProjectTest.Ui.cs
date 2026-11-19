@@ -7,6 +7,110 @@ using ChikagoShop.Domain.Days;
 // Subsystem checks share the ProjectTest runner and fixture helpers.
 public partial class ProjectTest
 {
+    private async Task TestQuotaCountdown()
+    {
+        const string save = "user://hf178_quota_countdown.json";
+        string locale = TranslationServer.GetLocale();
+        TradeScene game = null;
+        async Task Frame() { await ToSignal(this, SignalName.ProcessFrame); await ToSignal(this, SignalName.ProcessFrame); }
+        Label Caption() => game.GetNode<Label>("HUD/Root/ProgressPanel/Visual/Deadline/Caption");
+        async Task Create()
+        {
+            game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
+            game.SavePath = save;
+            Root.AddChild(game);
+            game.SetProcess(false);
+            MoveButtonPointer(new Vector2(800, 400));
+            await Frame();
+        }
+        try
+        {
+            if (FileAccess.FileExists(save)) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(save));
+            await Create();
+            int firstDeadline = EconomyConfigProvider.Load().Quotas.Single(quota => quota.Id == "first").DeadlineDay;
+            int finalDeadline = EconomyConfigProvider.Load().Days.TotalDays;
+            for (int stage = 0; stage < 2; stage++)
+            {
+                game.NewGame();
+                game.FirstQuota = 1000; // Reproduce the user's custom quota without changing its rules.
+                if (stage == 1)
+                {
+                    game.CurrentDay = firstDeadline;
+                    game.Score = 10000;
+                    game.AdvanceToNextDay();
+                }
+                int deadline = stage == 0 ? firstDeadline : finalDeadline;
+                int target = stage == 0 ? game.FirstQuota : game.SecondQuota;
+                game.CurrentDay = deadline - 1;
+                game.Score = target - 1;
+                TranslationServer.SetLocale("en");
+                game.RefreshDayPresentation();
+                await Frame();
+                Check(Caption().Text == "Quota due in 2 days", "An available penultimate day must still count today and the deadline day");
+                game.EndDay();
+                game._Process(game.DayRemainingSeconds + 0.1);
+                await Frame();
+                Check(game.DayClosed && !game.Failed && Caption().Text == "Quota due in 1 day",
+                    "A closed penultimate day must no longer count as an available day");
+                AdvanceDayForTest(game);
+                await Frame();
+                Check(game.CurrentDay == deadline && !game.DayStarted && !game.Failed && Caption().Text == "Quota due today",
+                    "The last waiting day must say today, without promising another full day after it");
+                game.EndDay();
+                game._Process(game.DayRemainingSeconds - 0.01);
+                await Frame();
+                Check(!game.DayClosed && !game.Failed && Caption().Text == "Quota due today",
+                    "The deadline remains today until the last playable second finishes");
+                game._Process(0.02);
+                await Frame();
+                Check(game.DayClosed && !game.Failed && Caption().Text == "Quota due now",
+                    "At 00:00 the deadline must be due now, with no extra day displayed");
+                game._Process(0.01);
+                await Frame();
+                Check(game.Failed && game.CurrentDay == deadline && game.Score == target - 1 &&
+                    Caption().Text == "Quota deadline passed", "Failing either real quota deadline must explicitly show an expired deadline");
+                await ToSignal(CreateTimer(0.65), SceneTreeTimer.SignalName.Timeout);
+                foreach (string language in new[] { "ru", "en" })
+                {
+                    TranslationServer.SetLocale(language);
+                    await Frame();
+                    Check(Caption().Text == (language == "ru" ? "Срок квоты истёк" : "Quota deadline passed"),
+                        "The expired deadline must be localized and never claim another day remains");
+                    using (await CapturePresentation($"quota-expired-{stage}-{language}")) { }
+                }
+                game.PersistProgress();
+                game.QueueFree();
+                await Frame();
+                await Create();
+                Check(game.Failed && Caption().Text == "Quota deadline passed", "Reloading a failed run must retain the expired deadline caption");
+                game.ReturnToCheckpoint();
+                await Frame();
+                Check(!game.Failed && Caption().Text != "Quota deadline passed", "Checkpoint recovery must clear the expired caption");
+            }
+            game.NewGame();
+            game.Score = 10000;
+            game.CurrentDay = firstDeadline;
+            game.AdvanceToNextDay();
+            game.CurrentDay = finalDeadline;
+            game.AdvanceToNextDay();
+            await Frame();
+            Check(game.Completed && Caption().Text == "Debt repaid", "Paying the final quota must keep the existing victory caption");
+            game.NewGame();
+            await Frame();
+            Check(!game.Failed && !game.Completed && Caption().Text.Contains(firstDeadline.ToString()),
+                "A new run must restore the initial countdown instead of keeping a terminal caption");
+        }
+        finally
+        {
+            Paused = false;
+            game?.QueueFree();
+            TranslationServer.SetLocale(locale);
+            if (FileAccess.FileExists(save)) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(save));
+            await Frame();
+        }
+        GD.Print("QUOTA_COUNTDOWN_CHECKS_PASS: both deadlines, closed-day exclusion, today/00:00/failure, RU/EN, reload/checkpoint/victory/new run");
+    }
+
     private static void TestPopupPlacement()
     {
         Rect2 viewport = new(0, 0, 1000, 700);
@@ -247,7 +351,7 @@ public partial class ProjectTest
             game.RefreshDayPresentation();
             await ToSignal(this, SignalName.ProcessFrame);
             await ToSignal(this, SignalName.ProcessFrame);
-            Check(Caption(1).Text.Contains("999") && Caption(2).Text.Contains("1 day"),
+            Check(Caption(1).Text.Contains("999") && Caption(2).Text == "Quota due today",
                 $"Live balance and deadline refresh while closed: {Caption(1).Text}; {Caption(2).Text}");
             game.Score = 2000;
             game.AdvanceToNextDay();
@@ -265,7 +369,7 @@ public partial class ProjectTest
             game.Score = 0;
             game.AdvanceToNextDay();
             await Settle();
-            Check(game.Failed && !content.Visible,
+            Check(game.Failed && !content.Visible && Caption(2).Text == "Quota deadline passed",
                 "Failure must not expose the old status or buttons in the pack");
             game.GetNode<PauseMenu>("PauseMenu").Open();
             await ClickControl(game, "PauseMenu/Root/Overlay/Center/Panel/Content/Menu/CheckpointButton");

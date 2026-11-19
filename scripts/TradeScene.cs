@@ -96,6 +96,7 @@ public partial class TradeScene : Node2D
 
 	public bool DayClosed => _dayCycle.Session.IsClosed;
 	public bool DayStarted => _dayCycle.Started;
+	public bool RequireStartedDay() => _dayCycle.RequireStartedDay();
 	public bool DayTransitionOpen =>
 		_dayCycle?.TransitionOpen ?? false;
 
@@ -509,11 +510,13 @@ public partial class TradeScene : Node2D
 
 	public void GetItemFromAtelier()
 	{
+		if (!RequireStartedDay()) return;
 		_embroidery.Open();
 	}
 
 	public void GetItemFromMusicWorkshop()
 	{
+		if (!RequireStartedDay()) return;
 		if (!MusicWorkshopUnlocked)
 			return;
 
@@ -522,6 +525,7 @@ public partial class TradeScene : Node2D
 
 	public void TryUnlockMusicWorkshop()
 	{
+		if (!RequireStartedDay()) return;
 		if (MusicWorkshopUnlocked ||
 			Failed ||
 			Completed ||
@@ -551,6 +555,7 @@ public partial class TradeScene : Node2D
 
 	private void AcquireItem(string workshop, int cost)
 	{
+		if (!RequireStartedDay()) return;
 		if (Failed ||
 			Completed ||
 			EnergyRemaining <= 0 ||
@@ -596,6 +601,7 @@ public partial class TradeScene : Node2D
 
 	public void PlaceItemInShowcase(int slotIndex)
 	{
+		if (!RequireStartedDay()) return;
 		if (Failed ||
 			Completed ||
 			slotIndex < 0 ||
@@ -632,6 +638,7 @@ public partial class TradeScene : Node2D
 
 	public void SelectInventoryItem(int index)
 	{
+		if (!RequireStartedDay()) return;
 		SelectedInventoryIndex = index;
 		RefreshItemButtons();
 	}
@@ -840,6 +847,7 @@ public partial class TradeScene : Node2D
 
 	public void RerollCustomer()
 	{
+		if (!RequireStartedDay()) return;
 		if (!TradeOfferRules.CanReroll(TradeActive, DayClosed, RerollsRemaining))
 			return;
 
@@ -870,6 +878,7 @@ public partial class TradeScene : Node2D
 
 	public void AcceptTrade()
 	{
+		if (!RequireStartedDay()) return;
 		if (!TradeActive)
 			return;
 

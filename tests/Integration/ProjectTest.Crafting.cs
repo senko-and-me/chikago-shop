@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Godot;
 using ChikagoShop.Domain.Days;
+using ChikagoShop.Domain.Crafting;
 
 // Subsystem checks share the ProjectTest runner and fixture helpers.
 public partial class ProjectTest
@@ -25,6 +26,7 @@ public partial class ProjectTest
                 Root.Size = size;
                 TranslationServer.SetLocale(locale);
                 game.NewGame();
+                game.EndDay();
                 game.Score = 10000;
                 if (name == "PolishingGame") game.TryUnlockMusicWorkshop();
                 var craft = game.GetNode<EmbroideryGame>(name);
@@ -75,13 +77,41 @@ public partial class ProjectTest
                 }
                 foreach (string buttonName in new[] { "Action", "Cancel" })
                 foreach (string color in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color", "font_disabled_color" })
-                    Check(surface.GetNode<Button>(buttonName).GetThemeColor(color) == Colors.Black,
-                        "Craft buttons must keep black lettering in every interaction state");
+                    Check(surface.GetNode<Button>(buttonName).GetThemeColor(color) ==
+                        (state == "ready" && buttonName == "Action" ? Colors.White : Colors.Black),
+                        "Start must have white text on dark fill; secondary and collect buttons keep black text");
+                var action = surface.GetNode<Button>("Action");
+                var cancel = surface.GetNode<Button>("Cancel");
+                if (state == "ready")
+                {
+                    Check(action.GetRect().End.X < cancel.Position.X && action.HasFocus() &&
+                        surface.PanelRect.Encloses(action.GetRect()) && surface.PanelRect.Encloses(cancel.GetRect()),
+                        "Start must be left of Back, initially focused, with both buttons inside the modal");
+                    Check(Pixel(action.Position + new Vector2(10, 10)).R < 0.35f &&
+                        Pixel(cancel.Position + new Vector2(10, 10)).R > 0.8f,
+                        "The rendered Start button must remain clearly darker than Back through the grayscale shader");
+                    if (size.X == 960)
+                        frame.SavePng(System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"chikago-hf179-{name}-{locale}.png"));
+                }
+                else if (action.Visible)
+                    Check(Mathf.Abs(action.GetRect().GetCenter().X - surface.PanelRect.GetCenter().X) < 0.1f,
+                        "Collect must remain centered after the two ready-state buttons are swapped");
                 if (locale == "ru" && size.X == 960 && state == "timeout")
                     frame.SavePng(System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"chikago-hf166-{name}.png"));
+                string closeButton = state == "ready" ? "Cancel" : "Action";
+                if (state == "ready" && locale == "ru" && size.X == 960)
+                {
+                    int money = game.Score, energy = game.EnergyRemaining, count = game.StoredItems.Length;
+                    await ClickControl(game, name + "/Surface/Action");
+                    Check(craft.ActiveSession.State == EmbroideryState.Playing && !action.Visible && !cancel.Visible &&
+                        game.Score < money && game.EnergyRemaining == energy - 1 && game.StoredItems.Length == count + 1,
+                        "The highlighted left Start must begin the real game, charge once and hide both buttons");
+                    craft.FinishForTesting(false);
+                    closeButton = "Action";
+                }
                 int items = game.StoredItems.Length;
                 if (state == "playing") craft.FinishForTesting(false);
-                await ClickControl(game, name + "/Surface/" + (state == "ready" ? "Cancel" : "Action"));
+                await ClickControl(game, name + "/Surface/" + closeButton);
                 Check(!craft.IsOpen && !Paused && game.StoredItems.Length == items,
                     "Restyled cancel/collect controls must close the minigame without duplicating items");
             }
@@ -427,6 +457,7 @@ public partial class ProjectTest
 
     private static void CraftMusic(TradeScene game)
     {
+        if (!game.DayStarted) game.EndDay();
         game.GetItemFromMusicWorkshop();
         FinishMusic(game);
     }
@@ -442,6 +473,7 @@ public partial class ProjectTest
 
     private static void CraftAtelier(TradeScene game)
     {
+        if (!game.DayStarted) game.EndDay();
         game.GetItemFromAtelier();
         FinishEmbroidery(game);
     }

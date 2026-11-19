@@ -147,7 +147,8 @@ public partial class ProjectTest
                         Mathf.Abs((curtain.Size.X - overlay.Size.X) * overlay.GetParent<Node2D>().GlobalScale.X - 2) < 0.02f &&
                         Mathf.Abs((curtain.Size.Y - overlay.Size.Y) * overlay.GetParent<Node2D>().GlobalScale.Y - 13) < 0.02f &&
                         curtain.MouseFilter == Control.MouseFilterEnum.Ignore &&
-                        curtain.GetIndex() == 0 && curtain.Modulate == Colors.White,
+                        curtain.GetIndex() == 0 && curtain.Modulate == Colors.White &&
+                        curtain.SelfModulate == new Color(0.55f, 0.55f, 0.55f, 1),
                         "Curtains must cover both locked rooms, keep labels above them and leave input to the existing overlay");
                 }
             }
@@ -188,6 +189,29 @@ public partial class ProjectTest
             game.SetProcess(false);
             await ToSignal(this, SignalName.ProcessFrame);
             CheckDoors(false);
+            if (DisplayServer.GetName() != "headless")
+            {
+                var curtains = new[] { "MusicWorkshop", "Showroom" }.Select(room =>
+                    game.GetNode<TextureRect>($"World/{room}/LockedOverlay/LockedCurtain")).ToArray();
+                foreach (var curtain in curtains) curtain.SelfModulate = Colors.White;
+                using var before = await CapturePresentation("curtains-before");
+                foreach (var curtain in curtains) curtain.SelfModulate = new Color(0.55f, 0.55f, 0.55f, 1);
+                using var after = await CapturePresentation("curtains-darkened");
+                Vector2 scale = new Vector2(after.GetWidth(), after.GetHeight()) / Root.GetVisibleRect().Size;
+                foreach (var curtain in curtains)
+                {
+                    Rect2 bounds = ScreenBounds(curtain).Intersection(Root.GetVisibleRect());
+                    int dimmed = 0;
+                    for (int y = (int)(bounds.Position.Y * scale.Y) + 5; y < bounds.End.Y * scale.Y - 5; y += 5)
+                    for (int x = (int)(bounds.Position.X * scale.X) + 5; x < bounds.End.X * scale.X - 5; x += 5)
+                    {
+                        float light = before.GetPixel(x, y).R, dark = after.GetPixel(x, y).R;
+                        if (light > 0.9f && dark > 0.2f && dark < light * 0.8f) dimmed++;
+                    }
+                    Check(dimmed > 100, "Both rendered curtains must look substantially darker while retaining visible fabric");
+                }
+            }
+            game.EndDay(); // Unlock checks exercise a running day after the pre-start action gate.
             game.Score = 0;
             game.TryUnlockMusicWorkshop();
             Check(!game.MusicWorkshopUnlocked, "An unaffordable unlock must keep neighboring rooms closed");
@@ -205,6 +229,7 @@ public partial class ProjectTest
             CheckDoors(false);
             await Reload();
             CheckDoors(false);
+            game.EndDay();
             game.TryUnlockMusicWorkshop();
             CheckDoors(true);
             game.NewGame();

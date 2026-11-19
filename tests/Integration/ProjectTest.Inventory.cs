@@ -200,6 +200,7 @@ public partial class ProjectTest
         game.SetProcess(false);
         game.GetNode<WorldCamera>("Camera2D").SetProcess(false);
         game.Score = 10000;
+        game.EndDay(); // Unlock and transfer fixtures now require an explicitly started day.
         game.TryUnlockMusicWorkshop(); // Both showrooms are exercised by Shift-transfer below.
         // Transfers need a stock of items, independent of the current items-per-craft balance.
         while (game.StoredItems.Length < 8)
@@ -209,7 +210,7 @@ public partial class ProjectTest
             CraftAtelier(game);
             Check(game.StoredItems.Length > previousCount, "Transfer fixture crafting must produce items");
         }
-        game.EndDay(); // Start the waiting day so that showcased items can attract buyers.
+        if (!game.DayStarted) game.EndDay();
         await ToSignal(this, SignalName.ProcessFrame);
         var inventory = game.GetNode<InventoryUI>("HUD/InventoryUI");
         var first = game.GetNode<Button>("World/ShowroomLeft/Showcases/Slot1");

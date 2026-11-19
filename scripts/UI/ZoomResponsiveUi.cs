@@ -4,24 +4,32 @@ using Godot;
 // Only world-space UI needs compensation: the HUD already has a stable screen size.
 public partial class ZoomResponsiveUi : Node
 {
-    private Camera2D _camera = null!;
+    private WorldCamera _camera = null!;
     private readonly List<(Control Control, Vector2 Scale)> _elements = [];
     private readonly List<(CanvasItem Item, Color Color)> _headers = [];
+    private readonly List<(Control Plate, Label Title, Vector2 Center, float MaxWidth)> _titles = [];
     private float _lastZoom = float.NaN;
     private bool _layoutDirty = true;
 
     public override void _Ready()
     {
         var game = GetParent();
-        _camera = game.GetNode<Camera2D>("Camera2D");
+        _camera = game.GetNode<WorldCamera>("Camera2D");
+        GetViewport().SizeChanged += InvalidateLayout;
         string[] rooms = ["Atelier", "MusicWorkshop", "Showroom", "ShowroomLeft", "TradingRoom"];
         foreach (string room in rooms)
         {
             Node node = game.GetNode("World/" + room);
-            foreach (string name in new[] { "Header", "NameLabel", "HintLabel", "ShowroomHeader",
-                         "ShowroomLabel", "ShowroomHint", "SalesRoomLabel" })
+            foreach (string name in new[] { "HintLabel", "ShowroomHint" })
+                node.GetNodeOrNull<CanvasItem>(name)?.Hide();
+            foreach (string name in new[] { "Header", "NameLabel", "ShowroomHeader",
+                         "ShowroomLabel", "SalesRoomLabel" })
                 if (node.GetNodeOrNull<CanvasItem>(name) is { } header)
                     _headers.Add((header, header.Modulate));
+            var plate = node.GetNodeOrNull<Control>("Header") ?? node.GetNodeOrNull<Control>("ShowroomHeader");
+            var title = node.GetNodeOrNull<Label>("NameLabel") ?? node.GetNodeOrNull<Label>("ShowroomLabel");
+            if (plate != null && title != null)
+                _titles.Add((plate, title, plate.Position + plate.Size * plate.Scale / 2, plate.Size.X * plate.Scale.X * 0.65f));
         }
         foreach (string room in new[] { "Atelier", "MusicWorkshop" })
         {
@@ -44,6 +52,13 @@ public partial class ZoomResponsiveUi : Node
 
     private void InvalidateLayout() => _layoutDirty = true;
 
+    public override void _Notification(int what)
+    {
+        if (what == NotificationTranslationChanged) InvalidateLayout();
+    }
+
+    public override void _ExitTree() => GetViewport().SizeChanged -= InvalidateLayout;
+
     public override void _Process(double delta)
     {
         if (_layoutDirty || _lastZoom != _camera.Zoom.X) UpdateForZoom(_camera.Zoom.X);
@@ -52,6 +67,20 @@ public partial class ZoomResponsiveUi : Node
     public void UpdateForZoom(float zoom)
     {
         _lastZoom = zoom;
+        if (_layoutDirty)
+            foreach (var entry in _titles)
+            {
+                var font = entry.Title.GetThemeFont("font");
+                int fontSize = entry.Title.GetThemeFontSize("font_size");
+                float textWidth = font.GetStringSize(entry.Title.Tr(entry.Title.Text), fontSize: fontSize).X;
+                float width = Mathf.Clamp(textWidth + 96, 320, entry.MaxWidth);
+                Vector2 size = new(width, 160);
+                entry.Plate.Size = size / entry.Plate.Scale;
+                entry.Plate.Position = entry.Center - size / 2;
+                entry.Title.Size = new Vector2(width - 80, Mathf.Max(78, font.GetHeight(fontSize)));
+                entry.Title.Position = entry.Center - entry.Title.Size / 2;
+                entry.Title.VerticalAlignment = VerticalAlignment.Center;
+            }
         _layoutDirty = false;
         // Partial compensation retains a sense of depth without letting panels fill the room.
         float scale = Mathf.Clamp(1f / Mathf.Sqrt(Mathf.Max(zoom, 0.01f)), 1f, 1.65f);
@@ -71,10 +100,11 @@ public partial class ZoomResponsiveUi : Node
                     -gap - pivot.Y - (entry.Control.Size.Y - pivot.Y) * entry.Control.Scale.Y);
             }
         }
-        float alpha = Mathf.SmoothStep(0.23f, 0.35f, zoom);
+        float hideAt = _camera.OverviewZoom * 1.2f;
+        float alpha = Mathf.SmoothStep(hideAt, _camera.OverviewZoom * 1.6f, zoom);
         foreach (var entry in _headers)
         {
-            entry.Item.Visible = zoom > 0.23f;
+            entry.Item.Visible = zoom > hideAt;
             Color color = entry.Color;
             color.A *= alpha;
             entry.Item.Modulate = color;

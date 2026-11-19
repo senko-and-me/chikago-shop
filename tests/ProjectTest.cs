@@ -16,6 +16,24 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--room-title-checks"))
+            {
+                await TestRoomTitles();
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--quota-countdown-checks"))
+            {
+                await TestQuotaCountdown();
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--day-start-gate-checks"))
+            {
+                await TestDayStartGate();
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--room-focus-checks"))
             {
                 await TestRoomDoubleClickFocus();
