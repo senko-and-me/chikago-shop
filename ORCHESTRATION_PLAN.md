@@ -11,11 +11,22 @@
 ## Текущий фронт
 ### HF-191 — публикация свежего арта, точной награды полировки и энергии-лампочек
 
-Статус: `IN_PROGRESS`; координатор `/root`; READY 2026-11-19; HF188/HF189/HF190 DONE; пользователь разрешил push и субагентов; пересечений нет.
+Статус: `DONE`; координатор `/root`; READY 2026-11-19; HF188/HF189/HF190 DONE; пользователь разрешил push и субагентов; пересечений нет.
 
 CP-HF-191 read-set: текущий фронт; готовые diff/evidence HF188/HF189/HF190; Git status/refs; основные сцены только hash. Write-set: Git index/commits/main/origin/main; ORCHESTRATION_PLAN.md; art/fonts/game.ttf, art/ui/{camera_frame,card_back,card_face,energy_bulb}.png и новые imports; docs/{ASSET_AUDIT,GAMEPLAY}.md; scenes/UI/DayUpgradeCard.tscn; scripts/Crafting/WorkshopItemCatalog.cs; scripts/Presentation/{DayCardSceneTransition,EnergyBulbsPresentation}.cs и новый uid; scripts/TradeScene.cs; scripts/UI/{DayTransitionCard,EmbroideryGame,PokerCardBack,ZoomResponsiveUi}.cs; tests/ProjectTest.cs; tests/Integration/ProjectTest.{CardDealing,Crafting,Resources,RoomFrames,EnergyBulbs}.cs и новый uid; .local/checks/hf191. Out of scope: source/, пользовательские main_menu/trade_scene.tscn, новые изменения поведения, force push.
 
 Приёмка: все проверенные изменения HF188…190 доступны в origin/main, refs совпадают, пользовательские сцены побайтно сохранены вне коммита. Проверки: local/isolated build; финальные совместные rendered craft-contrast/card-dealing/tutorial PASS; прежние frame/resource/reward/energy PASS; SHA256 с tested isolated copy и original Drive; staged exact filelist/diffcheck/push/readback.
+
+```text
+Task: HF-191
+Recommended status: REVIEW → принято координатором, DONE
+Changed: d60c71d опубликован в origin/main: чисто чёрная новая рамка, оригинальные карточные арты, свежий шрифт✓✗, energy bulbs, точный polished item reward, regression tests/docs. Все3субагента завершили работу, handoff приняты; запись публикации публикуется отдельным documentation commit.
+Checks: root/isolated dotnet build PASS0warnings/errors; финальные совместные --craft-contrast-checks/--card-dealing-checks/--tutorial-checks PASS, stderr пусты (.local/checks/hf191). Preceding --room-frame-checks/--resource-checks/--polishing-reward-checks/--energy-bulbs-checks PASS. SHA256 всех25 non-doc файлов совпали с tested isolated copy, пять основных rawPNG/TTF совпадают с original Drive. Staged ровно28 разрешённых файлов, diff --check PASS. Fetch0/0, обычный push PASS, refs0/0. SHA256 main_menu97BECA896A74173514B87915BAD731C10FA88AC6CBBCC079C63706F00A2A807F и trade_sceneE1BF47D6CA6CC2A6664C2FD0D1329B6C2D8BCFCF27BE6775F6A9E2A4719EC8A1 прежние.
+Acceptance: все запрошенные правки доступны в main, пользовательские основные сцены остались локально вне коммита.
+Read-set exception: нет новых; source/ не читался.
+Risks/blocker: нет новых; import содержит только прежние duplicateUID menu images, runtime stderr пуст.
+Next: пользовательская проверка опубликованных рамок/карт/полировки/лампочек.
+```
 
 ### HF-190 — лампочки вместо числовой плашки энергии
 
