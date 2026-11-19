@@ -69,6 +69,8 @@ public partial class ProjectTest
             Color pixel = image.GetPixelv((Vector2I)(new Vector2(56, 56) * scale));
             Check(Mathf.Abs(pixel.R - swatch.Color.R) < 0.025f && Mathf.Abs(pixel.G - swatch.Color.G) < 0.025f &&
                 Mathf.Abs(pixel.B - swatch.Color.B) < 0.025f, "Source colors must survive the final render in " + state);
+            CheckRenderedGray(image, ScreenBounds(swatch),
+                ScreenBounds(game.GetNode<Control>("HUD/Root/EnergyPanel/EnergyBulbs")));
         }
         try
         {
@@ -80,6 +82,10 @@ public partial class ProjectTest
                 game.Score = 10000;
                 game.TryUnlockMusicWorkshop();
                 await CheckColor("world-" + size.X);
+                var table = game.GetNode<RarityPanel>("World/Atelier/RarityPanel");
+                table.Show();
+                await CheckColor("rarity-" + size.X);
+                table.Hide();
                 var bulb = game.GetNode<TextureRect>("HUD/Root/EnergyPanel/EnergyBulbs/Bulb1");
                 using (var image = await CapturePresentation())
                     Check(CountRenderedColor(image, ScreenBounds(bulb)) > 15,
@@ -95,8 +101,17 @@ public partial class ProjectTest
                     craft.SetProcess(false);
                     Check(craft.IsOpen, "The fixture must open both craft modals");
                     await CheckColor(name + "-" + size.X);
-                    craft.GetNode<Button>("Surface/Cancel").EmitSignal(Button.SignalName.Pressed);
+                    craft.Activate();
+                    await CheckColor(name + "-playing-" + size.X);
+                    craft.FinishForTesting(true);
+                    await CheckColor(name + "-finished-" + size.X);
+                    craft.Activate();
                 }
+                var card = game.GetNode<DayTransitionCard>("DayTransitionCard");
+                card.Open(1, 2, new[] { DayUpgrade.Cash, DayUpgrade.Energy, DayUpgrade.Time }, game.Score);
+                await WaitForDayCardAnimation(card);
+                await CheckColor("cards-" + size.X);
+                card.Close();
             }
         }
         finally
@@ -106,6 +121,22 @@ public partial class ProjectTest
             probe.QueueFree();
             Root.Size = originalSize;
         }
+        await ToSignal(this, SignalName.ProcessFrame);
+        var menu = GD.Load<PackedScene>("res://scenes/main_menu.tscn").Instantiate<MainMenu>();
+        Root.AddChild(menu);
+        try
+        {
+            using (var image = await CapturePresentation("native-gray-menu")) CheckRenderedGray(image);
+            menu.OnSettingsPressed();
+            using (var image = await CapturePresentation("native-gray-settings")) CheckRenderedGray(image);
+            ulong deadline = Time.GetTicksMsec() + 10000;
+            while (!menu.IsGameScenePrepared)
+            {
+                Check(Time.GetTicksMsec() < deadline, "Menu warmup must finish");
+                await ToSignal(this, SignalName.ProcessFrame);
+            }
+        }
+        finally { menu.QueueFree(); }
         await ToSignal(this, SignalName.ProcessFrame);
     }
 }

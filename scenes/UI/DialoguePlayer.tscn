@@ -70,7 +70,7 @@ anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
-color = Color(0.06, 0.045, 0.035, 0.45)
+color = Color(0.047467, 0.047467, 0.047467, 0.45)
 
 [node name="Characters" type="Control" parent="."]
 layout_mode = 1
@@ -117,7 +117,7 @@ stretch_mode = 5
 layout_mode = 1
 anchor_right = 1.0
 offset_top = 32.0
-theme_override_colors/font_color = Color(0.780392, 0.709804, 0.568627, 1)
+theme_override_colors/font_color = Color(0.714618, 0.714618, 0.714618, 1)
 theme_override_constants/line_spacing = 10
 theme_override_font_sizes/font_size = 18
 horizontal_alignment = 1
@@ -139,7 +139,7 @@ theme_override_constants/separation = 10
 
 [node name="Speaker" type="Label" parent="Panel/Content"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.843137, 0.713725, 0.482353, 1)
+theme_override_colors/font_color = Color(0.724533, 0.724533, 0.724533, 1)
 theme_override_font_sizes/font_size = 20
 
 [node name="Text" type="RichTextLabel" parent="Panel/Content"]
@@ -147,7 +147,7 @@ layout_mode = 2
 size_flags_vertical = 3
 focus_mode = 0
 mouse_filter = 1
-theme_override_colors/default_color = Color(0.94902, 0.901961, 0.819608, 1)
+theme_override_colors/default_color = Color(0.90602, 0.90602, 0.90602, 1)
 theme_override_constants/line_separation = 5
 theme_override_font_sizes/normal_font_size = 20
 bbcode_enabled = true

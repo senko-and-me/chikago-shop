@@ -259,10 +259,17 @@ public partial class ProjectTest : SceneTree
                 Quit();
                 return;
             }
+            if (OS.GetCmdlineUserArgs().Contains("--button-palette-checks"))
+            {
+                await TestButtonFeedback();
+                GD.Print("BUTTON_PALETTE_CHECKS_PASS: neutral accents, native grayscale button states, mouse/keyboard and input lifecycle");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--presentation-checks"))
             {
                 await TestNativeColorPresentation();
-                GD.Print("PRESENTATION_CHECKS_PASS: native source colors, energy artwork, absent screen filter, craft/pause and resize");
+                GD.Print("PRESENTATION_CHECKS_PASS: authored grayscale scenes/art/runtime, colored bulbs, absent filter, menu/craft/cards/pause/rarity and resize");
                 Quit();
                 return;
             }

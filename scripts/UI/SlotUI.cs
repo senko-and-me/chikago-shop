@@ -82,8 +82,8 @@ public partial class SlotUI : Button
 	public void SetSelected(bool selected)
 	{
 		_isSelected = selected;
-		// Если выбран — желтоватый оттенок, если нет — обычный белый
-		SelfModulate = selected ? new Color(1.5f, 1.5f, 0.5f) : new Color(1, 1, 1);
+		// Выбранный предмет светлее; палитра остаётся чёрно-белой.
+		SelfModulate = selected ? new Color(1.4278f, 1.4278f, 1.4278f) : new Color(1, 1, 1);
 	}
 
 	// Эффект при наведении

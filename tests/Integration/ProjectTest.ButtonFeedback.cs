@@ -5,6 +5,14 @@ using Godot;
 
 public partial class ProjectTest
 {
+    private void CheckFeedbackGray(Image image, params Rect2[] exceptions)
+    {
+        var allowed = new System.Collections.Generic.List<Rect2>(exceptions);
+        foreach (Node node in Root.FindChildren("EnergyBulbs", "", true, false))
+            if (node is Control bulbs && bulbs.IsVisibleInTree()) allowed.Add(ScreenBounds(bulbs));
+        CheckRenderedGray(image, allowed.ToArray());
+    }
+
     private async Task TestShowcaseFeedbackBounds()
     {
         var layer = new CanvasLayer { Layer = 150 };
@@ -179,7 +187,7 @@ public partial class ProjectTest
                 "Hover must smoothly settle with no persistent color or press state");
             Check(accept.MouseDefaultCursorShape == Control.CursorShape.PointingHand && accept.GetGlobalRect() == originalBounds,
                 "Hover must show a hand without changing layout or hitboxes");
-            using (var image = await CaptureButtonFeedback("hover-gray")) CheckRenderedGray(image);
+            using (var image = await CaptureButtonFeedback("hover-gray")) CheckFeedbackGray(image);
 
             decline.GrabFocus();
             Root.PushInput(new InputEventKey { Pressed = true, Keycode = Key.Tab }, true);
@@ -195,14 +203,14 @@ public partial class ProjectTest
             using (var image = await CaptureButtonFeedback("confirm-flash"))
             {
                 frame = controller.GetVisualFrame();
-                Check(frame.Flash > 0 && frame.Accent.G > frame.Accent.R && frame.Pressed == 1,
-                    "A confirm press must briefly flash green and show a depressed state");
-                Check(CountRenderedColor(image, ScreenBounds(accept)) > 20, "Green action color must survive the monochrome filter");
-                CheckRenderedGray(image, ScreenBounds(accept));
+                Check(frame.Flash > 0 && !HasChroma(frame.Accent) && frame.Pressed == 1,
+                    "A confirm press must retain a neutral accent and depressed state");
+                Check(CountRenderedColor(image, ScreenBounds(accept)) == 0, "Confirm artwork must stay grayscale without a screen filter");
+                CheckFeedbackGray(image, ScreenBounds(accept));
             }
             Check(accepted == 0, "Visual press feedback must never activate a release-mode button early");
             await SettleButtonFeedback();
-            using (var image = await CaptureButtonFeedback("held-gray")) CheckRenderedGray(image);
+            using (var image = await CaptureButtonFeedback("held-gray")) CheckFeedbackGray(image);
             Check(controller.GetVisualFrame().Flash == 0 && controller.GetVisualFrame().Pressed == 1,
                 "A held press must return to grayscale after the short flash");
             PressButtonPointer(point, false);
@@ -216,9 +224,9 @@ public partial class ProjectTest
             using (var image = await CaptureButtonFeedback("refuse-flash"))
             {
                 frame = controller.GetVisualFrame();
-                Check(frame.Flash > 0 && frame.Accent.R > frame.Accent.G, "Refusal must briefly flash red");
-                Check(CountRenderedColor(image, ScreenBounds(decline)) > 20, "The refusal flash must actually render");
-                CheckRenderedGray(image, ScreenBounds(decline));
+                Check(frame.Flash > 0 && !HasChroma(frame.Accent), "Refusal must retain a neutral accent");
+                Check(CountRenderedColor(image, ScreenBounds(decline)) == 0, "Refusal artwork must stay grayscale");
+                CheckFeedbackGray(image, ScreenBounds(decline));
             }
             // Dragging out cancels the real click; the presentation layer must not replay it.
             MoveButtonPointer(new Vector2(700, 500));
@@ -234,7 +242,7 @@ public partial class ProjectTest
             await SettleButtonFeedback();
             Check(accepted == 1 && accept.MouseDefaultCursorShape == Control.CursorShape.Forbidden && controller.GetVisualFrame().Flash == 0,
                 "Disabled controls must not flash or activate and must show the unavailable cursor");
-            using (var image = await CaptureButtonFeedback("disabled-gray")) CheckRenderedGray(image);
+            using (var image = await CaptureButtonFeedback("disabled-gray")) CheckFeedbackGray(image);
 
             accept.Disabled = false;
             await SettleButtonFeedback();
@@ -243,7 +251,7 @@ public partial class ProjectTest
             MoveButtonPointer(new Vector2(700, 500));
             accept.GrabFocus();
             await SettleButtonFeedback();
-            using (var image = await CaptureButtonFeedback("keyboard-focus")) CheckRenderedGray(image);
+            using (var image = await CaptureButtonFeedback("keyboard-focus")) CheckFeedbackGray(image);
             Root.PushInput(new InputEventKey { Pressed = true, Keycode = Key.Space }, true);
             Root.PushInput(new InputEventKey { Pressed = false, Keycode = Key.Space }, true);
             Check(accepted == 2, "Keyboard activation must remain one original action");
@@ -260,7 +268,7 @@ public partial class ProjectTest
             MoveButtonPointer(point);
             PressButtonPointer(point, true);
             using (var image = await CaptureButtonFeedback("texture-button"))
-                Check(CountRenderedColor(image, ScreenBounds(textureButton)) > 20, "Runtime TextureButtons need the same action flash");
+                Check(CountRenderedColor(image, ScreenBounds(textureButton)) == 0, "Runtime TextureButtons must also stay grayscale");
             PressButtonPointer(point, false);
             Check(continued == 1, "TextureButton click must remain one action");
             textureButton.Hide();
@@ -278,7 +286,7 @@ public partial class ProjectTest
             accept.QueueFree();
             await ToSignal(this, SignalName.ProcessFrame);
             await SettleButtonFeedback();
-            using (var image = await CaptureButtonFeedback()) CheckRenderedGray(image);
+            using (var image = await CaptureButtonFeedback()) CheckFeedbackGray(image);
             Check(controller.GetVisualFrame().Flash == 0, "Freed buttons must not leave stale color feedback");
         }
         finally
@@ -303,6 +311,7 @@ public partial class ProjectTest
         try
         {
             game.NewGame();
+            game.EndDay(); // Exercise button feedback after the explicitly started day.
             game.Score = 1000;
             game.RefreshItemButtons();
             var craft = game.GetNode<Button>("World/Atelier/GetItemButton");
@@ -319,7 +328,7 @@ public partial class ProjectTest
                 Check(controller.GetVisualFrame().Bounds == ScreenBounds(craft).Intersection(Root.GetVisibleRect()),
                     "Real world-button feedback must track camera zoom and viewport size");
             }
-            using (var image = await CaptureButtonFeedback("craft-focus")) CheckRenderedGray(image);
+            using (var image = await CaptureButtonFeedback("craft-focus")) CheckFeedbackGray(image);
 
             var pause = game.GetNode<PauseMenu>("PauseMenu");
             pause.Open();
@@ -327,7 +336,7 @@ public partial class ProjectTest
             var resume = game.GetNode<Button>("PauseMenu/Root/Overlay/Center/Panel/Content/Menu/ResumeButton");
             Check(controller.GetVisualFrame().Bounds == ScreenBounds(resume),
                 "A focused pause button must show feedback while gameplay is paused");
-            using (var image = await CaptureButtonFeedback("pause-focus")) CheckRenderedGray(image);
+            using (var image = await CaptureButtonFeedback("pause-focus")) CheckFeedbackGray(image);
             const string pauseContent = "PauseMenu/Root/Overlay/Center/Panel/Content/";
             int cashBeforeHover = game.Score;
             int dayBeforeHover = game.CurrentDay;
@@ -370,7 +379,7 @@ public partial class ProjectTest
             await SettleButtonFeedback();
             Check(Root.GuiGetFocusOwner() == null && controller.GetVisualFrame().Strength == 0,
                 "Opening day cards must not automatically focus or outline a purchase");
-            using (var image = await CaptureButtonFeedback("card-no-selection")) CheckRenderedGray(image);
+            using (var image = await CaptureButtonFeedback("card-no-selection")) CheckFeedbackGray(image);
             int choicesMade = 0;
             card.Chosen += choice => choicesMade++;
             Root.PushInput(new InputEventKey { Pressed = true, Keycode = Key.Right }, true);
@@ -381,7 +390,7 @@ public partial class ProjectTest
                 controller.GetVisualFrame().Bounds == ScreenBounds(focusedChoice),
                 "The first arrow must reveal keyboard focus while paused");
             Check(choicesMade == 0, "Starting keyboard navigation must not purchase an upgrade");
-            using (var image = await CaptureButtonFeedback("card-focus")) CheckRenderedGray(image);
+            using (var image = await CaptureButtonFeedback("card-focus")) CheckFeedbackGray(image);
             Root.PushInput(new InputEventKey { Pressed = true, Keycode = Key.Right }, true);
             Root.PushInput(new InputEventKey { Pressed = false, Keycode = Key.Right }, true);
             await SettleButtonFeedback();
@@ -451,7 +460,7 @@ public partial class ProjectTest
             Check(miniGame.IsOpen && focusedAction != null && miniGame.IsAncestorOf(focusedAction) &&
                 controller.GetVisualFrame().Bounds == ScreenBounds(focusedAction),
                 "Crafting action feedback must remain active behind the covering-modal grayscale policy");
-            using (var image = await CaptureButtonFeedback("minigame-focus")) CheckRenderedGray(image);
+            using (var image = await CaptureButtonFeedback("minigame-focus")) CheckFeedbackGray(image);
             miniGame._Input(new InputEventKey { Pressed = true, Keycode = Key.Escape });
         }
         finally

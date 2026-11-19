@@ -24,7 +24,7 @@ public partial class PauseMenu : CanvasLayer
 		_overlay.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
 		var shade = new ColorRect
 		{
-			Color = new Color(0.04f, 0.03f, 0.025f, 0.78f),
+			Color = new Color(0.031765f, 0.031765f, 0.031765f, 0.78f),
 			MouseFilter = Control.MouseFilterEnum.Stop
 		};
 		_overlay.AddChild(shade);
@@ -91,7 +91,7 @@ public partial class PauseMenu : CanvasLayer
 			SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
 			VerticalAlignment = VerticalAlignment.Center
 		};
-		languageLabel.AddThemeColorOverride("font_color", new Color(0.23f, 0.19f, 0.17f));
+		languageLabel.AddThemeColorOverride("font_color", new Color(0.19706f, 0.19706f, 0.19706f));
 		languages.AddChild(languageLabel);
 		var languageGroup = new ButtonGroup();
 		_english = AddLanguageButton(languages, languageGroup, "EnglishButton", "English", "en");
@@ -138,7 +138,7 @@ public partial class PauseMenu : CanvasLayer
 	{
 		var title = new Label { Text = text, HorizontalAlignment = HorizontalAlignment.Center };
 		title.AddThemeFontSizeOverride("font_size", 32);
-		title.AddThemeColorOverride("font_color", new Color(0.23f, 0.19f, 0.17f));
+		title.AddThemeColorOverride("font_color", new Color(0.19706f, 0.19706f, 0.19706f));
 		parent.AddChild(title);
 	}
 

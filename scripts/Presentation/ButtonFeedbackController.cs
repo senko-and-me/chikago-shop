@@ -188,14 +188,7 @@ public partial class ButtonFeedbackController : Node
         return new Rect2(offset + ink.Position * scale, ink.Size * scale).Intersection(control);
     }
 
-    private static Color AccentFor(BaseButton button) => button.Name.ToString() switch
-    {
-        "AcceptButton" or "PlayButton" or "ContinueButton" or "ResumeButton" or
-        "GetItemButton" or "UnlockButton" or "Choose" or "Action" or "EndDayButton" => new Color("55c78b"),
-        "DeclineButton" or "QuitButton" or "Cancel" or "Skip" or "SkipButton" or
-        "CheckpointButton" or "NewGameButton" => new Color("ed7474"),
-        _ => new Color("d7d7d7")
-    };
+    private static Color AccentFor(BaseButton button) => new Color("d7d7d7");
 
     public override void _ExitTree()
     {

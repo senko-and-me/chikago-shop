@@ -38,7 +38,7 @@ public partial class MusicVolumeControl : PanelContainer
     {
         AddThemeStyleboxOverride("panel", new StyleBoxFlat
         {
-            BgColor = new Color(0.94f, 0.91f, 0.85f),
+            BgColor = new Color(0.912046f, 0.912046f, 0.912046f),
             ContentMarginLeft = 14, ContentMarginRight = 14,
             ContentMarginTop = 10, ContentMarginBottom = 10
         });

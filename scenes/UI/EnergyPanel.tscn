@@ -2,14 +2,12 @@
 
 [ext_resource type="Script" uid="uid://byewenergy190" path="res://scripts/Presentation/EnergyBulbsPresentation.cs" id="1_state"]
 [ext_resource type="PackedScene" path="res://scenes/UI/EnergyBulb.tscn" id="2_bulb"]
-[ext_resource type="Texture2D" uid="uid://bf1y5qehuwoj" path="res://art/ui/panel_small.png" id="3_paper"]
 
-[sub_resource type="StyleBoxTexture" id="EnergyPanelStyle"]
+[sub_resource type="StyleBoxEmpty" id="EnergyPanelStyle"]
 content_margin_left = 10.0
 content_margin_top = 6.0
 content_margin_right = 10.0
 content_margin_bottom = 6.0
-texture = ExtResource("3_paper")
 
 [node name="EnergyPanel" type="PanelContainer" unique_id=1048889908]
 anchors_preset = 1
@@ -18,7 +16,7 @@ anchor_right = 1.0
 offset_left = -204.0
 offset_top = 100.0
 offset_right = -24.0
-offset_bottom = 164.0
+offset_bottom = 180.0
 grow_horizontal = 0
 mouse_filter = 1
 theme_override_styles/panel = SubResource("EnergyPanelStyle")

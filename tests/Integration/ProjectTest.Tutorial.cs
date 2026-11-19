@@ -153,7 +153,9 @@ public partial class ProjectTest
                     Color pixel = image.GetPixel(x, y);
                     if (pixel.R > 0.8f && pixel.G > 0.6f && pixel.B < 0.25f) yellow++;
                 }
-                Check(yellow > 10, "The tutorial frame must render yellow through the monochrome filter");
+                Check(yellow > 10, "The tutorial frame must keep its authored yellow border");
+                CheckRenderedGray(image, ScreenBounds(outline),
+                    ScreenBounds(game.GetNode<Control>("HUD/Root/EnergyPanel/EnergyBulbs")));
             }
             // The clock already preserves its original color; use the pack to isolate the new frame exception.
             if (tutorial.Target.Name != "ProgressToggleButton") return;

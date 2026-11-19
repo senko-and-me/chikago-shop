@@ -20,10 +20,11 @@ public partial class ProjectTest
             var slot = authoredBulbs.GetChild<TextureRect>(index);
             Check(slot.Visible == (index < 3) && slot.SceneFilePath == "res://scenes/UI/EnergyBulb.tscn" &&
                 slot.Texture is AtlasTexture art && art.Region == new Rect2(526, 213, 984, 1612) &&
-                slot.CustomMinimumSize == new Vector2(14, 46),
+                slot.CustomMinimumSize == new Vector2(40, 64),
                 "Editor preview must have three visible bulbs with scene-authored texture crop and sizing");
         }
         Check(authoredBulbs.GetThemeConstant("separation") == 5 &&
+            authoredPanel.GetThemeStylebox("panel") is StyleBoxEmpty &&
             authoredPanel.GetThemeStylebox("panel").ContentMarginLeft == 10,
             "Spacing and panel style must be authored in the scene rather than changed by runtime code");
         // Preview the reusable scene on its own, without TradeScene or its startup hooks.
@@ -36,9 +37,14 @@ public partial class ProjectTest
             preview.AddChild(panel);
             panel.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.TopLeft);
             panel.Position = new Vector2(30, 18);
-            panel.Size = new Vector2(180, 64);
+            panel.Size = new Vector2(180, 80);
             using (await CapturePresentation()) { }
             using var pixels = preview.GetTexture().GetImage();
+            pixels.SavePng(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "chikago-hf197-preview.png"));
+            foreach (Vector2I point in new[] { new Vector2I(31, 19), new Vector2I(120, 19),
+                new Vector2I(31, 50), new Vector2I(208, 50), new Vector2I(120, 99) })
+                Check(pixels.GetPixelv(point).A < 0.01f,
+                    $"Only bulb artwork may be drawn: the panel background and border must stay transparent at {point}");
             foreach (var child in panel.GetNode("EnergyBulbs").GetChildren())
             {
                 var bulb = (TextureRect)child;
@@ -101,8 +107,11 @@ public partial class ProjectTest
                     for (int index = 0; index < capacity; index++)
                     {
                         Rect2 rect = ArtworkRect(index);
-                        Check(area.Encloses(rect) && rect.Size.Y >= 24 && rect.Size.X >= 14,
-                            "Every bulb must fit the HUD panel with readable proportions, including seven energy");
+                        Check(area.Encloses(rect) && rect.Size.Y >= 63 && rect.Size.X >= 38,
+                            "Enlarged bulbs must keep their full height, including seven energy");
+                        Check(Root.GetVisibleRect().Encloses(authoredPanel.GetGlobalRect()) &&
+                            authoredPanel.GetGlobalRect().Position.Y >= 100,
+                            "Expanded energy must fit the viewport below the balance without moving its right edge");
                         if (index > 0) Check(rect.Position.X - ArtworkRect(index - 1).End.X >= 4,
                             "Energy bulbs must retain distinct spacing");
                         Vector2 sample = bulbs.GetGlobalTransformWithCanvas() * (rect.Position + rect.Size * new Vector2(0.5f, 0.25f));

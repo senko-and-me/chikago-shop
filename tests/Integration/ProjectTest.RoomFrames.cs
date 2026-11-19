@@ -6,6 +6,16 @@ public partial class ProjectTest
     private async Task TestRoomFrames()
     {
         Check(DisplayServer.GetName() != "headless", "Camera frame checks require rendering");
+        foreach (var asset in new[] {
+            ("day_time.png", "e2af4dd10df143f4ccab73ef373a9c3f4996fb246f42defd8feefa1b8f779e06"),
+            ("night_time.png", "9bfd98084ea204e326bcb9c0eab34f4722573e55abf789f8169673fb43d06c11") })
+        {
+            string path = "res://art/rooms/" + asset.Item1;
+            Check(FileAccess.GetSha256(path) == asset.Item2,
+                "Day/night backgrounds must retain the exact newly supplied artwork bytes");
+            Check(GD.Load<Texture2D>(path).GetSize() == new Vector2(4560, 2565),
+                "New backgrounds must preserve the existing world dimensions");
+        }
         using (var source = GD.Load<Texture2D>("res://art/ui/camera_frame.png").GetImage())
         {
             source.Convert(Image.Format.Rgba8);

@@ -105,8 +105,41 @@ public partial class ProjectTest
                                 -face.Size.X * 0.07f, -face.Size.Y * 0.04f).Encloses(entry.GetGlobalRect()),
                             "Every card label and button must remain within the artwork's white interior");
                     }
+                    var purchase = face.GetNode<Button>("Content/Choose");
+                    foreach (string state in new[] { "normal", "hover", "pressed", "disabled" })
+                        Check(purchase.GetThemeStylebox(state) is StyleBoxTexture paper &&
+                            paper.Texture.ResourcePath == "res://art/ui/panel_small.png",
+                            "Purchase states must retain the existing drawn paper border");
+                    Check(purchase.GetThemeColor("font_color").R < 0.1f &&
+                        purchase.GetThemeColor("font_pressed_color").R > 0.9f,
+                        "Purchase text must contrast with light paper and the dark pressed state");
                 }
                 await Capture("ready-" + language + "-" + size.X);
+                if (language == "ru" && size.X == 1280)
+                {
+                    var purchase = first.GetNode<Button>("Content/Choose");
+                    Vector2 point = purchase.GetGlobalRect().GetCenter();
+                    MoveButtonPointer(point);
+                    await SettleButtonFeedback();
+                    Check(purchase.IsHovered(), "The drawn purchase must remain mouse-accessible");
+                    await Capture("purchase-hover");
+                    PressButtonPointer(point, true);
+                    await Capture("purchase-pressed");
+                    Check(game.Score == 220 && card.IsOpen && !card.IsAnimating,
+                        "Pressing the purchase must wait for release before charging");
+                    // Release outside: inspect pressed art without committing a transaction.
+                    MoveButtonPointer(Vector2.Zero);
+                    PressButtonPointer(Vector2.Zero, false);
+                    purchase.ReleaseFocus();
+                    purchase.Disabled = true;
+                    await Capture("purchase-disabled");
+                    PressButtonPointer(point, true);
+                    PressButtonPointer(point, false);
+                    Check(game.Score == 220 && !card.IsAnimating,
+                        "Disabled drawn purchases must reject clicks without charging");
+                    purchase.Disabled = false;
+                    MoveButtonPointer(Vector2.Zero);
+                }
                 bool buy = language == "ru";
                 if (buy)
                 {

@@ -127,15 +127,13 @@ void fragment() {
 		_material.SetShaderParameter("silhouette", mask);
 		_material.SetShaderParameter("coating", _coatingTexture);
 
-		bool brass = kind is "trumpet" or "sax";
-
 		_material.SetShaderParameter(
 			"dirt_color",
-			new Color(brass ? "6f634b" : "675547"));
+			new Color("595959"));
 
 		_material.SetShaderParameter(
 			"film_color",
-			new Color(brass ? "a49169" : "98795c"));
+			new Color("888888"));
 
 		_lastMisses = 0;
 		UpdateCoating();
@@ -341,14 +339,14 @@ void fragment() {
 				];
 
 				DrawColoredPolygon(
-					cloth, new Color("e4dfd3"));
+					cloth, new Color("dfdfdf"));
 
 				DrawPolyline(
 					[
 						cloth[0], cloth[1], cloth[2],
 						cloth[3], cloth[4], cloth[5], cloth[0]
 					],
-					new Color("898076"),
+					new Color("818181"),
 					2, true);
 			}
 		}
@@ -359,13 +357,13 @@ void fragment() {
 			DrawLine(
 				_missPoint - new Vector2(7, 7),
 				_missPoint + new Vector2(7, 7),
-				new Color("b32137"),
+				new Color("444444"),
 				3, true);
 
 			DrawLine(
 				_missPoint - new Vector2(-7, 7),
 				_missPoint + new Vector2(-7, 7),
-				new Color("b32137"),
+				new Color("444444"),
 				3, true);
 		}
 	}

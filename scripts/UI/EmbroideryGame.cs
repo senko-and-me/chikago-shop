@@ -430,7 +430,7 @@ public partial class EmbroiderySurface : Control
 
 	private readonly StyleBoxFlat _panelStyle = new()
 	{
-		BgColor = new Color("f5f5f2"),
+		BgColor = new Color("f5f5f5"),
 		BorderColor = Colors.Black,
 		BorderWidthLeft = 1,
 		BorderWidthRight = 1,
@@ -514,20 +514,20 @@ public partial class EmbroiderySurface : Control
 	public override void _Draw()
 	{
 		DrawRect(new Rect2(Vector2.Zero, Size),
-			new Color(0.02f, 0.025f, 0.03f, 0.9f));
+			new Color(0.025f, 0.025f, 0.025f, 0.9f));
 
 		DrawStyleBox(_panelStyle, PanelRect);
 
 		Rect2 fabric = FabricRect;
-		DrawRect(fabric.Grow(7), new Color("7e5634"));
-		DrawRect(fabric, new Color("d4bd96"));
+		DrawRect(fabric.Grow(7), new Color("595959"));
+		DrawRect(fabric, new Color("c0c0c0"));
 
 		for (float x = fabric.Position.X; x < fabric.End.X; x += 6)
 		{
 			DrawLine(
 				new Vector2(x, fabric.Position.Y),
 				new Vector2(x, fabric.End.Y),
-				new Color(0.43f, 0.3f, 0.17f, 0.12f));
+				new Color(0.32f, 0.32f, 0.32f, 0.12f));
 		}
 
 		for (float y = fabric.Position.Y; y < fabric.End.Y; y += 6)
@@ -535,7 +535,7 @@ public partial class EmbroiderySurface : Control
 			DrawLine(
 				new Vector2(fabric.Position.X, y),
 				new Vector2(fabric.End.X, y),
-				new Color(0.43f, 0.3f, 0.17f, 0.12f));
+				new Color(0.32f, 0.32f, 0.32f, 0.12f));
 		}
 
 		if (!Game.IsPolishing)
@@ -550,7 +550,7 @@ public partial class EmbroiderySurface : Control
 				DrawDashedLine(
 					ScreenPoint(i - 1) - GlobalPosition,
 					ScreenPoint(i) - GlobalPosition,
-					new Color(0.3f, 0.24f, 0.17f, 0.3f),
+					new Color(0.25f, 0.25f, 0.25f, 0.3f),
 					1,
 					5);
 			}
@@ -560,14 +560,14 @@ public partial class EmbroiderySurface : Control
 				DrawLine(
 					ScreenPoint(i - 1) - GlobalPosition,
 					ScreenPoint(i) - GlobalPosition,
-					new Color("501b2c"),
+					new Color("282828"),
 					6,
 					true);
 
 				DrawLine(
 					ScreenPoint(i - 1) - GlobalPosition,
 					ScreenPoint(i) - GlobalPosition,
-					new Color("b5374a"),
+					new Color("555555"),
 					3,
 					true);
 			}
@@ -578,7 +578,7 @@ public partial class EmbroiderySurface : Control
 				DrawCircle(
 					point,
 					4,
-					new Color(i < session.Stitches ? "a12f43" : "977d5b"));
+					new Color(i < session.Stitches ? "484848" : "808080"));
 			}
 
 			// Draw the target last so nearby points and stitches cannot cover it.
@@ -642,14 +642,14 @@ public partial class EmbroiderySurface : Control
 			DrawLine(
 				_missPoint - new Vector2(7, 7),
 				_missPoint + new Vector2(7, 7),
-				new Color("b32137"),
+				new Color("444444"),
 				3,
 				true);
 
 			DrawLine(
 				_missPoint - new Vector2(-7, 7),
 				_missPoint + new Vector2(-7, 7),
-				new Color("b32137"),
+				new Color("444444"),
 				3,
 				true);
 		}

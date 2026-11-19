@@ -54,10 +54,10 @@ public partial class DialoguePlayer : Control
                 _text.GetThemeStylebox("normal").GetMinimumSize().Y));
         var scrollbar = _text.GetVScrollBar();
         scrollbar.CustomMinimumSize = new Vector2(8, 0);
-        scrollbar.AddThemeStyleboxOverride("scroll", ScrollStyle("30291f", 4));
-        scrollbar.AddThemeStyleboxOverride("grabber", ScrollStyle("aa8b55", 4));
-        scrollbar.AddThemeStyleboxOverride("grabber_highlight", ScrollStyle("d7b67b", 4));
-        scrollbar.AddThemeStyleboxOverride("grabber_pressed", ScrollStyle("f2d49c", 4));
+        scrollbar.AddThemeStyleboxOverride("scroll", ScrollStyle("292929", 4));
+        scrollbar.AddThemeStyleboxOverride("grabber", ScrollStyle("8f8f8f", 4));
+        scrollbar.AddThemeStyleboxOverride("grabber_highlight", ScrollStyle("bbbbbb", 4));
+        scrollbar.AddThemeStyleboxOverride("grabber_pressed", ScrollStyle("d6d6d6", 4));
         _text.Resized += () => Callable.From(() =>
         {
             if (!_closed) DisplayPage();

@@ -12,7 +12,7 @@ public partial class ItemInfoPopup : PanelContainer
         MouseFilter = MouseFilterEnum.Ignore;
         var style = new StyleBoxFlat
         {
-            BgColor = new Color(0.12f, 0.1f, 0.09f, 0.94f),
+            BgColor = new Color(0.10353f, 0.10353f, 0.10353f, 0.94f),
             ContentMarginLeft = 12, ContentMarginRight = 12,
             ContentMarginTop = 8, ContentMarginBottom = 8
         };

@@ -761,7 +761,7 @@ public partial class TradeScene : Node2D
 					: GetItemName(itemIndex).ToUpperInvariant();
 
 			_showcaseGlass[i].Color =
-				new Color(0.77f, 0.9f, 0.88f, 0.58f);
+				new Color(0.870918f, 0.870918f, 0.870918f, 0.58f);
 
 			_showcaseSlots[i].Disabled =
 				locked ||

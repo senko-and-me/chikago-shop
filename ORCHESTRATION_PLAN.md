@@ -9,6 +9,92 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### HF-199 — публикация готовых изменений HF194–198
+
+Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-19; HF194–198 DONE, пользователь просит push. CP-HF-199 read-set: Git status/diff/refs, готовые изменения/evidence HF194–198, snapshots .local/checks/hf195/{main_menu,trade_scene}.before.tscn, текущие основные сцены для выделения только RGB replacements. Write-set: index/commit/push готовых файлов HF194–198; основные сцены в index только RGB из HF195 поверх HEAD; ORCHESTRATION_PLAN.md; .local/checks/hf199/isolatedcopy. Out of scope: source/, несвязанные пользовательские правки основных сцен, force push/gameplay. Приёмка: готовые изменения опубликованы, пользовательские изменения не включены и рабочие файлы сцен побайтно сохранены. Checks: exact staged list/diffcheck, staged scenes rendered checks, push/refreadback/status.
+
+### HF-198 — новые дневной и ночной фоны
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-19; HF197 завершён проверками. CP-HF-198 read-set: текущий фронт; точные root файлы ФонДень.PNG и ФонНочь.PNG; art/rooms/{day_time,night_time}.png; scenes/trade_scene.tscn только подключение фонов/RoomLayout; scripts/Days/DayNightBackground.cs; tests/Integration/ProjectTest.RoomFrames.cs; tests/ProjectTest.cs entrypoint; docs/ASSET_AUDIT.md. Write-set: root файлы перенести в art/rooms/{day_time,night_time}.png, прежние версии backup в.local/checks/hf198; RoomFrames test; docs/ASSET_AUDIT.md; ORCHESTRATION_PLAN.md; isolatedcopy. Out of scope: source/, геометрия/камера/основные сцены/баланс/прочие правки/commit/push. Приёмка: новые оригиналы подключены через прежние scene references, exactbytes сохранены, размер4560×2565 и смена дня/ночи работают. Checks: hashes, build, rendered --room-frame-checks, screenshots.
+
+HF-197 handoff: DONE; EnergyBulb minimum40×64 (вместо14×46), EnergyPanel bottom180; размер арта по высоте +39%, при7лампочках панель растёт влево и сохраняет правый край. Root/isolated build PASS; --energy-bulbs-checks PASS, stderr пуст: 3/6/7capacity RU/EN/3sizes/transparentpreview/pause/realcraft. Screenshot просмотрен. Исправлены точки проверки прозрачных полей после увеличения. Source/ не читался; commit/push не выполнялись.
+
+```text
+Task: HF-198
+Recommended status: REVIEW → принято координатором, DONE
+Changed: пользовательские ФонДень.PNG/ФонНочь.PNG перенесены в art/rooms/day_time.png/night_time.png с заменой прежних; существующие ссылки сцены сохранились. RoomFrames regression проверяет exact SHA256 и размеры новых оригиналов. ASSET_AUDIT обновлён; прежние PNG backup .local/checks/hf198/originals.
+Checks: root/isolated build PASS0warnings/errors; import обоих проектов PASS, только прежние duplicateUIDmenu warnings. Rendered --room-frame-checks PASS, stderr пуст: шесть комнат, границы камеры/фонов, day/night fade и NewGame restore. Просмотрены day/night screenshots, evidence .local/checks/hf198; originalSHA совпал с destinationSHA. diffcheck PASS (прежние line-ending warnings).
+Acceptance: новые фоны в нужной папке, оригинальные bytes/размеры сохранены, в игре видны новые фасады днём и ночью, сцены/геометрия не менялись.
+Read-set exception: нет; source/ не читался.
+Risks/blocker: нет; commit/push не выполнялись.
+Next: пользовательская проверка новых фонов.
+```
+
+### HF-197 — увеличить лампочки энергии
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-19; HF196 DONE. CP-HF-197 read-set: текущий фронт; scenes/UI/{EnergyBulb,EnergyPanel}.tscn; tests/Integration/ProjectTest.EnergyBulbs.cs; tests/ProjectTest.cs entrypoint. Write-set: эти две сцены, EnergyBulbs test, ORCHESTRATION_PLAN.md, .local/checks/hf197 и isolatedcopy. Out of scope: source/, арт/палитра/энергия/gameplay/основные сцены/commit/push. Приёмка: лампочки примерно на40% выше, крупные при3/6/7 энергии; без фона, с прежним правым краем и свободным местом под счётом. Checks: build, rendered --energy-bulbs-checks RU/EN/resize/preview/pause/craft, screenshot, diffcheck.
+
+### HF-196 — рисованная кнопка покупки улучшений
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-19; HF195 DONE. Пользователь просит стилизовать «Купить» в карточках.
+
+CP-HF-196 read-set: текущий фронт; scenes/UI/DayUpgradeCard.tscn; scripts/UI/DayTransitionCard.cs; themes/game_theme.tres; art/ui/{panel_small,panel_inverted,camera_frame,card_face}.png; scenes/UI/CraftButton.tscn; tests/Integration/ProjectTest.{CardDealing,ButtonFeedback}.cs; tests/ProjectTest.cs entrypoint. Write-set: ORCHESTRATION_PLAN.md; scenes/UI/DayUpgradeCard.tscn; tests/Integration/ProjectTest.CardDealing.cs; .local/checks/hf196 и isolatedcopy. Out of scope: source/, gameplay/цены/основные сцены/прочие изменения/commit/push. Приёмка: existing drawn art, прямая ЧБ палитра, различимые normal/hover/pressed/disabled/focus; RU/EN в960/1280 не обрезаются, покупка однократная. Checks: build; rendered --card-dealing-checks, визуальный screenshot, diffcheck.
+
+```text
+Task: HF-196
+Recommended status: REVIEW → принято координатором, DONE
+Changed: DayUpgradeCard.tscn — scene-authored normal/hover/pressed/disabled paper styles на существующем panel_small.png, контрастные ЧБ надписи, keyboard focus outline и pointing cursor. CardDealing regression проверяет стили, реальные hover/press/disabled clicks; прежняя проверка однократной покупки сохранена.
+Checks: root/isolated dotnet build --no-restore PASS (0 warnings/errors); rendered --card-dealing-checks PASS, stderr пуст; RU/EN960/1280 fit, purchase/skip/cancellation PASS. Просмотрены ready и pressed screenshots, .local/checks/hf196. git diff --check PASS (только прежние line-ending warnings).
+Acceptance: кнопки покупки имеют рисованный контур, светлую бумагу, затемнение hover/pressed и читаемый disabled; настроены непосредственно в сцене, gameplay не менялся.
+Read-set exception: нет.
+Risks/blocker: нет; commit/push не выполнялись.
+Next: пользовательская проверка внешнего вида.
+```
+
+### HF-195 — прямая чёрно-белая палитра без фильтра
+
+Статус: `DONE`; координатор `/root`; исполнители /root/polishing_reward (runtime миниигр/rarity/feedback), /root/card_art (UI scenes), /root (остальное/проверки). READY 2026-11-19; HF194 DONE; пользователь просит все элементы ЧБ, исключения — рамка обучения и лампочки. Общий фильтр не возвращается.
+
+CP-HF-195 read-set: текущий фронт; targeted color-literal audit scripts/*.cs (UI/Presentation/Dialogue/TradeScene); scenes/UI/*.tscn, scenes/{main_menu,trade_scene,customer}.tscn (color properties); themes/game_theme.tres; art/ (только аудит RGB и найденные цветные изображения); shaders/dialogue_portrait.gdshader read-only; tests/Integration/ProjectTest.{Presentation,EnergyBulbs,Tutorial,Crafting,Resources,ButtonFeedback}.cs; tests/ProjectTest.cs; docs/GAMEPLAY.md. Write-set runtime агент: scripts/UI/{EmbroideryGame,PolishingSurface,RarityPanel}.cs, scripts/Presentation/ButtonFeedbackController.cs. Scene агент: scenes/UI/{ShowcaseSlot,DialoguePlayer,MusicVolumeControl,DebugBalancePanel}.tscn. Координатор: ORCHESTRATION_PLAN.md; scripts/UI/{SlotUI,MusicVolumeControl,ItemInfoPopup,PauseMenu}.cs; scripts/TradeScene.cs только glassColor; scripts/Dialogue/DialoguePlayer.cs только palette strings; scenes/{main_menu,trade_scene}.tscn только RGBcolorliteral values; scenes/UI/FirstTradeTutorial.tscn только цветные значения кромежёлтойрамки; тесты Presentation/Tutorial/ProjectTest.cs и docs после аудита; .local/checks/hf195 и isolatedsame. Цветные raster assets только после уточнения exactpaths. Out of scope: source/, filter/shader tint/postprocessing дляЧБ, gameplay/alpha/геометрия/schema, несвязанные пользовательские изменения/commit/push.
+
+Приёмка: прямые R=G=B цвета в сценах/runtime и отображаемом арте; только tutorial outline и bulb artwork сохраняют цвет. Рамка hollow не окрашивает содержимое. Нет screenfilter. Checks: native asset/literalaudit, build, actualrender menu/world/pause/craft/rarity/cards/tutorial наRUEN и разныхокнах; alpha/positions/user changes сохранены. Основные сцены snapshots .local/checks/hf195/*.before.tscn, изменяются только color RGB values.
+
+Аудит RGB выявил18цветных rasterкромеenergy: art/ui/day_timer_expired.png (красный), art/dialogue/castello.png (небольшойtint),16art/items/{cap,cello,cloche_hat,dress,fur_stole,gloves,gramophone,jacket,maracas,metronome,saxophone,shirt,shoes,tambourine,trumpet,violin}.png (цветныеоттенкиштриха). Write-set дополнен этими18PNG: прямое offlineR=G=B назначение пикселям, alpha неизменна, originals backup в.local/checks/hf195, пользователь явно просит вручную задаватьЧБвместофильтра. EnergyPNG не меняется. Общий/локальный shader для перевода вЧБ не добавляется. Docs/ASSET_AUDIT.md обновляется с отличием от originalhash после ручной палитры.
+
+Дополнение аудита HF195: art/ui/music_slider_grip.svg содержит бежевые fill/stroke — write-set дополнен этимSVG, меняются только3цвета напрямую. Tests/Integration/ProjectTest.ButtonFeedback.cs дополняетwrite-set для замены прежних зелёных/красныхflash ожиданий на grayaccent и исключения цветныхbulbs изgraypixelchecks. ShaderdataRGBAполировки не является отображаемойпалитрой, не изменяется.
+
+Write-set тестов дополнен tests/Integration/ProjectTest.Days.cs (только тристарых ожиданиязелёного/красного raritytext → black); числовые вероятности/цены не меняются. Координатор меняет старые описания цветныхшансов вdocsнаЧБ.
+
+```text
+Task: HF-195
+Recommended status: REVIEW → принято координатором, DONE
+Changed: прямые серые цвета в4UIscenes агента, обеихmain scenes (толькоRGBvalues), FirstTradeTutorial фон (yellowoutlineпрежний), SlotUI/MusicVolume/ItemInfo/Pause/Dialogue scrollbar/TradeSceneglass. Runtime миниигр ткань/стежки/ошибки/dirt/film/cloth теперьgray; Raritytextblack, feedbackaccentsneutral.18PNG получили прямыеgrayRGB, alpha/sizeисходные; sliderSVGfill/strokegray; yellowenergyPNGнеизменён. Docs/testsсогласованы. Shader/экранныйfilterне добавлялся; существующий portraitlighten и polishingdata-mask не выполняют переводвЧБ.
+Checks: local/isolated build PASS0warnings/errors; native сценыColorliteral audit — единственная цветнаялитералжёлтаярамкаtutorial.18assets exactalpha/sizeиR=G=B PASS (palette-verification.json). Byteaudit обеихmain scenes — всёкромеColor()values совпадает сbefore, пользовательскиеправки/geometryсохранены. Rendered --presentation-checks PASS: menu/settings/world/rarity/pause/craftReady/Playing/Finished/cards960/1280, actualpixelsсерые exceptbulbs; цветнойtestprobeсохраняетцвет, подтверждаяотсутствиеfilter. --craft-contrast-checks/--energy-bulbs-checks/--tutorial-checks PASS (tutorialborderжёлтая, всёостальноеgrayexceptenergy); --button-palette-checks PASS (mouse/keyboard/lifecycle/nativegray/neutralaccent). Всеfocusedstderrпусты. Просмотреныscreenshots; .local/checks/hf195. rootimport имеет лишь4прежнихduplicateUIDmenuwarnings. gitdiff--check PASS.
+Acceptance: палитра задаётся непосредственно вassets/scenes/runtime, цветныеисключения толькорамкаобучения/лампочки.
+Read-set exception: полныйRGBаудитartбезsource; oldButtonFeedbackboundsпрочитан длядиагностикиширокоготеста.
+Risks/blocker: широкийстарый --button-feedback-checks останавливается на прежнемEnglishBackaspectratio fixture до проверкиpalette; отдельныйfocused --button-palette-checks дляизменённойпалитры PASS. Gameplayнеизменён. Commit/pushне выполнялись.
+Next: пользовательскаяпроверкацветов редактора/игры и отдельныйpushпозапросу.
+```
+
+### HF-194 — лампочки энергии без подложки
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-19; HF193 DONE; пересечений нет.
+
+CP-HF-194 read-set: текущий фронт; scenes/UI/EnergyPanel.tscn; tests/Integration/ProjectTest.EnergyBulbs.cs; tests/ProjectTest.cs entrypoint; scripts/Presentation/EnergyBulbsPresentation.cs read-only; основные сцены только hash. Write-set: ORCHESTRATION_PLAN.md; scenes/UI/EnergyPanel.tscn (только panel style/resource); ProjectTest.EnergyBulbs.cs (transparent preview regression); .local/checks/hf194 и isolatedsame. Out of scope: source/, основные сцены, арт/геометрия/энергия/gameplay/прочие изменения/commit/push.
+
+Приёмка: подложка/рамка отсутствует в редакторе и игре, остаются лампочки на прозрачном фоне; позиции/размеры/состояние/tooltip сохранены. Проверки: build, rendered --energy-bulbs-checks (включая alpha standalone preview), diffcheck и hashes основных сцен.
+
+```text
+Task: HF-194
+Recommended status: REVIEW → принято координатором, DONE
+Changed: EnergyPanel.tscn заменяет StyleBoxTexture на StyleBoxEmpty с прежними четырьмя content margins, удалён texture resource подложки; остальная компоновка прежняя. EnergyBulbs test проверяет Empty style и прозрачность actualrender вокруг лампочек.
+Checks: local/isolated build PASS0warnings/errors; rendered --energy-bulbs-checks PASS, stderr пуст: alpha по краям панели0, лампочки видимы, RU/EN/3-6-7capacity/resize/pause/craft прежние. Осмотрен .local/checks/hf194/transparent-preview.png — только лампочки. git diff--check PASS. SHA256 обеих основных сцен совпали со snapshot; их локальные правки сохранены.
+Acceptance: фон и рамка удалены прямо в сцене, остаются только лампочки.
+Read-set exception: нет; source/ не читался.
+Risks/blocker: нет новых; commit/push не выполнялись.
+Next: пользовательская проверка лампочек без фона.
+```
+
 ### HF-193 — убрать общий ЧБ-фильтр и опубликовать готовые сцены энергии
 
 Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-19; HF192 DONE; пользователь разрешил push, затем добавил удаление ЧБ-шейдера.

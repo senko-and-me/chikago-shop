@@ -384,9 +384,9 @@ public partial class ProjectTest
                         bool boosted = (room == "Atelier") == (choice == DayUpgrade.Atelier);
                         Check(panel.Values.GetNode<Label>("Chance0").Text == (boosted ? "45%" : "60%") &&
                               panel.Values.GetNode<Label>("Chance2").Text == (boosted ? "18%" : "10%"), "Category chances must match the actual boosted table");
-                        Check(panel.Values.GetNode<Label>("Chance0").GetThemeColor("font_color") == (boosted ? new Color("bf3232") : Colors.Black) &&
-                              panel.Values.GetNode<Label>("Chance2").GetThemeColor("font_color") == (boosted ? new Color("208447") : Colors.Black),
-                            "Chances below baseline must be red and above baseline green; the other category stays neutral");
+                        Check(panel.Values.GetNode<Label>("Chance0").GetThemeColor("font_color") == Colors.Black &&
+                              panel.Values.GetNode<Label>("Chance2").GetThemeColor("font_color") == Colors.Black,
+                            "Chance values must keep black text regardless of upgrades");
                     }
                     int[] counts = new int[WorkshopItemCatalog.Items.Count];
                     string workshop = choice == DayUpgrade.Atelier ? "atelier" : "music";
@@ -703,8 +703,8 @@ public partial class ProjectTest
                     {
                         var label = panel.Values.GetNode<Label>($"Price{rarity}");
                         int expected = boosted ? (int)(baseline[rarity] * 1.2m) : baseline[rarity];
-                        Check(label.Text == $"{expected}$" && label.GetThemeColor("font_color") == (boosted ? new Color("208447") : Colors.Black),
-                            "Craft tables must show boosted prices in green and the other category in neutral color");
+                        Check(label.Text == $"{expected}$" && label.GetThemeColor("font_color") == Colors.Black,
+                            "Craft tables must show correct boosted prices in black text");
                     }
                     if (clothing && room == "Atelier" && OS.GetCmdlineUserArgs().Contains("--day-card-preview"))
                     {

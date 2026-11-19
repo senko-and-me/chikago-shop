@@ -12,12 +12,12 @@ content_margin_top = 12.0
 content_margin_bottom = 12.0
 
 [sub_resource type="StyleBoxFlat" id="Style_track"]
-bg_color = Color(0.65, 0.62, 0.57, 1)
+bg_color = Color(0.622768, 0.622768, 0.622768, 1)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(0.32, 0.30, 0.27, 1)
+border_color = Color(0.302086, 0.302086, 0.302086, 1)
 corner_radius_top_left = 2
 corner_radius_top_right = 2
 corner_radius_bottom_left = 2
@@ -26,7 +26,7 @@ content_margin_top = 3.0
 content_margin_bottom = 3.0
 
 [sub_resource type="StyleBoxFlat" id="Style_fill"]
-bg_color = Color(0.24, 0.22, 0.20, 1)
+bg_color = Color(0.222808, 0.222808, 0.222808, 1)
 corner_radius_top_left = 2
 corner_radius_top_right = 2
 corner_radius_bottom_left = 2
@@ -37,7 +37,7 @@ content_margin_bottom = 3.0
 [sub_resource type="StyleBoxFlat" id="Style_focus"]
 bg_color = Color(0, 0, 0, 0)
 border_width_bottom = 1
-border_color = Color(0.4, 0.37, 0.32, 0.65)
+border_color = Color(0.372768, 0.372768, 0.372768, 0.65)
 
 [node name="MusicVolume" type="PanelContainer"]
 custom_minimum_size = Vector2(360, 100)
@@ -56,7 +56,7 @@ mouse_filter = 2
 [node name="Title" type="Label" parent="Content/Header"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.23, 0.21, 0.19, 1)
+theme_override_colors/font_color = Color(0.212808, 0.212808, 0.212808, 1)
 theme_override_font_sizes/font_size = 24
 text = "Громкость музыки"
 
@@ -64,7 +64,7 @@ text = "Громкость музыки"
 custom_minimum_size = Vector2(54, 0)
 layout_mode = 2
 auto_translate_mode = 2
-theme_override_colors/font_color = Color(0.35, 0.32, 0.28, 1)
+theme_override_colors/font_color = Color(0.32349, 0.32349, 0.32349, 1)
 theme_override_font_sizes/font_size = 24
 text = "100%"
 horizontal_alignment = 2

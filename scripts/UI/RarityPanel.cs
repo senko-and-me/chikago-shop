@@ -98,15 +98,13 @@ public partial class RarityPanel : Control
 			var label = Values.GetNode<Label>($"Chance{i}");
 			label.Text = $"{current:0.#}%";
 			label.TooltipText = GameLocalization.Format("Базовый шанс: {0}%", baseline);
-			label.AddThemeColorOverride("font_color", current > baseline ? new Color("208447") :
-				current < baseline ? new Color("bf3232") : Colors.Black);
+			label.AddThemeColorOverride("font_color", Colors.Black);
 			var category = items.Where(item => item.RarityId == rarities[i]).ToArray();
 			int average = category.Length > 0 ? (int)Math.Round(category.Average(item => item.BasePrice)) : 0;
 			int price = upgrades?.Price(workshop, average) ?? average;
 			var priceLabel = Values.GetNode<Label>($"Price{i}");
 			priceLabel.Text = $"{price}$";
-			priceLabel.AddThemeColorOverride("font_color", price > average ? new Color("208447") :
-				price < average ? new Color("bf3232") : Colors.Black);
+			priceLabel.AddThemeColorOverride("font_color", Colors.Black);
 			Values.GetNode<Label>($"Rerolls{i}").Text = WorkshopItemCatalog.RerollsFor(rarities[i]).ToString();
 		}
 	}
