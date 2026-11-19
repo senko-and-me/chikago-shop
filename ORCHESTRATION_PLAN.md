@@ -11,7 +11,18 @@
 ## Текущий фронт
 ### HF-199 — публикация готовых изменений HF194–198
 
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-19; HF194–198 DONE, пользователь просит push. CP-HF-199 read-set: Git status/diff/refs, готовые изменения/evidence HF194–198, snapshots .local/checks/hf195/{main_menu,trade_scene}.before.tscn, текущие основные сцены для выделения только RGB replacements. Write-set: index/commit/push готовых файлов HF194–198; основные сцены в index только RGB из HF195 поверх HEAD; ORCHESTRATION_PLAN.md; .local/checks/hf199/isolatedcopy. Out of scope: source/, несвязанные пользовательские правки основных сцен, force push/gameplay. Приёмка: готовые изменения опубликованы, пользовательские изменения не включены и рабочие файлы сцен побайтно сохранены. Checks: exact staged list/diffcheck, staged scenes rendered checks, push/refreadback/status.
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-19; HF194–198 DONE, пользователь просит push. CP-HF-199 read-set: Git status/diff/refs, готовые изменения/evidence HF194–198, snapshots .local/checks/hf195/{main_menu,trade_scene}.before.tscn, текущие основные сцены для выделения только RGB replacements. Write-set: index/commit/push готовых файлов HF194–198; основные сцены в index только RGB из HF195 поверх HEAD; ORCHESTRATION_PLAN.md; .local/checks/hf199/isolatedcopy. Out of scope: source/, несвязанные пользовательские правки основных сцен, force push/gameplay. Приёмка: готовые изменения опубликованы, пользовательские изменения не включены и рабочие файлы сцен побайтно сохранены. Checks: exact staged list/diffcheck, staged scenes rendered checks, push/refreadback/status.
+
+```text
+Task: HF-199
+Recommended status: REVIEW → принято координатором, DONE
+Changed: 98f4203 опубликован в origin/main: HF194–198, 51файл; лампочки без подложки и крупнее, прямая ЧБ палитра с исключениями, рисованная покупка, новые day/night PNG. В trade_scene включены только RGB replacements поверх HEAD; main_menu не имеет новых палитровых изменений относительно HEAD и не включён. Несвязанные сцены остались локально, байты workingtree сохранены.
+Checks: all staged runtime/assets/tests совпали с isolatedcopy; --presentation-checks/--energy-bulbs-checks/--room-frame-checks/--card-dealing-checks PASS на exactstagedscenes, stderr пуст. Предшествующие build/palette/tutorial/craft checks HF195–198 PASS; exactstagedlist/diffcheck PASS, fetch доpush0/0; push main PASS. Evidence .local/checks/hf199.
+Acceptance: готовые изменения опубликованы без несвязанных пользовательских правок.
+Read-set exception: нет; source/ не читался.
+Risks/blocker: остаются только локальные пользовательские изменения main_menu/trade_scene.
+Next: пользовательская проверка опубликованной версии.
+```
 
 ### HF-198 — новые дневной и ночной фоны
 
