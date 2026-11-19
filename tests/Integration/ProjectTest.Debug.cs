@@ -34,14 +34,14 @@ public partial class ProjectTest
             Check(game.Score == 320, "Repeat and modified keys must not grant money");
             await Press(Key.F7);
             await Press(Key.F7);
-            Check(game.DayRemainingSeconds == 150 && game.GetNode<Label>("HUD/Root/DayTimer").Text == "150",
+            Check(game.DayRemainingSeconds == 150 && game.GetNode<Label>("HUD/DayClock/Root/DayTimer").Text == "150",
                 "Time grants must stack and update the HUD immediately");
             game._Process(150);
             Check(game.DayClosed, "Timer fixture must expire");
             await Press(Key.F7);
             Check(!game.DayClosed && game.CurrentDay == 1 && game.DayRemainingSeconds == 30,
                 "F7 must reopen the same expired day with30 seconds");
-            Check(game.GetNode<TextureRect>("HUD/Root/DayTimer/Clock").Texture.ResourcePath.EndsWith("day_timer_empty.png"),
+            Check(game.GetNode<TextureRect>("HUD/DayClock/Root/DayTimer/Clock").Texture.ResourcePath.EndsWith("day_timer_empty.png"),
                 "Reopening the day must restore the active clock sprite");
             var pause = game.GetNode<PauseMenu>("PauseMenu");
             pause.Open();

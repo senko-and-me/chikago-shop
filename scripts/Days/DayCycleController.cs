@@ -17,6 +17,7 @@ public sealed class DayCycleController
 	public int CheckpointMusicPriceLevel { get; private set; }
 	private readonly TradeScene _game;
 	private readonly Label _timer;
+	private readonly CanvasLayer _clockLayer;
 	private readonly TextureRect _clock;
 	private readonly Button _startButton;
 	private readonly Button _clockAction;
@@ -25,6 +26,9 @@ public sealed class DayCycleController
 	private readonly Texture2D _clockExpired;
 	private readonly Control _inventoryStrip;
 	private int _displayedSeconds = -1;
+	private double _tutorialEndNotice;
+	private const string TutorialEndMessage = "Сначала завершите или пропустите обучение.";
+	private bool TutorialActive => _game.GetNodeOrNull<FirstTradeTutorial>("FirstTradeTutorial")?.IsActive == true;
 	private readonly DayTransitionCard _card;
 	private readonly DayNightBackground _dayNight;
 	private readonly DayAnnouncementOverlay _announcements;
@@ -36,6 +40,11 @@ public sealed class DayCycleController
 	public DayCycleController(TradeScene game)
 	{
 		_game = game;
+		_clockLayer = new CanvasLayer { Name = "DayClock", Layer = game.GetNode<CanvasLayer>("HUD").Layer + 1 };
+		game.GetNode("HUD").AddChild(_clockLayer);
+		var clockRoot = new Control { Name = "Root", MouseFilter = Control.MouseFilterEnum.Ignore };
+		_clockLayer.AddChild(clockRoot);
+		clockRoot.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
 		Upgrades.Rules = DebugBalanceSettings.CardRules;
 		_card = GD.Load<PackedScene>("res://scenes/UI/DayTransitionCard.tscn").Instantiate<DayTransitionCard>();
 		_card.Chosen += ChooseUpgrade;
@@ -48,7 +57,7 @@ public sealed class DayCycleController
 		};
 		_timer.AddThemeColorOverride("font_color", Colors.Black);
 		_timer.AddThemeConstantOverride("outline_size", 0);
-		game.GetNode<Control>("HUD/Root").AddChild(_timer);
+		clockRoot.AddChild(_timer);
 		_timer.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.BottomLeft);
 		_clockActive = GD.Load<Texture2D>("res://art/ui/day_timer_empty.png");
 		_clockExpired = GD.Load<Texture2D>("res://art/ui/day_timer_expired.png");
@@ -78,6 +87,7 @@ public sealed class DayCycleController
 		_startButton.FocusEntered += UpdateClockFeedback;
 		_startButton.FocusExited += UpdateClockFeedback;
 		_clockAction = game.GetNode<Button>("HUD/Root/ClockActionButton");
+		_clockAction.Reparent(clockRoot);
 		_clockAction.Pressed += game.EndDay;
 		_clockAction.MouseEntered += UpdateClockFeedback;
 		_clockAction.MouseExited += UpdateClockFeedback;
@@ -140,6 +150,7 @@ public sealed class DayCycleController
 
 	public void Tick(double delta)
 	{
+		_tutorialEndNotice = Math.Max(0, _tutorialEndNotice - delta);
 		bool crafting = _game.CraftMiniGameOpen;
 		if (!Started || Upgrades.Pending || (_game.GetTree().Paused && !crafting) || _game.Failed || _game.Completed) return;
 		// Expiry closes trading immediately, then advances once the current interaction is finished.
@@ -160,8 +171,14 @@ public sealed class DayCycleController
 
 	public void EndDay()
 	{
-		if (_game.Failed || _game.Completed || TransitionOpen || Upgrades.Pending) return;
+		if (_game.Failed || _game.Completed || TransitionOpen || Upgrades.Pending || _game.CraftMiniGameOpen) return;
 		if (!Started && !Session.IsClosed) { StartDay(); return; }
+		if (TutorialActive)
+		{
+			_tutorialEndNotice = 3;
+			RefreshTimer();
+			return;
+		}
 		switch (Session.RequestEnd(_game.TradeActive))
 		{
 			case EndDayAction.Closed:
@@ -191,6 +208,7 @@ public sealed class DayCycleController
 
 	public void Reset(bool preserveCategories = false)
 	{
+		_tutorialEndNotice = 0;
 		_actionGate.Dismiss();
 		_advanceWhenClosed = false;
 		_card.Close();
@@ -284,7 +302,8 @@ public sealed class DayCycleController
 		RefreshTimer();
 		button.Text = Session.IsClosed ? "Начать следующий день" : Started ? "Завершить день" : "Начать";
 		button.Disabled = _game.Failed || _game.Completed || (Session.IsClosed && _game.TradeActive);
-		button.TooltipText = Session.IsClosed && _game.TradeActive ? "Сначала завершите сделку" : "";
+		button.TooltipText = TutorialActive && Started ? GameLocalization.Text(TutorialEndMessage) :
+			Session.IsClosed && _game.TradeActive ? "Сначала завершите сделку" : "";
 	}
 
 	public string DisplayStatus(string status) => GameLocalization.Status(
@@ -294,13 +313,15 @@ public sealed class DayCycleController
 
 	private bool RefreshTimer()
 	{
+		_clockLayer.Layer = _game.CraftMiniGameOpen ? 111 : _game.GetNode<CanvasLayer>("HUD").Layer + 1;
 		LayoutTimer();
 		int seconds = (int)Math.Ceiling(Session.RemainingSeconds);
 		_startButton.Visible = !Started && !Session.IsClosed && !_game.Failed && !_game.Completed;
 		_startButton.Disabled = Upgrades.Pending;
 		_clockAction.Visible = (Started || Session.IsClosed) && !_game.Failed && !_game.Completed;
-		_clockAction.Disabled = Upgrades.Pending || Session.IsClosed && _game.TradeActive;
-		_clockAction.TooltipText = Session.IsClosed ? "Начать следующий день" : "";
+		_clockAction.Disabled = _game.CraftMiniGameOpen || Upgrades.Pending || Session.IsClosed && _game.TradeActive;
+		_clockAction.TooltipText = TutorialActive ? GameLocalization.Text(TutorialEndMessage) :
+			Session.IsClosed ? "Начать следующий день" : "";
 		UpdateClockFeedback();
 		bool changed = seconds != _displayedSeconds;
 		_displayedSeconds = seconds;
@@ -315,11 +336,12 @@ public sealed class DayCycleController
 			_clockAction.Visible && !_clockAction.Disabled && (_clockAction.IsHovered() || _clockAction.HasFocus());
 		_clock.SelfModulate = active ? new Color(0.9f, 0.9f, 0.9f) : Colors.White;
 		if (_endCaption == null) return;
-		bool showEnd = _clockAction.Visible && !_clockAction.Disabled && Started &&
+		bool tutorialNotice = TutorialActive && _tutorialEndNotice > 0;
+		bool showEnd = tutorialNotice || _clockAction.Visible && !_clockAction.Disabled && Started &&
 			!Session.IsClosed && Session.RemainingSeconds > 0 &&
 			(_clockAction.IsHovered() || _clockAction.HasFocus());
 		_endCaption.Visible = showEnd;
-		string caption = GameLocalization.Text("Завершить день");
+		string caption = GameLocalization.Text(TutorialActive ? "Завершите обучение" : "Завершить день");
 		_endCaption.Text = caption.Replace(" ", "\n");
 		int baseSize = _startButton.GetThemeFontSize("font_size");
 		float wordWidth = 1;

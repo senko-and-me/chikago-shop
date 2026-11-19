@@ -47,7 +47,7 @@ public partial class ProjectTest
             Check(!panel.IsOpen && !Paused && menu.IsInsideTree(), "Escape from menu balance must resume the menu without quitting");
             menu.QueueFree(); await Frame();
             await Create();
-            await ClickControl(game, "HUD/Root/DayTimer/StartButton");
+            await ClickControl(game, "HUD/DayClock/Root/DayTimer/StartButton");
             game._Process(10);
             double remaining = game.DayRemainingSeconds;
             int cash = game.Score, energy = game.EnergyRemaining;

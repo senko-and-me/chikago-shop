@@ -101,7 +101,7 @@ public partial class ProjectTest
             if (FileAccess.FileExists(SavePath)) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(SavePath));
             game = await CreateGame(scene);
             Check(!game.DayClosed && game.DayRemainingSeconds == 120 &&
-                  game.GetNode<Label>("HUD/Root/DayTimer").Text == "02:00",
+                  game.GetNode<Label>("HUD/DayClock/Root/DayTimer").Text == "02:00",
                 "A new day must start with a full two minutes in mm:ss format");
             foreach (Vector2I size in new[] { new Vector2I(1280, 720), new Vector2I(960, 540) })
             foreach (float zoom in new[] { 0.25f, 1.8f })
@@ -109,17 +109,17 @@ public partial class ProjectTest
                 Root.Size = size;
                 game.GetNode<Camera2D>("Camera2D").Zoom = Vector2.One * zoom;
                 await ToSignal(this, SignalName.ProcessFrame);
-                var timer = game.GetNode<Label>("HUD/Root/DayTimer");
+                var timer = game.GetNode<Label>("HUD/DayClock/Root/DayTimer");
                 Rect2 bounds = timer.GetGlobalRect();
                 Check(Mathf.IsEqualApprox(bounds.GetCenter().X, Root.GetVisibleRect().Size.X / 2) &&
                       Root.GetVisibleRect().Encloses(bounds) && timer.MouseFilter == Control.MouseFilterEnum.Ignore,
                     "The timer must stay centered at the top, in bounds, and ignore mouse input regardless of zoom");
             }
             game._Process(0.25);
-            Check(game.DayRemainingSeconds == 119.75 && game.GetNode<Label>("HUD/Root/DayTimer").Text == "02:00",
+            Check(game.DayRemainingSeconds == 119.75 && game.GetNode<Label>("HUD/DayClock/Root/DayTimer").Text == "02:00",
                 "The timer must count partial seconds without showing zero early");
             game._Process(0.75);
-            Check(game.GetNode<Label>("HUD/Root/DayTimer").Text == "01:59", "The timer must roll from minutes to seconds");
+            Check(game.GetNode<Label>("HUD/DayClock/Root/DayTimer").Text == "01:59", "The timer must roll from minutes to seconds");
 
             foreach (bool manual in new[] { true, false })
             {
@@ -148,7 +148,7 @@ public partial class ProjectTest
                 Check(game.DayClosed && game.DayRemainingSeconds == 0 && game.EnergyRemaining == 0 &&
                       game.CurrentDay == 4 && !game.Failed && game.TradeActive && game.ItemIndex == item &&
                       game.StoredItems.SequenceEqual(inventory) && game.ShowcaseItems.SequenceEqual(showcases) &&
-                      game.GetNode<Label>("HUD/Root/DayTimer").Text == "00:00" && game.BuyerCountdown == 0,
+                      game.GetNode<Label>("HUD/DayClock/Root/DayTimer").Text == "00:00" && game.BuyerCountdown == 0,
                     "Manual close and timeout must discard energy, retain goods and keep the last trade before quota settlement");
                 Check(game.GetNode<Button>("World/Atelier/GetItemButton").Disabled &&
                       game.GetNode<Button>("HUD/Root/ProgressPanel/Content/EndDayButton").Disabled &&
@@ -431,7 +431,7 @@ public partial class ProjectTest
             if (FileAccess.FileExists(SavePath)) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(SavePath));
             game = await CreateGame(scene);
             game.NewGame();
-            var timer = game.GetNode<Label>("HUD/Root/DayTimer");
+            var timer = game.GetNode<Label>("HUD/DayClock/Root/DayTimer");
             var clock = timer.GetNode<TextureRect>("Clock");
             Check(timer.Text == "90" && clock.Texture.ResourcePath == "res://art/ui/day_timer_empty.png",
                 "The existing one-room duration must display plain seconds on the empty clock");
@@ -492,7 +492,7 @@ public partial class ProjectTest
             game.QueueFree();
             await ToSignal(this, SignalName.ProcessFrame);
             game = await CreateGame(scene);
-            timer = game.GetNode<Label>("HUD/Root/DayTimer");
+            timer = game.GetNode<Label>("HUD/DayClock/Root/DayTimer");
             clock = timer.GetNode<TextureRect>("Clock");
             Check(game.DayRemainingSeconds == remaining && timer.Text == "88" && clock.Texture.ResourcePath.EndsWith("day_timer_empty.png"),
                 "Reload must restore fractional time with the matching seconds and art");
@@ -506,8 +506,9 @@ public partial class ProjectTest
             Check(timer.Text == "120" && game.DayRemainingSeconds == 120, "The timer must show all remaining seconds including a purchased time bonus");
             game.GetItemFromAtelier();
             var embroidery = game.GetNode<EmbroideryGame>("EmbroideryGame");
-            Check(embroidery.IsOpen && embroidery.GetNode<Label>("Surface/DayTimer").Text == timer.Text,
-                "The minigame clock copy must keep working with the new seconds format");
+            Check(embroidery.IsOpen && !embroidery.HasNode("Surface/DayTimer") &&
+                game.GetNode<CanvasLayer>("HUD/DayClock").Layer > embroidery.Layer && timer.Text == "120",
+                "The shared seconds clock must appear above the minigame without a duplicate");
             embroidery.GetNode<Button>("Surface/Cancel").EmitSignal(Button.SignalName.Pressed);
         }
         finally

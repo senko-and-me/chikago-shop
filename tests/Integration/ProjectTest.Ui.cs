@@ -335,7 +335,7 @@ public partial class ProjectTest
             Check(game.DayStarted, "The existing Start action remains wired to the real day cycle");
             await ClickControl(game, "HUD/Root/ProgressPanel/Content/EndDayButton");
             Check(game.DayClosed, "The existing End Day action still closes the shop");
-            await ClickControl(game, "HUD/Root/ClockActionButton");
+            await ClickControl(game, "HUD/DayClock/Root/ClockActionButton");
             await WaitForDayCardAnimation(game);
             var dayCard = game.GetNode<DayTransitionCard>("DayTransitionCard");
             Check(game.CurrentDay == 2 && dayCard.IsOpen, "Clicking the closed clock must open the next day and its cards");

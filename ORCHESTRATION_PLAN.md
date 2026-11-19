@@ -9,6 +9,52 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### HF-187 — публикация учебной блокировки и общих часов
+
+Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-19; HF185/HF186 DONE; пользователь разрешил commit/push; пересечений нет.
+
+CP-HF-187 read-set: текущий фронт, готовые diff/evidence HF185/HF186, Git status/refs, основные сцены только hash. Write-set: Git index/commits/main/origin/main; ORCHESTRATION_PLAN.md; публикация localization/en.tres, scripts/Days/DayCycleController.cs, scripts/UI/{EmbroideryGame,FirstTradeTutorial}.cs, tests/Integration/ProjectTest.{Crafting,DayExpiry,DayStart,DayStartGate,Days,Debug,DebugBalance,Economy,Helpers,Menu,Presentation,Tutorial,Ui}.cs. Out of scope: source/, пользовательские основные сцены, новые изменения поведения, force push.
+
+Приёмка: готовые изменения HF185/HF186 опубликованы в origin/main; refs совпадают, пользовательские сцены сохранены вне коммита. Проверки: fetch/refs, hash с tested isolated copy, предыдущие build и rendered craft-contrast/day-start/tutorial PASS; staged diff --check; push/readback/hash сцен.
+
+### HF-186 — общие часы поверх мини-игр
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-19; HF185 DONE; пересечений нет.
+
+CP-HF-186 read-set: текущий фронт; scripts/Days/DayCycleController.cs; scripts/UI/{EmbroideryGame,FirstTradeTutorial,PauseMenu}.cs; scripts/Presentation/MonochromePresentation.cs; tests/ProjectTest.cs; tests/Integration/ProjectTest.{Crafting,DayStart,DayExpiry,DayStartGate,Days,Debug,DebugBalance,Economy,Helpers,Menu,Presentation,Ui,Tutorial}.cs (ссылки на часы и focused checks); localization/en.tres; основные сцены только hash. Write-set: ORCHESTRATION_PLAN.md; DayCycleController.cs (слой часов, блокировка input при craft); EmbroideryGame.cs (убрать duplicate day timer, header); FirstTradeTutorial.cs (пути); перечисленные test файлы (пути, regression); localization/en.tres (удалить неиспользуемый перевод); .local/checks/hf186; isolated copy тех же файлов. Out of scope: source/, пользовательские сцены, gameplay/баланс/schema, commit/push.
+
+Приёмка: один общий clock перед craft UI во всех состояниях обеих мини-игр, без дублирования дня внутри modal; таймер самой мини-игры сохранён. Clock не завершает день во время craft, после закрытия обычное управление возвращается; pause/cards перекрывают clock. RU/EN/три размера. Проверки: local/isolated build; rendered craft-contrast/day-start/tutorial; screenshot; diff/hash.
+
+```text
+Task: HF-186
+Recommended status: REVIEW → принято координатором, DONE
+Changed: DayCycleController — существующие часы и кнопка перенесены в runtime CanvasLayer HUD/DayClock, слой111 при craft и HUD+1 иначе; ввод отключён в craft, общий EndDay также guarded. EmbroideryGame — удалён duplicate day timer/heading, три stat cards сдвинуты вправо, обновление presentation при open/close; время самой мини-игры сохранено. FirstTradeTutorial и test ссылки обновлены на новый путь; переводы очищены. Crafting regressions проверяют actual bright pixels часов вне modal, слои/отсутствие дубля/клики/возврат ввода; устаревшие copy-clock ожидания заменены. DayStart fixture явно отключает onboarding, которому теперь запрещено закрытие дня HF185.
+Checks: local/isolated build PASS (0 warnings/errors); rendered --craft-contrast-checks PASS (2 игры ×4 состояния ×2 языка ×3 размера, реальные Start/Back/Collect/Clock); --day-start-checks PASS (hover, реальное закрытие, переход/карты, resize/reload/legacy); --tutorial-checks PASS (полный onboarding с новой блокировкой и reload/replay/skip). stderr пусты. Просмотрен embroidery-ready-ru: общий clock яркий поверх затемнения, duplicate отсутствует; screenshots/logs .local/checks/hf186. git diff --check PASS; SHA256 обеих основных сцен прежние.
+Acceptance: общие часы постоянно видны во время мини-игры; внутри остаётся только собственный таймер задания; обучение блокирует завершение дня.
+Read-set exception: нет; source/ не читался.
+Risks/blocker: нет новых; пользовательские сцены сохранены; commit/push не выполнялись.
+Next: пользовательская проверка часов во время мини-игры.
+```
+
+### HF-185 — запрет завершать день во время обучения
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-19; HF184 DONE; пересечений нет.
+
+CP-HF-185 read-set: текущий фронт; scripts/Days/DayCycleController.cs; scripts/UI/FirstTradeTutorial.cs; scripts/TradeScene.cs (EndDay/StatusText read-only); tests/Integration/ProjectTest.{Tutorial,Helpers,Presentation}.cs; tests/ProjectTest.cs (runner); localization/en.tres; основные сцены только hash. Write-set: ORCHESTRATION_PLAN.md; scripts/Days/DayCycleController.cs; localization/en.tres; tests/Integration/ProjectTest.Tutorial.cs; .local/checks/hf185; isolated .local/checks/git-review-20261118/project (те же файлы). Out of scope: source/, основные сцены, TradeScene, баланс/таймер/schema/шаги обучения, commit/push.
+
+Приёмка: во время активного обучения EndDay/часы/legacy-кнопка не закрывают и не переключают день, сообщают причину; Start доступен. Проверка после reload, в Summary и после завершения/пропуска; обучение полностью проходимо. Проверки: local/isolated build; rendered --tutorial-checks; git diff --check; SHA256 сцен.
+
+```text
+Task: HF-185
+Recommended status: REVIEW → принято координатором, DONE
+Changed: DayCycleController — guard в общем EndDay после разрешённого Start, проверяет IsActive обучения; локализованные tooltip и трёхсекундная надпись на часах. EN переводы; Tutorial tests проверяют реальный click, direct и legacy signal в Craft/после reload/Offer/Summary, прежние ресурсы/день/таймер/шаг; после completion/skip день закрывается нормально.
+Checks: local/isolated build PASS (0 warnings/errors); rendered --tutorial-checks PASS, stderr пуст; полный tutorial/reload/replay/skip lifecycle пройден. Финальный diff/hash проверяется вместе с последующей задачей часов HF186.
+Acceptance: игрок не завершает день при активном обучении, Start и обычная игра после выхода доступны.
+Read-set exception: DayAnnouncementOverlay.cs только публичный API для диагностики подходящей подсказки; не изменён.
+Risks/blocker: нет новых; commit/push не выполнялись.
+Next: HF186 — общие часы поверх мини-игры.
+```
+
 ### HF-184 — публикация подписей сигарет и компоновки мини-игр
 
 Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-19; HF182/HF183 DONE; пользователь разрешил commit/push; пересечений нет.

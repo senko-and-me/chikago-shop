@@ -121,7 +121,7 @@ public partial class ProjectTest
             game.GetItemFromAtelier();
             Check(!game.DayStarted && !game.CraftMiniGameOpen, "Reload must preserve the action lock for a waiting day");
             gate = game.GetNode<DayStartGate>("DayStartGate");
-            await ClickControl(game, "HUD/Root/DayTimer/StartButton");
+            await ClickControl(game, "HUD/DayClock/Root/DayTimer/StartButton");
             Check(game.DayStarted && !gate.GetNode<Control>("Root/Notice").Visible, "Start must immediately dismiss the notice and lift the gate");
             game.SelectInventoryItem(0);
             game.PlaceItemInShowcase(0);

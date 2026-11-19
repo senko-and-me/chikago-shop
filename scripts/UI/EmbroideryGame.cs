@@ -13,8 +13,8 @@ public partial class EmbroideryGame : CanvasLayer
 	private PolishingSurface _polishingSurface = null!;
 	public bool IsOpen => _surface != null && _surface.Visible;
 	private EmbroiderySurface _surface = null!;
-	private Label _title = null!, _hint = null!, _quality = null!, _dayTimer = null!;
-	private Label _dayHeading = null!, _qualityHeading = null!;
+	private Label _title = null!, _hint = null!, _quality = null!;
+	private Label _qualityHeading = null!;
 	private readonly Control[] _statCards = new Control[3];
 	private readonly Label[] _statValues = new Label[3];
 	private readonly Label[] _statHeadings = new Label[3];
@@ -58,8 +58,6 @@ public partial class EmbroideryGame : CanvasLayer
 		}
 
 		_title = AddLabel("Title", 28);
-		_dayTimer = AddLabel("DayTimer", 22);
-		_dayHeading = AddLabel("DayHeading", 14);
 		_qualityHeading = AddLabel("QualityHeading", 14);
 		_title.HorizontalAlignment = HorizontalAlignment.Left;
 
@@ -198,6 +196,7 @@ public partial class EmbroideryGame : CanvasLayer
 		_ownsPause = true;
 		GetTree().Paused = true;
 		_surface.Show();
+		game.RefreshDayPresentation();
 		Refresh();
 		_action.GrabFocus();
 	}
@@ -250,6 +249,7 @@ public partial class EmbroideryGame : CanvasLayer
 			GetTree().Paused = false;
 
 		_ownsPause = false;
+		GetParent<TradeScene>().RefreshDayPresentation();
 	}
 
 	public override void _ExitTree()
@@ -327,21 +327,13 @@ public partial class EmbroideryGame : CanvasLayer
 		StyleAction(ready);
 
 		Rect2 panel = _surface.PanelRect;
-		_dayTimer.Text =
-			GetParent().GetNode<Label>("HUD/Root/DayTimer").Text;
-
-		_dayHeading.Text = GameLocalization.Text("ДО КОНЦА ДНЯ");
 		_qualityHeading.Text = GameLocalization.Text("КАЧЕСТВО");
 		Place(_title, new Rect2(panel.Position + new Vector2(24, 24),
-			new Vector2(panel.Size.X - 492, 60)));
-		float statsX = panel.End.X - 456;
+			new Vector2(panel.Size.X - 380, 60)));
+		float statsX = panel.End.X - 348;
 		for (int i = 0; i < _statCards.Length; i++)
 			Place(_statCards[i], new Rect2(new Vector2(statsX + i * 116, panel.Position.Y + 24),
 				new Vector2(104, 60)));
-		Place(_dayHeading, new Rect2(new Vector2(panel.End.X - 112, panel.Position.Y + 28),
-			new Vector2(96, 18)));
-		Place(_dayTimer, new Rect2(new Vector2(panel.End.X - 104, panel.Position.Y + 49),
-			new Vector2(80, 30)));
 
 		Rect2 track = _surface.QualityTrackRect;
 		Place(_qualityHeading, new Rect2(new Vector2(track.Position.X - 8, _surface.FabricRect.Position.Y),

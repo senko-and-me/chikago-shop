@@ -89,6 +89,28 @@ public partial class ProjectTest
         void Step(FirstTradeTutorial.Step expected) => Check(tutorial.IsActive && tutorial.IsShowing && tutorial.CurrentStep == expected,
             $"Tutorial must follow actual gameplay state: expected {expected}, got {tutorial.CurrentStep}");
         ProgressBar CameraBar() => tutorial.GetNode<ProgressBar>("Root/Panel/Content/CameraProgress");
+        async Task CheckTutorialEndBlocked()
+        {
+            int day = game.CurrentDay, score = game.Score, energy = game.EnergyRemaining;
+            double remaining = game.DayRemainingSeconds;
+            bool trading = game.TradeActive;
+            var step = tutorial.CurrentStep;
+            game.EndDay();
+            await ClickControl(game, "HUD/DayClock/Root/ClockActionButton");
+            game.GetNode<Button>("HUD/Root/ProgressPanel/Content/EndDayButton").EmitSignal(Button.SignalName.Pressed);
+            await Frame();
+            Check(game.DayStarted && !game.DayClosed && !game.DayTransitionOpen &&
+                game.CurrentDay == day && game.DayRemainingSeconds == remaining &&
+                game.Score == score && game.EnergyRemaining == energy && game.TradeActive == trading &&
+                tutorial.IsActive && tutorial.CurrentStep == step,
+                "Direct, real clock and legacy end-day actions must preserve the active tutorial and day");
+            var caption = game.GetNode<Label>("HUD/DayClock/Root/DayTimer/EndDayCaption");
+            Check(caption.Visible && caption.Text == GameLocalization.Text("Завершите обучение").Replace(" ", "\n") &&
+                game.GetNode<Button>("HUD/DayClock/Root/ClockActionButton").TooltipText ==
+                    GameLocalization.Text("Сначала завершите или пропустите обучение."),
+                "Blocked end-day attempts must show a localized explanation on the clock");
+            MoveButtonPointer(new Vector2(800, 400));
+        }
         async Task CheckPracticeLayout(string stage)
         {
             foreach (Vector2I viewport in new[] { new Vector2I(960, 540), new Vector2I(1280, 720) })
@@ -250,9 +272,10 @@ public partial class ProjectTest
             await CheckYellowHighlight("tutorial-yellow-start");
             Check(!Paused && !game.DayStarted && game.Score == game.StartingMoney && game.StoredItems.Length == 0,
                 "Starting the tutorial must not pause gameplay, spend money or generate items");
-            await ClickControl(game, "HUD/Root/DayTimer/StartButton");
+            await ClickControl(game, "HUD/DayClock/Root/DayTimer/StartButton");
             await Frame();
             Step(FirstTradeTutorial.Step.Craft);
+            await CheckTutorialEndBlocked();
             Check(game.GetNode<WorldCamera>("Camera2D").IsFocusing, "Craft instructions must start a new camera flight");
             await CheckCameraLocked();
             Highlight();
@@ -271,6 +294,7 @@ public partial class ProjectTest
             legacyTutorial.Save(progress);
             await Reload();
             Step(FirstTradeTutorial.Step.Select);
+            await CheckTutorialEndBlocked();
             Check(!tutorial.IsCameraCompletionPending,
                 "A save from the removed waiting phase must hand off immediately after loading");
             legacyTutorial.EraseSectionKey("tutorial", "camera_handoff_done");
@@ -310,6 +334,7 @@ public partial class ProjectTest
             game._Process(game.BuyerCountdown + 0.01);
             await Frame();
             Step(FirstTradeTutorial.Step.Offer);
+            await CheckTutorialEndBlocked();
             await CheckCameraLocked();
             Highlight();
             var buyerHint = tutorial.GetNode<Label>("Root/Panel/Content/Body");
@@ -338,6 +363,7 @@ public partial class ProjectTest
             Check(!pack.Expanded, "Leaving the pack during Summary must retract it normally");
             await Reload();
             Step(FirstTradeTutorial.Step.Summary);
+            await CheckTutorialEndBlocked();
             Check(!game.GetNode<ProgressPanel>("HUD/Root/ProgressPanel").Expanded,
                 "Reloading Summary must not open the pack without player input");
             await ClickControl(game, "FirstTradeTutorial/Root/Panel/Content/Actions/Done");
@@ -354,6 +380,9 @@ public partial class ProjectTest
             await Reload();
             Check(!tutorial.IsActive, "Completed onboarding must not replay when loading the game");
             CheckFreshRun();
+            game.EndDay();
+            await ClickControl(game, "HUD/DayClock/Root/ClockActionButton");
+            Check(game.DayClosed && !game.DayTransitionOpen, "Completing the tutorial must restore normal manual day closure");
             game.GetNode<PauseMenu>("PauseMenu").Open();
             await Frame();
             await ClickControl(game, "PauseMenu/Root/Overlay/Center/Panel/Content/Menu/NewGameButton");
@@ -388,7 +417,7 @@ public partial class ProjectTest
             var pending = new ConfigFile();
             Check(pending.Load(progress) == Error.Ok && !pending.GetValue("tutorial", "finished").AsBool(),
                 "Merely opening confirmation must not persist a skipped tutorial");
-            await ClickControl(game, "HUD/Root/DayTimer/StartButton");
+            await ClickControl(game, "HUD/DayClock/Root/DayTimer/StartButton");
             Check(!game.DayStarted && tutorial.IsSkipConfirmationOpen,
                 "The confirmation overlay must prevent clicks from starting the day behind it");
             foreach (Vector2I viewport in new[] { new Vector2I(960, 540), new Vector2I(1280, 720) })
@@ -416,7 +445,7 @@ public partial class ProjectTest
             Check(!tutorial.IsSkipConfirmationOpen && !Paused &&
                 !game.GetNode<Control>("PauseMenu/Root/Overlay").Visible,
                 "Escape must cancel skip without opening the pause menu or ending onboarding");
-            await ClickControl(game, "HUD/Root/DayTimer/StartButton");
+            await ClickControl(game, "HUD/DayClock/Root/DayTimer/StartButton");
             game.GetItemFromAtelier();
             FinishEmbroidery(game);
             await Frame();
@@ -437,6 +466,9 @@ public partial class ProjectTest
             await Reload();
             Check(!tutorial.IsActive && !tutorial.IsShowing, "Skipping must persist just like completing onboarding");
             CheckFreshRun();
+            game.EndDay();
+            await ClickControl(game, "HUD/DayClock/Root/ClockActionButton");
+            Check(game.DayClosed && !game.DayTransitionOpen, "Skipping the tutorial must restore normal manual day closure");
             game.NewGame();
             await Frame();
             Step(FirstTradeTutorial.Step.Camera);

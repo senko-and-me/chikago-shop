@@ -105,7 +105,7 @@ public partial class ProjectTest
                 "Every actual menu NewGame path must ignore the previous run's completed tutorial");
             game.SetProcess(false);
             Check(game.CurrentDay == 1 && game.Score == game.StartingMoney && game.DayRemainingSeconds > 88 &&
-                  !game.DayStarted && game.GetNode<Button>("HUD/Root/DayTimer/StartButton").Visible,
+                  !game.DayStarted && game.GetNode<Button>("HUD/DayClock/Root/DayTimer/StartButton").Visible,
                 "A new run must preserve the current starting economy and wait for manual day start during camera practice");
             game.Score = 321;
             game.PersistProgress();

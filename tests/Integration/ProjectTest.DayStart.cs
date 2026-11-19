@@ -15,6 +15,7 @@ public partial class ProjectTest
             if (game != null) { game.QueueFree(); await ToSignal(this, SignalName.ProcessFrame); }
             game = packed.Instantiate<TradeScene>();
             game.SavePath = save;
+            game.GetNode<FirstTradeTutorial>("FirstTradeTutorial").ProgressPath = "";
             Root.AddChild(game);
             game.SetProcess(false);
             await ToSignal(this, SignalName.ProcessFrame);
@@ -24,7 +25,7 @@ public partial class ProjectTest
             if (FileAccess.FileExists(save)) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(save));
             Root.Size = new Vector2I(1280, 720);
             await Reload();
-            var timer = game.GetNode<Label>("HUD/Root/DayTimer");
+            var timer = game.GetNode<Label>("HUD/DayClock/Root/DayTimer");
             var start = timer.GetNode<Button>("StartButton");
             using (var image = await CapturePresentation("day-start")) { }
             Check(Mathf.Abs(timer.Size.X - 207) < 0.1f && timer.OffsetLeft == 6 && timer.OffsetBottom == -6,
@@ -67,22 +68,22 @@ public partial class ProjectTest
             await Reload();
             Check(!game.DayStarted && game.DayRemainingSeconds == 90, "Reload must preserve waiting for Start");
             TranslationServer.SetLocale("en");
-            start = game.GetNode<Button>("HUD/Root/DayTimer/StartButton");
+            start = game.GetNode<Button>("HUD/DayClock/Root/DayTimer/StartButton");
             Check(start.Tr(start.Text) == "Start", "Start must have an English translation");
             TranslationServer.SetLocale("ru");
-            await ClickControl(game, "HUD/Root/DayTimer/StartButton");
-            timer = game.GetNode<Label>("HUD/Root/DayTimer");
+            await ClickControl(game, "HUD/DayClock/Root/DayTimer/StartButton");
+            timer = game.GetNode<Label>("HUD/DayClock/Root/DayTimer");
             Check(game.DayStarted && !start.Visible && game.DayRemainingSeconds == 90, "A real click must start exactly once");
             Root.PushInput(new InputEventMouseMotion { Position = new Vector2(800, 400), Relative = Vector2.One }, true);
             using (await CapturePresentation()) { }
-            Check(game.GetNode<TextureRect>("HUD/Root/DayTimer/Clock").SelfModulate == Colors.White,
+            Check(game.GetNode<TextureRect>("HUD/DayClock/Root/DayTimer/Clock").SelfModulate == Colors.White,
                 "Starting the day must clear the hover darkening");
             start.EmitSignal(BaseButton.SignalName.Pressed);
             game._Process(1);
-            Check(game.DayRemainingSeconds == 89 && game.GetNode<Label>("HUD/Root/DayTimer").Text == "89",
+            Check(game.DayRemainingSeconds == 89 && game.GetNode<Label>("HUD/DayClock/Root/DayTimer").Text == "89",
                 "After Start the timer must count down in seconds");
-            var clockAction = game.GetNode<Button>("HUD/Root/ClockActionButton");
-            var endCaption = game.GetNode<Label>("HUD/Root/DayTimer/EndDayCaption");
+            var clockAction = game.GetNode<Button>("HUD/DayClock/Root/ClockActionButton");
+            var endCaption = game.GetNode<Label>("HUD/DayClock/Root/DayTimer/EndDayCaption");
             Check(!endCaption.Visible, "A running clock must show seconds until hovered");
             Vector2 endPoint = ScreenBounds(clockAction).GetCenter();
             Root.PushInput(new InputEventMouseMotion { Position = endPoint, GlobalPosition = endPoint, Relative = Vector2.One }, true);
@@ -107,7 +108,7 @@ public partial class ProjectTest
             clockAction.ReleaseFocus();
             await Reload();
             Check(game.DayStarted && game.DayRemainingSeconds > 88 && game.DayRemainingSeconds <= 89, "Reload of a running day must not demand another Start");
-            clockAction = game.GetNode<Button>("HUD/Root/ClockActionButton");
+            clockAction = game.GetNode<Button>("HUD/DayClock/Root/ClockActionButton");
             Vector2 clickPoint = ScreenBounds(clockAction).GetCenter();
             int clockClicks = 0;
             void ObserveClockClick(SoundEffects.Cue cue) { if (cue == SoundEffects.Cue.Click) clockClicks++; }
@@ -126,7 +127,7 @@ public partial class ProjectTest
                 Check(clockClicks == 1, "A physical clock down/hold/release across frames must play exactly one click");
             }
             finally { SoundEffects.Instance.Played -= ObserveClockClick; }
-            Check(game.DayClosed && !game.GetNode<Label>("HUD/Root/DayTimer/EndDayCaption").Visible,
+            Check(game.DayClosed && !game.GetNode<Label>("HUD/DayClock/Root/DayTimer/EndDayCaption").Visible,
                 "A real click must close the day early and clear its hover caption");
             game._Process(0.01);
             Check(game.CurrentDay == 2 && game.DayTransitionOpen,
@@ -144,14 +145,14 @@ public partial class ProjectTest
             game.ReturnToCheckpoint();
             Check(!game.DayStarted, "Returning to a checkpoint must wait for Start");
             game.NewGame();
-            Check(!game.DayStarted && game.GetNode<Button>("HUD/Root/DayTimer/StartButton").Visible,
+            Check(!game.DayStarted && game.GetNode<Button>("HUD/DayClock/Root/DayTimer/StartButton").Visible,
                 "New Game must show Start again");
             game.Score = 1000;
             game.EndDay(); // The unlock layout fixture requires an explicitly started day.
             game.TryUnlockMusicWorkshop();
             Root.Size = new Vector2I(1000, 800);
             using (var image = await CapturePresentation()) { }
-            timer = game.GetNode<Label>("HUD/Root/DayTimer");
+            timer = game.GetNode<Label>("HUD/DayClock/Root/DayTimer");
             var inventory = game.GetNode<Control>("HUD/InventoryUI/ScrollContainer");
             Check(timer.GetGlobalRect().End.X <= inventory.GetGlobalRect().Position.X,
                 "The larger clock must not overlap the six-slot inventory on a narrow viewport");

@@ -100,7 +100,7 @@ public partial class ProjectTest
             game.Score = 1000;
             game.TryUnlockMusicWorkshop();
             game.DayUpgrades.Restore(false, DayUpgrade.None, 2, 1, 1, 1, 1);
-            var clock = game.GetNode<TextureRect>("HUD/Root/DayTimer/Clock");
+            var clock = game.GetNode<TextureRect>("HUD/DayClock/Root/DayTimer/Clock");
             game.EndDay(); // Start the waiting day before advancing its clock to expiry.
             game._Process(91);
             Check(clock.Texture.ResourcePath.EndsWith("day_timer_expired.png"), "Expired clock must use its special red sprite");

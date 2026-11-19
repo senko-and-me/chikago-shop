@@ -34,7 +34,7 @@ public partial class ProjectTest
         // Legacy callers exercise the same public action through its current visible clock control.
         if (path == "HUD/Root/ProgressPanel/Content/EndDayButton")
             path = ((TradeScene)game).DayStarted || ((TradeScene)game).DayClosed
-                ? "HUD/Root/ClockActionButton" : "HUD/Root/DayTimer/StartButton";
+                ? "HUD/DayClock/Root/ClockActionButton" : "HUD/DayClock/Root/DayTimer/StartButton";
         var control = game.GetNode<Control>(path);
         if (path.StartsWith("World/", StringComparison.Ordinal))
         {

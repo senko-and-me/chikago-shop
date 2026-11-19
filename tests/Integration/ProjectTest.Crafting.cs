@@ -71,21 +71,36 @@ public partial class ProjectTest
                 var title = surface.GetNode<Label>("Title");
                 var firstStat = surface.GetNode<Control>("StatTime");
                 var lastStat = surface.GetNode<Control>("StatMisses");
-                var dayHeading = surface.GetNode<Label>("DayHeading");
-                var dayTimer = surface.GetNode<Label>("DayTimer");
                 var hint = surface.GetNode<Label>("Hint");
                 Check(title.GetRect().End.X + 8 <= firstStat.Position.X &&
-                    lastStat.GetRect().End.X + 8 <= dayHeading.Position.X &&
+                    lastStat.GetRect().End.X + 8 <= panel.End.X &&
                     firstStat.GetRect().End.Y + 20 <= fabric.Position.Y,
-                    "Title, three statistics and labeled day timer must share a separated header above the workspace");
+                    "Title and three statistics must share a separated header above the workspace");
                 Check(panel.Encloses(fabric.Grow(7)) && fabric.End.Y + 7 <= hint.Position.Y &&
                     surface.QualityTrackRect.Position.X >= fabric.End.X + 16 &&
                     surface.GetNode<Label>("Quality").GetRect().End.Y <= fabric.End.Y + 1,
                     "Workspace, quality sidebar and footer must stay separated inside the modal");
-                Check(panel.Encloses(dayTimer.GetRect()) && panel.Encloses(dayHeading.GetRect()) &&
-                    dayHeading.GetRect().End.Y <= dayTimer.Position.Y &&
-                    dayHeading.Text == (locale == "ru" ? "ДО КОНЦА ДНЯ" : "DAY ENDS IN"),
-                    "Day countdown must have a translated heading instead of an unexplained number");
+                var clockLayer = game.GetNode<CanvasLayer>("HUD/DayClock");
+                var clockAction = game.GetNode<Button>("HUD/DayClock/Root/ClockActionButton");
+                var clock = game.GetNode<Label>("HUD/DayClock/Root/DayTimer");
+                Check(!surface.HasNode("DayTimer") && !surface.HasNode("DayHeading") &&
+                    clockLayer.Layer > craft.Layer && clock.IsVisibleInTree() && clockAction.Disabled &&
+                    surface.GetNode<Control>("StatTime").Visible,
+                    "One shared clock must render above the craft modal, with input disabled and craft time preserved");
+                int visibleClock = 0;
+                Rect2 clockBounds = ScreenBounds(clock);
+                for (int y = (int)clockBounds.Position.Y; y < (int)clockBounds.End.Y; y += 2)
+                for (int x = (int)clockBounds.Position.X; x < (int)clockBounds.End.X; x += 2)
+                {
+                    if (panel.HasPoint(new Vector2(x, y))) continue;
+                    Vector2 pixel = new Vector2(x, y) * scale;
+                    if (frame.GetPixel((int)pixel.X, (int)pixel.Y).R > 0.8f) visibleClock++;
+                }
+                Check(visibleClock > 20, "Shared clock must remain visibly bright above modal dimming");
+                double beforeEnd = game.DayRemainingSeconds;
+                game.EndDay();
+                Check(game.DayRemainingSeconds == beforeEnd && !game.DayClosed,
+                    "Direct end-day calls must be ignored while crafting");
                 if (state is "ready" or "playing")
                     Check(hint.Text.Length > 0, "Instructions must remain visible while playing");
                 if (state == "playing" && locale == "ru" && size.X == 960)
@@ -134,9 +149,12 @@ public partial class ProjectTest
                     craft.FinishForTesting(false);
                     closeButton = "Action";
                 }
+                await ClickControl(game, "HUD/DayClock/Root/ClockActionButton");
+                Check(craft.IsOpen && !game.DayClosed, "Visible shared clock must not close the day through a real click during craft");
                 int items = game.StoredItems.Length;
                 if (state == "playing") craft.FinishForTesting(false);
                 await ClickControl(game, name + "/Surface/" + closeButton);
+                Check(clockLayer.Layer < 100 && !clockAction.Disabled, "Closing craft must restore ordinary clock layer and input");
                 Check(!craft.IsOpen && !Paused && game.StoredItems.Length == items,
                     "Restyled cancel/collect controls must close the minigame without duplicating items");
             }
@@ -310,7 +328,7 @@ public partial class ProjectTest
             embroidery._Process(0.5);
             Check(game.DayClosed && embroidery.IsOpen && Paused && game.EnergyRemaining == 0 &&
                   game.StoredItems.Length == 3 && game.Score == 130 &&
-                  embroidery.GetNode<Label>("Surface/DayTimer").Text == "00:00",
+                  game.GetNode<Label>("HUD/DayClock/Root/DayTimer").Text == "00",
                 "Expiry during a started craft must close the day and retain the paid batch");
             embroidery._Process(10);
             embroidery.Activate();

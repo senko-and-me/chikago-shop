@@ -145,7 +145,7 @@ public partial class ProjectTest
             {
                 TranslationServer.SetLocale(language);
                 game.NewGame();
-                Check(game.DayRemainingSeconds == 90 && game.GetNode<Label>("HUD/Root/DayTimer").Text == "90",
+                Check(game.DayRemainingSeconds == 90 && game.GetNode<Label>("HUD/DayClock/Root/DayTimer").Text == "90",
                     "The first day must start at ninety seconds before unlocking music");
                 foreach (string workshop in new[] { "atelier", "music" })
                 {
@@ -196,7 +196,7 @@ public partial class ProjectTest
             using (var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Write))
                 file.StoreString("{\"save_version\":12,\"day\":1,\"score\":220,\"energy_remaining\":3,\"day_remaining_seconds\":30}");
             game = await CreateGame(scene);
-            Check(game.DayRemainingSeconds == 45 && game.GetNode<Label>("HUD/Root/DayTimer").Text == "45",
+            Check(game.DayRemainingSeconds == 45 && game.GetNode<Label>("HUD/DayClock/Root/DayTimer").Text == "45",
                 "Half of a legacy sixty-second first day must restore as half of ninety seconds");
         }
         finally
