@@ -11,12 +11,22 @@
 ## Текущий фронт
 ### HF-181 — публикация изменений до старта дня, квот и интерфейса комнат
 
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-19; HF176/HF177/HF178/HF179/HF180 DONE; пользователь разрешил commit/push; пересечений нет.
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-19; HF176/HF177/HF178/HF179/HF180 DONE; пользователь разрешил commit/push; пересечений нет.
 
 CP-HF-181 read-set: текущий фронт; Git status/diff/refs; готовые изменения и evidence HF176…HF180; scenes/{main_menu,trade_scene}.tscn только hash. Write-set: Git index/commits/main/origin/main; ORCHESTRATION_PLAN.md; публикация готовых docs/GAMEPLAY.md, localization/en.tres, scripts/Camera/WorldCamera.cs, scripts/Days/DayCycleController.cs, scripts/Presentation/RoomDoorwayPresentation.cs, scripts/TradeScene.cs, scripts/UI/{DayStartGate.cs/.uid,EmbroideryGame.cs,InventoryUI.cs,ProgressPanel.cs,ZoomResponsiveUi.cs}, tests/ProjectTest.cs, tests/Integration/ProjectTest.{Camera,Crafting,DayStart,DayStartGate,Inventory,Resources,Ui}.cs и ProjectTest.DayStartGate.cs.uid; .local/checks/hf181. Out of scope: source/, пользовательские основные сцены, новые изменения поведения/баланса/schema, force push.
 
 Приёмка: все готовые проверенные правки опубликованы обычным push в origin/main; HEAD=origin/main; пользовательские сцены побайтно сохранены вне коммита. Проверки: SHA25619 runtime/test/docs файлов совпадают с tested isolated copy,2 новых UID валидны; прежние build/gate/inventory/doorway/quota/craft/titles/focus/tutorial PASS; staged diff --check, push/ref/status/hash readback.
 
+```text
+Task: HF-181
+Recommended status: REVIEW → принято координатором, DONE
+Changed: HF176…HF180 опубликованы коммитом2c03172 в origin/main: блокировка игровых действий до Start и локализованная подсказка, тёмные шторы, корректный срок квоты, Start слева с выделением, компактные названия комнат без подзаголовков и скрытие при отдалении; regression tests/docs/UID включены. Пользовательские основные сцены вне коммита. Запись завершения публикуется отдельным documentation commit.
+Checks: fetch0/0; все19 runtime/test/docs SHA256 совпадают с tested isolated copy;2 UID прочитаны и валидны. Прежние local/isolated build, rendered day-start-gate/inventory/room-doorway/quota-countdown/craft-contrast/room-title/room-focus/tutorial PASS. Staged diff --check PASS; staged paths точно совпадают с22 разрешёнными файлами. Обычный push origin main PASS; refs0/0. SHA256 двух пользовательских основных сцен совпадают со snapshot HF181; только они остались изменёнными.
+Acceptance: все готовые проверенные правки доступны в main на GitHub; main_menu.tscn/trade_scene.tscn сохранены локально побайтно.
+Read-set exception: нет; source/ не читался.
+Risks/blocker: нет новых.
+Next: пользовательская проверка опубликованной версии.
+```
 ### HF-180 — компактные названия комнат без подзаголовков, скрытие в общем ракурсе
 
 Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-19; HF-179 DONE; пересечений нет.
