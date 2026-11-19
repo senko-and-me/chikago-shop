@@ -11,11 +11,22 @@
 ## Текущий фронт
 ### HF-184 — публикация подписей сигарет и компоновки мини-игр
 
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-19; HF182/HF183 DONE; пользователь разрешил commit/push; пересечений нет.
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-19; HF182/HF183 DONE; пользователь разрешил commit/push; пересечений нет.
 
 CP-HF-184 read-set: текущий фронт, готовые diff/evidence HF182/HF183, Git status/refs, основные сцены только hash. Write-set: Git index/commits/main/origin/main; ORCHESTRATION_PLAN.md; публикация localization/en.tres, scripts/UI/{EmbroideryGame,ProgressPanel}.cs, tests/Integration/ProjectTest.{Crafting,Ui}.cs. Out of scope: source/, пользовательские основные сцены, новые изменения поведения, force push.
 
 Приёмка: проверенные изменения HF182/HF183 опубликованы в origin/main, refs совпадают; пользовательские сцены сохранены вне коммита. Проверки: fetch/ref, hash пяти файлов с tested isolated copy, готовые build/rendered checks, staged diff --check, push/readback/hash сцен.
+
+```text
+Task: HF-184
+Recommended status: REVIEW → принято координатором, DONE
+Changed: ea3c755 опубликован в origin/main: постоянные подписи на сигаретах и новая компоновка вышивки/полировки, переводы и regression tests. Запись завершения публикуется отдельным documentation commit.
+Checks: fetch refs0/0; SHA256 всех пяти runtime/test/localization файлов совпали с tested isolated copy. Предыдущие local/isolated build и rendered progress-toggle/quota-countdown/tutorial/craft-contrast PASS. Staged diff --check PASS; staged только шесть разрешённых файлов. Обычный push PASS, refs0/0. SHA256 основных сцен сохранены: main_menu 97BECA896A74173514B87915BAD731C10FA88AC6CBBCC079C63706F00A2A807F; trade_scene E1BF47D6CA6CC2A6664C2FD0D1329B6C2D8BCFCF27BE6775F6A9E2A4719EC8A1.
+Acceptance: обе готовые правки доступны в main; пользовательские сцены вне коммита.
+Read-set exception: нет; source/ не читался.
+Risks/blocker: нет новых.
+Next: пользовательская проверка опубликованной версии.
+```
 
 ### HF-183 — компоновка вышивки и полировки
 
