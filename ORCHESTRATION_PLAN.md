@@ -11,11 +11,22 @@
 ## Текущий фронт
 ### HF-187 — публикация учебной блокировки и общих часов
 
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-19; HF185/HF186 DONE; пользователь разрешил commit/push; пересечений нет.
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-19; HF185/HF186 DONE; пользователь разрешил commit/push; пересечений нет.
 
 CP-HF-187 read-set: текущий фронт, готовые diff/evidence HF185/HF186, Git status/refs, основные сцены только hash. Write-set: Git index/commits/main/origin/main; ORCHESTRATION_PLAN.md; публикация localization/en.tres, scripts/Days/DayCycleController.cs, scripts/UI/{EmbroideryGame,FirstTradeTutorial}.cs, tests/Integration/ProjectTest.{Crafting,DayExpiry,DayStart,DayStartGate,Days,Debug,DebugBalance,Economy,Helpers,Menu,Presentation,Tutorial,Ui}.cs. Out of scope: source/, пользовательские основные сцены, новые изменения поведения, force push.
 
 Приёмка: готовые изменения HF185/HF186 опубликованы в origin/main; refs совпадают, пользовательские сцены сохранены вне коммита. Проверки: fetch/refs, hash с tested isolated copy, предыдущие build и rendered craft-contrast/day-start/tutorial PASS; staged diff --check; push/readback/hash сцен.
+
+```text
+Task: HF-187
+Recommended status: REVIEW → принято координатором, DONE
+Changed: ad736c6 опубликован в origin/main: запрет завершать день во время обучения с подсказкой, общие часы над мини-играми и удаление дубля дня внутри, обновлённые regression tests/переводы/пути. Запись завершения публикуется отдельным documentation commit.
+Checks: fetch refs0/0; SHA256 всех17 runtime/test/localization файлов совпали с tested isolated copy; предыдущие local/isolated build и rendered craft-contrast/day-start/tutorial PASS, stderr пусты. Staged ровно18 разрешённых файлов, diff --check PASS; обычный push PASS, refs0/0. SHA256 двух пользовательских сцен совпадают с HF184: main_menu 97BECA896A74173514B87915BAD731C10FA88AC6CBBCC079C63706F00A2A807F; trade_scene E1BF47D6CA6CC2A6664C2FD0D1329B6C2D8BCFCF27BE6775F6A9E2A4719EC8A1.
+Acceptance: обе готовые правки доступны в main, основные сцены остались локально вне коммита.
+Read-set exception: нет; source/ не читался.
+Risks/blocker: нет новых.
+Next: пользовательская проверка опубликованной версии.
+```
 
 ### HF-186 — общие часы поверх мини-игр
 
