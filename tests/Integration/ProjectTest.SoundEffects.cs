@@ -40,7 +40,8 @@ public partial class ProjectTest
             await Settle();
         }
         void OnlyActivation(SoundEffects.Cue cue, string message) => Check(
-            sounds.SequenceEqual(new[] { cue }),
+            sounds.Where(sound => sound != SoundEffects.Cue.Hover).SequenceEqual(new[] { cue }) ||
+            cue == SoundEffects.Cue.Click && sounds.SequenceEqual(new[] { SoundEffects.Cue.Hover }),
             message + $" (heard: {string.Join(",", sounds)})");
         async Task CreateTrade()
         {
@@ -95,8 +96,8 @@ public partial class ProjectTest
             }
             Check(effects.GetNode<AudioStreamPlayer>("Click").Stream.ResourcePath == "res://audio/sfx/click.wav" &&
                   effects.GetNode<AudioStreamPlayer>("Hover").Stream.ResourcePath == "res://audio/sfx/hover.wav" &&
-                  effects.HoverDelaySeconds == 0.15,
-                "Original hover and click recordings must have separate roles with a 150ms hover grace period");
+                  effects.HoverClickMergeSeconds == 0.1,
+                "Original recordings must retain their roles with a 100ms click merge window and no hover delay");
             fixture = new CanvasLayer { Layer = 500 };
             Root.AddChild(fixture);
             var button = new Button { Name = "SoundProbe", Text = "Sound", Position = new Vector2(80, 100), Size = new Vector2(240, 70) };
@@ -113,14 +114,43 @@ public partial class ProjectTest
             Check(sounds.SequenceEqual(new[] { SoundEffects.Cue.Click }),
                 "A fast pointer entry and click must play only click, without starting hover");
             sounds.Clear();
-            await ToSignal(CreateTimer(effects.HoverDelaySeconds + 0.08), SceneTreeTimer.SignalName.Timeout);
+            await ToSignal(CreateTimer(effects.HoverClickMergeSeconds + 0.08), SceneTreeTimer.SignalName.Timeout);
             Check(sounds.Count == 0, "Cancelled hover must not start late after the fast click");
             await Move(new Vector2(600, 100));
             await Move(point);
-            Check(sounds.Count == 0, "Pointer entry must stay silent during the grace period");
-            await ToSignal(CreateTimer(effects.HoverDelaySeconds + 0.03), SceneTreeTimer.SignalName.Timeout);
             Check(sounds.SequenceEqual(new[] { SoundEffects.Cue.Hover }),
-                "A deliberate hover must play the original hover sound once after the delay");
+                "Pointer entry must play hover immediately without an intentional delay");
+            int activations = 0;
+            button.Pressed += () => activations++;
+            Root.PushInput(new InputEventMouseButton { Position = point, GlobalPosition = point,
+                ButtonIndex = MouseButton.Left, Pressed = true, ButtonMask = MouseButtonMask.Left }, true);
+            await ToSignal(CreateTimer(effects.HoverClickMergeSeconds + 0.06), SceneTreeTimer.SignalName.Timeout);
+            Root.PushInput(new InputEventMouseButton { Position = point, GlobalPosition = point,
+                ButtonIndex = MouseButton.Left, Pressed = false }, true);
+            await Settle();
+            Check(sounds.SequenceEqual(new[] { SoundEffects.Cue.Hover }) && activations == 1,
+                "Fast mouse-down must merge the ordinary click while a held release still activates the button exactly once");
+            sounds.Clear();
+            button.EmitSignal(BaseButton.SignalName.Pressed);
+            Check(sounds.SequenceEqual(new[] { SoundEffects.Cue.Click }),
+                "A merged physical click must not suppress a subsequent separate activation");
+            await Move(new Vector2(600, 100));
+            await Move(point);
+            Root.PushInput(new InputEventMouseButton { Position = point, GlobalPosition = point,
+                ButtonIndex = MouseButton.Left, Pressed = true, ButtonMask = MouseButtonMask.Left }, true);
+            await Move(new Vector2(600, 100));
+            Root.PushInput(new InputEventMouseButton { Position = new Vector2(600, 100), GlobalPosition = new Vector2(600, 100),
+                ButtonIndex = MouseButton.Left, Pressed = false }, true);
+            await Settle();
+            sounds.Clear();
+            button.EmitSignal(BaseButton.SignalName.Pressed);
+            Check(sounds.SequenceEqual(new[] { SoundEffects.Cue.Click }),
+                "An abandoned mouse gesture must clear its merge latch before later activations");
+            await Move(new Vector2(600, 100));
+            sounds.Clear();
+            await Move(point);
+            Check(sounds.SequenceEqual(new[] { SoundEffects.Cue.Hover }), "A new entry must immediately play hover again");
+            await ToSignal(CreateTimer(effects.HoverClickMergeSeconds + 0.03), SceneTreeTimer.SignalName.Timeout);
             sounds.Clear();
             await Move(point + Vector2.One * 3);
             Check(sounds.Count == 0, "Movement within one icon must not restart hover");
@@ -135,17 +165,34 @@ public partial class ProjectTest
             await Settle();
             Check(sounds.SequenceEqual(new[] { SoundEffects.Cue.Click }), "Release must play exactly one original click");
             sounds.Clear();
+            button.GrabFocus();
+            Root.PushInput(new InputEventKey { Keycode = Key.Space, Pressed = true }, true);
+            Root.PushInput(new InputEventKey { Keycode = Key.Space, Pressed = false }, true);
+            await Settle();
+            Check(sounds.SequenceEqual(new[] { SoundEffects.Cue.Click }), "Keyboard activation must never be lost to mouse merging");
+            await Move(new Vector2(600, 100));
+            sounds.Clear();
+            button.Name = "SettingsButton";
+            await Move(point);
+            await Press(point);
+            Check(sounds.SequenceEqual(new[] { SoundEffects.Cue.Hover, SoundEffects.Cue.Settings }) &&
+                  !effects.GetNode<AudioStreamPlayer>("Hover").Playing,
+                "A rapid special activation must retain its own sound and stop hover, without generic click");
+            button.Name = "SoundProbe";
+            sounds.Clear();
             await Move(new Vector2(600, 100)); await Move(point);
+            sounds.Clear();
             button.Hide();
-            await ToSignal(CreateTimer(effects.HoverDelaySeconds + 0.08), SceneTreeTimer.SignalName.Timeout);
+            await ToSignal(CreateTimer(effects.HoverClickMergeSeconds + 0.08), SceneTreeTimer.SignalName.Timeout);
             Check(sounds.Count == 0, "Hiding a button must cancel pending hover");
             button.Show();
-            await ToSignal(CreateTimer(effects.HoverDelaySeconds + 0.08), SceneTreeTimer.SignalName.Timeout);
+            await ToSignal(CreateTimer(effects.HoverClickMergeSeconds + 0.08), SceneTreeTimer.SignalName.Timeout);
             Check(sounds.Count == 0, "Showing a button under a stationary pointer must not schedule hover");
             await Move(new Vector2(600, 100));
+            sounds.Clear();
             Root.PushInput(new InputEventMouseMotion { Position = point, GlobalPosition = point, Relative = Vector2.One }, true);
             Root.PushInput(new InputEventMouseMotion { Position = new Vector2(600, 100), GlobalPosition = new Vector2(600, 100), Relative = Vector2.One }, true);
-            await ToSignal(CreateTimer(effects.HoverDelaySeconds + 0.08), SceneTreeTimer.SignalName.Timeout);
+            await ToSignal(CreateTimer(effects.HoverClickMergeSeconds + 0.08), SceneTreeTimer.SignalName.Timeout);
             Check(sounds.Count == 0, "Passing over an icon and leaving it quickly must not play hover");
             sounds.Clear();
             button.Disabled = true;
@@ -176,12 +223,12 @@ public partial class ProjectTest
             await Move(new Vector2(600, 100));
             Vector2 skipPoint = skip.GetGlobalTransformWithCanvas() * (skip.Size / 2);
             await Move(skipPoint);
-            await ToSignal(CreateTimer(effects.HoverDelaySeconds + 0.03), SceneTreeTimer.SignalName.Timeout);
+            await ToSignal(CreateTimer(effects.HoverClickMergeSeconds + 0.03), SceneTreeTimer.SignalName.Timeout);
             Check(sounds.SequenceEqual(new[] { SoundEffects.Cue.Hover }),
                 $"Prologue Skip must support delayed hover (heard: {string.Join(",", sounds)}, target: {Root.GuiGetHoveredControl()?.GetPath()}, rect: {skip.GetGlobalRect()})");
             sounds.Clear();
             await Press(skipPoint);
-            OnlyActivation(SoundEffects.Cue.Click, "The manual Skip input path must play one click");
+            OnlyActivation(SoundEffects.Cue.Click, "The manual Skip input path must play or merge one ordinary activation");
             Check(!menu.GetNode<CanvasLayer>("IntroSkipLayer").Visible &&
                   menu.GetNode<IntroMusicDirector>("MusicDirector").CurrentCue == "silence",
                 "A sounded Skip must still start exactly one existing fade-out transition");
@@ -199,7 +246,7 @@ public partial class ProjectTest
             sounds.Clear();
             Root.PushInput(new InputEventMouseMotion { Position = skipPoint, GlobalPosition = skipPoint, Relative = Vector2.One }, true);
             await Press(skipPoint);
-            await ToSignal(CreateTimer(effects.HoverDelaySeconds + 0.08), SceneTreeTimer.SignalName.Timeout);
+            await ToSignal(CreateTimer(effects.HoverClickMergeSeconds + 0.08), SceneTreeTimer.SignalName.Timeout);
             Check(sounds.SequenceEqual(new[] { SoundEffects.Cue.Click }),
                 "Fast Skip must emit exactly one click and cancel hover without a late sound");
             menu.QueueFree(); menu = null;

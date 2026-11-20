@@ -1,7 +1,7 @@
 # Оркестровый план: «Бакалея для гангстеров»
 
 Версия плана: 1.2
-Обновлено: 2026-11-18
+Обновлено: 2026-11-20
 Стадия по реестру: `S1 — домен, конфигурация и воспроизводимость`
 
 Этот файл хранит требования, решения, стадии и текущий фронт. Рабочий протокол — в [AGENTS.md](AGENTS.md), подробные завершённые отчёты — в [архиве](docs/archive/ORCHESTRATION_HISTORY_2026-11-12.md). `source/` остаётся локальным архивом и не входит в Git.
@@ -9,6 +9,20 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### HF-200 — мгновенный звук наведения и объединение быстрого клика
+
+Статус: `DONE`; координатор/исполнитель /root; READY 2026-11-20; HF199 DONE. CP-HF-200: .local/checks/hf200/CP-HF-200.md, точные scope/приёмка/проверки в пакете. Hover без задержки, обычный click того же элемента в100мс объединяется с hover; особые звуки сохраняются. Без правок аудиофайлов, ZIP/EXE и commit/push.
+
+
+Task: HF-200
+Recommended status: REVIEW → принято координатором, DONE
+Changed: scripts/Audio/SoundEffects.cs; tests/Integration/ProjectTest.{SoundEffects,DayStart}.cs; tests/ProjectTest.cs; ORCHESTRATION_PLAN.md.
+Checks: dotnet build ChikagoShop.sln --no-restore PASS (0 warnings/errors); isolated Godot import PASS; rendered --sound-effects-checks PASS: hover на первом обработанном кадре, fast same-frame без hover даёт click, быстрый hover/down + hold160ms + release даёт только Hover и одно реальное действие, медленный click даёт Click и останавливает hover, повторный и отменённый gesture не оставляют latch, keyboard не подавляется, Settings всегда звучит и останавливает Hover, menu/Skip/pause/sale/bell/reroll/editor mix/WAV hashes regression PASS. Rendered --day-start-checks PASS, физическое нажатие часов ждёт вне окна100мс и затем проверяет ровно1Click и переход дня; поведение часов не менялось. git diff-check PASS. Evidence .local/checks/hf200/{build,import,sound-effects,day-start}.log.
+Acceptance: искусственная задержка hover150ms удалена. Экспортирован HoverClickMergeSeconds=0.1: при mouse-down того же элемента в100мс после фактического старта hover фиксируется объединение обычного Click; оно сохраняется до отпускания, действие выполняется штатно, Hover не перезапускается и второй generic click не звучит. Special Settings/Sale/result всегда имеют собственный звук. Input generation защищает от очистки новой попытки deferred-событием предыдущего release. Уход/скрытие/disabled/static menus сохраняют прежнюю фильтрацию. Аудиофайлы, уровни и SFX preference не менялись.
+Read-set exception: test DayStart включён в write-set для согласования существующего ожидания Click с новой семантикой rapid merge; изолированная копия читает tracked runtime-файлы, source/ не читался.
+Risks/blocker: новых блокеров нет; прежнее Godot root certificate warning в sandbox. Быстрое специальное действие может дать уже услышанное начало hover, но при воспроизведении special hover останавливается — сохраняется оговорённый приоритет специальных звуков. ZIP/EXE/Downloads не менялись, commit/push не выполнялись.
+Next: пользовательская оценка окна100мс на слух; при необходимости изменить HoverClickMergeSeconds у SoundEffects.
+
 ### HF-199 — публикация готовых изменений HF194–198
 
 Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-19; HF194–198 DONE, пользователь просит push. CP-HF-199 read-set: Git status/diff/refs, готовые изменения/evidence HF194–198, snapshots .local/checks/hf195/{main_menu,trade_scene}.before.tscn, текущие основные сцены для выделения только RGB replacements. Write-set: index/commit/push готовых файлов HF194–198; основные сцены в index только RGB из HF195 поверх HEAD; ORCHESTRATION_PLAN.md; .local/checks/hf199/isolatedcopy. Out of scope: source/, несвязанные пользовательские правки основных сцен, force push/gameplay. Приёмка: готовые изменения опубликованы, пользовательские изменения не включены и рабочие файлы сцен побайтно сохранены. Checks: exact staged list/diffcheck, staged scenes rendered checks, push/refreadback/status.

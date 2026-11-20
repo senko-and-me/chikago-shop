@@ -10,17 +10,18 @@ public partial class SoundEffects : Node
     private readonly RandomNumberGenerator _stitchRandom = new();
     public const string BusName = "SFX";
     public static SoundEffects Instance { get; private set; }
-    [Export(PropertyHint.Range, "0.05,1,0.01")] public double HoverDelaySeconds { get; set; } = 0.15;
+    [Export(PropertyHint.Range, "0,0.3,0.005")] public double HoverClickMergeSeconds { get; set; } = 0.1;
     public double Volume { get; private set; } = 1;
     public event Action<double> VolumeChanged;
     public event Action<Cue> Played;
     private readonly Dictionary<Cue, AudioStreamPlayer> _voices = new();
     private readonly Dictionary<BaseButton, Action> _buttons = new();
     private readonly Dictionary<TradeScene, (Action Arrived, Action Changed)> _games = new();
-    private BaseButton _hovered, _pendingHover;
+    private BaseButton _hovered, _hoverSoundButton, _mergedPress;
+    private ulong _hoverSoundAt;
+    private ulong _pressGeneration;
     private Vector2 _lastPointer = new(float.NaN, float.NaN);
     private bool _motionPending;
-    private double _hoverElapsed;
 
     public override void _Ready()
     {
@@ -91,12 +92,15 @@ public partial class SoundEffects : Node
                 if (!Interactive(button)) return;
                 // Refusal is sounded once the new offer is known, rather than as a generic click.
                 if (button.Name == "DeclineButton") return;
-                Play(button.Name.ToString() switch
+                Cue cue = button.Name.ToString() switch
                 {
                     "SettingsButton" => Cue.Settings,
                     "AcceptButton" => Cue.Sale,
                     _ => Cue.Click
-                });
+                };
+                bool merged = cue == Cue.Click && _mergedPress == button;
+                _mergedPress = null;
+                if (!merged) Play(cue);
             };
             _buttons.Add(button, activate);
             button.Pressed += activate;
@@ -125,6 +129,8 @@ public partial class SoundEffects : Node
             game.BuyerOfferChanged -= callbacks.Changed;
         }
         if (node == _hovered) { _hovered = null; CancelHover(); }
+        if (node == _hoverSoundButton) _hoverSoundButton = null;
+        if (node == _mergedPress) _mergedPress = null;
     }
 
     private static bool Interactive(BaseButton button) => GodotObject.IsInstanceValid(button) &&
@@ -140,8 +146,7 @@ public partial class SoundEffects : Node
 
     private void CancelHover()
     {
-        _pendingHover = null;
-        _hoverElapsed = 0;
+        _hoverSoundButton = null;
         _voices[Cue.Hover].Stop();
     }
 
@@ -156,7 +161,20 @@ public partial class SoundEffects : Node
         else if (input is InputEventMouseButton { Pressed: true } or InputEventKey { Pressed: true })
         {
             _motionPending = false;
-            CancelHover();
+            _pressGeneration++;
+            _mergedPress = null;
+            var current = PointerButton();
+            if (input is InputEventMouseButton { ButtonIndex: MouseButton.Left } &&
+                current != null && current == _hovered && current == _hoverSoundButton &&
+                (Time.GetTicksMsec() - _hoverSoundAt) / 1000.0 <= HoverClickMergeSeconds)
+                _mergedPress = current;
+            else CancelHover();
+        }
+        else if (input is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: false })
+        {
+            // GUI activation follows _Input. Clear an abandoned press only after GUI dispatch.
+            ulong generation = _pressGeneration;
+            Callable.From(() => { if (_pressGeneration == generation) _mergedPress = null; }).CallDeferred();
         }
     }
 
@@ -171,14 +189,14 @@ public partial class SoundEffects : Node
             {
                 CancelHover();
                 _hovered = current;
-                _pendingHover = current;
+                if (current != null)
+                {
+                    _hoverSoundButton = current;
+                    _hoverSoundAt = Time.GetTicksMsec();
+                    Play(Cue.Hover);
+                }
             }
         }
-        if (_pendingHover == null) return;
-        _hoverElapsed += delta;
-        if (_hoverElapsed < Math.Max(0, HoverDelaySeconds)) return;
-        _pendingHover = null;
-        Play(Cue.Hover);
     }
 
     public void PlayStitch()

@@ -117,6 +117,7 @@ public partial class ProjectTest
             {
                 Root.PushInput(new InputEventMouseMotion { Position = clickPoint, GlobalPosition = clickPoint, Relative = Vector2.One }, true);
                 await ToSignal(this, SignalName.ProcessFrame);
+                await ToSignal(CreateTimer(SoundEffects.Instance.HoverClickMergeSeconds + 0.03), SceneTreeTimer.SignalName.Timeout);
                 Root.PushInput(new InputEventMouseButton { Position = clickPoint, GlobalPosition = clickPoint,
                     ButtonIndex = MouseButton.Left, Pressed = true, ButtonMask = MouseButtonMask.Left }, true);
                 // A human releases in a later frame. Same-frame synthetic clicks miss focus-reset bugs.
