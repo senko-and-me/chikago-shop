@@ -7,19 +7,17 @@ public partial class SoundEffects : Node
 {
     public enum Cue { Hover, Click, Settings, Sale, CustomerBell, RerollSuccess, RerollFailure, Stitch1, Stitch2, Stitch3 }
     private static readonly Cue[] StitchCues = { Cue.Stitch1, Cue.Stitch2, Cue.Stitch3 };
+    private static readonly Cue[] UiCues = { Cue.Hover, Cue.Click, Cue.Settings, Cue.Sale };
     private readonly RandomNumberGenerator _stitchRandom = new();
     public const string BusName = "SFX";
     public static SoundEffects Instance { get; private set; }
-    [Export(PropertyHint.Range, "0,0.3,0.005")] public double HoverClickMergeSeconds { get; set; } = 0.1;
     public double Volume { get; private set; } = 1;
     public event Action<double> VolumeChanged;
     public event Action<Cue> Played;
     private readonly Dictionary<Cue, AudioStreamPlayer> _voices = new();
     private readonly Dictionary<BaseButton, Action> _buttons = new();
     private readonly Dictionary<TradeScene, (Action Arrived, Action Changed)> _games = new();
-    private BaseButton _hovered, _hoverSoundButton, _mergedPress;
-    private ulong _hoverSoundAt;
-    private ulong _pressGeneration;
+    private BaseButton _hovered;
     private Vector2 _lastPointer = new(float.NaN, float.NaN);
     private bool _motionPending;
 
@@ -98,9 +96,7 @@ public partial class SoundEffects : Node
                     "AcceptButton" => Cue.Sale,
                     _ => Cue.Click
                 };
-                bool merged = cue == Cue.Click && _mergedPress == button;
-                _mergedPress = null;
-                if (!merged) Play(cue);
+                Play(cue);
             };
             _buttons.Add(button, activate);
             button.Pressed += activate;
@@ -128,9 +124,7 @@ public partial class SoundEffects : Node
             game.BuyerArrived -= callbacks.Arrived;
             game.BuyerOfferChanged -= callbacks.Changed;
         }
-        if (node == _hovered) { _hovered = null; CancelHover(); }
-        if (node == _hoverSoundButton) _hoverSoundButton = null;
-        if (node == _mergedPress) _mergedPress = null;
+        if (node == _hovered) _hovered = null;
     }
 
     private static bool Interactive(BaseButton button) => GodotObject.IsInstanceValid(button) &&
@@ -146,7 +140,6 @@ public partial class SoundEffects : Node
 
     private void CancelHover()
     {
-        _hoverSoundButton = null;
         _voices[Cue.Hover].Stop();
     }
 
@@ -161,40 +154,21 @@ public partial class SoundEffects : Node
         else if (input is InputEventMouseButton { Pressed: true } or InputEventKey { Pressed: true })
         {
             _motionPending = false;
-            _pressGeneration++;
-            _mergedPress = null;
-            var current = PointerButton();
-            if (input is InputEventMouseButton { ButtonIndex: MouseButton.Left } &&
-                current != null && current == _hovered && current == _hoverSoundButton &&
-                (Time.GetTicksMsec() - _hoverSoundAt) / 1000.0 <= HoverClickMergeSeconds)
-                _mergedPress = current;
-            else CancelHover();
-        }
-        else if (input is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: false })
-        {
-            // GUI activation follows _Input. Clear an abandoned press only after GUI dispatch.
-            ulong generation = _pressGeneration;
-            Callable.From(() => { if (_pressGeneration == generation) _mergedPress = null; }).CallDeferred();
         }
     }
 
     public override void _Process(double delta)
     {
         var current = PointerButton();
-        if (_hovered != null && current != _hovered) { _hovered = null; CancelHover(); }
+        if (_hovered != null && current != _hovered) _hovered = null;
         if (_motionPending)
         {
             _motionPending = false;
             if (current != _hovered)
             {
-                CancelHover();
                 _hovered = current;
                 if (current != null)
-                {
-                    _hoverSoundButton = current;
-                    _hoverSoundAt = Time.GetTicksMsec();
                     Play(Cue.Hover);
-                }
             }
         }
     }
@@ -207,7 +181,20 @@ public partial class SoundEffects : Node
 
     private void Play(Cue cue)
     {
-        if (cue is Cue.Click or Cue.Settings or Cue.Sale or Cue.RerollSuccess or Cue.RerollFailure) CancelHover();
+        bool ordinaryUi = cue is Cue.Hover or Cue.Click;
+        bool actionUi = cue is Cue.Settings or Cue.Sale;
+        if (ordinaryUi || actionUi)
+        {
+            // Rejected sounds are dropped, never delayed or queued. Button actions remain independent.
+            if (ordinaryUi)
+            {
+                foreach (Cue ui in UiCues)
+                    if (_voices[ui].Playing) return;
+            }
+            else
+                foreach (Cue ui in UiCues) _voices[ui].Stop();
+        }
+        if (cue is Cue.RerollSuccess or Cue.RerollFailure) CancelHover();
         if (cue is Cue.RerollSuccess or Cue.RerollFailure)
         {
             _voices[Cue.RerollSuccess].Stop();

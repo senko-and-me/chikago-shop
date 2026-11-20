@@ -9,6 +9,20 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### HF-202 — блокировка новых UI-звуков до окончания предыдущего и аудит WAV
+
+Статус: `DONE`; координатор/исполнитель /root; READY 2026-11-20; HF200/201 DONE. CP-HF-202: .local/checks/hf202/CP-HF-202.md — точные scope, приёмка и проверки. First-wins для hover/click с сохранением приоритета настроек/продажи; по явному ответу пользователя убрано тихое начало hover/click, оригиналы сохранены отдельно. ZIP/EXE и commit/push вне задачи.
+
+
+Task: HF-202
+Recommended status: REVIEW → принято координатором, DONE
+Changed: scripts/Audio/SoundEffects.cs; audio/sfx/{hover,click}.wav; tests/Integration/ProjectTest.{SoundEffects,DayStart}.cs; tests/ProjectTest.cs; ORCHESTRATION_PLAN.md. Originals/evidence in .local/checks/hf202.
+Checks: dotnet build ChikagoShop.sln --no-restore PASS0warnings/errors; isolated Godot import PASS. Rendered --sound-effects-checks PASS: immediate hover, actions during busy voice, other-button shared limit, no queue/restart, next sound after natural completion, keyboard, Settings/Sale priority, menu/Skip/pause/bell/reroll, editor volume and approved hashes. First20ms decoder probe confirms hover/click attack. --day-start-checks PASS (physical clock click after hover completion). All8 other SFX hash unchanged, original hover/click backups match pre-task hashes. git diff-check PASS. Evidence .local/checks/hf202/{audio-analysis.json,trim-report.txt,build.log,import.log,sound-effects.log,day-start.log}.
+Acceptance: prior100ms heuristic removed. Hover/Click first-wins while any UI voice (Hover,Click,Settings,Sale) plays; rejected cue is dropped, no delayed replay. Mouse-down/leave no longer truncate hover. Settings/Sale interrupt UI voices and always retain their own cue, as explicitly selected. Gameplay bell/reroll/stitches keep prior rules. User explicitly authorized removing quiet lead; each hover/click trimmed5016frames=113.741ms with3ms retained before detected attack. New lengths0.286259s/0.345329s vs0.400000s/0.459070s. PCM24/44100Hz/stereo and retained PCM bytes unchanged; no gain/tail changes.
+Read-set exception: original PCM helper .local/checks/hf154/PrepareAudio.cs reused read-only, audio imports/mix scene read-only, isolated snapshot runtime files read for import. source/ not read.
+Risks/blocker: none new; previous sandbox root certificate warning. Measurements use5ms RMS relative threshold1%/10%max, onset trimming uses1ms blocks. About115ms is a very quiet lead, NOT literal digital silence (first nonzero originally25.71ms hover/8.73ms click). Reroll failure has about1s below relative -40dB after its useful part, unchanged. Customer bell1.502s/sale1.500s, settings0.297s, success/failure1.608s, stitches0.500s. Waveforms measured and decoder tested, subjective listening not claimed. ZIP/EXE and GitHub unchanged, no commit/push.
+Next: user listening evaluation of first-wins and shortened UI samples.
+
 ### HF-200 — мгновенный звук наведения и объединение быстрого клика
 
 Статус: `DONE`; координатор/исполнитель /root; READY 2026-11-20; HF199 DONE. CP-HF-200: .local/checks/hf200/CP-HF-200.md, точные scope/приёмка/проверки в пакете. Hover без задержки, обычный click того же элемента в100мс объединяется с hover; особые звуки сохраняются. Без правок аудиофайлов, ZIP/EXE и commit/push.

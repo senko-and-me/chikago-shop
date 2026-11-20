@@ -86,7 +86,7 @@ public partial class ProjectTest : SceneTree
             if (OS.GetCmdlineUserArgs().Contains("--sound-effects-checks"))
             {
                 await TestSoundEffects();
-                GD.Print("SOUND_EFFECTS_CHECKS_PASS: immediate hover, 100ms same-button click merge, held/slow/keyboard clicks, special cue priority, natural buyer bell, pause and cleanup");
+                GD.Print("SOUND_EFFECTS_CHECKS_PASS: immediate trimmed hover/click, first-wins UI playback without queue/restart, actions/keyboard, special cue priority, natural buyer bell, pause and cleanup");
                 Quit();
                 return;
             }
