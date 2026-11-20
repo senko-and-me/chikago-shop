@@ -11,7 +11,18 @@
 ## Текущий фронт
 ### HF-204 — публикация анимаций и исправлений интерфейса
 
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-20; HF200–203 DONE; пользователь просит push. CP-HF-204 read-set: Git status/diff/refs, готовые файлы HF200–203 и evidence; основные сцены только выделение разрешённых script/cover rect/LanguageLabel properties поверх HEAD. Write-set: index/commit/push готовых файлов, main_menu/trade_scene index только разрешённые свойства; ORCHESTRATION_PLAN.md; .local/checks/hf204/isolatedcopy. Out of scope: source/, export_presets.cfg, остальные пользовательские изменения основных сцен, force push/новый gameplay. Приёмка: анимации занавесок/пролога, styled pause sliders, стабильные кнопки и покрытие щелей опубликованы; пользовательские файлы побайтно сохранены. Checks: exactstageddiff, build, focused renders на stagedscenes, push/refreadback/status.
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-20; HF200–203 DONE; пользователь просит push. CP-HF-204 read-set: Git status/diff/refs, готовые файлы HF200–203 и evidence; основные сцены только выделение разрешённых script/cover rect/LanguageLabel properties поверх HEAD. Write-set: index/commit/push готовых файлов, main_menu/trade_scene index только разрешённые свойства; ORCHESTRATION_PLAN.md; .local/checks/hf204/isolatedcopy. Out of scope: source/, export_presets.cfg, остальные пользовательские изменения основных сцен, force push/новый gameplay. Приёмка: анимации занавесок/пролога, styled pause sliders, стабильные кнопки и покрытие щелей опубликованы; пользовательские файлы побайтно сохранены. Checks: exactstageddiff, build, focused renders на stagedscenes, push/refreadback/status.
+
+```text
+Task: HF-204
+Recommended status: REVIEW → принято координатором, DONE
+Changed: e0fe3e8 опубликован в origin/main, 18файлов HF200–203. Основные сцены частично staged: mainmenu только2LanguageLabel properties; trade только curtain script resource/bindings и5cover/curtain/button rect nodes. export_presets и прочие пользовательские scene changes исключены. На сервере были6cd65b9/1265ccd (UI audio); rebase сохранил оба, журнал работ объединён с сохранением обеих параллельных историй HF200–202, tests/ProjectTest.cs auto-merge сохранил новые аудио checks.
+Checks: до rebase stagedscenes prologue/curtains/frames/portraits/settings PASS; после rebase root/isolated build PASS0warnings/errors, exactcombined commit runtime/scenes/assets copied to isolated; rendered prologue-motion/room-curtain/sound-effects/music-settings PASS, stderr всех4suites пуст. Import только прежние4duplicateUIDmenu warnings. commitdiffcheck PASS; push/refreadback0/0. User working bytes main_menu/trade_scene/export_presets восстановлены точно после scopedstash/rebase, SHA256 audit PASS (.local/checks/hf204/working.json). Evidence .local/checks/hf204.
+Acceptance: готовые анимации и исправления опубликованы вместе с сохранёнными свежими серверными изменениями, несвязанные локальные правки не включены.
+Read-set exception: incoming audio/test files через Git для интеграции и combined regression; source/ не читался.
+Risks/blocker: остаются только пользовательские локальные main_menu/trade_scene/export_presets; новых blockers нет.
+Next: пользовательская проверка опубликованного main.
+```
 
 ### HF-203 — уход покупательницы и приход Кастелло в прологе
 
