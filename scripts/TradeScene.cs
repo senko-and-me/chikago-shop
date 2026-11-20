@@ -55,7 +55,7 @@ public partial class TradeScene : Node2D
 	private Button _endDayButton = null!;
 	private Button _atelierGetItemButton = null!;
 	private Button _musicGetItemButton = null!;
-	private Control _musicLockedOverlay = null!;
+	private RoomCurtainPresentation _musicLockedOverlay = null!;
 	private Button _musicUnlockButton = null!;
 
 	private readonly Control[] _rarityPanels = new Control[2];
@@ -67,7 +67,7 @@ public partial class TradeScene : Node2D
 	private readonly Label[] _showcaseLabels = new Label[ShowcaseCapacity];
 
 	private Label _extraShowroomHint = null!;
-	private ColorRect _rightShowroomOverlay = null!;
+	private RoomCurtainPresentation _rightShowroomOverlay = null!;
 	private InventoryUI _inventoryUI = null!;
 
 	private readonly RandomNumberGenerator _rng = new();
@@ -424,7 +424,7 @@ public partial class TradeScene : Node2D
 		RefreshCraftLabels();
 
 		_musicLockedOverlay =
-			workshop.GetNode<Control>("LockedOverlay");
+			workshop.GetNode<RoomCurtainPresentation>("LockedOverlay");
 
 		_musicUnlockButton =
 			workshop.GetNode<Button>(
@@ -483,7 +483,7 @@ public partial class TradeScene : Node2D
 
 	private void BindExtraShowroomOverlay()
 	{
-		_rightShowroomOverlay = GetNode<ColorRect>("World/Showroom/LockedOverlay");
+		_rightShowroomOverlay = GetNode<RoomCurtainPresentation>("World/Showroom/LockedOverlay");
 	}
 	public override void _Process(double delta)
 	{
@@ -726,7 +726,7 @@ public partial class TradeScene : Node2D
 			EnergyRemaining <= 0 ||
 			Score < MusicSpinCost;
 
-		_musicLockedOverlay.Visible = !MusicWorkshopUnlocked;
+		_musicLockedOverlay.SetLocked(!MusicWorkshopUnlocked);
 
 		_musicUnlockButton.Disabled =
 			Failed ||
@@ -776,7 +776,7 @@ public partial class TradeScene : Node2D
 				: Colors.White;
 		}
 
-		_rightShowroomOverlay.Visible = !MusicWorkshopUnlocked;
+		_rightShowroomOverlay.SetLocked(!MusicWorkshopUnlocked);
 
 		_extraShowroomHint.Text = !MusicWorkshopUnlocked
 			? GameLocalization.Language == "en"

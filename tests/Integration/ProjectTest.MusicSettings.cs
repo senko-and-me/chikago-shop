@@ -22,6 +22,7 @@ public partial class ProjectTest
 
         async Task CheckLayout(Node host, string path, string name)
         {
+            var languageGeometry = new System.Collections.Generic.Dictionary<int, Rect2[]>();
             foreach (var size in new[] { new Vector2I(960, 540), new Vector2I(1280, 720) })
             foreach (string language in new[] { "ru", "en" })
             {
@@ -30,6 +31,20 @@ public partial class ProjectTest
                 await ToSignal(this, SignalName.ProcessFrame);
                 await ToSignal(this, SignalName.ProcessFrame);
                 var control = host.GetNode<MusicVolumeControl>(path);
+                var languageRow = control.GetParent().GetNode<HBoxContainer>("LanguageRow");
+                var languageLabel = languageRow.GetNode<Label>("LanguageLabel");
+                var rects = new[] { languageRow.GetNode<Control>("EnglishButton").GetGlobalRect(),
+                    languageRow.GetNode<Control>("RussianButton").GetGlobalRect(),
+                    control.GetParent().GetNode<Control>("BackButton").GetGlobalRect(),
+                    control.GetParent().GetNode<Control>("FullscreenButton").GetGlobalRect() };
+                if (language == "ru") languageGeometry[size.X] = rects;
+                else for (int index = 0; index < rects.Length; index++)
+                    Check(rects[index].IsEqualApprox(languageGeometry[size.X][index]),
+                        "Changing the label language must not move or resize settings buttons");
+                float labelWidth = languageLabel.GetThemeFont("font").GetStringSize(languageLabel.Text,
+                    fontSize: languageLabel.GetThemeFontSize("font_size")).X;
+                Check(labelWidth <= languageLabel.Size.X,
+                    "The fixed language-label column must fit both translations without clipping");
                 var title = control.GetNode<Label>("Content/Header/Title");
                 var percentage = control.GetNode<Label>("Content/Header/Percentage");
                 var sound = host.GetNode<MusicVolumeControl>(path.Replace("/MusicVolume", "/SoundVolume"));
@@ -64,10 +79,11 @@ public partial class ProjectTest
                     "Adding the sound plaque must keep Back visible and clickable");
                 if (host is TradeScene)
                 {
-                    Check(control.GetThemeStylebox("panel") is StyleBoxFlat plain &&
-                          plain.BgColor == new Color(0.94f, 0.91f, 0.85f) &&
-                          !control.GetNode<HSlider>("Content/Slider").HasThemeIconOverride("grabber"),
-                        "Pause volume must retain its compact style and plain slider handle");
+                    Check(control.GetThemeStylebox("panel") is StyleBoxTexture paper &&
+                          paper.Texture.ResourcePath == "res://art/ui/panel_small.png" &&
+                          control.GetNode<HSlider>("Content/Slider").GetThemeIcon("grabber").ResourcePath ==
+                              "res://art/ui/music_slider_grip.svg",
+                        "Pause volume must retain paper artwork and the illustrated slider handle");
                     var toggle = fullscreen as FullscreenToggle;
                     bool enabled = DisplayServer.WindowGetMode() is DisplayServer.WindowMode.Fullscreen or DisplayServer.WindowMode.ExclusiveFullscreen;
                     Check(toggle != null && toggle.TextureNormal.ResourcePath ==

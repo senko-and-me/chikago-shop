@@ -36,17 +36,14 @@ public partial class MusicVolumeControl : PanelContainer
 
     private void ApplyPlainStyle()
     {
-        AddThemeStyleboxOverride("panel", new StyleBoxFlat
-        {
-            BgColor = new Color(0.912046f, 0.912046f, 0.912046f),
-            ContentMarginLeft = 14, ContentMarginRight = 14,
-            ContentMarginTop = 10, ContentMarginBottom = 10
-        });
+        // Keep the scene-authored paper, ink track and illustrated handle in pause too.
+        var paper = (StyleBox)GetThemeStylebox("panel").Duplicate();
+        paper.ContentMarginLeft = 14; paper.ContentMarginRight = 14;
+        paper.ContentMarginTop = 10; paper.ContentMarginBottom = 10;
+        AddThemeStyleboxOverride("panel", paper);
         CustomMinimumSize = new Vector2(360, 0);
         SizeFlagsHorizontal = SizeFlags.ExpandFill;
         _slider.CustomMinimumSize = new Vector2(0, 28);
-        foreach (string icon in new[] { "grabber", "grabber_highlight", "grabber_disabled" })
-            _slider.RemoveThemeIconOverride(icon);
     }
 
     private void UpdateValue(double volume)

@@ -9,6 +9,70 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### HF-204 — публикация анимаций и исправлений интерфейса
+
+Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; READY 2026-11-20; HF200–203 DONE; пользователь просит push. CP-HF-204 read-set: Git status/diff/refs, готовые файлы HF200–203 и evidence; основные сцены только выделение разрешённых script/cover rect/LanguageLabel properties поверх HEAD. Write-set: index/commit/push готовых файлов, main_menu/trade_scene index только разрешённые свойства; ORCHESTRATION_PLAN.md; .local/checks/hf204/isolatedcopy. Out of scope: source/, export_presets.cfg, остальные пользовательские изменения основных сцен, force push/новый gameplay. Приёмка: анимации занавесок/пролога, styled pause sliders, стабильные кнопки и покрытие щелей опубликованы; пользовательские файлы побайтно сохранены. Checks: exactstageddiff, build, focused renders на stagedscenes, push/refreadback/status.
+
+### HF-203 — уход покупательницы и приход Кастелло в прологе
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-20; HF202 DONE. CP-HF-203 read-set: текущий фронт; scripts/Dialogue/DialoguePlayer.cs; dialogue/intro.ru.json; scenes/UI/DialoguePlayer.tscn; src/ChikagoShop.Domain/Dialogue/DialogueSession.cs readonly; tests/Integration/ProjectTest.{DialoguePortraits,IntroMusic,Menu}.cs; tests/ProjectTest.cs entrypoint. Write-set: новый scripts/Dialogue/PrologueCharacterMotion.cs/uid; DialoguePlayer.cs только motion sync/stop calls; DialoguePlayer.tscn Characters script/Castello initialvisibility; tests/ProjectTest.cs и новый ProjectTest.PrologueMotion.cs; ORCHESTRATION_PLAN.md; .local/checks/hf203/isolatedcopy. Out of scope: source/, текст/schema диалога/музыка/новыйарт/основные сцены/gameplay/прочие пользовательские изменения/commit/push. Приёмка: Кастелло скрыт до первой реплики, плавно входит; после оплаты покупательница плавно уходит; locale/page/resize не повторяют stage, rapidadvance/skip/cancel не оставляют tween, restart сбрасывает. Idle без Process; проверка обоихокон/языков и соседних portrait tests.
+
+```text
+Task: HF-203
+Recommended status: REVIEW → принято координатором, DONE
+Changed: scene-owned PrologueCharacterMotion на Characters, Castello initially hidden. Первое появление спикера Кастелло запускает0.7s slide/fade arrival; следующая реплика после оплаты запускает0.6s уход покупательницы. Normalized progress/offsets сохраняют anchors при resize; locale/page refresh не повторяют стадию. Idle без Process; bound Tweens убиваются при stop/cancel/naturalfinish/ExitTree. Длительности доступны Inspector. Dialogue text/schema/music не менялись. Write-set дополнен generated UID новых runtime/test scripts.
+Checks: root/isolated build PASS0warnings/errors; --prologue-motion-checks PASS (1280/960, timing/alpha/positions, locale/resize, restart/rapidinput/stop/teardown); --dialogue-portraits-checks PASS (speaker shaders/alpha/RUEN), --intro-music-checks PASS (full/skip/cancel/exit/cues), stderr этих3suites пуст. --dialogue-localization-checks дошёл до PASS всех24lines/pages/live switch после корректной isolateduserdata fixture, но teardown оставил ParseError trade_scene и leakedobjects; чистый exit этогоsuite не подтверждён. Новые motion assertions и соседний intro suite подтверждают функциональные ветки. Screenshots arrival/departure просмотрены .local/checks/hf203. Import только прежние duplicateUIDmenu warnings; diffcheck PASS.
+Acceptance: Кастелло появляется на первой реплике об оплате, покупательница уходит перед «Френки оборачивается»; повторные refresh не перезапускают, skip/restart корректны.
+Read-set exception: dialogue_portrait.gdshader readonly для подтверждения применения alpha в GPU; DialogueLocalization test fixture/guard для проверки неизменности локализации. Source/ не читался.
+Risks/blocker: shutdown diagnostic широкого localization-suite описана выше; focused motion/portrait/music clean. Пользовательские изменения сохранены; commit/push не выполнялись.
+Next: пользовательская проверка пролога.
+```
+
+### HF-202 — стиль ползунков паузы и щели занавесок
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-20; HF201 DONE. CP-HF-202 read-set: текущий фронт; scripts/UI/{PauseMenu,MusicVolumeControl}.cs; scenes/UI/MusicVolumeControl.tscn; scripts/Presentation/RoomCurtainPresentation.cs; scenes/trade_scene.tscn две lockedroom art/frame/cover nodes; tests/Integration/ProjectTest.{MusicSettings,RoomCurtains,RoomFrames}.cs; tests/ProjectTest.cs. Write-set: MusicVolumeControl.cs только compact style сохраняет artwork; trade_scene.tscn только два LockedOverlay/LockedCurtain rects и UnlockButton compensation; MusicSettings/RoomCurtains tests; ORCHESTRATION_PLAN.md; .local/checks/hf202/isolatedcopy. Out of scope: source/, прочие пользовательские правки/геометрия комнат/анимация/gameplay/commit/push. Приёмка: оба slider паузы используют рисованный хват и paper; закрытые заглушки перекрывают art bounds с небольшим запасом под рамку, без щелей при zoom/pan; reveal/reset сохранены. Checks: build, rendered settings/curtain/frame checks и actual edge coverage на разных zoom.
+
+```text
+Task: HF-202
+Recommended status: REVIEW → принято координатором, DONE
+Changed: compact volume presentation больше не удаляет scene-authored grabber icons и paper texture; сохраняет только компактные margins/height. Две заглушки расширены на24localpx под комнатные рамки, их curtain rects совпадают с cover; кнопка открытия компенсирует сдвиг родителя и сохраняет worldposition. Причина щелей: clipping применялся к старому1920×1080 cover, меньшему исправленного art bounds и межэтажного стыка. Анимация/домен не менялись.
+Checks: root/isolated build PASS0warnings/errors; --room-curtain-checks PASS с actualpixel sweep межэтажного шва при3zoom/pan, geometry/реальныйunlock/reset/pause; --room-frame-checks PASS, stderr пуст. --music-settings-checks до MUSIC_SETTINGS_CHECKS_PASS: paper/grip, RU/EN960/1280/mainmenu/pause/actualclicks/audio/persistence; после PASS прежняя GodotMono unsafe-reference cleanup FATAL как HF201, чистый exit широкогоaudio-suite не подтверждён. Обе screenshot просмотрены .local/checks/hf202. Scene audit: изменены только5разрешённых cover/curtain/button nodes, прочие userchanges сохранены. diffcheck PASS.
+Acceptance: стилизованные ползунки в pause; ярких щелей на стыках заглушек нет при приближении, reveal/reset работают.
+Read-set exception: нет; source/ не читался.
+Risks/blocker: прежний shutdown audio-suite; новых functional blockers нет. Commit/push не выполнялись.
+Next: пользовательская проверка стыков и настроек паузы.
+```
+
+### HF-201 — стабильные кнопки выбора языка
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-20; HF200 DONE. CP-HF-201 read-set: текущий фронт; scenes/main_menu.tscn LanguageRow; scripts/MainMenu.cs language label handling; scripts/UI/PauseMenu.cs LanguageRow; tests/Integration/ProjectTest.MusicSettings.cs; tests/ProjectTest.cs entrypoint. Write-set: scenes/main_menu.tscn только LanguageLabel sizing; scripts/UI/PauseMenu.cs только languageLabel sizing; ProjectTest.MusicSettings.cs geometry regression; ORCHESTRATION_PLAN.md; .local/checks/hf201/isolatedcopy. Out of scope: source/, прочая геометрия/стили/языки/пользовательские изменения/commit/push. Приёмка: смена RU/EN не двигает English/Russian/Back/Fullscreen в mainmenu и pause; надписи помещаются. Checks: build, rendered --music-settings-checks RU/EN960/1280 и actualrect comparison; diffcheck.
+
+```text
+Task: HF-201
+Recommended status: REVIEW → принято координатором, DONE
+Changed: LanguageLabel в main_menu и PauseMenu имеет фиксированный минимальный столбец128px и ClipText, длина перевода больше не влияет на minimumwidth строки. MusicSettings regression сравнивает actualglobalrect English/Russian/Back/Fullscreen между RU/EN на960/1280 в обоих меню; проверяет, что обе подписи помещаются. Старое beigeожидание теста согласовано с прямойgrayпалитрой HF195.
+Checks: root/isolated build PASS0warnings/errors; rendered --music-settings-checks дошёл до MUSIC_SETTINGS_CHECKS_PASS (layout/realclicks/audio/persistence/menu/pause), новые geometry assertions PASS; screenshot просмотрен, .local/checks/hf201. diffcheck PASS.
+Acceptance: обе кнопки языка остаются на прежних местах при смене перевода; основной заголовок/Back/Fullscreen также стабильны; тексты помещаются.
+Read-set exception: нет; source/ не читался.
+Risks/blocker: после PASS при завершении Godot сообщил csharp script_bindings/unsafe reference cleanup FATAL; функциональные проверки завершились успешно, чистое завершение этого широкого audio-suite не подтверждено. Runtime вне labellayout не менялся. Пользовательские изменения сцен сохранены; commit/push не выполнялись.
+Next: пользовательская проверка переключения языка.
+```
+
+### HF-200 — плавное поднятие занавесок при открытии комнат
+
+Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-19; HF199 DONE. CP-HF-200 read-set: текущий фронт; scripts/TradeScene.cs только binding/visibility двух LockedOverlay и unlock flow; scenes/trade_scene.tscn только overlay/curtain nodes; scripts/Days/DayCycleController.cs lifecycle; tests/ProjectTest.cs entrypoint; tests/Integration/ProjectTest.{Camera,RoomFrames,EnergyBulbs}.cs fixture examples. Write-set: новый scripts/Presentation/RoomCurtainPresentation.cs/uid; TradeScene.cs только типы/binding и делегирование двух visibility assignments; trade_scene.tscn только script resource/две overlay script properties; tests/ProjectTest.cs и новый ProjectTest.RoomCurtains.cs; ORCHESTRATION_PLAN.md; .local/checks/hf200/isolatedcopy. Out of scope: source/, новая доменная логика TradeScene, экономика/schema/другие сцены/пользовательские изменения/commit/push. Приёмка: оба занавеса при unlock поднимаются/собираются/растворяются; нет скачка при load, reset отменяет анимацию, refresh не перезапускает; idle без Process, один bound Tween на комнату, корректный input/пауза/освобождение. Checks: build, rendered focused curtain lifecycle и соседние energy/room-frame checks, screenshots.
+
+```text
+Task: HF-200
+Recommended status: REVIEW → принято координатором, DONE
+Changed: scene-owned RoomCurtainPresentation на двух LockedOverlay; 0.85s cubic lift/compress, delayed sine fade, раннее исчезновение чёрной подложки; clip проёма, purchasebutton скрывается сразу. Только locked→unlocked запускает один bound Tween; idle без Process. SetLocked сбрасывает tween на relock, первая синхронизация без анимации, ExitTree отменяет работу. TradeScene только делегирует visual state, новая доменная логика не добавлена. Экспортированная длительность доступна в Inspector.
+Checks: root/isolated build PASS0warnings/errors; rendered --room-curtain-checks PASS: обе комнаты/реальная покупка/недостаток денег/midpoint/12refresh/pause/NewGame/initialunlocked/teardown; --energy-bulbs-checks и --room-frame-checks PASS; stderr всех suites пуст. Screenshot midpoint просмотрен .local/checks/hf200. User trade scene byteaudit PASS: кроме3scriptbindings байты совпадают с beforeHF200; main_menu/export_presets не менялись исполнителем. Import создаёт scriptUID; только прежние4duplicateUIDmenu warnings. diffcheck PASS.
+Acceptance: занавесы плавно стягиваются вверх и растворяются в пределах комнаты; повторные refresh не перезапускают, загрузка/сброс безопасны, постоянной обработки idle нет.
+Read-set exception: targeted rg Persistence для подтверждения порядка загрузки unlocked state; source/ не читался.
+Risks/blocker: нет новых; пользовательские изменения main_menu/trade_scene/export_presets сохранены. Commit/push не выполнялись.
+Next: пользовательская проверка анимации открытия.
+```
+
 ### HF-202 — блокировка новых UI-звуков до окончания предыдущего и аудит WAV
 
 Статус: `DONE`; координатор/исполнитель /root; READY 2026-11-20; HF200/201 DONE. CP-HF-202: .local/checks/hf202/CP-HF-202.md — точные scope, приёмка и проверки. First-wins для hover/click с сохранением приоритета настроек/продажи; по явному ответу пользователя убрано тихое начало hover/click, оригиналы сохранены отдельно. ZIP/EXE и commit/push вне задачи.

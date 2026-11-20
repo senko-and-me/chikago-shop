@@ -16,6 +16,20 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--prologue-motion-checks"))
+            {
+                await TestPrologueMotion();
+                GD.Print("PROLOGUE_MOTION_CHECKS_PASS: dialogue timing, arrival/departure, locale, resize, rapid input and restart");
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--room-curtain-checks"))
+            {
+                await TestRoomCurtains();
+                GD.Print("ROOM_CURTAIN_CHECKS_PASS: reveal, repeated refresh, pause, reset, loaded state and teardown");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--energy-bulbs-checks"))
             {
                 await TestEnergyBulbs();

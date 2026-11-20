@@ -229,11 +229,13 @@ theme_override_constants/separation = 12
 alignment = 1
 
 [node name="LanguageLabel" type="Label" parent="SettingsMenuContainer/Settings/LanguageRow"]
+custom_minimum_size = Vector2(128, 0)
 layout_mode = 2
 auto_translate_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 24
 text = "Язык"
+clip_text = true
 vertical_alignment = 1
 
 [node name="EnglishButton" type="Button" parent="SettingsMenuContainer/Settings/LanguageRow"]

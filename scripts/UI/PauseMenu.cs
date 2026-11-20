@@ -88,6 +88,7 @@ public partial class PauseMenu : CanvasLayer
 		var languageLabel = new Label
 		{
 			Name = "LanguageLabel", Text = "Язык",
+			CustomMinimumSize = new Vector2(128, 0), ClipText = true,
 			SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
 			VerticalAlignment = VerticalAlignment.Center
 		};

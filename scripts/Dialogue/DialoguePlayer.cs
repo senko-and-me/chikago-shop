@@ -24,6 +24,7 @@ public partial class DialoguePlayer : Control
     public void StopInteraction()
     {
         if (_portraitTransition?.IsValid() == true) _portraitTransition.Kill();
+        GetNode<PrologueCharacterMotion>("Characters").Stop();
         _closed = true;
         SetProcess(false);
     }
@@ -88,6 +89,7 @@ public partial class DialoguePlayer : Control
         _speaker.Text = GameLocalization.Text(Session.Current.Speaker);
         _speaker.Visible = !string.IsNullOrWhiteSpace(Session.Current.Speaker);
         UpdatePortraits();
+        GetNode<PrologueCharacterMotion>("Characters").SyncLine(Session.Index, Session.Current.Speaker);
         _localizedText = GameLocalization.Text(Session.Current.Text);
         _pageStart = 0;
         DisplayPage();
@@ -158,7 +160,7 @@ public partial class DialoguePlayer : Control
         }
         if (Session.Advance())
         {
-            _closed = true;
+            StopInteraction();
             Finished?.Invoke();
         }
         else DisplayLine();
@@ -181,7 +183,7 @@ public partial class DialoguePlayer : Control
         if (key.Keycode == Key.Escape)
         {
             GetViewport().SetInputAsHandled();
-            _closed = true;
+            StopInteraction();
             Cancelled?.Invoke();
         }
         else if (key.Keycode == Key.Space)

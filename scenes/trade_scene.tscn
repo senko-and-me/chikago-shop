@@ -1,5 +1,6 @@
 [gd_scene format=3 uid="uid://6ciouuso5bqi"]
 
+[ext_resource type="Script" path="res://scripts/Presentation/RoomCurtainPresentation.cs" id="34_curtain"]
 [ext_resource type="Script" uid="uid://bj66ajuqbshg0" path="res://scripts/TradeScene.cs" id="1_main"]
 [ext_resource type="Script" uid="uid://c6334skyxf3jy" path="res://scripts/CounterWorld.cs" id="2_world"]
 [ext_resource type="Texture2D" uid="uid://bc8clisawybhl" path="res://art/rooms/music_room.jpg" id="4_pi35y"]
@@ -360,17 +361,19 @@ mouse_filter = 2
 theme_override_styles/panel = SubResource("RoomFrameSealStyle")
 
 [node name="LockedOverlay" type="ColorRect" parent="World/MusicWorkshop" unique_id=1604263624]
+script = ExtResource("34_curtain")
+offset_bottom = 1129.0
+offset_right = 1944.0
+offset_top = -24.0
+offset_left = -28.0
 z_index = 100
-offset_right = 1920.0
-offset_bottom = 1080.0
 mouse_filter = 1
 color = Color(0, 0, 0, 1)
 
 [node name="LockedCurtain" type="TextureRect" parent="World/MusicWorkshop/LockedOverlay" unique_id=1953917145]
+offset_bottom = 1153.0
+offset_right = 1972.0
 layout_mode = 0
-offset_left = -3.7118425
-offset_right = 1920.0
-offset_bottom = 1104.8657
 mouse_filter = 2
 texture = ExtResource("background_6_2e12l")
 expand_mode = 1
@@ -378,10 +381,10 @@ stretch_mode = 6
 
 [node name="UnlockButton" type="Button" parent="World/MusicWorkshop/LockedOverlay" unique_id=1687329513]
 layout_mode = 0
-offset_left = 660.0
-offset_top = 470.0
-offset_right = 1260.0
-offset_bottom = 640.0
+offset_left = 688.0
+offset_top = 494.0
+offset_right = 1288.0
+offset_bottom = 664.0
 tooltip_text = "Открыть музыкальную комнату за 100$"
 mouse_default_cursor_shape = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
@@ -480,17 +483,18 @@ mouse_filter = 2
 theme_override_styles/panel = SubResource("RoomFrameSealStyle")
 
 [node name="LockedOverlay" type="ColorRect" parent="World/Showroom" unique_id=581286688]
+script = ExtResource("34_curtain")
+offset_bottom = 1104.0
+offset_right = 1944.0
+offset_top = -50.0
+offset_left = -28.0
 z_index = 100
-offset_right = 1920.0
-offset_bottom = 1080.0
 color = Color(0, 0, 0, 1)
 
 [node name="LockedCurtain" type="TextureRect" parent="World/Showroom/LockedOverlay" unique_id=744648570]
+offset_bottom = 1154.0
+offset_right = 1972.0
 layout_mode = 0
-offset_left = -3.7118425
-offset_top = -25.610617
-offset_right = 1920.0
-offset_bottom = 1080.0
 mouse_filter = 2
 texture = ExtResource("background_6_2e12l")
 expand_mode = 1

@@ -8,6 +8,7 @@
 [ext_resource type="Texture2D" path="res://art/dialogue/castello.png" id="6_castello"]
 [ext_resource type="Texture2D" path="res://art/dialogue/customer.png" id="7_customer"]
 [ext_resource type="Shader" path="res://shaders/dialogue_portrait.gdshader" id="8_portrait"]
+[ext_resource type="Script" path="res://scripts/Dialogue/PrologueCharacterMotion.cs" id="9_motion"]
 
 [sub_resource type="ShaderMaterial" id="FrankieTone"]
 resource_local_to_scene = true
@@ -73,6 +74,7 @@ mouse_filter = 2
 color = Color(0.047467, 0.047467, 0.047467, 0.45)
 
 [node name="Characters" type="Control" parent="."]
+script = ExtResource("9_motion")
 layout_mode = 1
 anchor_left = 0.12
 anchor_top = 0.20
@@ -81,6 +83,7 @@ anchor_bottom = 0.79
 mouse_filter = 2
 
 [node name="Castello" type="TextureRect" parent="Characters"]
+visible = false
 material = SubResource("CastelloTone")
 layout_mode = 1
 anchor_right = 0.23
