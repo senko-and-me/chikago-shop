@@ -843,6 +843,7 @@ public partial class TradeScene : Node2D
 
 	private void RefreshOffer()
 	{
+		SynchronizeBuyerPatienceWithDay();
 		Percentage = BuyerPatienceRules.OfferPercent(Percentage, _buyerWaitRemaining);
 		int basePrice = GetItemPrice(ItemIndex);
 
@@ -1018,6 +1019,7 @@ public partial class TradeScene : Node2D
 
 	public void RefreshDayPresentation()
 	{
+		RefreshClosedBuyerOffer();
 		_declineButton.Disabled = !CanRerollCurrentBuyer;
 		_inventoryUI.UpdateUI(_storedItems);
 		RefreshScore();

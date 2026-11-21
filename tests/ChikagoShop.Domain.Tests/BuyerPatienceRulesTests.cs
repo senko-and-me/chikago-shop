@@ -5,6 +5,14 @@ namespace ChikagoShop.Domain.Tests;
 
 public sealed class BuyerPatienceRulesTests
 {
+    [TestCase(20, false, 20)]
+    [TestCase(0, false, 0)]
+    [TestCase(20, true, 0)]
+    [TestCase(0.01, true, 0)]
+    [TestCase(0, true, 0)]
+    public void ClosedDayExhaustsEvenFreshBuyerPatience(double remaining, bool closed, double expected) =>
+        Assert.That(BuyerPatienceRules.RemainingAfterDayClosure(remaining, closed), Is.EqualTo(expected));
+
     [TestCase(0.01, 20)]
     [TestCase(0, -50)]
     [TestCase(-1, -50)]

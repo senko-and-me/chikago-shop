@@ -29,7 +29,7 @@ public partial class ProjectTest
             foreach (bool manual in new[] { false, true })
             {
                 using (var file = FileAccess.Open(path, FileAccess.ModeFlags.Write))
-                    file.StoreString("{\"save_version\":13,\"day\":1,\"score\":220,\"energy_remaining\":3,\"day_remaining_seconds\":90,\"trade_active\":true,\"item_index\":0,\"customer_index\":0,\"rerolls_remaining\":3}");
+                    file.StoreString("{\"save_version\":16,\"day_started\":true,\"day\":1,\"score\":220,\"energy_remaining\":3,\"day_remaining_seconds\":0.25,\"trade_active\":true,\"item_index\":0,\"customer_index\":0,\"rerolls_remaining\":3,\"buyer_wait_remaining\":20,\"active_trade_grade\":\"S\"}");
                 await Reload();
                 var reroll = game.GetNode<Button>(actions + "DeclineButton");
                 Check(!reroll.Disabled, "Reroll must be enabled during an open active trade");
@@ -41,12 +41,17 @@ public partial class ProjectTest
                 else
                 {
                     game._Process(game.DayRemainingSeconds - 0.01);
-                    Check(!game.DayClosed && reroll.Disabled == (game.BuyerWaitRemaining <= 0),
-                        "An open day allows rerolls only while buyer patience remains");
+                    Check(!game.DayClosed && game.BuyerWaitRemaining > 19 && !reroll.Disabled,
+                        "Fresh buyer must retain time and normal rerolls immediately before day expiry");
                     game._Process(0.02);
                 }
                 Check(game.DayClosed && game.DayRemainingSeconds == 0 && reroll.Disabled,
                     "Expiry and manual closing must immediately disable reroll");
+                int half = TradeScene.PriceForPercent(game.GetItemPrice(game.ItemIndex), -50);
+                Check(game.BuyerWaitRemaining == 0 && game.Percentage == -50 && game.OfferedPrice == half &&
+                    game.GetNode<Label>("World/TradingRoom/Item/TradePanel/Content/OfferLabel").Text ==
+                        GameLocalization.Format("Получим: {0}$", half),
+                    "Day closure must immediately replace a fresh buyer's offer with exactly half, without tips");
                 int buyer = game.CustomerIndex, offer = game.OfferedPrice, remaining = game.RerollsRemaining;
                 int score = game.Score, item = game.ItemIndex;
                 string closedSave = FileAccess.GetFileAsString(path);
@@ -57,6 +62,12 @@ public partial class ProjectTest
                 Check(game.CustomerIndex == buyer && game.OfferedPrice == offer && game.RerollsRemaining == remaining &&
                     game.TradeActive && game.ItemIndex == item && FileAccess.GetFileAsString(path) == closedSave,
                     "All closed-day reroll routes must leave buyer, offer, stock, count and save unchanged");
+                // Simulate a save from the version that froze buyer patience at day closure.
+                var legacyClosed = System.Text.Json.Nodes.JsonNode.Parse(closedSave);
+                legacyClosed["buyer_wait_remaining"] = 17;
+                legacyClosed["percentage"] = 20;
+                using (var file = FileAccess.Open(path, FileAccess.ModeFlags.Write))
+                    file.StoreString(legacyClosed.ToJsonString());
                 await Reload();
                 reroll = game.GetNode<Button>(actions + "DeclineButton");
                 foreach (string language in new[] { "en", "ru" })
@@ -65,7 +76,7 @@ public partial class ProjectTest
                     await ToSignal(this, SignalName.ProcessFrame);
                     game.RerollCustomer();
                     Check(game.DayClosed && reroll.Disabled && game.RerollsRemaining == remaining &&
-                        game.CustomerIndex == buyer && game.OfferedPrice == offer,
+                        game.CustomerIndex == buyer && game.OfferedPrice == offer && game.Percentage == -50 && game.BuyerWaitRemaining == 0,
                         "Reload and language refresh must not restore expired rerolls");
                 }
                 Check(!game.GetNode<Button>(actions + "AcceptButton").Disabled,

@@ -9,6 +9,17 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### POL-04 — окончание дня исчерпывает терпение покупателя
+
+Статус: `DONE`; /root coordinator/executor; POL03 DONE; CP: .local/checks/pol04/CP-POL-04.md.
+Task: POL-04
+Recommended status: REVIEW → принято координатором, DONE
+Changed: src/ChikagoShop.Domain/Trading/BuyerPatienceRules.cs; tests/ChikagoShop.Domain.Tests/BuyerPatienceRulesTests.cs; scripts/TradeScene.BuyerBonuses.cs; scripts/TradeScene.cs (2 adapter calls only); tests/Integration/ProjectTest.Days.cs; ORCHESTRATION_PLAN.md.
+Checks: dotnet build ChikagoShop.sln --no-restore PASS0warnings/errors. Unit BuyerPatience+BuyerAvailability PASS28/28. Rendered --closed-reroll-checks PASS: автоматическое и ручное закрытие дня при ещё19–20s покупателя, мгновенные−50%/0s/нет бонусов, запретсмены, ровно половина выплаты, reload старого closed-day save с17s и обычным процентом, старт нового дня. Rendered --buyer-arrival-checks PASS включая POL02/POL03. git diff --check PASS. Evidence .local/checks/pol04/{build,domain,closed-reroll,buyer-arrival}.log.
+Acceptance: на закрытии дня активный покупатель немедленно получает истёкшее терпение и−50% обычной цены. И отображение, и выплата без чаевых; финальную сделку принять можно, сменить нельзя. Восстановление закрытой сделки из старого сохранения нормализуется тем же правилом. Следующий день/покупатель работает обычно. Предыдущие незакоммиченные изменения сохранены.
+Read-set exception: нет; использован существующий изолированный POL03 snapshot/cache, его обновление разрешено CP как test evidence reuse. Fresh font import не запускался.
+Risks/blocker: нет; только прежний certificate warning тестовой среды. Schema/баланс/музыка/EXE/ZIP/GitHub не менялись, commit/push не выполнялись.
+Next: пользовательская проверка свежего покупателя на окончании дня.
 ### POL-03 — после истечения ожидания только продажа за50% цены
 
 Статус: `DONE`; координатор/исполнитель /root; READY 2026-11-21; POL02 DONE. CP-POL-03: .local/checks/pol03/CP-POL-03.md. На нуле таймера покупателя отображается −50%, смена через UI/F/API запрещается, выплата ровно половина обычной цены без чаевых; reload и ожидание товара сохраняют штраф. Без schema/assets/balance/commit/push.

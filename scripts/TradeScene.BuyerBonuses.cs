@@ -164,6 +164,18 @@ public partial class TradeScene
         return true;
     }
 
+    private void SynchronizeBuyerPatienceWithDay()
+    {
+        _buyerWaitRemaining = BuyerPatienceRules.RemainingAfterDayClosure(_buyerWaitRemaining, DayClosed);
+        if (TradeActive && DayClosed)
+            _buyerWaitWidget?.SetState(Items[ItemIndex].WorkshopId == "music", _buyerWaitRemaining);
+    }
+
+    private void RefreshClosedBuyerOffer()
+    {
+        if (TradeActive && DayClosed) RefreshOffer();
+    }
+
     private bool CanRerollCurrentBuyer => BuyerPatienceRules.CanReroll(
         TradeActive, DayClosed, RerollsRemaining, _buyerWaitRemaining);
 

@@ -6,6 +6,9 @@ public static class BuyerPatienceRules
 
     public static bool IsExpired(double remaining) => remaining <= 0;
 
+    public static double RemainingAfterDayClosure(double remaining, bool dayClosed) =>
+        dayClosed ? 0 : remaining;
+
     public static int OfferPercent(int normalPercent, double remaining) =>
         IsExpired(remaining) ? ExpiredPercent : normalPercent;
 
