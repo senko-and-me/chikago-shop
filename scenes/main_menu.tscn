@@ -22,7 +22,7 @@
 
 [sub_resource type="StyleBoxTexture" id="LanguageNormal"]
 texture = ExtResource("15_paper")
-modulate_color = Color(0.65, 0.65, 0.65, 1)
+modulate_color = Color(1, 1, 1, 1)
 content_margin_left = 16.0
 content_margin_right = 16.0
 content_margin_top = 8.0
@@ -38,6 +38,7 @@ content_margin_bottom = 8.0
 
 [sub_resource type="StyleBoxTexture" id="LanguageSelected"]
 texture = ExtResource("15_paper")
+modulate_color = Color(0.47, 0.47, 0.47, 1)
 content_margin_left = 16.0
 content_margin_right = 16.0
 content_margin_top = 8.0
@@ -229,11 +230,13 @@ theme_override_constants/separation = 12
 alignment = 1
 
 [node name="LanguageLabel" type="Label" parent="SettingsMenuContainer/Settings/LanguageRow"]
+custom_minimum_size = Vector2(128, 0)
 layout_mode = 2
 auto_translate_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 24
 text = "Язык"
+clip_text = true
 vertical_alignment = 1
 
 [node name="EnglishButton" type="Button" parent="SettingsMenuContainer/Settings/LanguageRow"]
@@ -243,8 +246,8 @@ auto_translate_mode = 2
 mouse_default_cursor_shape = 2
 theme_override_colors/font_color = Color(0.08, 0.08, 0.08, 1)
 theme_override_colors/font_hover_color = Color(0.08, 0.08, 0.08, 1)
-theme_override_colors/font_pressed_color = Color(0.08, 0.08, 0.08, 1)
-theme_override_colors/font_hover_pressed_color = Color(0.08, 0.08, 0.08, 1)
+theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_pressed_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 24
 theme_override_styles/normal = SubResource("LanguageNormal")
 theme_override_styles/hover = SubResource("LanguageHover")
@@ -262,8 +265,8 @@ auto_translate_mode = 2
 mouse_default_cursor_shape = 2
 theme_override_colors/font_color = Color(0.08, 0.08, 0.08, 1)
 theme_override_colors/font_hover_color = Color(0.08, 0.08, 0.08, 1)
-theme_override_colors/font_pressed_color = Color(0.08, 0.08, 0.08, 1)
-theme_override_colors/font_hover_pressed_color = Color(0.08, 0.08, 0.08, 1)
+theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_pressed_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 24
 theme_override_styles/normal = SubResource("LanguageNormal")
 theme_override_styles/hover = SubResource("LanguageHover")

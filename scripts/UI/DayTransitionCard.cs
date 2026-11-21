@@ -56,6 +56,14 @@ public partial class DayTransitionCard : CanvasLayer
         panel.Name = upgrade.ToString();
         parent.AddChild(panel);
         _cards.Add(panel);
+        // Preserve this build's textured card layout and its purchase button artwork.
+        // Each card receives its own style so mixed rarities never recolor each other.
+        if (panel.GetThemeStylebox("panel") is StyleBoxTexture sharedFace)
+        {
+            var face = (StyleBoxTexture)sharedFace.Duplicate(true);
+            face.Texture = FaceTextureFor(Cost(upgrade));
+            panel.AddThemeStyleboxOverride("panel", face);
+        }
         panel.GetNode<Label>("Content/Amount").Text = amount;
         panel.GetNode<Label>("Content/Title").Text = title;
         panel.GetNode<Label>("Content/Description").Text = description;
@@ -63,10 +71,52 @@ public partial class DayTransitionCard : CanvasLayer
         int cost = Cost(upgrade);
         var button = panel.GetNode<Button>("Content/Choose");
         button.Text = GameLocalization.Format("Купить за {0}$", cost);
+        if (cost >= 30) StylePremiumButton(button, true);
+        else if (cost >= 20) StylePremiumButton(button, false);
         button.Disabled = _balance < cost;
         button.Pressed += () => Choose(upgrade);
         return button;
     }
+
+    private static void StylePremiumButton(Button button, bool gold)
+    {
+        // Use the real hand-painted frames, not a tinted copy of panel_small.png.
+        // They were converted to horizontal nine-slice artwork, preserving corners.
+        string texturePath = gold
+            ? "res://art/ui/card_buy_gold.png"
+            : "res://art/ui/card_buy_silver.png";
+        Texture2D texture = GD.Load<Texture2D>(texturePath);
+        foreach (var (name, tint) in new (string, string)[]
+        {
+            ("normal", "FFFFFF"), ("hover", "FFFFFF"),
+            ("pressed", "C9C9C9"), ("disabled", "AAAAAA")
+        })
+        {
+            if (button.GetThemeStylebox(name) is not StyleBoxTexture original) continue;
+            var style = (StyleBoxTexture)original.Duplicate(true);
+            style.Texture = texture;
+            style.ModulateColor = new Color(tint);
+            button.AddThemeStyleboxOverride(name, style);
+        }
+        Color ink = new Color(gold ? "21180C" : "202329");
+        foreach (string name in new[]
+        {
+            "font_color", "font_hover_color", "font_pressed_color",
+            "font_focus_color", "font_disabled_color"
+        })
+            button.AddThemeColorOverride(name, ink);
+    }
+
+    private static Texture2D FaceTextureFor(int cost)
+    {
+        string path = cost >= 30
+            ? "res://art/ui/day_card_gold.png"
+            : cost >= 20
+                ? "res://art/ui/day_card_silver.png"
+                : "res://art/ui/card_face.png";
+        return GD.Load<Texture2D>(path);
+    }
+
     private void Layout()
     {
         _layoutScale = Mathf.Clamp(_root.Size.Y / 720, 0.6f, 1);
@@ -75,10 +125,10 @@ public partial class DayTransitionCard : CanvasLayer
         style.ContentMarginLeft = style.ContentMarginRight = style.ContentMarginTop = style.ContentMarginBottom = 24 * _layoutScale;
         _route.AddThemeFontSizeOverride("font_size", (int)(22 * _layoutScale));
         _title.AddThemeFontSizeOverride("font_size", (int)(30 * _layoutScale));
-        _skip.CustomMinimumSize = new Vector2(0, 36 * _layoutScale);
+        _skip.CustomMinimumSize = new Vector2(252 * _layoutScale, 45 * _layoutScale);
         _choices.CustomMinimumSize = new Vector2(0, 460 * _layoutScale);
         _deck.Size = new Vector2(100, 144) * _layoutScale;
-        _deck.Position = new Vector2(Mathf.Max(20, _root.Size.X * 0.04f), _root.Size.Y - _deck.Size.Y - 28);
+        _deck.Position = new Vector2(8 * _layoutScale, _root.Size.Y - _deck.Size.Y - 28);
         foreach (var card in _cards)
         {
             var content = card.GetNode<VBoxContainer>("Content");
@@ -161,7 +211,7 @@ public partial class DayTransitionCard : CanvasLayer
 
     public void Open(int previousDay, int nextDay, IReadOnlyList<DayUpgrade> options, int balance)
     {
-        if (IsOpen || previousDay is < 1 or > 6 || nextDay != previousDay + 1 || GetTree().Paused) return;
+        if (IsOpen || previousDay < 1 || nextDay != previousDay + 1 || GetTree().Paused) return;
         Options = options.ToArray();
         _balance = balance;
         _navigationButtons.Clear();
@@ -171,13 +221,12 @@ public partial class DayTransitionCard : CanvasLayer
         {
             var button = upgrade switch
             {
-                DayUpgrade.Cash => AddChoice(_choices, upgrade, "Оборотные средства", "+50$", "Получить 50$ сразу. Деньги остаются на счёте.", "СРАЗУ"),
+                DayUpgrade.Cash => AddChoice(_choices, upgrade, "Оборотные средства", "+50$", "Получить 50$ при выборе перед новым днём.", "СРАЗУ"),
                 DayUpgrade.Energy => AddChoice(_choices, upgrade, "Второе дыхание", "+1", "Добавить 1 энергию к следующему дню.", "ЭНЕРГИЯ · НА ОДИН ДЕНЬ"),
-                DayUpgrade.Time => AddChoice(_choices, upgrade, "Длинная смена", "+30с", "Добавить 30 секунд к следующему дню.", "ВРЕМЯ · НА ОДИН ДЕНЬ"),
-                DayUpgrade.Atelier => AddChoice(_choices, upgrade, "Мастерство портного", "↑", "Больше редкой одежды до конца игры.", "ОДЕЖДА · ДО КОНЦА ИГРЫ"),
-                DayUpgrade.Music => AddChoice(_choices, upgrade, "Мастерство мастера", "↑", "Больше редких инструментов до конца игры.", "ИНСТРУМЕНТЫ · ДО КОНЦА ИГРЫ"),
-                DayUpgrade.AtelierPrice => AddChoice(_choices, upgrade, "Имя на этикетке", "+20%", "Ещё +20% к базовой стоимости всей одежды.", "ОДЕЖДА · ДО КОНЦА ИГРЫ"),
-                DayUpgrade.MusicPrice => AddChoice(_choices, upgrade, "Коллекционный звук", "+20%", "Ещё +20% к базовой стоимости всех инструментов.", "ИНСТРУМЕНТЫ · ДО КОНЦА ИГРЫ"),
+                DayUpgrade.Atelier => AddChoice(_choices, upgrade, "Мастерство портного", "↑", "Повысить шанс редкой одежды на следующий день.", "ОДЕЖДА · НА ОДИН ДЕНЬ"),
+                DayUpgrade.Music => AddChoice(_choices, upgrade, "Мастерство мастера", "↑", "Повысить шанс редких инструментов на следующий день.", "ИНСТРУМЕНТЫ · НА ОДИН ДЕНЬ"),
+                DayUpgrade.AtelierPrice => AddChoice(_choices, upgrade, "Имя на этикетке", "+20%", "+20% к базовой цене одежды на следующий день.", "ОДЕЖДА · НА ОДИН ДЕНЬ"),
+                DayUpgrade.MusicPrice => AddChoice(_choices, upgrade, "Коллекционный звук", "+20%", "+20% к базовой цене инструментов на следующий день.", "ИНСТРУМЕНТЫ · НА ОДИН ДЕНЬ"),
                 _ => throw new ArgumentOutOfRangeException(nameof(options))
             };
             _navigationButtons.Add(button);

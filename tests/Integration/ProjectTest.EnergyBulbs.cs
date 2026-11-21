@@ -116,9 +116,17 @@ public partial class ProjectTest
                             "Energy bulbs must retain distinct spacing");
                         Vector2 sample = bulbs.GetGlobalTransformWithCanvas() * (rect.Position + rect.Size * new Vector2(0.5f, 0.25f));
                         Color color = image.GetPixelv(new Vector2I((int)(sample.X * pixels.X), (int)(sample.Y * pixels.Y)));
-                        Check(HasChroma(color), "Energy artwork must retain its native yellow color without a grayscale filter");
-                        Check(index < remaining ? color.R > 0.65f : color.R < 0.4f,
-                            "Remaining bulbs must be visibly bright and spent bulbs visibly dark");
+                        var displayedBulb = bulbs.GetChild<TextureRect>(index);
+                        string artPath = index < remaining
+                            ? "res://art/ui/energy_bulb.png"
+                            : "res://art/ui/energy_bulb_empty.png";
+                        Check(displayedBulb.Texture is AtlasTexture frame && frame.Atlas.ResourcePath == artPath,
+                            "Energy must swap between the provided lit and empty textures from right to left");
+                        Check(displayedBulb.SelfModulate == Colors.White,
+                            "Energy texture colors must be preserved rather than darkened with a tint");
+                        if (index < remaining)
+                            Check(HasChroma(color) && color.R > 0.65f,
+                                "A lit bulb must retain its native yellow color");
                     }
                     if (size.X == 1280 && language == "ru" && configuration == 2 && remaining == capacity / 2)
                         image.SavePng(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "chikago-hf190-energy-bulbs.png"));

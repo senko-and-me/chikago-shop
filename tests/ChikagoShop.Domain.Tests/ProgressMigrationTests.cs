@@ -94,7 +94,7 @@ public sealed class ProgressMigrationTests
             MusicWorkshopUnlocked = true, CheckpointMusicWorkshopUnlocked = true,
             StoredItems = [0, 4, 9], CheckpointItems = [2, 3], ShowcaseItems = [1, -1, 8],
             CheckpointShowcaseItems = [-1, 7], TradeActive = true, ItemIndex = 8,
-            CustomerIndex = 3, RerollsRemaining = 1, ActiveShowcaseIndex = 2, BuyerCountdown = 1.25,
+            CustomerIndex = 3, RerollsRemaining = 1, ActiveShowcaseIndex = 2, BuyerWaitRemaining = 12.5,
             DayRemainingSeconds = 35.5, UpgradePending = true, SelectedUpgrade = (int)DayUpgrade.Energy,
             AtelierUpgradeLevel = 2, MusicUpgradeLevel = 3, AtelierPriceLevel = 4, MusicPriceLevel = 5,
             CheckpointAtelierUpgradeLevel = 1, CheckpointMusicUpgradeLevel = 2,
@@ -104,7 +104,7 @@ public sealed class ProgressMigrationTests
         var restored = ProgressJson.Deserialize(json, 3)!;
         Assert.That(ProgressJson.Serialize(restored), Is.EqualTo(json));
         using var doc = JsonDocument.Parse(json);
-        Assert.That(doc.RootElement.GetProperty("save_version").GetInt32(), Is.EqualTo(13));
+        Assert.That(doc.RootElement.GetProperty("save_version").GetInt32(), Is.EqualTo(ProgressJson.CurrentVersion));
         Assert.That(doc.RootElement.GetProperty("checkpoint_music_price_level").GetInt32(), Is.EqualTo(4));
         Assert.That(doc.RootElement.GetProperty("day_remaining_seconds").GetDouble(), Is.EqualTo(35.5));
         string[] fields = [
@@ -112,13 +112,17 @@ public sealed class ProgressMigrationTests
             "checkpoint_atelier_price_level", "checkpoint_music_price_level", "atelier_upgrade_level",
             "music_upgrade_level", "checkpoint_atelier_upgrade_level", "checkpoint_music_upgrade_level",
             "day_remaining_seconds", "day_closed", "day_started", "day", "score", "energy_remaining", "accepted", "declined",
-            "quota_stage", "checkpoint_day", "checkpoint_score", "checkpoint_energy", "music_workshop_unlocked",
+            "quota_stage", "invisible_hand_pressure", "checkpoint_invisible_hand_pressure", "mafia_notice_pending",
+            "checkpoint_day", "checkpoint_score", "checkpoint_energy", "music_workshop_unlocked",
             "checkpoint_music_workshop_unlocked", "checkpoint_accepted", "checkpoint_declined", "failed", "completed",
+            "quota_visit", "checkpoint_quota_visit", "quota_dialogue_page", "quota_dialogue_revealed", "quota_dialogue_language",
             "status", "trade_active", "item_index", "customer_index", "percentage", "rerolls_remaining", "stored_items",
-            "checkpoint_items", "showcase_items", "checkpoint_showcase_items", "active_showcase_index", "buyer_countdown"
+            "checkpoint_items", "showcase_items", "checkpoint_showcase_items", "active_showcase_index",
+            "buyer_wait_remaining", "waiting_buyer_present", "waiting_buyer_music", "stored_grades", "showcase_grades",
+            "checkpoint_grades", "checkpoint_showcase_grades", "active_trade_grade"
         ];
         Assert.That(doc.RootElement.EnumerateObject().Select(property => property.Name),
-            Is.EquivalentTo(fields), "Preserve existing save fields with the additive day_started flag");
+            Is.EquivalentTo(fields), "Preserve the game state and customer wait without the retired arrival timer");
     }
 
     [Test]

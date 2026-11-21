@@ -56,7 +56,7 @@ public partial class ProjectTest
             Remember($"World/{room}/LockedOverlay");
             Remember($"World/{room}/LockedOverlay/LockedCurtain");
         }
-        Remember("World/MusicWorkshop/LockedOverlay/UnlockButton");
+        Remember("World/MusicWorkshop/LockedOverlay/UnlockPanel/Content/UnlockButton");
         Remember("World/TimeOfDayDay");
         Remember("World/TimeOfDayNight");
         foreach (ColorRect partition in game.GetNode("World/RoomPartitions").GetChildren())

@@ -45,7 +45,7 @@ public static class WeekBalanceSimulator
                 upgrades.Reset(preserveCategories: true);
                 if (day > 1)
                 {
-                    upgrades.Offer(day);
+                    upgrades.Offer(day, unlocked);
                     DayUpgrade choice = DayUpgrade.None;
                     if (profile.BuyUpgrades)
                     {
@@ -67,7 +67,7 @@ public static class WeekBalanceSimulator
                 if (profile.Produce && profile.UnlockMusic && !unlocked && day >= 2 && cash >= music.UnlockCost + music.SpinCost + 25)
                 { cash -= music.UnlockCost; unlocked = true; }
                 int energy = upgrades.EnergyCapacityFor(unlocked ? config.Days.EnergyAfterMusicUnlock : config.Days.EnergyBeforeMusicUnlock);
-                double remaining = config.Days.DurationSeconds + (upgrades.Selected == DayUpgrade.Time ? 30 : 0);
+                double remaining = config.Days.DurationSeconds + (unlocked ? 30 : 0);
                 var tables = new Dictionary<string, WeightedItemTable>();
                 foreach (var workshop in config.Workshops)
                     tables[workshop.Id] = new WeightedItemTable(config.Rarities.Select((rarity, index) =>

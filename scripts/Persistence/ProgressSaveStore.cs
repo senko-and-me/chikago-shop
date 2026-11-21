@@ -8,13 +8,17 @@ public static class ProgressSaveStore
     public static void Save(string path, ProgressData data)
     {
         if (string.IsNullOrEmpty(path)) return;
-        using var file = FileAccess.Open(path, FileAccess.ModeFlags.Write);
-        if (file == null)
+        string destination = ProjectSettings.GlobalizePath(path);
+        string temporary = destination + ".tmp";
+        try
         {
-            GD.PushWarning($"Не удалось сохранить прогресс: {path}");
-            return;
+            System.IO.File.WriteAllText(temporary, ProgressJson.Serialize(data));
+            System.IO.File.Move(temporary, destination, overwrite: true);
         }
-        file.StoreString(ProgressJson.Serialize(data));
+        catch (System.Exception exception) when (exception is System.IO.IOException or System.UnauthorizedAccessException)
+        {
+            GD.PushWarning($"Не удалось сохранить прогресс: {path} ({exception.Message})");
+        }
     }
 
     public static ProgressData Load(string path, int defaultEnergy)

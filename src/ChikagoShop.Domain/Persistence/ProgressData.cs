@@ -1,5 +1,7 @@
 namespace ChikagoShop.Domain.Persistence;
 
+public enum QuotaVisitStage { Unavailable, AwaitingVisitor, Dialogue, Rewarded }
+
 // Versioned wire DTO. Keep property names/defaults compatible with historical saves.
 public sealed record ProgressData
 {
@@ -26,6 +28,14 @@ public sealed record ProgressData
 	public int Accepted { get; set; }
 	public int Declined { get; set; }
 	public int QuotaStage { get; set; }
+	public double InvisibleHandPressure { get; set; }
+	public double CheckpointInvisibleHandPressure { get; set; }
+	public bool MafiaNoticePending { get; set; }
+	public QuotaVisitStage QuotaVisit { get; set; }
+	public QuotaVisitStage CheckpointQuotaVisit { get; set; }
+	public int QuotaDialoguePage { get; set; }
+	public bool QuotaDialogueRevealed { get; set; }
+	public string QuotaDialogueLanguage { get; set; } = "";
 	public int CheckpointDay { get; set; } = 1;
 	public int CheckpointScore { get; set; }
 
@@ -48,5 +58,12 @@ public sealed record ProgressData
 	public int[] ShowcaseItems { get; set; } = [];
 	public int[] CheckpointShowcaseItems { get; set; } = [];
 	public int ActiveShowcaseIndex { get; set; } = -1;
-	public double BuyerCountdown { get; set; }
+	public double? BuyerWaitRemaining { get; set; }
+	public bool WaitingBuyerPresent { get; set; }
+	public bool WaitingBuyerMusic { get; set; }
+	public string[] StoredGrades { get; set; } = [];
+	public string[] ShowcaseGrades { get; set; } = [];
+	public string[] CheckpointGrades { get; set; } = [];
+	public string[] CheckpointShowcaseGrades { get; set; } = [];
+	public string ActiveTradeGrade { get; set; } = "D";
 }

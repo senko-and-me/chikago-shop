@@ -1,7 +1,44 @@
-[gd_resource type="Theme" load_steps=2 format=3]
+[gd_resource type="Theme" load_steps=10 format=3]
 
 [ext_resource type="FontFile" path="res://art/fonts/game.ttf" id="1_font"]
+[ext_resource type="Texture2D" path="res://art/ui/scrollbar_track.png" id="2_vtrack"]
+[ext_resource type="Texture2D" path="res://art/ui/scrollbar_grabber.png" id="3_vthumb"]
+[ext_resource type="Texture2D" path="res://art/ui/scrollbar_track_horizontal.png" id="4_htrack"]
+[ext_resource type="Texture2D" path="res://art/ui/scrollbar_grabber_horizontal.png" id="5_hthumb"]
+
+
+[sub_resource type="StyleBoxTexture" id="VScrollTrack"]
+texture = ExtResource("2_vtrack")
+content_margin_left = 10.0
+content_margin_right = 10.0
+
+[sub_resource type="StyleBoxTexture" id="VScrollThumb"]
+texture = ExtResource("3_vthumb")
+content_margin_left = 12.0
+content_margin_right = 12.0
+content_margin_top = 5.0
+content_margin_bottom = 5.0
+
+[sub_resource type="StyleBoxTexture" id="HScrollTrack"]
+texture = ExtResource("4_htrack")
+content_margin_top = 9.0
+content_margin_bottom = 9.0
+
+[sub_resource type="StyleBoxTexture" id="HScrollThumb"]
+texture = ExtResource("5_hthumb")
+content_margin_left = 5.0
+content_margin_right = 5.0
+content_margin_top = 12.0
+content_margin_bottom = 12.0
 
 [resource]
 default_font = ExtResource("1_font")
 default_font_size = 20
+VScrollBar/styles/scroll = SubResource("VScrollTrack")
+VScrollBar/styles/grabber = SubResource("VScrollThumb")
+VScrollBar/styles/grabber_highlight = SubResource("VScrollThumb")
+VScrollBar/styles/grabber_pressed = SubResource("VScrollThumb")
+HScrollBar/styles/scroll = SubResource("HScrollTrack")
+HScrollBar/styles/grabber = SubResource("HScrollThumb")
+HScrollBar/styles/grabber_highlight = SubResource("HScrollThumb")
+HScrollBar/styles/grabber_pressed = SubResource("HScrollThumb")

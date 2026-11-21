@@ -15,6 +15,7 @@ public partial class ProjectTest
             if (game != null) { game.QueueFree(); await ToSignal(this, SignalName.ProcessFrame); }
             game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
             game.SavePath = save;
+            game.GetNode<FirstTradeTutorial>("FirstTradeTutorial").ProgressPath = "";
             Root.AddChild(game);
             game.SetProcess(false);
             MoveButtonPointer(new Vector2(800, 400));
@@ -26,6 +27,7 @@ public partial class ProjectTest
                 file.StoreString("{\"save_version\":13,\"day\":1,\"score\":1000,\"energy_remaining\":3,\"day_remaining_seconds\":90,\"day_started\":false,\"stored_items\":[0],\"showcase_items\":[-1,-1,-1,-1,-1,-1]}");
             await Reload();
             Check(game.StoredItems.Length == 1 && !game.DayStarted, "The waiting-day fixture must restore an inventory item");
+            double dayTime = game.DayRemainingSeconds;
             var gate = game.GetNode<DayStartGate>("DayStartGate");
             var notice = gate.GetNode<Control>("Root/Notice");
             var message = notice.GetNode<Label>("Message");
@@ -43,7 +45,7 @@ public partial class ProjectTest
             game.AcceptTrade();
             Check(!game.CraftMiniGameOpen && !Paused && !game.MusicWorkshopUnlocked && !game.TradeActive &&
                 game.Score == money && game.EnergyRemaining == energy && game.StoredItems.SequenceEqual(new[] { 0 }) &&
-                game.ShowcaseItems.All(item => item == -1) && game.DayRemainingSeconds == 90,
+                game.ShowcaseItems.All(item => item == -1) && game.DayRemainingSeconds == dayTime,
                 "Every direct gameplay action must be inert before Start");
             game.SelectedInventoryIndex = -1;
             Check(notice.Visible && message.Text.Contains("Начать"), "Blocked actions must show a visible Start instruction");
@@ -66,7 +68,7 @@ public partial class ProjectTest
                     "The Start instruction must remain readable beside the existing tutorial panel");
             }
             gate.Dismiss();
-            await ClickControl(game, "World/MusicWorkshop/LockedOverlay/UnlockButton");
+            await ClickControl(game, "World/MusicWorkshop/LockedOverlay/UnlockPanel/Content/UnlockButton");
             Check(notice.Visible && !game.MusicWorkshopUnlocked && game.Score == money, "Unlock clicks must show the same notice without spending money");
             gate.Dismiss();
             await ClickControl(game, "World/ShowroomLeft/Showcases/Slot1");

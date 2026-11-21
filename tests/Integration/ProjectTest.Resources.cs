@@ -332,6 +332,7 @@ public partial class ProjectTest
             }
             // Open the actual paid minigame and exercise its selected new silhouette.
             game.Score = 1000;
+            game.EndDay(); // Start before crafting and unlocking.
             game.TryUnlockMusicWorkshop();
             var miniGame = game.GetNode<EmbroideryGame>("PolishingGame");
             miniGame.SetProcess(false);
@@ -375,7 +376,8 @@ public partial class ProjectTest
         var font = GD.Load<FontFile>("res://art/fonts/game.ttf");
         Check(font != null, "The canonical game font must load");
         string supported = font.GetSupportedChars();
-        string alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789✓✗" +
+        // The original font covers text and digits and uses system fallback for symbols.
+        string alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789" +
             "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя";
         foreach (char character in alphabet)
             Check(supported.Contains(character), $"Game font must contain its own glyph for {character}");

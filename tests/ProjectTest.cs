@@ -16,6 +16,41 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--quota-visit-checks"))
+            {
+                await TestQuotaVisit();
+                GD.Print("QUOTA_VISIT_CHECKS_PASS: greeting, dialogue reload, gift, checkpoint, failure, notebook and unlock");
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--rarity-color-checks"))
+            {
+                await TestRarityColors();
+                GD.Print("RARITY_COLOR_CHECKS_PASS: both workshops, roll tickets, prices, both languages, reload and reset");
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--buyer-arrival-checks"))
+            {
+                await TestBuyerArrival();
+                GD.Print("BUYER_ARRIVAL_CHECKS_PASS: immediate buyers, 20-second wait, tips, modal pause, saves, unlock panel and atelier art");
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--prologue-motion-checks"))
+            {
+                await TestPrologueMotion();
+                GD.Print("PROLOGUE_MOTION_CHECKS_PASS: dialogue timing, arrival/departure, locale, resize, rapid input and restart");
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--room-curtain-checks"))
+            {
+                await TestRoomCurtains();
+                GD.Print("ROOM_CURTAIN_CHECKS_PASS: reveal, repeated refresh, pause, reset, loaded state and teardown");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--energy-bulbs-checks"))
             {
                 await TestEnergyBulbs();

@@ -86,7 +86,11 @@ public partial class ZoomResponsiveUi : Node
         float scale = Mathf.Clamp(1f / Mathf.Sqrt(Mathf.Max(zoom, 0.01f)), 1f, 1.65f);
         foreach (var entry in _elements)
         {
-            entry.Control.PivotOffset = entry.Control.Size / 2f;
+            // The trade window grows from its lower center so the extra 25% goes upward,
+            // keeping the buttons and the item below it clear.
+            entry.Control.PivotOffset = entry.Control.Name == "TradePanel"
+                ? new Vector2(entry.Control.Size.X / 2f, entry.Control.Size.Y)
+                : entry.Control.Size / 2f;
             entry.Control.Scale = entry.Scale * (entry.Control.Name == "TradePanel"
                 ? Mathf.Clamp(1f / Mathf.Max(zoom, 0.01f), 0.6f, 1.2f)
                 : scale);

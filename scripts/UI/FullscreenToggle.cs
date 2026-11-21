@@ -34,8 +34,4 @@ public partial class FullscreenToggle : TextureButton
         if (what == NotificationTranslationChanged && IsNodeReady()) RefreshState();
     }
 
-    public override void _Process(double delta)
-    {
-        if (IsVisibleInTree()) RefreshState();
-    }
 }

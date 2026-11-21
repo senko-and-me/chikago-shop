@@ -390,7 +390,7 @@ public partial class ProjectTest
         CraftAtelier(game);
         game.SelectInventoryItem(0);
         game.PlaceItemInShowcase(0);
-        double countdown = game.BuyerCountdown;
+        double countdown = game.BuyerWaitRemaining;
         Root.PushInput(new InputEventKey { Keycode = Key.Escape, Pressed = true }, true);
         Check(Paused && game.GetNode<Control>("PauseMenu/Root/Overlay").Visible,
             "Escape must open a modal pause instead of quitting");
@@ -407,7 +407,7 @@ public partial class ProjectTest
         Root.PushInput(new InputEventMouseMotion { Relative = new Vector2(100, 100) }, true);
         game._Process(5);
         await ToSignal(this, SignalName.ProcessFrame);
-        Check(Paused && !game.TradeActive && game.BuyerCountdown == countdown && game.Score == score && game.CurrentDay == day &&
+        Check(Paused && !game.TradeActive && game.BuyerWaitRemaining == countdown && game.Score == score && game.CurrentDay == day &&
               camera.Zoom == zoomBefore && camera.Position == position,
             "Pause must freeze buyer time, purchases, camera and game hotkeys");
         const string content = "PauseMenu/Root/Overlay/Center/Panel/Content/";

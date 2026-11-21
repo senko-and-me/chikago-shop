@@ -14,7 +14,7 @@ public partial class ProjectTest
         var game = scene.Instantiate<TradeScene>();
         try
         {
-            Check(game.StartingMoney == 220 && game.FirstQuota == 250 && game.SecondQuota == 450 &&
+            Check(game.StartingMoney == 220 && game.FirstQuota == 750 && game.SecondQuota == 1500 &&
                 game.SavePath == "user://trade_progress.json",
                 "Packed scene must preserve configured starting funds, quotas and save path instead of overriding them with null");
             game.SavePath = "user://new_game_funds_test.json";
@@ -49,7 +49,7 @@ public partial class ProjectTest
             game.StartingMoney = 0; game.FirstQuota = 0; game.SecondQuota = 0; game.SavePath = null;
             // Simulate the values Godot produces when the editor serializes exported defaults as null.
             SceneConfigurationDefaults.Apply(game, EconomyConfigProvider.Load());
-            Check(game.StartingMoney == 220 && game.FirstQuota == 250 && game.SecondQuota == 450 &&
+            Check(game.StartingMoney == 220 && game.FirstQuota == 750 && game.SecondQuota == 1500 &&
                 game.SavePath == "user://trade_progress.json",
                 "Missing scene defaults must recover configured values including the default save path");
             // Never initialize a test scene with the player's real save path.
@@ -57,7 +57,7 @@ public partial class ProjectTest
             game.StartingMoney = 0; game.FirstQuota = 0; game.SecondQuota = 0;
             Root.AddChild(game);
             game.SetProcess(false);
-            Check(game.StartingMoney == 220 && game.FirstQuota == 250 && game.SecondQuota == 450,
+            Check(game.StartingMoney == 220 && game.FirstQuota == 750 && game.SecondQuota == 1500,
                 "The Ready adapter must recover zero defaults before game initialization");
             game.NewGame();
             Check(game.Score == 220 && game.CheckpointScore == 220,
@@ -119,7 +119,7 @@ public partial class ProjectTest
                 double seconds = game.DayRemainingSeconds;
                 game.PersistProgress();
                 var saved = ProgressSaveStore.Load(SavePath, 3);
-                Check(saved.SaveVersion == 13 && saved.Score == 333 && saved.TradeActive &&
+                Check(saved.SaveVersion == ProgressJson.CurrentVersion && saved.Score == 333 && saved.TradeActive &&
                       saved.StoredItems.SequenceEqual(new[] { 0 }) && saved.DayRemainingSeconds == seconds,
                     "Migrated state must write the existing version13 schema without losing the active trade");
                 game.QueueFree();
@@ -189,19 +189,19 @@ public partial class ProjectTest
         Check(!game.TradeActive && game.StoredItems.SequenceEqual(itemsBeforePlacement.Skip(1)) &&
               game.ShowcaseItems[3] == itemsBeforePlacement[0],
             "Placing must move the selected item into a showcase without starting a trade");
-        double savedDelay = game.BuyerCountdown;
+        double savedWait = game.BuyerWaitRemaining;
         game.QueueFree();
         await ToSignal(this, SignalName.ProcessFrame);
         game = await CreateGame(scene);
-        Check(!game.TradeActive && Math.Abs(game.BuyerCountdown - savedDelay) < 0.00001 &&
+        Check(!game.TradeActive && Math.Abs(game.BuyerWaitRemaining - savedWait) < 0.00001 &&
               game.ShowcaseItems[3] == itemsBeforePlacement[0],
-            "Reload must restore the pending buyer delay without starting an immediate trade");
+            "Reload must keep the existing waiting customer's timer and the showcased item");
         CheckInventoryTooltips(game);
-        game._Process(game.BuyerCountdown + 0.001);
+        game._Process(0);
         Check(game.TradeActive && game.ItemIndex == itemsBeforePlacement[0] && game.ShowcaseItems[3] == -1 &&
               game.StoredItems[0] == itemsBeforePlacement[1] && game.EnergyRemaining == musicEnergy - 2 &&
 		      game.Score == 500 - unlockCost - craftSpending && game.MusicWorkshopUnlocked,
-            "The delayed trade, inventory, unlocked room, cash and spent energy must survive a reload");
+            "The trade, inventory, unlocked room, cash and spent energy must survive a reload");
         game.QueueFree();
         await ToSignal(this, SignalName.ProcessFrame);
         game = await CreateGame(scene);
@@ -264,9 +264,8 @@ public partial class ProjectTest
         game.QueueFree();
         await ToSignal(this, SignalName.ProcessFrame);
         game = await CreateGame(scene);
-        Check(!game.TradeActive && game.BuyerCountdown is > 0 and <= 2,
-            "Reloaded checkpoint goods must wait for a buyer");
-        game._Process(game.BuyerCountdown + 0.001);
+        Check(!game.TradeActive && !game.DayStarted, "Reloaded checkpoint goods must wait for Start");
+        game.EndDay();
         Check(game.CurrentDay == 5 && game.Score == 12 && game.EnergyRemaining == musicEnergy &&
 		      game.MusicWorkshopUnlocked &&
               game.TradeActive && game.ItemIndex == checkpointItems[0] && game.ShowcaseItems[2] == -1 &&
@@ -315,14 +314,8 @@ public partial class ProjectTest
                     ? "{\"save_version\":7,\"showcase_items\":[0],\"buyer_countdown\":0}"
                     : "{\"save_version\":7,\"showcase_items\":[0],\"buyer_countdown\":0.125}");
             game = await CreateGame(scene);
-            Check(!game.TradeActive && (savedCountdown == 0
-                    ? game.BuyerCountdown is >= 0.5 and <= 2
-                    : game.BuyerCountdown == savedCountdown),
-                "Legacy zero timers must gain a delay; a positive remainder below 0.5 must survive reload");
-            game._Process(game.BuyerCountdown - 0.001);
-            Check(!game.TradeActive, "Reload must not bypass the remaining delay");
-            game._Process(0.002);
-            Check(game.TradeActive && game.ItemIndex == 0, "Reloaded waiting goods must reach a buyer after the delay");
+            Check(game.TradeActive && game.ItemIndex == 0 && game.BuyerWaitRemaining == TradeScene.BuyerWaitDuration,
+                "A retired arrival timer must not delay a buyer in a running legacy day");
             game.QueueFree();
             await ToSignal(this, SignalName.ProcessFrame);
         }

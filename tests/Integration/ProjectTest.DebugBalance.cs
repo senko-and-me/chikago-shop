@@ -139,7 +139,7 @@ public partial class ProjectTest
             craft.FinishForTesting(true); craft.Activate();
             Check(!Paused && !craft.IsOpen, "Collect must retain the normal craft pause lifecycle");
             game.SelectInventoryItem(0); game.PlaceItemInShowcase(0);
-            game._Process(game.BuyerCountdown + 0.01);
+            game._Process(0);
             Check(game.TradeActive && game.OfferedPrice == TradeScene.PriceForPercent(123, game.Percentage),
                 "A real buyer must calculate its offer from the edited item price");
             game.AcceptTrade();

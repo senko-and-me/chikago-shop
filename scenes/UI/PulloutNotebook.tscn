@@ -1,0 +1,78 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/UI/PulloutNotebook.cs" id="1_notebook"]
+[ext_resource type="Texture2D" path="res://art/ui/pullout_notebook.png" id="2_texture"]
+[ext_resource type="Theme" path="res://themes/game_theme.tres" id="3_theme"]
+
+[node name="PulloutNotebook" type="Control"]
+layout_mode = 0
+offset_right = 312.0
+offset_bottom = 410.0
+mouse_filter = 2
+script = ExtResource("1_notebook")
+
+[node name="Page" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = -232.0
+offset_right = 48.0
+offset_bottom = 410.0
+mouse_filter = 0
+texture = ExtResource("2_texture")
+expand_mode = 1
+
+[node name="Notes" type="VBoxContainer" parent="Page"]
+layout_mode = 0
+offset_left = 33.0
+offset_top = 65.0
+offset_right = 250.0
+offset_bottom = 366.0
+mouse_filter = 2
+theme = ExtResource("3_theme")
+theme_override_constants/separation = 7
+
+[node name="QuestsTitle" type="Label" parent="Page/Notes"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.1, 0.1, 0.1, 1)
+theme_override_font_sizes/font_size = 21
+text = "ЗАДАНИЯ"
+
+[node name="QuestDetails" type="Label" parent="Page/Notes"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.13, 0.13, 0.13, 1)
+theme_override_font_sizes/font_size = 16
+text = "Выплатить мафии: 250$"
+autowrap_mode = 3
+
+[node name="BuffsTitle" type="Label" parent="Page/Notes"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.1, 0.1, 0.1, 1)
+theme_override_font_sizes/font_size = 19
+text = "БАФФЫ ДНЯ"
+
+[node name="BuffDetails" type="Label" parent="Page/Notes"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.12, 0.12, 0.12, 1)
+theme_override_font_sizes/font_size = 16
+text = "Нет"
+autowrap_mode = 3
+
+[node name="DebuffsTitle" type="Label" parent="Page/Notes"]
+visible = false
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.1, 0.1, 0.1, 1)
+theme_override_font_sizes/font_size = 19
+text = "ДЕБАФФЫ ДНЯ"
+
+[node name="DebuffDetails" type="Label" parent="Page/Notes"]
+visible = false
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.22, 0.12, 0.12, 1)
+theme_override_font_sizes/font_size = 16
+autowrap_mode = 3
+

@@ -130,7 +130,7 @@ public partial class ProjectTest
                 game.PlaceItemInShowcase(0);
                 SelectInventorySlot(game, 0);
                 game.PlaceItemInShowcase(1);
-                game._Process(game.BuyerCountdown + 0.001);
+                game._Process(0);
                 Check(game.TradeActive && game.EnergyRemaining == 1, "Closing test must have an active trade and unused energy");
                 int item = game.ItemIndex;
                 int[] inventory = game.StoredItems;
@@ -148,7 +148,7 @@ public partial class ProjectTest
                 Check(game.DayClosed && game.DayRemainingSeconds == 0 && game.EnergyRemaining == 0 &&
                       game.CurrentDay == 4 && !game.Failed && game.TradeActive && game.ItemIndex == item &&
                       game.StoredItems.SequenceEqual(inventory) && game.ShowcaseItems.SequenceEqual(showcases) &&
-                      game.GetNode<Label>("HUD/DayClock/Root/DayTimer").Text == "00:00" && game.BuyerCountdown == 0,
+                      game.GetNode<Label>("HUD/DayClock/Root/DayTimer").Text == "00:00",
                     "Manual close and timeout must discard energy, retain goods and keep the last trade before quota settlement");
                 Check(game.GetNode<Button>("World/Atelier/GetItemButton").Disabled &&
                       game.GetNode<Button>("HUD/Root/ProgressPanel/Content/EndDayButton").Disabled &&
@@ -182,17 +182,18 @@ public partial class ProjectTest
                 await ClickControl(game, "World/TradingRoom/Item/TradePanel/Content/Buttons/AcceptButton");
                 game.AcceptTrade();
                 Check(!game.TradeActive && game.DayClosed && game.Score == cash + offer && game.EnergyRemaining == 0 &&
-                      game.ShowcaseItems.SequenceEqual(showcases) && game.BuyerCountdown == 0,
+                      game.ShowcaseItems.SequenceEqual(showcases),
                     "The final sale must credit money once and keep the shop closed with displayed goods intact");
                 game._Process(120);
-                Check(!game.TradeActive && game.BuyerCountdown == 0, "No further buyers may arrive after the last sale");
+                Check(!game.TradeActive && !game.GetNode<ModularCustomer>("World/TradingRoom/Customer").Visible,
+                    "No further buyers may arrive after the last sale");
                 await ClickControl(game, "HUD/Root/ProgressPanel/Content/EndDayButton");
                 Check(!game.DayClosed && game.CurrentDay == 5 && game.QuotaStage == 1 &&
                       game.Score == cash + offer - game.FirstQuota && game.EnergyRemaining == 2 && game.DayRemainingSeconds == 120 &&
-                      game.BuyerCountdown is >= 0.5 and <= 2,
-                    "The next day must settle the quota using the last sale, restore energy/time and schedule a fresh buyer delay");
+                      !game.DayStarted,
+                    "The next day must settle the quota, restore energy and time and wait for Start");
                 await ClickControl(game, "DayTransitionCard/Root/Center/Card/Content/Choices/Atelier/Content/Choose");
-                game._Process(game.BuyerCountdown + 0.001);
+                game.EndDay(); // Start the next day.
                 Check(game.TradeActive, "Buyers must return when the next day starts");
                 game.ReturnToCheckpoint();
                 Check(!game.TradeActive && !game.DayClosed && game.DayRemainingSeconds == 120 && game.EnergyRemaining == 2,
@@ -384,9 +385,9 @@ public partial class ProjectTest
                         bool boosted = (room == "Atelier") == (choice == DayUpgrade.Atelier);
                         Check(panel.Values.GetNode<Label>("Chance0").Text == (boosted ? "45%" : "60%") &&
                               panel.Values.GetNode<Label>("Chance2").Text == (boosted ? "18%" : "10%"), "Category chances must match the actual boosted table");
-                        Check(panel.Values.GetNode<Label>("Chance0").GetThemeColor("font_color") == Colors.Black &&
-                              panel.Values.GetNode<Label>("Chance2").GetThemeColor("font_color") == Colors.Black,
-                            "Chance values must keep black text regardless of upgrades");
+                        Check(panel.Values.GetNode<Label>("Chance0").GetThemeColor("font_color") == (boosted ? new Color("c32b38") : Colors.Black) &&
+                              panel.Values.GetNode<Label>("Chance2").GetThemeColor("font_color") == (boosted ? new Color("268d48") : Colors.Black),
+                            "Chance colors must mark decreases and increases in the boosted workshop");
                     }
                     int[] counts = new int[WorkshopItemCatalog.Items.Count];
                     string workshop = choice == DayUpgrade.Atelier ? "atelier" : "music";
@@ -703,8 +704,8 @@ public partial class ProjectTest
                     {
                         var label = panel.Values.GetNode<Label>($"Price{rarity}");
                         int expected = boosted ? (int)(baseline[rarity] * 1.2m) : baseline[rarity];
-                        Check(label.Text == $"{expected}$" && label.GetThemeColor("font_color") == Colors.Black,
-                            "Craft tables must show correct boosted prices in black text");
+                        Check(label.Text == $"{expected}$" && label.GetThemeColor("font_color") == (boosted ? new Color("268d48") : Colors.Black),
+                            "Craft tables must show increased prices in green and baseline prices in black");
                     }
                     if (clothing && room == "Atelier" && OS.GetCmdlineUserArgs().Contains("--day-card-preview"))
                     {
@@ -718,7 +719,7 @@ public partial class ProjectTest
                 int item = clothing ? 0 : 2;
                 SelectInventorySlot(game, item);
                 game.PlaceItemInShowcase(0);
-                game._Process(game.BuyerCountdown + 0.001);
+                game._Process(0);
                 Check(game.TradeActive && game.ItemIndex == item && game.OfferedPrice == TradeScene.PriceForPercent(game.GetItemPrice(item), game.Percentage),
                     "The buyer offer must use the improved category price");
                 int offer = game.OfferedPrice;

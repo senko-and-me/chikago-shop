@@ -85,7 +85,7 @@ public partial class ProjectTest
                         "The deck and flying backs must load the original textured, transparent card art");
                 if (language == "ru" && size.X == 1280) await Capture("dealing");
                 await WaitForDayCardAnimation(card);
-                Check(Root.GuiGetFocusOwner() == null && game.DayRemainingSeconds == 90,
+                Check(Root.GuiGetFocusOwner() == null && game.DayRemainingSeconds == 60,
                     "Finishing the deal must not preselect a purchase or consume day time");
                 foreach (var upgrade in card.Options)
                 {
@@ -94,9 +94,12 @@ public partial class ProjectTest
                         !face.GetNode<Control>("Back").Visible && Root.GetVisibleRect().Encloses(face.GetGlobalRect()) &&
                         face.Size.Y > face.Size.X,
                         "Settled portrait cards must fit the viewport in both languages and sizes");
+                    int cardCost = game.DayUpgrades.CostFor(upgrade);
+                    string expectedArt = cardCost >= 30 ? "res://art/ui/day_card_gold.png" :
+                        cardCost >= 20 ? "res://art/ui/day_card_silver.png" : "res://art/ui/card_face.png";
                     Check(face.GetThemeStylebox("panel") is StyleBoxTexture faceArt &&
-                        faceArt.Texture.ResourcePath == "res://art/ui/card_face.png",
-                        "Every upgrade face must reuse the original hand-drawn card art");
+                        faceArt.Texture.ResourcePath == expectedArt,
+                        "Card artwork must match the configured price tier");
                     foreach (string name in new[] { "Amount", "Title", "Description", "Duration", "Choose" })
                     {
                         var entry = face.GetNode<Control>("Content/" + name);

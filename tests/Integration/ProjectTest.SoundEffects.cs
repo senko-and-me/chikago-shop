@@ -258,12 +258,15 @@ public partial class ProjectTest
 
             if (FileAccess.FileExists(save)) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(save));
             await CreateTrade();
-            game.EndDay(); // Start the waiting day.
+            sounds.Clear();
+            game.EndDay(); // Start and bring in the first buyer.
+            Check(sounds.SequenceEqual(new[] { SoundEffects.Cue.CustomerBell }),
+                "The first customer must ring once at Start");
             CraftAtelier(game); SelectInventorySlot(game, 0); game.PlaceItemInShowcase(0);
             sounds.Clear();
-            game._Process(game.BuyerCountdown + 0.01);
-            Check(game.TradeActive && sounds.SequenceEqual(new[] { SoundEffects.Cue.CustomerBell }),
-                "A natural buyer arrival must play one bell immediately");
+            game._Process(0);
+            Check(game.TradeActive && !sounds.Contains(SoundEffects.Cue.CustomerBell),
+                "Serving the customer who is already waiting must not ring a second time");
             sounds.Clear();
             game.RerollsRemaining = 100;
             int initialOffer = game.OfferedPrice;
@@ -322,7 +325,7 @@ public partial class ProjectTest
             Check(sounds.Count == 0, "A hidden completed sale must not play another effect");
 
             CraftAtelier(game); SelectInventorySlot(game, 0); game.PlaceItemInShowcase(0);
-            sounds.Clear(); game._Process(game.BuyerCountdown + 0.01);
+            sounds.Clear(); game._Process(0);
             Check(game.TradeActive && sounds.SequenceEqual(new[] { SoundEffects.Cue.CustomerBell }),
                 "The next natural buyer must ring once after the previous sale");
             game.PersistProgress();

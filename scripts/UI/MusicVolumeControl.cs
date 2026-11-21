@@ -8,6 +8,7 @@ public partial class MusicVolumeControl : PanelContainer
     private Label _percentage;
     private MusicSettings _settings;
     private SoundEffects _effects;
+    private bool _dragging;
 
     public override void _Ready()
     {
@@ -27,26 +28,39 @@ public partial class MusicVolumeControl : PanelContainer
             UpdateValue(_settings.Volume);
             _settings.VolumeChanged += UpdateValue;
         }
+        _slider.DragStarted += () => _dragging = true;
+        _slider.DragEnded += changed =>
+        {
+            _dragging = false;
+            if (changed) SaveVolume(_slider.Value);
+        };
         _slider.ValueChanged += value =>
         {
-            Error error = ControlsSoundEffects ? _effects.SetVolume(value / 100) : _settings.SetVolume(value / 100);
-            if (error != Error.Ok) GD.PushWarning($"Audio volume could not be saved: {error}");
+            if (_dragging)
+            {
+                if (ControlsSoundEffects) _effects.PreviewVolume(value / 100);
+                else _settings.PreviewVolume(value / 100);
+            }
+            else SaveVolume(value);
         };
+    }
+
+    private void SaveVolume(double value)
+    {
+        Error error = ControlsSoundEffects ? _effects.SetVolume(value / 100) : _settings.SetVolume(value / 100);
+        if (error != Error.Ok) GD.PushWarning($"Audio volume could not be saved: {error}");
     }
 
     private void ApplyPlainStyle()
     {
-        AddThemeStyleboxOverride("panel", new StyleBoxFlat
-        {
-            BgColor = new Color(0.912046f, 0.912046f, 0.912046f),
-            ContentMarginLeft = 14, ContentMarginRight = 14,
-            ContentMarginTop = 10, ContentMarginBottom = 10
-        });
+        // Keep the scene-authored paper, ink track and illustrated handle in pause too.
+        var paper = (StyleBox)GetThemeStylebox("panel").Duplicate();
+        paper.ContentMarginLeft = 14; paper.ContentMarginRight = 14;
+        paper.ContentMarginTop = 10; paper.ContentMarginBottom = 10;
+        AddThemeStyleboxOverride("panel", paper);
         CustomMinimumSize = new Vector2(360, 0);
         SizeFlagsHorizontal = SizeFlags.ExpandFill;
         _slider.CustomMinimumSize = new Vector2(0, 28);
-        foreach (string icon in new[] { "grabber", "grabber_highlight", "grabber_disabled" })
-            _slider.RemoveThemeIconOverride(icon);
     }
 
     private void UpdateValue(double volume)

@@ -33,18 +33,20 @@ public partial class CounterWorld : Node2D
     public override void _Ready()
     {
         _item = GetNode<Node2D>("TradingRoom/Item");
+        var variants = _item.GetChildren().OfType<Sprite2D>()
+            .ToDictionary(sprite => sprite.Name.ToString(), StringComparer.OrdinalIgnoreCase);
         foreach (CraftItem item in WorkshopItemCatalog.Items)
         {
-            // Reuse scene-owned variants and fill only the existing catalogue's missing kinds.
-            if (_item.GetChildren().OfType<Sprite2D>().Any(sprite =>
-                sprite.Name.ToString().Equals(item.Kind, StringComparison.OrdinalIgnoreCase))) continue;
+            if (!variants.TryGetValue(item.Kind, out var sprite))
+            {
+                sprite = new Sprite2D { Name = item.Kind, Position = new Vector2(64, -48), Visible = false };
+                _item.AddChild(sprite);
+            }
+            if (sprite.Texture != null) continue;
             Texture2D texture = GD.Load<Texture2D>(item.ArtPath);
             float scale = Math.Min(128f / texture.GetWidth(), 128f / texture.GetHeight());
-            _item.AddChild(new Sprite2D
-            {
-                Name = item.Kind, Texture = texture, Scale = Vector2.One * scale,
-                Position = new Vector2(64, -48), Visible = false
-            });
+            sprite.Texture = texture;
+            sprite.Scale = Vector2.One * scale;
         }
         var background = GetNode<Sprite2D>("TradingRoom/TradingRoomBackground");
         Vector2 contact = _item.ToLocal(background.ToGlobal(CounterItemContact));

@@ -8,6 +8,7 @@
 [ext_resource type="Texture2D" path="res://art/dialogue/castello.png" id="6_castello"]
 [ext_resource type="Texture2D" path="res://art/dialogue/customer.png" id="7_customer"]
 [ext_resource type="Shader" path="res://shaders/dialogue_portrait.gdshader" id="8_portrait"]
+[ext_resource type="Script" path="res://scripts/Dialogue/PrologueCharacterMotion.cs" id="9_motion"]
 
 [sub_resource type="ShaderMaterial" id="FrankieTone"]
 resource_local_to_scene = true
@@ -73,17 +74,19 @@ mouse_filter = 2
 color = Color(0.047467, 0.047467, 0.047467, 0.45)
 
 [node name="Characters" type="Control" parent="."]
+script = ExtResource("9_motion")
 layout_mode = 1
-anchor_left = 0.12
-anchor_top = 0.20
-anchor_right = 0.88
-anchor_bottom = 0.79
+anchor_left = 0.075
+anchor_top = 0.12
+anchor_right = 0.925
+anchor_bottom = 0.82
 mouse_filter = 2
 
 [node name="Castello" type="TextureRect" parent="Characters"]
+visible = false
 material = SubResource("CastelloTone")
 layout_mode = 1
-anchor_right = 0.23
+anchor_right = 0.275
 anchor_bottom = 1.0
 mouse_filter = 2
 texture = ExtResource("6_castello")
@@ -93,10 +96,10 @@ stretch_mode = 5
 [node name="Customer" type="TextureRect" parent="Characters"]
 material = SubResource("CustomerTone")
 layout_mode = 1
-anchor_left = 0.21
-anchor_top = 0.04
-anchor_right = 0.44
-anchor_bottom = 0.95
+anchor_left = 0.235
+anchor_top = 0.00
+anchor_right = 0.500
+anchor_bottom = 1.0
 mouse_filter = 2
 texture = ExtResource("7_customer")
 expand_mode = 1
@@ -105,8 +108,8 @@ stretch_mode = 5
 [node name="Frankie" type="TextureRect" parent="Characters"]
 material = SubResource("FrankieTone")
 layout_mode = 1
-anchor_left = 0.69
-anchor_right = 0.96
+anchor_left = 0.675
+anchor_right = 0.985
 anchor_bottom = 1.0
 mouse_filter = 2
 texture = ExtResource("5_frankie")
