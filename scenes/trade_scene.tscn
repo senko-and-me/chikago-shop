@@ -11,44 +11,41 @@
 [ext_resource type="Texture2D" uid="uid://d21j3cp04fmi5" path="res://art/rooms/cashier_closed.jpg" id="12_cashier"]
 [ext_resource type="Texture2D" uid="uid://7i21ur522dc7" path="res://art/rooms/upper_corridor_closed.jpg" id="13_58qc8"]
 [ext_resource type="Texture2D" uid="uid://dcj7da0lpr1fq" path="res://art/rooms/room_layout.jpg" id="14_layout"]
-[ext_resource type="Texture2D" uid="uid://dfxl3bik7r087" path="res://art/ui/panel_large.png" id="16_panel_large"]
 [ext_resource type="Texture2D" uid="uid://bf1y5qehuwoj" path="res://art/ui/panel_small.png" id="17_panel_small"]
 [ext_resource type="PackedScene" path="res://scenes/UI/RarityPanel.tscn" id="19_rarity_panel"]
 [ext_resource type="Script" uid="uid://dxn8wgvls5a4a" path="res://scripts/UI/PauseMenu.cs" id="20_pause"]
 [ext_resource type="Script" uid="uid://bdswgixl6srw1" path="res://scripts/UI/ZoomResponsiveUi.cs" id="21_zoom_ui"]
 [ext_resource type="Script" uid="uid://dqhunfpycjxyp" path="res://scripts/UI/ProgressPanel.cs" id="22_progress"]
-[ext_resource type="PackedScene" path="res://scenes/UI/CigaretteProgress.tscn" id="32_cigarette_progress"]
-[ext_resource type="PackedScene" path="res://scenes/UI/EnergyPanel.tscn" id="33_energy_panel"]
 [ext_resource type="Script" uid="uid://cnnctojfahevu" path="res://scripts/Camera/WorldCamera.cs" id="23_world_camera"]
 [ext_resource type="Script" uid="uid://moiorwdg8bcp" path="res://scripts/Presentation/RoomDoorwayPresentation.cs" id="24_doorways"]
 [ext_resource type="Texture2D" uid="uid://cog2ypvb6uqtj" path="res://art/ui/panel_inverted.png" id="25_inverted"]
 [ext_resource type="Script" uid="uid://6v4lxl6qtq6y" path="res://scripts/Audio/GameplayMusicDirector.cs" id="26_game_music"]
 [ext_resource type="AudioStream" uid="uid://dapsv2fl4qete" path="res://audio/music/menu_theme_loop.wav" id="27_day_music"]
 [ext_resource type="AudioStream" uid="uid://chjxk4p6834ac" path="res://audio/music/thoughtful_loop.wav" id="28_upgrade_music"]
+[ext_resource type="PackedScene" path="res://scenes/UI/FirstTradeTutorial.tscn" id="30_tutorial"]
+[ext_resource type="PackedScene" path="res://scenes/UI/CraftButton.tscn" id="31_craft_button"]
+[ext_resource type="PackedScene" path="res://scenes/UI/CigaretteProgress.tscn" id="32_cigarette_progress"]
+[ext_resource type="PackedScene" uid="uid://wged5cxnn4t5" path="res://scenes/UI/EnergyPanel.tscn" id="33_energy_panel"]
 [ext_resource type="Texture2D" uid="uid://b8xud5umuwi61" path="res://art/rooms/night_time.png" id="background_1_jqty7"]
 [ext_resource type="Texture2D" uid="uid://dcpdw0kad8qlu" path="res://art/rooms/day_time.png" id="background_2_31fg5"]
 [ext_resource type="Texture2D" uid="uid://bj3pbvpqnrv7g" path="res://art/ui/camera_frame.png" id="background_4_00ccd"]
 [ext_resource type="Texture2D" uid="uid://deul0bfifm5rg" path="res://art/rooms/locked_curtain.png" id="background_6_2e12l"]
-[ext_resource type="PackedScene" path="res://scenes/UI/FirstTradeTutorial.tscn" id="30_tutorial"]
-
-[ext_resource type="PackedScene" path="res://scenes/UI/CraftButton.tscn" id="31_craft_button"]
-
-[ext_resource type="Texture2D" path="res://art/items/cap.png" id="item_0"]
-[ext_resource type="Texture2D" path="res://art/items/shirt.png" id="item_1"]
-[ext_resource type="Texture2D" path="res://art/items/maracas.png" id="item_2"]
-[ext_resource type="Texture2D" path="res://art/items/metronome.png" id="item_3"]
-[ext_resource type="Texture2D" path="res://art/items/gloves.png" id="item_4"]
-[ext_resource type="Texture2D" path="res://art/items/jacket.png" id="item_5"]
-[ext_resource type="Texture2D" path="res://art/items/fur_stole.png" id="item_6"]
-[ext_resource type="Texture2D" path="res://art/items/trumpet.png" id="item_7"]
-[ext_resource type="Texture2D" path="res://art/items/violin.png" id="item_8"]
-[ext_resource type="Texture2D" path="res://art/items/gramophone.png" id="item_9"]
-[ext_resource type="Texture2D" path="res://art/items/cloche_hat.png" id="item_10"]
-[ext_resource type="Texture2D" path="res://art/items/shoes.png" id="item_11"]
-[ext_resource type="Texture2D" path="res://art/items/dress.png" id="item_12"]
-[ext_resource type="Texture2D" path="res://art/items/tambourine.png" id="item_13"]
-[ext_resource type="Texture2D" path="res://art/items/saxophone.png" id="item_14"]
-[ext_resource type="Texture2D" path="res://art/items/cello.png" id="item_15"]
+[ext_resource type="Texture2D" uid="uid://c3ghxs50ono82" path="res://art/items/cap.png" id="item_0"]
+[ext_resource type="Texture2D" uid="uid://wj0rgw2dyexa" path="res://art/items/shirt.png" id="item_1"]
+[ext_resource type="Texture2D" uid="uid://i0bu83h1a74u" path="res://art/items/maracas.png" id="item_2"]
+[ext_resource type="Texture2D" uid="uid://dfy2y46n3c8r6" path="res://art/items/metronome.png" id="item_3"]
+[ext_resource type="Texture2D" uid="uid://bw57e18b5g53h" path="res://art/items/gloves.png" id="item_4"]
+[ext_resource type="Texture2D" uid="uid://bks25fr8ggx3" path="res://art/items/jacket.png" id="item_5"]
+[ext_resource type="Texture2D" uid="uid://cdtrh333bp243" path="res://art/items/fur_stole.png" id="item_6"]
+[ext_resource type="Texture2D" uid="uid://c7sqi7hvai6e" path="res://art/items/trumpet.png" id="item_7"]
+[ext_resource type="Texture2D" uid="uid://bv054kbb4nanj" path="res://art/items/violin.png" id="item_8"]
+[ext_resource type="Texture2D" uid="uid://bhiec4fjxqq5b" path="res://art/items/gramophone.png" id="item_9"]
+[ext_resource type="Texture2D" uid="uid://c7aumqjh3o22m" path="res://art/items/cloche_hat.png" id="item_10"]
+[ext_resource type="Texture2D" uid="uid://deyh3lhg5ahp0" path="res://art/items/shoes.png" id="item_11"]
+[ext_resource type="Texture2D" uid="uid://bppko5tcbd16d" path="res://art/items/dress.png" id="item_12"]
+[ext_resource type="Texture2D" uid="uid://35bsuo8psaku" path="res://art/items/tambourine.png" id="item_13"]
+[ext_resource type="Texture2D" uid="uid://cf42kht7swi3j" path="res://art/items/saxophone.png" id="item_14"]
+[ext_resource type="Texture2D" uid="uid://l6onyoshybbc" path="res://art/items/cello.png" id="item_15"]
 
 [sub_resource type="AtlasTexture" id="InvertedHeaderTexture"]
 atlas = ExtResource("25_inverted")
@@ -110,13 +107,6 @@ bg_color = Color(0.515402, 0.515402, 0.515402, 1)
 
 [sub_resource type="StyleBoxFlat" id="DeclineDisabled"]
 bg_color = Color(0.240239, 0.240239, 0.240239, 1)
-
-[sub_resource type="StyleBoxTexture" id="HudLargePanelStyle"]
-content_margin_left = 18.0
-content_margin_top = 18.0
-content_margin_right = 18.0
-content_margin_bottom = 18.0
-texture = ExtResource("16_panel_large")
 
 [sub_resource type="StyleBoxFlat" id="RerollNormal"]
 bg_color = Color(0.39698, 0.39698, 0.39698, 1)
@@ -202,7 +192,6 @@ offset_left = 735.0
 offset_top = 849.0
 offset_right = 1185.0
 offset_bottom = 1039.0
-mouse_default_cursor_shape = 2
 
 [node name="PriceHint" type="PanelContainer" parent="World/Atelier/GetItemButton" unique_id=672506262]
 visible = false
@@ -305,7 +294,6 @@ offset_left = 735.0
 offset_top = 849.0
 offset_right = 1185.0
 offset_bottom = 1039.0
-mouse_default_cursor_shape = 2
 
 [node name="PriceHint" type="PanelContainer" parent="World/MusicWorkshop/GetItemButton" unique_id=1906600376]
 visible = false
@@ -615,97 +603,97 @@ color = Color(0.475051, 0.475051, 0.475051, 1)
 visible = false
 position = Vector2(676, 651)
 
-[node name="Hat" type="Sprite2D" parent="World/TradingRoom/Item"]
+[node name="Hat" type="Sprite2D" parent="World/TradingRoom/Item" unique_id=1373056900]
 visible = false
 position = Vector2(64, -48)
 scale = Vector2(0.08333333, 0.08333333)
 texture = ExtResource("item_0")
 
-[node name="Gloves" type="Sprite2D" parent="World/TradingRoom/Item"]
+[node name="Gloves" type="Sprite2D" parent="World/TradingRoom/Item" unique_id=2006531660]
 visible = false
 position = Vector2(64, -48)
 scale = Vector2(0.08839779, 0.08839779)
 texture = ExtResource("item_1")
 
-[node name="Guitar" type="Sprite2D" parent="World/TradingRoom/Item"]
+[node name="Guitar" type="Sprite2D" parent="World/TradingRoom/Item" unique_id=1046897459]
 visible = false
 position = Vector2(64, -48)
 scale = Vector2(0.08333333, 0.08333333)
 texture = ExtResource("item_2")
 
-[node name="Trumpet" type="Sprite2D" parent="World/TradingRoom/Item"]
+[node name="Trumpet" type="Sprite2D" parent="World/TradingRoom/Item" unique_id=795141583]
 visible = false
 position = Vector2(64, -48)
 scale = Vector2(0.10207337, 0.10207337)
 texture = ExtResource("item_3")
 
-[node name="Clothing_first" type="Sprite2D" parent="World/TradingRoom/Item"]
+[node name="Clothing_first" type="Sprite2D" parent="World/TradingRoom/Item" unique_id=946822664]
 visible = false
 position = Vector2(64, -48)
 scale = Vector2(0.08333333, 0.08333333)
 texture = ExtResource("item_4")
 
-[node name="Clothing_exclusive" type="Sprite2D" parent="World/TradingRoom/Item"]
+[node name="Clothing_exclusive" type="Sprite2D" parent="World/TradingRoom/Item" unique_id=881665222]
 visible = false
 position = Vector2(64, -48)
 scale = Vector2(0.08333333, 0.08333333)
 texture = ExtResource("item_5")
 
-[node name="Clothing_unique" type="Sprite2D" parent="World/TradingRoom/Item"]
+[node name="Clothing_unique" type="Sprite2D" parent="World/TradingRoom/Item" unique_id=1074353419]
 visible = false
 position = Vector2(64, -48)
 scale = Vector2(0.09756098, 0.09756098)
 texture = ExtResource("item_6")
 
-[node name="Music_first" type="Sprite2D" parent="World/TradingRoom/Item"]
+[node name="Music_first" type="Sprite2D" parent="World/TradingRoom/Item" unique_id=1988147074]
 visible = false
 position = Vector2(64, -48)
 scale = Vector2(0.08333333, 0.08333333)
 texture = ExtResource("item_7")
 
-[node name="Music_exclusive" type="Sprite2D" parent="World/TradingRoom/Item"]
+[node name="Music_exclusive" type="Sprite2D" parent="World/TradingRoom/Item" unique_id=71513595]
 visible = false
 position = Vector2(64, -48)
 scale = Vector2(0.10207337, 0.10207337)
 texture = ExtResource("item_8")
 
-[node name="Music_unique" type="Sprite2D" parent="World/TradingRoom/Item"]
+[node name="Music_unique" type="Sprite2D" parent="World/TradingRoom/Item" unique_id=439983155]
 visible = false
 position = Vector2(64, -48)
 scale = Vector2(0.09756098, 0.09756098)
 texture = ExtResource("item_9")
 
-[node name="Cloche_hat" type="Sprite2D" parent="World/TradingRoom/Item"]
+[node name="Cloche_hat" type="Sprite2D" parent="World/TradingRoom/Item" unique_id=2033039212]
 visible = false
 position = Vector2(64, -48)
 scale = Vector2(0.08333333, 0.08333333)
 texture = ExtResource("item_10")
 
-[node name="Shoes" type="Sprite2D" parent="World/TradingRoom/Item"]
+[node name="Shoes" type="Sprite2D" parent="World/TradingRoom/Item" unique_id=2081785774]
 visible = false
 position = Vector2(64, -48)
 scale = Vector2(0.08333333, 0.08333333)
 texture = ExtResource("item_11")
 
-[node name="Dress" type="Sprite2D" parent="World/TradingRoom/Item"]
+[node name="Dress" type="Sprite2D" parent="World/TradingRoom/Item" unique_id=597064986]
 visible = false
 position = Vector2(64, -48)
 scale = Vector2(0.08333333, 0.08333333)
 texture = ExtResource("item_12")
 
-[node name="Tambourine" type="Sprite2D" parent="World/TradingRoom/Item"]
+[node name="Tambourine" type="Sprite2D" parent="World/TradingRoom/Item" unique_id=1840566662]
 visible = false
 position = Vector2(64, -48)
 scale = Vector2(0.08333333, 0.08333333)
 texture = ExtResource("item_13")
 
-[node name="Saxophone" type="Sprite2D" parent="World/TradingRoom/Item"]
+[node name="Saxophone" type="Sprite2D" parent="World/TradingRoom/Item" unique_id=412325167]
 visible = false
 position = Vector2(64, -48)
 scale = Vector2(0.10207337, 0.10207337)
 texture = ExtResource("item_14")
 
-[node name="Cello" type="Sprite2D" parent="World/TradingRoom/Item"]
+[node name="Cello" type="Sprite2D" parent="World/TradingRoom/Item" unique_id=633360588]
 visible = false
 position = Vector2(64, -48)
 scale = Vector2(0.08333333, 0.08333333)
@@ -951,18 +939,19 @@ text = "Счёт: 220$"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="EnergyPanel" parent="HUD/Root" instance=ExtResource("33_energy_panel")]
+[node name="EnergyPanel" parent="HUD/Root" unique_id=1238519908 instance=ExtResource("33_energy_panel")]
 layout_mode = 1
 
 [node name="ProgressPanel" type="Control" parent="HUD/Root" unique_id=1016591818]
-layout_mode = 0
+anchors_preset = 0
 offset_top = 24.0
 offset_right = 46.0
 offset_bottom = 232.0
 mouse_filter = 2
 script = ExtResource("22_progress")
 
-[node name="Visual" parent="HUD/Root/ProgressPanel" instance=ExtResource("32_cigarette_progress")]
+[node name="Visual" parent="HUD/Root/ProgressPanel" unique_id=1617430455 instance=ExtResource("32_cigarette_progress")]
+anchors_preset = 0
 
 [node name="Content" type="VBoxContainer" parent="HUD/Root/ProgressPanel" unique_id=1283382676]
 visible = false
@@ -1039,22 +1028,22 @@ offset_top = 24.0
 offset_right = 44.0
 offset_bottom = 232.0
 mouse_default_cursor_shape = 2
-flat = true
 theme_override_styles/normal = SubResource("ProgressEmpty")
-theme_override_styles/hover = SubResource("ProgressEmpty")
 theme_override_styles/pressed = SubResource("ProgressEmpty")
+theme_override_styles/hover = SubResource("ProgressEmpty")
 theme_override_styles/disabled = SubResource("ProgressEmpty")
+flat = true
 
-[node name="ClockActionButton" type="Button" parent="HUD/Root" groups=["button_feedback_local"]]
+[node name="ClockActionButton" type="Button" parent="HUD/Root" unique_id=87239404 groups=["button_feedback_local"]]
 visible = false
 layout_mode = 0
 mouse_default_cursor_shape = 2
-flat = true
 theme_override_styles/normal = SubResource("ProgressEmpty")
-theme_override_styles/hover = SubResource("ProgressEmpty")
 theme_override_styles/pressed = SubResource("ProgressEmpty")
+theme_override_styles/hover = SubResource("ProgressEmpty")
 theme_override_styles/disabled = SubResource("ProgressEmpty")
 theme_override_styles/focus = SubResource("ProgressEmpty")
+flat = true
 
 [node name="InventoryUI" parent="HUD" unique_id=1583018025 instance=ExtResource("9_cppqn")]
 offset_top = -3.0
@@ -1070,4 +1059,4 @@ script = ExtResource("21_zoom_ui")
 [node name="RoomDoorways" type="Node" parent="." unique_id=1292616752]
 script = ExtResource("24_doorways")
 
-[node name="FirstTradeTutorial" parent="." instance=ExtResource("30_tutorial")]
+[node name="FirstTradeTutorial" parent="." unique_id=588100133 instance=ExtResource("30_tutorial")]
