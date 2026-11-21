@@ -9,6 +9,20 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### POL-02 — убрать покупателей при исчерпании энергии и всего товара
+
+Статус: `DONE`; координатор/исполнитель /root; READY 2026-11-21; POL01 DONE. CP-POL-02: .local/checks/pol02/CP-POL-02.md — точные read/write-set/out of scope/приёмка/проверки. Исправляется приход обычного покупателя, когда Energy0 и ни в инвентаре, ни на витринах нет товара. Доменное правило отдельно от TradeScene.cs; последняя активная сделка и оставшийся товар сохраняются. Без изменений баланса/категорий/дней/сохранений и без commit/push.
+
+
+Task: POL-02
+Recommended status: REVIEW → принято координатором, DONE
+Changed: src/ChikagoShop.Domain/Trading/BuyerAvailabilityRules.cs; tests/ChikagoShop.Domain.Tests/BuyerAvailabilityRulesTests.cs; scripts/TradeScene.BuyerBonuses.cs; tests/Integration/ProjectTest.{BuyerAvailability,BuyerArrival}.cs и UID нового integration файла; ORCHESTRATION_PLAN.md.
+Checks: regression на исходной версии --buyer-arrival-checks FAIL: No customer should appear when no goods or energy remain (.local/checks/pol02/baseline-errors.log). После исправления dotnet build ChikagoShop.sln --no-restore PASS0warnings/errors. dotnet test ... --filter FullyQualifiedName~BuyerAvailabilityRulesTests PASS9/9 (DOTNET_ROLL_FORWARD=Major). Isolated import PASS, rendered --buyer-arrival-checks PASS: отсутствие новых прибытий/bell при Energy0+пустом запасе, уход существующего waiting buyer без reload, немедленная очистка старого waiting save и нормализация saved flag, продажа из inventory/showcase при Energy0, сохранность активной финальной сделки, отсутствие нового покупателя после последней продажи, возобновление прихода в новом дне. Прежние buyer/tip/modal/save/unlock/art проверки в том же suite PASS. git diff-check PASS. Evidence .local/checks/pol02/{baseline-errors,build,domain,import,buyer-arrival}.log.
+Acceptance: отдельное доменное правило допускает нового ожидающего покупателя, только если есть энергия для производства или непроданный товар в инвентаре/витринах. Адаптер проверяет supply до StartWaitingBuyer; существующий невозможный waiting buyer снимается в ShowWaitingBuyer/ TryServeWaitingBuyer с сохранением. Последняя активная сделка не отменяется, товары не удаляются. TradeScene.cs не изменялся, schema/таймер дня/категории50/50/баланс сохранены.
+Read-set exception: нет; штатный tracked runtime snapshot использован для изолированного импорта/проверок, source/ не читался.
+Risks/blocker: новых блокеров нет; прежнее Godot root certificate warning в sandbox. Известные2 balance/config теста исходного проекта POL01 вне scope, здесь выполнялись9новых unit кейсов и полный buyer suite. Категорийный выбор покупателей не менялся; правило касается исчерпания всего запаса при0энергии. EXE/ZIP/Downloads и GitHub не менялись, commit/push не выполнялись.
+Next: пользовательская проверка в polishing после последней продажи.
+
 ### POL-01 — перенос выбранного ChikagoShop_Final в polishing
 
 Статус: `DONE`; координатор/исполнитель /root; READY 2026-11-21. CP-POL-01: .local/checks/polishing-import-2026-11-21/CP-POL-01.md. Авторитетная версия: C:/Users/artem/Downloads/ChikagoShop_Final(1)/ChikagoShop_Final/chikago-shop-main. Перенос600 source/resource/doc файлов в рабочую Git-папку polishing,92 различия и80 новых; старая версия сохранена в previous-project.zip и Git50f0a33. Точные manifest/read/write-set/out of scope/приёмка — в CP. Служебные кэши и готовый Windows-экспорт вне Git; main не изменяется. Без исправлений игрового поведения при переносе.

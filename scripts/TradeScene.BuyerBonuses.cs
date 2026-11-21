@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using ChikagoShop.Domain.Trading;
 using Godot;
 
 // A crafted object's quality belongs to the particular copy, not its catalogue kind.
@@ -94,7 +95,7 @@ public partial class TradeScene
 
     private void StartWaitingBuyer()
     {
-        if (_waitingBuyer || TradeActive || !_dayCycle.CanReceiveBuyers) return;
+        if (_waitingBuyer || TradeActive || !_dayCycle.CanReceiveBuyers || !CanSupplyWaitingBuyer()) return;
 
         // Each new customer independently chooses a desired category, 50/50.
         // Before the music workshop is unlocked, only atelier requests are playable.
@@ -111,6 +112,7 @@ public partial class TradeScene
     private void ShowWaitingBuyer()
     {
         if (!_waitingBuyer || !_dayCycle.CanReceiveBuyers) return;
+        if (DismissBuyerWithoutSupply()) return;
         _customer.SetAppearance(CustomerIndex);
         _customer.Visible = true;
         _world.ItemVisible = false;
@@ -128,6 +130,7 @@ public partial class TradeScene
     private bool TryServeWaitingBuyer()
     {
         if (!_waitingBuyer || !_dayCycle.CanReceiveBuyers) return false;
+        if (DismissBuyerWithoutSupply()) return false;
         var matching = new List<int>();
         for (int i = 0; i < ShowcaseCapacity; i++)
         {
@@ -144,6 +147,17 @@ public partial class TradeScene
         _showcaseGrades[_activeShowcaseIndex] = "D";
         RefreshShowcases();
         StartBuyerOffer();
+        return true;
+    }
+
+    private bool CanSupplyWaitingBuyer() => BuyerAvailabilityRules.CanWait(
+        EnergyRemaining, _storedItems.Count > 0, Array.Exists(_showcaseItems, index => index >= 0));
+
+    private bool DismissBuyerWithoutSupply()
+    {
+        if (CanSupplyWaitingBuyer()) return false;
+        HideWaitingBuyer();
+        SaveProgress();
         return true;
     }
 

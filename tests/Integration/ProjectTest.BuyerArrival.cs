@@ -139,6 +139,7 @@ public partial class ProjectTest
             if (FileAccess.FileExists(save)) DirAccess.RemoveAbsolute(save);
         }
         await ToSignal(this, SignalName.ProcessFrame);
+        await TestBuyerAvailability();
     }
 
     private async Task CheckMusicUnlockPanel(TradeScene game, bool rendered)
