@@ -58,6 +58,13 @@ public partial class ProjectTest : SceneTree
                 Quit();
                 return;
             }
+            if (OS.GetCmdlineUserArgs().Contains("--polishing-start-checks"))
+            {
+                await TestPolishingStart();
+                GD.Print("POLISHING_START_CHECKS_PASS: real held clicks, start, collect, resize and languages");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--polishing-reward-checks"))
             {
                 await TestPolishingReward();

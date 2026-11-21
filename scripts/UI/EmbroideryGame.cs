@@ -164,8 +164,7 @@ public partial class EmbroideryGame : CanvasLayer
 
         if (IsPolishing)
         {
-            // Mouse cursor artwork sits above the entire polishing window, not only the fabric.
-            // It follows the mouse even when no button is held.
+            // Use the cloth while playing; ready/result buttons keep the native UI pointer.
             _polishingSurface.DrawClothAtPointer = false;
             // Sprite2D uses an explicit scale calculated from the source artwork.
             // TextureRect's old centering could render the native 2048px texture
@@ -239,10 +238,7 @@ public partial class EmbroideryGame : CanvasLayer
         if (IsPolishing)
         {
             _previousCursorMode = Input.MouseMode;
-            Input.MouseMode = Input.MouseModeEnum.Hidden;
             _polishingCursorHidden = true;
-            _polishingCursor.Position = _surface.GetLocalMousePosition();
-            _polishingCursor.Show();
         }
         game.RefreshDayPresentation();
         Refresh();
@@ -311,6 +307,16 @@ public partial class EmbroideryGame : CanvasLayer
         Input.MouseMode = _previousCursorMode;
     }
 
+    private void RefreshPolishingCursor()
+    {
+        if (!IsPolishing || !_polishingCursorHidden) return;
+        bool playing = ActiveSession.State == EmbroideryState.Playing;
+        _polishingCursor.Position = _surface.GetLocalMousePosition();
+        _polishingCursor.Visible = playing;
+        Input.MouseModeEnum mode = playing ? Input.MouseModeEnum.Hidden : Input.MouseModeEnum.Visible;
+        if (Input.MouseMode != mode) Input.MouseMode = mode;
+    }
+
     public override void _ExitTree()
     {
         RestoreMouseCursor();
@@ -347,15 +353,6 @@ public partial class EmbroideryGame : CanvasLayer
     {
         if (!IsOpen)
             return;
-
-        if (IsPolishing)
-        {
-            // Keep the cloth visible under the pointer at rest, during rubbing and over buttons.
-            // Centered sprite follows the pointer exactly, even at rest.
-            _polishingCursor.Position = _surface.GetLocalMousePosition();
-            if (Input.MouseMode != Input.MouseModeEnum.Hidden)
-                Input.MouseMode = Input.MouseModeEnum.Hidden;
-        }
 
         var game = GetParent<TradeScene>();
         game.TickCraftDay(delta);
@@ -441,6 +438,7 @@ public partial class EmbroideryGame : CanvasLayer
         {
             Place(_polishingSurface, _surface.FabricRect);
             _polishingSurface.RefreshArtwork();
+            RefreshPolishingCursor();
         }
 
         _surface.QueueRedraw();

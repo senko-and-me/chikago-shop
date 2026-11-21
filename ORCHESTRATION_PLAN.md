@@ -9,6 +9,17 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### POL-05 — запуск полировки кнопкой Начать
+
+Статус: `DONE`; /root coordinator/executor; POL04 DONE. CP: .local/checks/pol05/CP-POL-05.md.
+Task: POL-05
+Recommended status: REVIEW → принято координатором, DONE для исправления курсора UI.
+Changed: scripts/UI/EmbroideryGame.cs (курсор по состоянию мини-игры); tests/Integration/ProjectTest.Crafting.cs (TestPolishingStart); tests/ProjectTest.cs (focused runner); ORCHESTRATION_PLAN.md. Остальные незакоммиченные задачи сохранены.
+Checks: build PASS0warnings/errors; cursor baseline FAIL до фикса: Ready buttons need the native pointer. После фикса rendered --polishing-start-checks PASS на штатном D3D12/Mobile и GL compatibility: RU/EN,1280x720/960x540/1920x1080, cancel/reopen, LMB held5frames, Start→Playing, native→cloth cursor, actual held strokes increase Progress, one payment/energy/batch, finish→native cursor и collect. --polishing-reward-checks PASS все инструменты/веса/отмена/оплата/награда/качество/timeout/reload. git diff --check PASS. Evidence .local/checks/pol05/{cursor-baseline-errors,start-fixed,start-fixed-gl,reward-fixed,build}.log.
+Acceptance: до старта и на результате виден обычный курсор с точной точкой нажатия, тряпочка не закрывает кнопки. После старта тряпочка заменяет указатель для полировки, закрытие возвращает предыдущий mouse mode. Сигналы кнопки и цикл мини-игры проверены реальным mouse input через viewport.
+Read-set exception: диагностика UI input перехватчиков ButtonFeedbackController/WorldCamera/FirstTradeTutorial и текущего пользовательского Godot log read-only. source/ не читался; пользовательский log ошибок не содержит.
+Risks/blocker: оригинальный запрет нажатия в embedded окне не воспроизведён — обычные кнопочные тесты проходили до фикса. По скрину подтверждён UI дефект: центр тряпочки является hotspot и не совпадает с её видимым кончиком; убрано перекрытие кнопок кастомным указателем. Если пользовательский симптом остаётся, нужны записи2ошибок из его Debugger. В тестах только прежний root certificate warning. Commit/push/EXE/ZIP/сохранения не менялись.
+Next: перезапустить игровую сессию и проверить кнопку с обычным курсором в embedded Godot.
 ### POL-04 — окончание дня исчерпывает терпение покупателя
 
 Статус: `DONE`; /root coordinator/executor; POL03 DONE; CP: .local/checks/pol04/CP-POL-04.md.
