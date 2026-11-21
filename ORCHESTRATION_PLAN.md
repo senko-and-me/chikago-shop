@@ -11,7 +11,17 @@
 ## Текущий фронт
 ### HF-204 — текущий проект в отдельной ветке polishing
 
-Статус: `IN_PROGRESS`; координатор/исполнитель /root; READY 2026-11-21; HF202/203 DONE. CP-HF-204: .local/checks/hf204/CP-HF-204.md — точные scope/приёмка/проверки. Пользователь просит сохранить текущую версию проекта в новой ветке polishing и работать в ней. Снимок основан на локальной main1265ccd + текущая trade_scene.tscn; более новые remote-main коммиты не подмешиваются. В main ничего не публикуется. Проверки: сохранность scene SHA, build/import/resources/scene smoke, ordinary push polishing/upstream/refs/status.
+Статус: `DONE`; координатор/исполнитель /root; READY 2026-11-21; HF202/203 DONE. CP-HF-204: .local/checks/hf204/CP-HF-204.md — точные scope/приёмка/проверки. Пользователь просит сохранить текущую версию проекта в новой ветке polishing и работать в ней. Снимок основан на локальной main1265ccd + текущая trade_scene.tscn; более новые remote-main коммиты не подмешиваются. В main ничего не публикуется. Проверки: сохранность scene SHA, build/import/resources/scene smoke, ordinary push polishing/upstream/refs/status.
+
+
+Task: HF-204
+Recommended status: REVIEW → принято координатором, DONE
+Changed: создана polishing от текущей локальной main1265ccd; текущая trade_scene.tscn сохранена коммитом825d62e, опубликована в origin/polishing через обычный push --set-upstream. Включён полный проект через базовую историю, сцена — единственное исходное локальное отличие. Main local/remote не изменялись.
+Checks: dotnet build ChikagoShop.sln --no-restore PASS (0 warnings/errors); isolated Godot import PASS; rendered --resource-checks PASS (font/resources/menu), headless запуск res://scenes/trade_scene.tscn --quit-after120 PASS с инициализацией. Scene SHA256 совпадает с исходным snapshot, local main ref сохранён; staged diff-check PASS; push/upstream PASS. Исходники проекта не переписывались при проверках. Evidence .local/checks/hf204/{before.json,build.log,import.log,resources.log,scene-smoke.log}.
+Acceptance: текущий проект сохранён на GitHub в polishing, активная рабочая ветка polishing, дальнейшая работа ведётся в ней. Remote main84287b1 новее текущей базы, пользователь об этом уведомлён; новая ветка сохраняет именно его текущую версию без включения чужих новых main-коммитов.
+Read-set exception: tracked runtime snapshot читался для изолированного import/test; source/ не читался.
+Risks/blocker: блокеров нет; прежнее предупреждение Godot root certificate store в sandbox. Игровые правила не менялись; EXE/ZIP и пользовательские сохранения не затронуты.
+Next: зафиксировать этот итог в polishing, обычный push и сверка чистого рабочего дерева.
 
 ### HF-202 — блокировка новых UI-звуков до окончания предыдущего и аудит WAV
 
