@@ -101,9 +101,10 @@ public partial class ProjectTest
             Check(game.BuyerWaitRemaining == 0 && bar.Value == 20 && TradeScene.SpeedBonus(game.BuyerWaitRemaining) == 0,
                 "At twenty seconds the bar must be full and the speed bonus zero");
 
-            int payout = game.Score + game.OfferedPrice + bonus;
+            Check(game.Percentage == -50, "Expired buyer must offer -50% of normal price");
+            int payout = game.Score + game.OfferedPrice;
             game.AcceptTrade();
-            Check(game.Score == payout && game.Accepted == 1, "The sale must apply the current offer and quality bonus exactly once");
+            Check(game.Score == payout && game.Accepted == 1, "The expired sale must pay exactly the discounted price once");
             arrivals = 0;
             game.BuyerArrived += () => arrivals++;
             game._Process(0);
@@ -140,6 +141,7 @@ public partial class ProjectTest
         }
         await ToSignal(this, SignalName.ProcessFrame);
         await TestBuyerAvailability();
+        await TestBuyerPatience();
     }
 
     private async Task CheckMusicUnlockPanel(TradeScene game, bool rendered)

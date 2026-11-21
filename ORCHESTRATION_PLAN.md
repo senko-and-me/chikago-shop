@@ -9,6 +9,18 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### POL-03 — после истечения ожидания только продажа за50% цены
+
+Статус: `DONE`; координатор/исполнитель /root; READY 2026-11-21; POL02 DONE. CP-POL-03: .local/checks/pol03/CP-POL-03.md. На нуле таймера покупателя отображается −50%, смена через UI/F/API запрещается, выплата ровно половина обычной цены без чаевых; reload и ожидание товара сохраняют штраф. Без schema/assets/balance/commit/push.
+
+Task: POL-03
+Recommended status: REVIEW → принято координатором, DONE
+Changed: src/ChikagoShop.Domain/Trading/BuyerPatienceRules.cs; tests/ChikagoShop.Domain.Tests/BuyerPatienceRulesTests.cs; scripts/TradeScene.BuyerBonuses.cs; scripts/TradeScene.cs (только вызовы правил/helper); tests/Integration/ProjectTest.BuyerPatience.cs/.uid, BuyerArrival.cs и Days.cs; ORCHESTRATION_PLAN.md. Предыдущие POL02 изменения сохранены.
+Checks: dotnet build ChikagoShop.sln --no-restore PASS0warnings/errors. Domain BuyerPatience+BuyerAvailability PASS23/23. Rendered --buyer-arrival-checks PASS (включая POL02 и новый BUYER_PATIENCE_CHECKS_PASS). Rendered --closed-reroll-checks PASS. Cached isolated Godot import PASS. git diff --check PASS. Evidence .local/checks/pol03/{build,domain,buyer-arrival,closed-reroll,import-cached}.log.
+Acceptance: положительный остаток сохраняет прежний оффер/чаевые/смену; на нуле мгновенно −50%, блокировка UI/F/API, реальная выплата половины даже для S-качества, существующее округление денежных единиц. Штраф сохраняется после reload и когда товар выставлен после истечения ожидания. Следующий покупатель получает20s и обычный оффер. Завершение дня и продажа последнего предложения проверены. Save schema не менялась: RefreshOffer восстанавливает штраф из сохранённого таймера.
+Read-set exception: scripts/Days/DayCycleController.cs прочитан для диагностики старой integration fixture; Days.cs read/write расширен координатором в CP. Исправлены предположения старого теста: часы дня не равны терпению покупателя, ручное закрытие до20s сохраняет чаевые, новый покупатель создаётся обычным запуском дня, tutorial progress изолирован. Runtime правила дня не менялись.
+Risks/blocker: блокеров нет. Fresh isolated import сначала упал в Godot при импорте game.ttf; использован проверенный POL02 asset cache, повторный import PASS и обе runtime suites PASS. Прежний sandbox root certificate warning. Исходные2 balance/config failures POL01 вне scope. Commit/push/EXE/ZIP не выполнялись.
+Next: пользовательская проверка истечения ожидания в polishing.
 ### POL-02 — убрать покупателей при исчерпании энергии и всего товара
 
 Статус: `DONE`; координатор/исполнитель /root; READY 2026-11-21; POL01 DONE. CP-POL-02: .local/checks/pol02/CP-POL-02.md — точные read/write-set/out of scope/приёмка/проверки. Исправляется приход обычного покупателя, когда Energy0 и ни в инвентаре, ни на витринах нет товара. Доменное правило отдельно от TradeScene.cs; последняя активная сделка и оставшийся товар сохраняются. Без изменений баланса/категорий/дней/сохранений и без commit/push.

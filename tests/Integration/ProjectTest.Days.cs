@@ -19,6 +19,7 @@ public partial class ProjectTest
             if (game != null) { game.QueueFree(); await ToSignal(this, SignalName.ProcessFrame); }
             game = scene.Instantiate<TradeScene>();
             game.SavePath = path;
+            game.GetNode<FirstTradeTutorial>("FirstTradeTutorial").ProgressPath = "";
             Root.AddChild(game);
             game.SetProcess(false);
             await ToSignal(this, SignalName.ProcessFrame);
@@ -40,7 +41,8 @@ public partial class ProjectTest
                 else
                 {
                     game._Process(game.DayRemainingSeconds - 0.01);
-                    Check(!game.DayClosed && !reroll.Disabled, "Reroll stays available while positive time remains");
+                    Check(!game.DayClosed && reroll.Disabled == (game.BuyerWaitRemaining <= 0),
+                        "An open day allows rerolls only while buyer patience remains");
                     game._Process(0.02);
                 }
                 Check(game.DayClosed && game.DayRemainingSeconds == 0 && reroll.Disabled,
@@ -68,11 +70,16 @@ public partial class ProjectTest
                 }
                 Check(!game.GetNode<Button>(actions + "AcceptButton").Disabled,
                     "The last offer remains sellable after time expires");
+                int payout = ChikagoShop.Domain.Trading.BuyerPatienceRules.TotalPayout(offer,
+                    game.BuyerWaitRemaining, TradeScene.SpeedBonus(game.BuyerWaitRemaining),
+                    TradeScene.QualityBonus(game.ActiveTradeQualityRank));
                 game.AcceptTrade();
                 game.AcceptTrade();
-                Check(game.Score == score + offer && !game.TradeActive && game.DayClosed,
+                Check(game.Score == score + payout && !game.TradeActive && game.DayClosed,
                     "The final sale must pay exactly once without reopening the day");
                 game.NewGame();
+                game.EndDay(); // Starts a fresh day when its clock has not started yet.
+                game._Process(0); // A real new customer resets patience before opening an offer.
                 game.TradeActive = true; game.ItemIndex = 0; game.CustomerIndex = 0; game.RerollsRemaining = 3;
                 game.ShowTrade();
                 Check(!game.DayClosed && !game.GetNode<Button>(actions + "DeclineButton").Disabled,
