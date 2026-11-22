@@ -11,7 +11,7 @@
 ## Текущий фронт
 ### HF-210 — интеграция проверенных interface fixes
 
-Статус: `REVIEW`; координатор/исполнитель `/root`; HF209 DONE; user explicitly approves main integration; CP `.local/checks/hf210/CP-HF-210.md`; exact write-set `.local/checks/hf210/write-set.txt`. Приёмка: approved11files + obsolete UI fixtures, build/domain/focused suites, main merge/push/readback. Баланс/каталог/save schema/cloud/source/ и ZIP removal вне scope.
+Статус: `DONE`; принято координатором; координатор/исполнитель `/root`; HF209 DONE; user explicitly approves main integration; CP `.local/checks/hf210/CP-HF-210.md`; exact write-set `.local/checks/hf210/write-set.txt`. Приёмка: approved11files + obsolete UI fixtures, build/domain/focused suites, main merge/push/readback. Баланс/каталог/save schema/cloud/source/ и ZIP removal вне scope.
 
 ```text
 Task: HF-210
@@ -21,7 +21,7 @@ Checks: root/isolated build PASS0warnings/errors; root domain204/204 PASS.10 foc
 Acceptance: UI fixes preserve canonical catalogue/save format/economy/fullscreen/story overlap; both old failing UI suites now pass; tutorial blocks sale/reroll and both timers across reload until acknowledgment. No extra art/doc EOL churn or archived plan copied. ZIP untouched/untracked.
 Read-set exception: scenes/main_menu.tscn, scripts/MainMenu.cs and domain DayUpgradeSession/Rules read to diagnose old test expectations; no edits there. Source/ not inspected.
 Risks/blocker: known unrelated general-runner layout fixture mismatch from HF206 remains; full suite not claimed PASS. No focused blocker.
-Next: fast-forward main and publish; verify remote reference.
+Final: integration/interface-fixes=815964f fast-forwarded to main and published; remote reference verified. Next: use canonical root project.godot; ZIP remains untouched outside tracked changes.
 ```
 ### HF-209 — review ChikagoShop_Interface_Fixes_FULL.zip
 
