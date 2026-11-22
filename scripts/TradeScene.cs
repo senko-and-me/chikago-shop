@@ -799,6 +799,8 @@ public partial class TradeScene : Node2D
 
 	private void RefreshOffer()
 	{
+		SynchronizeBuyerPatienceWithDay();
+		Percentage = BuyerPatienceRules.OfferPercent(Percentage, _buyerWaitRemaining);
 		int basePrice = GetItemPrice(ItemIndex);
 
 		OfferedPrice = PriceForPercent(
@@ -822,7 +824,7 @@ public partial class TradeScene : Node2D
 		RefreshTotalOfferDisplay();
 
 		_declineButton.Text = $"× ({RerollsRemaining})";
-		_declineButton.Disabled = !TradeOfferRules.CanReroll(TradeActive, DayClosed, RerollsRemaining);
+		_declineButton.Disabled = !CanRerollCurrentBuyer;
 	}
 
 	public static int PriceForPercent(int basePrice, int value)
@@ -833,7 +835,7 @@ public partial class TradeScene : Node2D
 	public void RerollCustomer()
 	{
 		if (!RequireStartedDay()) return;
-		if (!TradeOfferRules.CanReroll(TradeActive, DayClosed, RerollsRemaining))
+		if (!CanRerollCurrentBuyer)
 			return;
 
 		RerollsRemaining--;
@@ -867,9 +869,7 @@ public partial class TradeScene : Node2D
 		if (!TradeActive)
 			return;
 
-		int speedTip = SpeedBonus(_buyerWaitRemaining);
-		int gradeTip = QualityBonus(_activeTradeGrade);
-		Score += OfferedPrice + speedTip + gradeTip;
+		Score += CurrentBuyerPayout;
 		Accepted++;
 
 		RefreshScore();
@@ -975,7 +975,8 @@ public partial class TradeScene : Node2D
 
 	public void RefreshDayPresentation()
 	{
-		_declineButton.Disabled = !TradeOfferRules.CanReroll(TradeActive, DayClosed, RerollsRemaining);
+		RefreshClosedBuyerOffer();
+		_declineButton.Disabled = !CanRerollCurrentBuyer;
 		_inventoryUI.UpdateUI(_storedItems);
 		RefreshScore();
 		RefreshProgress();

@@ -1,6 +1,6 @@
 using Godot;
 
-// Prologue blocking follows the first Castello speech, independently of translated text/pages.
+// Prologue blocking establishes the cast on opening and cues departure from the original dialogue.
 public partial class PrologueCharacterMotion : Control
 {
     [Export(PropertyHint.Range, "0.2,2,0.05")] public double ArrivalDuration { get; set; } = 0.7;
@@ -9,6 +9,7 @@ public partial class PrologueCharacterMotion : Control
     private Vector2 _mafiaOffsets, _customerOffsets;
     private Tween _arrival, _departure;
     private int _firstMafiaLine = -1;
+    private bool _entranceStarted;
     private bool _departed, _stopped;
     public float ArrivalProgress { get; private set; }
     public float DepartureProgress { get; private set; }
@@ -28,15 +29,16 @@ public partial class PrologueCharacterMotion : Control
     public void SyncLine(int index, string speaker)
     {
         if (_stopped) return;
-        if (_firstMafiaLine < 0 && speaker == "Кастелло")
+        if (!_entranceStarted)
         {
-            _firstMafiaLine = index;
+            _entranceStarted = true;
             _mafia.Show();
             _arrival = CreateTween();
             _arrival.TweenMethod(Callable.From<float>(value => { ArrivalProgress = value; Apply(); }),
                 0f, 1f, ArrivalDuration).SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
             _arrival.TweenCallback(Callable.From(() => _arrival = null));
         }
+        if (_firstMafiaLine < 0 && speaker == "Кастелло") _firstMafiaLine = index;
         // She remains for his offer to pay, then leaves as Frankie turns to him.
         if (_firstMafiaLine >= 0 && index > _firstMafiaLine && !_departed)
         {

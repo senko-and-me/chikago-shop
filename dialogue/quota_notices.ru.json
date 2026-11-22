@@ -1,0 +1,20 @@
+{
+  "firstQuota": {
+    "speaker": "Кастелло",
+    "text": "Первую неделю ты выдержал, Френки. Но наше пари ещё не окончено.",
+    "leftPortrait": "serious",
+    "rightPortrait": "smile"
+  },
+  "victory": {
+    "speaker": "Кастелло",
+    "text": "Ты победил, Френки. Не ожидал. Я сдержу своё слово.",
+    "leftPortrait": "smile",
+    "rightPortrait": "smile"
+  },
+  "defeat": {
+    "speaker": "Кастелло",
+    "text": "Ты не сдержал слово, Френки. Наше пари окончено.",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  }
+}

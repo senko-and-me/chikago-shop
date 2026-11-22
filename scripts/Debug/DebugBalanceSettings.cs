@@ -51,7 +51,7 @@ public static class DebugBalanceSettings
             RemoveRetiredOverrides(profile);
             // One-time migration of the old shipped first-quota defaults in existing F10 profiles.
             // Later explicit changes (even back to 250 or 500) remain fully editable.
-            bool migrated = MigrateFirstQuotaBaseline(profile) | MigrateEconomyBaseline(profile);
+            bool migrated = MigrateFirstQuotaBaseline(profile) | MigrateEconomyBaseline(profile) | MigrateItemOverrides(profile);
             Validate(profile);
             if (migrated && OS.IsDebugBuild() && Godot.FileAccess.FileExists(StoragePath))
             {
@@ -89,6 +89,7 @@ public static class DebugBalanceSettings
             // This is an explicit edit, so do not migrate this first-quota choice later.
             profile.FirstQuotaBaselineRevision = 1;
             profile.EconomyBaselineRevision = 1;
+            profile.ItemCatalogueRevision = 1;
             Validate(profile);
             string path = ProjectSettings.GlobalizePath(StoragePath);
             temporary = path + ".tmp";
@@ -125,6 +126,28 @@ public static class DebugBalanceSettings
                 profile.Numbers.Remove("workshop.music.unlock");
         }
         profile.EconomyBaselineRevision = 1;
+        return true;
+    }
+
+    private static bool MigrateItemOverrides(BalanceProfile profile)
+    {
+        if (profile.ItemCatalogueRevision >= 1 || profile.Numbers == null || profile.ItemRarities == null) return false;
+        var aliases = new (string Old, string Current)[]
+        {
+            ("gloves", "vest"), ("trumpet", "drum"), ("clothing_first", "gloves"),
+            ("clothing_exclusive", "matteo_hat"), ("clothing_unique", "lorgnette"),
+            ("music_first", "banjo"), ("music_exclusive", "violin"), ("music_unique", "tuba"),
+            ("cloche_hat", "vest"), ("shoes", "gloves"), ("dress", "matteo_hat"),
+            ("tambourine", "guitar"), ("saxophone", "violin"), ("cello", "tuba")
+        };
+        foreach (var (old, current) in aliases)
+        {
+            if (profile.Numbers.Remove($"item.{old}.price", out double price))
+                profile.Numbers.TryAdd($"item.{current}.price", price);
+            if (profile.ItemRarities.Remove(old, out string rarity))
+                profile.ItemRarities.TryAdd(current, rarity);
+        }
+        profile.ItemCatalogueRevision = 1;
         return true;
     }
 

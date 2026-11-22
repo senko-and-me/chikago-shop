@@ -100,16 +100,20 @@ public static class WeekBalanceSimulator
                     int percent = hand.AdjustInitialOffer(TradeOfferRules.InitialPercent(rng.Next(61)), 3);
                     double buyerRemaining = RunRewardRules.BuyerWaitDuration - Math.Max(0, cycle - 10);
                     int rerolls = rarity.Rerolls;
-                    while (profile.Reroll && percent < 5 && rerolls-- > 0)
+                    while (profile.Reroll && percent < 5 &&
+                        BuyerPatienceRules.CanReroll(true, false, rerolls, buyerRemaining))
                     {
+                        rerolls--;
                         var options = TradeOfferRules.RerollOptions(basePrice, TradeOfferRules.Price(basePrice, percent),
                             rng.NextDouble() < TradeOfferRules.HigherRerollChance);
                         percent = options[rng.Next(options.Length)];
                         remaining -= 0.8; // The final active trade can finish after closing.
                         buyerRemaining -= 0.8;
                     }
-                    cash += TradeOfferRules.Price(basePrice, percent) + RunRewardRules.SpeedBonus(buyerRemaining) +
-                        RunRewardRules.QualityBonus(profile.QualityRank);
+                    buyerRemaining = BuyerPatienceRules.RemainingAfterDayClosure(buyerRemaining, remaining <= 0);
+                    percent = BuyerPatienceRules.OfferPercent(percent, buyerRemaining);
+                    cash += BuyerPatienceRules.TotalPayout(TradeOfferRules.Price(basePrice, percent), buyerRemaining,
+                        RunRewardRules.SpeedBonus(buyerRemaining), RunRewardRules.QualityBonus(profile.QualityRank));
                     Observe();
                 }
                 if (day == config.Days.TotalDays) cashAtFinal[run] = cash;

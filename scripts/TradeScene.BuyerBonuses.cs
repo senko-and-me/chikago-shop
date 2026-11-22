@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using ChikagoShop.Domain.Trading;
 using Godot;
 
 // A crafted object's quality belongs to the particular copy, not its catalogue kind.
@@ -71,17 +72,20 @@ public partial class TradeScene
             return;
 
         // The timer belongs to the customer and follows them into the offer.
+        bool wasExpired = BuyerPatienceRules.IsExpired(_buyerWaitRemaining);
         _buyerWaitRemaining = Math.Max(0, _buyerWaitRemaining - delta);
+        bool justExpired = !wasExpired && BuyerPatienceRules.IsExpired(_buyerWaitRemaining);
         if (_buyerWaitWidget != null)
             _buyerWaitWidget.SetState(_waitingBuyer ? _waitingBuyerMusic :
                 Items[ItemIndex].WorkshopId == "music", _buyerWaitRemaining);
         if (TradeActive)
         {
             int speedNow = SpeedBonus(_buyerWaitRemaining);
-            if (_lastShownSpeedBonus != speedNow) RefreshTotalOfferDisplay();
+            if (justExpired) RefreshOffer();
+            else if (_lastShownSpeedBonus != speedNow) RefreshTotalOfferDisplay();
         }
         _buyerWaitAutosave += delta;
-        if (_buyerWaitAutosave >= 1.0)
+        if (justExpired || _buyerWaitAutosave >= 1.0)
         {
             _buyerWaitAutosave = 0;
             SaveProgress();
@@ -90,7 +94,7 @@ public partial class TradeScene
 
     private void StartWaitingBuyer()
     {
-        if (_waitingBuyer || TradeActive || !_dayCycle.CanReceiveBuyers) return;
+        if (_waitingBuyer || TradeActive || !_dayCycle.CanReceiveBuyers || !CanSupplyWaitingBuyer()) return;
 
         // Each new customer independently chooses a desired category, 50/50.
         // Before the music workshop is unlocked, only atelier requests are playable.
@@ -107,6 +111,7 @@ public partial class TradeScene
     private void ShowWaitingBuyer()
     {
         if (!_waitingBuyer || !_dayCycle.CanReceiveBuyers) return;
+        if (DismissBuyerWithoutSupply()) return;
         _customer.SetAppearance(CustomerIndex);
         _customer.Visible = true;
         _world.ItemVisible = false;
@@ -124,6 +129,7 @@ public partial class TradeScene
     private bool TryServeWaitingBuyer()
     {
         if (!_waitingBuyer || !_dayCycle.CanReceiveBuyers) return false;
+        if (DismissBuyerWithoutSupply()) return false;
         var matching = new List<int>();
         for (int i = 0; i < ShowcaseCapacity; i++)
         {
@@ -143,13 +149,42 @@ public partial class TradeScene
         return true;
     }
 
+    private bool CanSupplyWaitingBuyer() => BuyerAvailabilityRules.CanWait(
+        EnergyRemaining, _storedItems.Count > 0, Array.Exists(_showcaseItems, index => index >= 0));
+
+    private bool DismissBuyerWithoutSupply()
+    {
+        if (CanSupplyWaitingBuyer()) return false;
+        HideWaitingBuyer();
+        SaveProgress();
+        return true;
+    }
+
+    private void SynchronizeBuyerPatienceWithDay()
+    {
+        _buyerWaitRemaining = BuyerPatienceRules.RemainingAfterDayClosure(_buyerWaitRemaining, DayClosed);
+        if (TradeActive && DayClosed)
+            _buyerWaitWidget?.SetState(Items[ItemIndex].WorkshopId == "music", _buyerWaitRemaining);
+    }
+
+    private void RefreshClosedBuyerOffer()
+    {
+        if (TradeActive && DayClosed) RefreshOffer();
+    }
+
+    private bool CanRerollCurrentBuyer => BuyerPatienceRules.CanReroll(
+        TradeActive, DayClosed, RerollsRemaining, _buyerWaitRemaining);
+
+    private int CurrentBuyerPayout => BuyerPatienceRules.TotalPayout(
+        OfferedPrice, _buyerWaitRemaining, SpeedBonus(_buyerWaitRemaining), QualityBonus(_activeTradeGrade));
+
     private void RefreshTotalOfferDisplay()
     {
         if (!TradeActive || ItemIndex < 0) return;
         int speed = SpeedBonus(_buyerWaitRemaining);
-        int grade = QualityBonus(_activeTradeGrade);
+        int grade = BuyerPatienceRules.IsExpired(_buyerWaitRemaining) ? 0 : QualityBonus(_activeTradeGrade);
         _lastShownSpeedBonus = speed;
-        _offerLabel.Text = GameLocalization.Format("Получим: {0}$", OfferedPrice + speed + grade);
+        _offerLabel.Text = GameLocalization.Format("Получим: {0}$", CurrentBuyerPayout);
         _offerLabel.TooltipText = GameLocalization.Language == "en"
             ? $"Offer {OfferedPrice}$ + speed {speed}$ + quality {_activeTradeGrade} {grade}$"
             : $"Цена {OfferedPrice}$ + скорость {speed}$ + качество {_activeTradeGrade} {grade}$";

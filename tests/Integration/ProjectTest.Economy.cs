@@ -35,7 +35,7 @@ public partial class ProjectTest
                 foreach (var rarity in config.Rarities)
                 {
                     var entries = WorkshopItemCatalog.Items.Select((item,index)=>(item,index))
-                        .Where(entry => entry.item.WorkshopId == workshop && entry.item.RarityId == rarity.Id).ToArray();
+                        .Where(entry => entry.index < WorkshopItemCatalog.ActiveItemCount && entry.item.WorkshopId == workshop && entry.item.RarityId == rarity.Id).ToArray();
                     Check(entries.Sum(entry => counts[entry.index]) == rarity.Weight * multiplier &&
                         entries.All(entry => counts[entry.index] == rarity.Weight * multiplier / entries.Length &&
                             TradeScene.GetItemBasePrice(entry.index) == rarity.BasePrices[workshop] &&
@@ -52,7 +52,7 @@ public partial class ProjectTest
                     foreach (var rarity in config.Rarities)
                     {
                         var entries = WorkshopItemCatalog.Items.Select((item, index) => (item, index))
-                            .Where(entry => entry.item.WorkshopId == workshop && entry.item.RarityId == rarity.Id).ToArray();
+                            .Where(entry => entry.index < WorkshopItemCatalog.ActiveItemCount && entry.item.WorkshopId == workshop && entry.item.RarityId == rarity.Id).ToArray();
                         int expected = WorkshopItemCatalog.RarityWeight(workshop, rarity.Id, upgrades) * multiplier;
                         Check(entries.Sum(entry => boosted[entry.index]) == expected &&
                             entries.All(entry => boosted[entry.index] == expected / entries.Length),
@@ -60,8 +60,8 @@ public partial class ProjectTest
                     }
                 }
             }
-            Check(TradeScene.GetItemKind(0) == "hat" && TradeScene.GetItemKind(1) == "gloves" &&
-                  TradeScene.GetItemKind(2) == "guitar" && TradeScene.GetItemKind(3) == "trumpet",
+            Check(TradeScene.GetItemKind(0) == "hat" && TradeScene.GetItemKind(1) == "vest" &&
+                  TradeScene.GetItemKind(2) == "guitar" && TradeScene.GetItemKind(3) == "drum",
                 "Legacy save indices must keep their original item identity");
             for (int index=0;index<WorkshopItemCatalog.Items.Count;index++)
             {
@@ -88,6 +88,17 @@ public partial class ProjectTest
                 game.PlaceItemInShowcase(0);
                 Check(game.GetNode<TextureRect>("World/ShowroomLeft/Showcases/Slot1/Icon").Texture.ResourcePath == art,
                     "Showcases must display matching catalogue artwork");
+                // Exercise a matching customer deterministically without changing the live 50/50 rule.
+                var matching = ProgressSaveStore.Load(path, game.EnergyCapacity) with
+                {
+                    WaitingBuyerPresent = true,
+                    WaitingBuyerMusic = WorkshopItemCatalog.Items[index].WorkshopId == "music",
+                    BuyerWaitRemaining = 20, CustomerIndex = 0
+                };
+                ProgressSaveStore.Save(path, matching);
+                game.QueueFree();
+                await ToSignal(this, SignalName.ProcessFrame);
+                game = await Load();
                 game._Process(0);
                 var visible = game.GetNode<Node2D>("World/TradingRoom/Item").GetChildren().OfType<Sprite2D>()
                     .Where(sprite => sprite.Visible).ToArray();
@@ -116,7 +127,7 @@ public partial class ProjectTest
             if(FileAccess.FileExists(path)) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(path));
         }
         await ToSignal(this, SignalName.ProcessFrame);
-        GD.Print("All 16 items, configured rarity odds, equal per-rarity shares, trading and reload checks passed");
+        GD.Print("Ten rollable items plus six legacy saved items; rarity odds, trading and reload checks passed");
     }
 
     private static void TestEconomyConfig()

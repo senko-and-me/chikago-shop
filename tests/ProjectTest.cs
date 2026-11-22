@@ -16,6 +16,27 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--canonical-migration-checks"))
+            {
+                await TestCanonicalMigration();
+                GD.Print("CANONICAL_MIGRATION_CHECKS_PASS: catalogue10, v18/v19, grades, checkpoint, active trade, real-save copy and round trip");
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--buyer-availability-checks"))
+            {
+                await TestBuyerAvailability();
+                GD.Print("BUYER_AVAILABILITY_CHECKS_PASS");
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--buyer-patience-checks"))
+            {
+                await TestBuyerPatience();
+                GD.Print("BUYER_PATIENCE_CHECKS_PASS");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--campaign-balance-checks"))
             {
                 await TestCampaignBalance();
@@ -69,6 +90,13 @@ public partial class ProjectTest : SceneTree
             {
                 await TestEnergyBulbs();
                 GD.Print("ENERGY_BULBS_CHECKS_PASS: remaining, depleted, unlocked/upgraded capacity, localized tooltips, pause and three window sizes");
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--polishing-start-checks"))
+            {
+                await TestPolishingStart();
+                GD.Print("POLISHING_START_CHECKS_PASS: real held clicks, start, collect, resize and languages");
                 Quit();
                 return;
             }
@@ -156,7 +184,9 @@ public partial class ProjectTest : SceneTree
             if (OS.GetCmdlineUserArgs().Contains("--dialogue-portraits-checks"))
             {
                 await TestDialoguePortraits();
-                GD.Print("DIALOGUE_PORTRAITS_CHECKS_PASS: scene portraits, speaker tones, narration, RU/EN, alpha and resize");
+                await TestStoryPortraitExpressions();
+                await TestStoryDialogueLayout();
+                GD.Print("DIALOGUE_PORTRAITS_CHECKS_PASS: scene portraits, speaker tones, narration, RU/EN, alpha and all story scenes at 720p/1080p");
                 Quit();
                 return;
             }

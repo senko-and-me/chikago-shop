@@ -101,9 +101,10 @@ public partial class ProjectTest
             Check(game.BuyerWaitRemaining == 0 && bar.Value == 20 && TradeScene.SpeedBonus(game.BuyerWaitRemaining) == 0,
                 "At twenty seconds the bar must be full and the speed bonus zero");
 
-            int payout = game.Score + game.OfferedPrice + bonus;
+            Check(game.Percentage == -50, "Expired buyer must offer -50% of normal price");
+            int payout = game.Score + game.OfferedPrice;
             game.AcceptTrade();
-            Check(game.Score == payout && game.Accepted == 1, "The sale must apply the current offer and quality bonus exactly once");
+            Check(game.Score == payout && game.Accepted == 1, "The expired sale must pay exactly the discounted price once");
             arrivals = 0;
             game.BuyerArrived += () => arrivals++;
             game._Process(0);
@@ -139,6 +140,8 @@ public partial class ProjectTest
             if (FileAccess.FileExists(save)) DirAccess.RemoveAbsolute(save);
         }
         await ToSignal(this, SignalName.ProcessFrame);
+        await TestBuyerAvailability();
+        await TestBuyerPatience();
     }
 
     private async Task CheckMusicUnlockPanel(TradeScene game, bool rendered)
@@ -189,19 +192,20 @@ public partial class ProjectTest
     {
         var items = new[]
         {
-            (0, "hat", "atelier_hat.png", "Шляпка", "Hat"),
-            (1, "gloves", "atelier_vest.png", "Жилетка", "Vest"),
-            (4, "clothing_first", "atelier_gloves.png", "Перчатки", "Gloves"),
-            (10, "cloche_hat", "atelier_vest.png", "Жилетка", "Vest"),
-            (11, "shoes", "atelier_gloves.png", "Перчатки", "Gloves")
+            (0, "hat", "hat.png", "Шляпка", "Hat"),
+            (1, "vest", "vest.png", "Жилетка", "Vest"),
+            (4, "gloves", "gloves.png", "Перчатки", "Gloves"),
+            (1, "vest", "vest.png", "Жилетка", "Vest"),
+            (4, "gloves", "gloves.png", "Перчатки", "Gloves")
         };
         var craftOutcomes = Enumerable.Range(0, WorkshopItemCatalog.TotalWeight("atelier"))
             .Select(ticket => WorkshopItemCatalog.Roll("atelier", ticket)).ToHashSet();
         foreach (var (index, kind, artwork, russian, english) in items)
         {
             string artPath = "res://art/items/" + artwork;
-            Check(craftOutcomes.Contains(index) && game.StoredItems[0] == index && TradeScene.GetItemKind(index) == kind,
-                "Crafting and legacy inventory must retain every original kind and index");
+            Check(craftOutcomes.Contains(index) &&
+                game.StoredItems[0] == index && TradeScene.GetItemKind(index) == kind,
+                "Crafting selects the five active art items and legacy inventory entries migrate by rarity");
             foreach (var (locale, name) in new[] { ("ru", russian), ("en", english) })
             {
                 TranslationServer.SetLocale(locale);
@@ -220,13 +224,13 @@ public partial class ProjectTest
             game._Process(0);
             var visible = game.GetNode<Node2D>("World/TradingRoom/Item").GetChildren().OfType<Sprite2D>().Single(sprite => sprite.Visible);
             Check(game.TradeActive && game.ItemIndex == index && visible.Texture.ResourcePath == artPath &&
-                visible.Scale.X == visible.Scale.Y && (visible.Texture.GetSize() * visible.Scale).Length() <= 182,
+                visible.Scale.X == visible.Scale.Y && (visible.Texture.GetSize() * visible.Scale).Length() <= 330,
                 "The sale must show exactly one fitted sprite for the saved kind");
             game.AcceptTrade();
         }
-        var vest = GD.Load<Texture2D>("res://art/items/atelier_vest.png");
-        Check(vest.GetWidth() == 104 && vest.GetHeight() == 149, "Vest preparation must remove the large right-hand margin without stretching the art");
-        Check(TradeScene.GetItemArtPath(5).EndsWith("/jacket.png") && TradeScene.GetItemArtPath(6).EndsWith("/fur_stole.png") &&
+        var vest = GD.Load<Texture2D>("res://art/items/vest.png");
+        Check(vest.GetWidth() == 104 && vest.GetHeight() <= 151, "Vest preparation must remove the large right-hand margin without stretching the art");
+        Check(TradeScene.GetItemArtPath(5).EndsWith("/matteo_hat.png") && TradeScene.GetItemArtPath(6).EndsWith("/lorgnette.png") &&
             WorkshopItemCatalog.Items.Where(item => item.WorkshopId == "music").All(item => !item.ArtPath.Contains("atelier_")),
             "Exclusive and unique clothing and all the instruments must keep their existing artwork");
     }

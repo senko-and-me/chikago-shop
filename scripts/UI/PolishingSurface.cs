@@ -1,12 +1,14 @@
 
 using System;
+using System.Linq;
 using ChikagoShop.Domain.Crafting;
 using Godot;
 
 public partial class PolishingSurface : Control
 {
 	public static System.Collections.Generic.IReadOnlyList<string> InstrumentKinds { get; } =
-		Array.AsReadOnly(new[] { "maracas", "tambourine", "metronome", "trumpet", "violin", "saxophone", "cello", "gramophone" });
+		Array.AsReadOnly(WorkshopItemCatalog.BaselineItems
+			.Where(item => item.WorkshopId == "music").Select(item => item.Kind).ToArray());
 	private const string ClothPath =
 		"res://art/minigames/polishing_cloth.png";
 

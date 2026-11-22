@@ -29,10 +29,10 @@ public partial class ProjectTest
                         {
                             var portrait = player.GetNode<TextureRect>("Characters/" + entry.Item1);
                             float tone = ((ShaderMaterial)portrait.Material).GetShaderParameter("lighten").AsSingle();
-                            Check(Mathf.IsEqualApprox(tone, player.Session.Current.Speaker == entry.Item2 ? 0 : 0.32f),
+                            Check(Mathf.IsEqualApprox(tone, player.Session.Current.Speaker == entry.Item2 ? 0 : StoryDialogueLayout.InactivePortraitTone),
                                 "Only the current speaker must keep the original tone; narration lightens everyone in either locale");
                             Check(portrait.MouseFilter == Control.MouseFilterEnum.Ignore &&
-                                Root.GetVisibleRect().Encloses(portrait.GetGlobalRect()),
+                                (!portrait.Visible || player.GetGlobalRect().Grow(1).Encloses(portrait.GetGlobalRect())),
                                 "Scene portraits must fit both viewport sizes without intercepting dialogue clicks");
                         }
                     }

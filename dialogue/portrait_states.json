@@ -1,0 +1,30 @@
+{
+  "left": {
+    "smile": {
+      "closed": "res://art/dialogue/expressions/castello_smile_closed.png",
+      "open": "res://art/dialogue/expressions/castello_smile_open.png"
+    },
+    "serious": {
+      "closed": "res://art/dialogue/expressions/castello_serious_closed.png",
+      "open": "res://art/dialogue/expressions/castello_serious_open.png"
+    }
+  },
+  "right": {
+    "smile": {
+      "closed": "res://art/dialogue/expressions/frankie_smile_closed.png",
+      "open": "res://art/dialogue/expressions/frankie_smile_open.png"
+    },
+    "serious": {
+      "closed": "res://art/dialogue/expressions/frankie_serious.png",
+      "open": "res://art/dialogue/expressions/frankie_smile_open.png"
+    },
+    "confused": {
+      "closed": "res://art/dialogue/expressions/frankie_smile_closed.png",
+      "open": "res://art/dialogue/expressions/frankie_serious.png"
+    },
+    "angry": {
+      "closed": "res://art/dialogue/expressions/frankie_angry_closed.png",
+      "open": "res://art/dialogue/expressions/frankie_angry_open.png"
+    }
+  }
+}

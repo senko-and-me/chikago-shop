@@ -35,7 +35,7 @@ public partial class ProjectTest
         DialoguePlayer Dialogue() => game.GetNode<DialoguePlayer>("QuotaDialogue/DialoguePlayer");
         try
         {
-            int[] expectedPrices = [25, 45, 40, 70, 75, 115, 195, 115, 175, 295, 45, 75, 115, 40, 175, 295];
+            int[] expectedPrices = [25, 45, 40, 70, 75, 115, 195, 115, 175, 295];
             Check(WorkshopItemCatalog.Items.Select(item => item.BasePrice).SequenceEqual(expectedPrices) && price == 1000,
                 "All catalogue items must use the new base prices and the music workshop must cost $1000");
             SetLastDay(4000);
@@ -78,6 +78,15 @@ public partial class ProjectTest
             else await ClickControl(game, visitorPath);
             Check(Paused && Dialogue().Session.Current.Text.Contains("1000"), "Clicking the visitor must open the existing dialogue UI");
             await ToSignal(this, SignalName.ProcessFrame);
+            Check(!game.GetNode<TextureButton>(visitorPath).Visible &&
+                Dialogue().GetNode<TextureRect>("Characters/Son").Visible,
+                "The son must use the full portrait while the world visitor is hidden during dialogue");
+            Dialogue()._Input(new InputEventKey { Pressed = true, Keycode = Key.Escape });
+            Check(!Paused && game.GetNode<TextureButton>(visitorPath).Visible && game.QuotaVisitPending,
+                "Escape must close the story layout and restore the clickable visitor");
+            await ToSignal(this, SignalName.ProcessFrame);
+            game.GetNode<TextureButton>(visitorPath).EmitSignal(BaseButton.SignalName.Pressed);
+            await ToSignal(this, SignalName.ProcessFrame);
             Dialogue().RestorePage(0, true);
             Check(ProgressSaveStore.Load(save, 3).QuotaVisit == QuotaVisitStage.Dialogue,
                 "Starting the conversation must save the dialogue phase");
@@ -92,12 +101,18 @@ public partial class ProjectTest
                 "Finishing must add the gift exactly once and leave the workshop locked");
             Check(game.GetNode<DayAnnouncementOverlay>("DayAnnouncements").IsShowing &&
                 game.GetNode<Label>("DayAnnouncements/Root/Title").Text == GameLocalization.Format("Получено {0}$", TradeScene.QuotaGift), "The standard overlay must announce the gift");
+            var customer = game.GetNode<ModularCustomer>("World/TradingRoom/Customer");
+            game._Process(0.1);
+            Check(!customer.Visible && !game.DayStarted, "The counter must remain empty after the dialogue");
             await Reload();
+            Check(!game.GetNode<ModularCustomer>("World/TradingRoom/Customer").Visible,
+                "Restoring a claimed reward before Start must leave the counter empty");
             Check(!game.GetNode<TextureButton>(visitorPath).Visible && game.Score == cashAfterQuota + 1000,
                 "Reload must retain the reward and the completed event");
             game.ReturnToCheckpoint();
             Check(!game.QuotaVisitPending && game.Score == cashAfterQuota + 1000, "Checkpoint must restore both the gift and the claimed flag");
             game.EndDay();
+            Check(game.GetNode<ModularCustomer>("World/TradingRoom/Customer").Visible, "Start must resume ordinary arrivals");
             game.TryUnlockMusicWorkshop();
             Check(game.MusicWorkshopUnlocked && game.Score == cashAfterQuota, "Buying the workshop must charge the configured $1000");
             game.NewGame();

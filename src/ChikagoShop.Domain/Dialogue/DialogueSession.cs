@@ -3,7 +3,14 @@ using System.Text.Json;
 
 namespace ChikagoShop.Domain.Dialogue;
 
-public sealed record DialogueLine(string Speaker, string Text, string? MusicCue = null);
+public sealed record DialogueLine(
+    string Speaker,
+    string Text,
+    string? MusicCue = null,
+    string? LeftPortrait = null,
+    string? RightPortrait = null,
+    string? LeftPortraitAfter = null,
+    string? RightPortraitAfter = null);
 
 /// <summary>A finite, ordered dialogue. Content and presentation are independent.</summary>
 public sealed class DialogueSession

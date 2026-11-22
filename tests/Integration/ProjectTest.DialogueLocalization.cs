@@ -103,10 +103,12 @@ public partial class ProjectTest
                         Check(text.GetThemeFontSize("normal_font_size") == 20 &&
                               (text.ScrollActive || text.GetContentHeight() <= text.Size.Y),
                             "Translated pages must fit or scroll without shrinking the project font");
-                        var panel = player.GetNode<Control>("Panel");
-                        Check(text.GlobalPosition.X >= panel.GlobalPosition.X + 112 &&
-                              text.GetGlobalRect().End.X <= panel.GetGlobalRect().End.X - 112 &&
-                              text.GetGlobalRect().End.Y <= panel.GetGlobalRect().End.Y - 64,
+                        var panel = player.GetNode<PanelContainer>("Panel");
+                        Rect2 bounds = panel.GetGlobalRect();
+                        var cloud = panel.GetThemeStylebox("panel");
+                        Check(text.GlobalPosition.X >= bounds.Position.X + cloud.GetMargin(Side.Left) - 1 &&
+                              text.GetGlobalRect().End.X <= bounds.End.X - cloud.GetMargin(Side.Right) + 1 &&
+                              text.GetGlobalRect().End.Y <= bounds.End.Y - cloud.GetMargin(Side.Bottom) + 1,
                             "Translation must preserve the cloud's internal padding");
                         reconstructed += text.Text;
                         player.Advance();

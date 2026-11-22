@@ -1,6 +1,5 @@
 using Godot;
 using System;
-using System.Linq;
 
 public partial class CounterWorld : Node2D
 {
@@ -33,33 +32,20 @@ public partial class CounterWorld : Node2D
     public override void _Ready()
     {
         _item = GetNode<Node2D>("TradingRoom/Item");
-        var variants = _item.GetChildren().OfType<Sprite2D>()
-            .ToDictionary(sprite => sprite.Name.ToString(), StringComparer.OrdinalIgnoreCase);
-        foreach (CraftItem item in WorkshopItemCatalog.Items)
-        {
-            if (!variants.TryGetValue(item.Kind, out var sprite))
-            {
-                sprite = new Sprite2D { Name = item.Kind, Position = new Vector2(64, -48), Visible = false };
-                _item.AddChild(sprite);
-            }
-            if (sprite.Texture != null) continue;
-            Texture2D texture = GD.Load<Texture2D>(item.ArtPath);
-            float scale = Math.Min(128f / texture.GetWidth(), 128f / texture.GetHeight());
-            sprite.Texture = texture;
-            sprite.Scale = Vector2.One * scale;
-        }
         var background = GetNode<Sprite2D>("TradingRoom/TradingRoomBackground");
         Vector2 contact = _item.ToLocal(background.ToGlobal(CounterItemContact));
-        foreach (var sprite in _item.GetChildren().OfType<Sprite2D>())
+        foreach (CraftItem item in WorkshopItemCatalog.Items)
         {
-            if (sprite.Texture == null) continue;
-            using var image = sprite.Texture.GetImage();
+            Texture2D texture = GD.Load<Texture2D>(item.ArtPath);
+            using var image = texture.GetImage();
             Rect2I ink = image.GetUsedRect();
             if (ink.Size == Vector2I.Zero) continue;
-            // Align the artwork itself: transparent padding differs between catalogue items.
+            float scale = Math.Min(232f / ink.Size.X, 224f / ink.Size.Y);
+            var sprite = new Sprite2D { Name = item.Kind, Texture = texture, Scale = Vector2.One * scale, Visible = false };
             Vector2 bottomCenter = (Vector2)ink.Position + new Vector2(ink.Size.X / 2f, ink.Size.Y);
             Vector2 localContact = sprite.GetRect().Position + bottomCenter;
-            sprite.Position = contact - sprite.Transform.BasisXform(localContact);
+            sprite.Position = contact - localContact * scale;
+            _item.AddChild(sprite);
         }
         RefreshItem();
     }
@@ -69,7 +55,7 @@ public partial class CounterWorld : Node2D
         foreach (var child in _item.GetChildren())
         {
             if (child is Sprite2D variant)
-                variant.Visible = variant.Name.ToString().ToLowerInvariant() == _itemKind;
+                variant.Visible = variant.Name == _itemKind;
         }
         _item.Visible = _itemVisible;
     }

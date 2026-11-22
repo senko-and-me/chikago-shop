@@ -4,7 +4,7 @@ namespace ChikagoShop.Domain.Persistence;
 
 public static class ProgressJson
 {
-    public const int CurrentVersion = 18;
+    public const int CurrentVersion = 19;
     private static readonly JsonSerializerOptions Options = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,

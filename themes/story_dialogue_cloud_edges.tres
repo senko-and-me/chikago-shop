@@ -1,0 +1,14 @@
+[gd_resource type="ShaderMaterial" format=3]
+
+[sub_resource type="Shader" id="CloudEdgeShader"]
+code = "shader_type canvas_item;
+void fragment() {
+    vec4 cloud = COLOR;
+    float side = min(UV.x, 1.0 - UV.x);
+    cloud.a *= smoothstep(0.0, 0.055, side) * smoothstep(0.0, 0.14, UV.y);
+    cloud.rgb = mix(vec3(0.384), vec3(0.49), cloud.rgb);
+    COLOR = cloud;
+}"
+
+[resource]
+shader = SubResource("CloudEdgeShader")

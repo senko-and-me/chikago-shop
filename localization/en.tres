@@ -3,6 +3,9 @@
 [resource]
 locale = "en"
 messages = {
+&"Первую неделю ты выдержал, Френки. Но наше пари ещё не окончено.": &"You survived the first week, Frankie. But our wager isn't over.",
+&"Ты победил, Френки. Не ожидал. Я сдержу своё слово.": &"You won, Frankie. I did not expect that. I will keep my word.",
+&"Ты не сдержал слово, Френки. Наше пари окончено.": &"You did not keep your promise, Frankie. Our wager ends here.",
 &"{0}\nРедкость: {1}\nКачество: {3} (+{4}$)\nСтоимость: {2}$": &"{0}\nRarity: {1}\nQuality: {3} (+${4})\nValue: ${2}",
 &"Сначала завершите или пропустите обучение.": &"Complete or skip the tutorial first.",
 &"Завершите обучение": &"Finish tutorial",
@@ -36,6 +39,13 @@ messages = {
 &"Перемещение: {0}  •  Масштаб: {1}": &"Movement: {0}  •  Zoom: {1}",
 &"Громкость музыки": &"Music volume",
 &"виолончель": &"cello",
+&"Гитара": &"Guitar",
+&"Барабан": &"Drum",
+&"Банджо": &"Banjo",
+&"Туба": &"Tuba",
+&"Скрипка": &"Violin",
+&"Шляпа Маттео": &"Matteo's hat",
+&"Лорнет": &"Lorgnette",
 &"банджо": &"banjo",
 &"гитара": &"guitar",
 &"туба": &"tuba",

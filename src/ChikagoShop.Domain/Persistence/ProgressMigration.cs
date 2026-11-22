@@ -19,6 +19,11 @@ public static class ProgressMigration
         return data with
         {
             Day = day,
+            StoredItems = MigrateItems(data.StoredItems, data.SaveVersion),
+            CheckpointItems = MigrateItems(data.CheckpointItems, data.SaveVersion),
+            ShowcaseItems = MigrateItems(data.ShowcaseItems, data.SaveVersion),
+            CheckpointShowcaseItems = MigrateItems(data.CheckpointShowcaseItems, data.SaveVersion),
+            ItemIndex = MigrateItem(data.ItemIndex, data.SaveVersion),
             MusicWorkshopUnlocked = music,
             CheckpointMusicWorkshopUnlocked = data.SaveVersion >= 7 && data.CheckpointMusicWorkshopUnlocked,
             DayRemainingSeconds = remaining,
@@ -27,6 +32,20 @@ public static class ProgressMigration
             SelectedUpgrade = data.SaveVersion >= 9 ? data.SelectedUpgrade : (int)DayUpgrade.None
         };
     }
+
+    private static int[] MigrateItems(int[]? items, int version) =>
+        items?.Select(index => MigrateItem(index, version)).ToArray() ?? [];
+
+    private static int MigrateItem(int index, int version) => version >= 19 ? index : index switch
+    {
+        10 => 1, // cloche_hat -> vest
+        11 => 4, // shoes -> gloves
+        12 => 5, // dress -> matteo_hat
+        13 => 2, // tambourine -> guitar
+        14 => 8, // saxophone -> violin
+        15 => 9, // cello -> tuba
+        _ => index
+    };
 
     public static int Energy(int version, int savedEnergy, int capacity, bool musicUnlocked) =>
         version < 6 ? capacity : version < 12

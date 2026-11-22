@@ -21,11 +21,9 @@ public partial class ProjectTest
                 var motion = player.GetNode<PrologueCharacterMotion>("Characters");
                 var mafia = motion.GetNode<TextureRect>("Castello");
                 var customer = motion.GetNode<TextureRect>("Customer");
-                Check(customer.Visible && customer.Modulate.A == 1 && !mafia.Visible && !motion.IsMoving,
-                    "A restarted prologue must open with the customer and no mafia entrance yet");
-                AdvanceMusicLine(player);
-                Check(player.Session.Index == 1 && mafia.Visible && motion.IsMoving && customer.Visible,
-                    "Castello must enter on his first line while the customer hears his offer to pay");
+                Check(player.Session.Index == 0 && customer.Visible && customer.Modulate.A == 1 &&
+                    mafia.Visible && motion.IsMoving,
+                    "All three portraits must be introduced during the opening line");
                 await Wait(0.18);
                 Check(motion.ArrivalProgress > 0 && motion.ArrivalProgress < 1 &&
                     mafia.Modulate.A > 0 && mafia.Modulate.A < 1 && mafia.OffsetLeft < 0,
@@ -36,6 +34,9 @@ public partial class ProjectTest
                 Check(motion.ArrivalProgress == 1 && mafia.Modulate.A == 1 && mafia.OffsetLeft == 0 &&
                     customer.Visible && motion.DepartureProgress == 0,
                     "Localizing or paging his speech must not replay entrance or send the customer away early");
+                AdvanceMusicLine(player);
+                Check(player.Session.Index == 1 && mafia.Visible && !motion.IsMoving && customer.Visible,
+                    "Castello's first line must retain the opening composition without replaying the entrance");
                 AdvanceMusicLine(player);
                 await Wait(0.2);
                 Check(player.Session.Index == 2 && motion.DepartureProgress > 0 && motion.DepartureProgress < 1 &&

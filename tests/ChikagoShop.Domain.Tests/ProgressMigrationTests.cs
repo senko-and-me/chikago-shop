@@ -8,6 +8,46 @@ namespace ChikagoShop.Domain.Tests;
 public sealed class ProgressMigrationTests
 {
     [Test]
+    public void Version18CatalogueAliasesPreserveStockGradesAndCheckpointAcrossRewrite()
+    {
+        var legacy = new ProgressData
+        {
+            SaveVersion = 18, Day = 8, Score = 2333, QuotaStage = 1, ItemIndex = 15,
+            StoredItems = [10, 11, 12, 13, 14, 15], StoredGrades = ["S", "A", "B", "C", "D", "S"],
+            ShowcaseItems = [-1, 10, 11, 12, 13, 14], CheckpointItems = [15, 0, 11],
+            CheckpointShowcaseItems = [10, 12, -1], TradeActive = true, ActiveTradeGrade = "A"
+        };
+        var migrated = ProgressMigration.Prepare(legacy);
+        Assert.Multiple(() =>
+        {
+            Assert.That(migrated.StoredItems, Is.EqualTo(new[] { 1, 4, 5, 2, 8, 9 }));
+            Assert.That(migrated.ShowcaseItems, Is.EqualTo(new[] { -1, 1, 4, 5, 2, 8 }));
+            Assert.That(migrated.CheckpointItems, Is.EqualTo(new[] { 9, 0, 4 }));
+            Assert.That(migrated.CheckpointShowcaseItems, Is.EqualTo(new[] { 1, 5, -1 }));
+            Assert.That(migrated.ItemIndex, Is.EqualTo(9));
+            Assert.That(migrated.StoredGrades, Is.EqualTo(legacy.StoredGrades));
+            Assert.That(migrated.Score, Is.EqualTo(2333));
+            Assert.That(migrated.TradeActive, Is.True);
+            Assert.That(migrated.ActiveTradeGrade, Is.EqualTo("A"));
+        });
+        migrated.SaveVersion = ProgressJson.CurrentVersion;
+        var reread = ProgressMigration.Prepare(ProgressJson.Deserialize(ProgressJson.Serialize(migrated), 3)!);
+        Assert.That(reread.StoredItems, Is.EqualTo(migrated.StoredItems));
+        Assert.That(reread.CheckpointItems, Is.EqualTo(migrated.CheckpointItems));
+        Assert.That(reread.ItemIndex, Is.EqualTo(migrated.ItemIndex));
+        Assert.That(legacy.StoredItems, Is.EqualTo(new[] { 10, 11, 12, 13, 14, 15 }), "Migration must leave the source DTO intact");
+    }
+
+    [Test]
+    public void Version19CanonicalIndicesNeverRemapAgain()
+    {
+        int[] items = Enumerable.Range(0, 10).ToArray();
+        var prepared = ProgressMigration.Prepare(new ProgressData { SaveVersion = 19, StoredItems = items, ItemIndex = 9 });
+        Assert.That(prepared.StoredItems, Is.EqualTo(items));
+        Assert.That(prepared.ItemIndex, Is.EqualTo(9));
+    }
+
+    [Test]
     public void MissingDayStartedPreservesLegacyRunningDay()
     {
         var legacy = ProgressJson.Deserialize("{\"save_version\":13,\"day_remaining_seconds\":42}", 3)!;

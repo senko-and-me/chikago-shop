@@ -280,29 +280,51 @@ public partial class ProjectTest
     // Asset replacement must preserve all saved catalogue identities and the trading lifecycle.
     private async Task TestDriveAssetReplacements()
     {
-        string[] kinds = { "hat", "gloves", "guitar", "trumpet", "clothing_first", "clothing_exclusive",
-            "clothing_unique", "music_first", "music_exclusive", "music_unique",
-            "cloche_hat", "shoes", "dress", "tambourine", "saxophone", "cello" };
+        var legacy = new ChikagoShop.Domain.Persistence.ProgressData
+        {
+            SaveVersion = 18, StoredItems = [10, 11, 10, 14],
+            StoredGrades = ["S", "B", "A", "C"], ShowcaseItems = [12, 13, 15, -1],
+            ShowcaseGrades = ["B", "S", "A", "D"], CheckpointItems = [11, 13],
+            CheckpointGrades = ["A", "B"], CheckpointShowcaseItems = [14, 15, -1],
+            CheckpointShowcaseGrades = ["A", "C", "D"], ItemIndex = 15, TradeActive = true, ActiveTradeGrade = "S"
+        };
+        var migrated = ChikagoShop.Domain.Persistence.ProgressMigration.Prepare(legacy);
+        Check(migrated.StoredItems.SequenceEqual(new[] { 1, 4, 1, 8 }) &&
+            migrated.ShowcaseItems.SequenceEqual(new[] { 5, 2, 9, -1 }) &&
+            migrated.CheckpointItems.SequenceEqual(new[] { 4, 2 }) &&
+            migrated.CheckpointShowcaseItems.SequenceEqual(new[] { 8, 9, -1 }) &&
+            migrated.ItemIndex == 9 && migrated.TradeActive && migrated.ActiveTradeGrade == "S" &&
+            migrated.StoredGrades.SequenceEqual(legacy.StoredGrades) && migrated.ShowcaseGrades.SequenceEqual(legacy.ShowcaseGrades) &&
+            migrated.CheckpointGrades.SequenceEqual(legacy.CheckpointGrades) &&
+            migrated.CheckpointShowcaseGrades.SequenceEqual(legacy.CheckpointShowcaseGrades),
+            "Legacy saves must migrate every item location while keeping duplicates, grades, and the active sale");
+        string[] kinds = ["hat", "vest", "guitar", "drum", "gloves", "matteo_hat", "lorgnette", "banjo", "violin", "tuba"];
         Check(WorkshopItemCatalog.Items.Count == kinds.Length &&
               WorkshopItemCatalog.Items.Select(item => item.Kind).SequenceEqual(kinds),
-            "The first ten save kinds must stay stable and six new kinds must append");
+            "The ten canonical kinds must retain stable slot indices");
         foreach (var item in WorkshopItemCatalog.Items)
         {
             using var image = GD.Load<Texture2D>(item.ArtPath).GetImage();
             Check(item.ArtPath.EndsWith(".png") && image.GetPixel(0, 0).A == 0,
-                "All sixteen new PNGs must preserve transparent padding");
+                "All ten PNGs must preserve transparent padding");
             string before = TranslationServer.GetLocale();
             TranslationServer.SetLocale("en");
             Check(GameLocalization.Text(item.Name) != item.Name, "Every new item must have an English name");
             TranslationServer.SetLocale(before);
         }
+        Check(WorkshopItemCatalog.ActiveItemCount == 10, "The active catalogue must contain ten items");
         foreach (string workshop in new[] { "atelier", "music" })
-            Check(WorkshopItemCatalog.Items.Count(item => item.WorkshopId == workshop) == 8,
-                "Each workshop must contain eight new items");
+        {
+            var active = WorkshopItemCatalog.ActiveItems.Where(item => item.WorkshopId == workshop).ToArray();
+            Check(active.Length == 5 && active.Select(item => item.RarityId).Distinct().Count() == 5,
+                "Each workshop must offer one item per rarity tier");
+            var possible = Enumerable.Range(0, WorkshopItemCatalog.TotalWeight(workshop))
+                .Select(ticket => WorkshopItemCatalog.Roll(workshop, ticket)).ToHashSet();
+            Check(possible.Count == 5 && possible.All(index => index < WorkshopItemCatalog.ActiveItemCount),
+                "No legacy-only item may be freshly rolled");
+        }
         var game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
         game.SavePath = "";
-        Check(game.GetNode<Node2D>("World/TradingRoom/Item").GetChildren().OfType<Sprite2D>().Count() == 16,
-            "All sixteen trading sprites must be authored in the scene before Ready");
         Root.AddChild(game);
         await ToSignal(this, SignalName.ProcessFrame);
         try
@@ -313,12 +335,13 @@ public partial class ProjectTest
             foreach (int index in Enumerable.Range(0, kinds.Length))
             {
                 var sprite = variants.Single(value => value.Name.ToString().ToLowerInvariant() == kinds[index]);
-                Vector2 size = sprite.Texture.GetSize() * sprite.Scale;
-                Check(sprite.Texture.ResourcePath == TradeScene.GetItemArtPath(index) && size.X <= 150.01f && size.Y <= 150.01f,
+                using var image = sprite.Texture.GetImage();
+                Vector2 size = (Vector2)image.GetUsedRect().Size * sprite.Scale;
+                Check(sprite.Texture.ResourcePath == TradeScene.GetItemArtPath(index) && size.X <= 232.01f && size.Y <= 224.01f && sprite.Scale.X == sprite.Scale.Y,
                     "Trading sprites must use matching catalogue art and fit their existing display area");
             }
             var surface = game.GetNode<PolishingSurface>("PolishingGame/Surface/Polishing");
-            Check(PolishingSurface.InstrumentKinds.Count == 8, "Polishing must use all eight new music artworks");
+            Check(PolishingSurface.InstrumentKinds.Count == 5, "Polishing must accept exactly the five catalogue instruments");
             foreach (string kind in PolishingSurface.InstrumentKinds)
             {
                 var session = surface.Begin(kind);
@@ -331,13 +354,13 @@ public partial class ProjectTest
                 Check(session.Progress > 0, "Rubbing inside each instrument silhouette must remove its coating");
             }
             // Open the actual paid minigame and exercise its selected new silhouette.
-            game.Score = 1000;
+            game.Score = 2000;
             game.EndDay(); // Start before crafting and unlocking.
             game.TryUnlockMusicWorkshop();
             var miniGame = game.GetNode<EmbroideryGame>("PolishingGame");
             miniGame.SetProcess(false);
             game.GetItemFromMusicWorkshop();
-            Check(miniGame.IsOpen && PolishingSurface.InstrumentKinds.Contains(surface.InstrumentKind), "Opening polishing must select one of the eight new artworks");
+            Check(miniGame.IsOpen && PolishingSurface.InstrumentKinds.Contains(surface.InstrumentKind), "Opening polishing must select one of the five instruments");
             int cashBefore = game.Score, energyBefore = game.EnergyRemaining;
             miniGame.Activate();
             Check(game.Score == cashBefore - WorkshopItemCatalog.CraftCost("music") && game.EnergyRemaining == energyBefore - 1,

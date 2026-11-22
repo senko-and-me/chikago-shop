@@ -9,6 +9,20 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### HF-206 — единая каноническая версия проекта
+
+Статус: `REVIEW`; координатор/исполнитель `/root`; 2026-11-22; HF-205 DONE. CP-HF-206: `.local/checks/hf206/CP-HF-206.md`; exact write-set `.local/checks/hf206/write-set.txt`. Main remains the integration base; user explicitly authorized backups, consolidation, migration checks, main merge and one active project path.
+
+```text
+Task: HF-206
+Recommended status: REVIEW
+Changed: integration/canonical-project combines polishing fixes 873a54b/0809d97/c44ad27/dbf5633 and all unique nested work: catalogue10/art, schema19 migration, portrait expressions and story layout; preserves main accepted balance/fullscreen/font/shared rules/terminal cleanup and user's scene/export changes. Simulator uses shared patience rules. Nested original moved outside project; canonical workspace/Godot registration points to root.
+Checks: build PASS0warnings/errors; domain204/204 PASS; isolated Godot import retry clean; 25 focused rendered suites PASS (migration, buyer availability/patience/arrival, dialogue portraits/layout, quota, campaign, save compatibility, polishing start/reward, music/fullscreen, rarity, resources, prologue, curtains, energy, frames, tutorial, dealing, inventory, debug balance, day start/gate/expiry, sound). Simulation10000runs/profile regenerated; diffcheck PASS; MSBuild nested inputs0. Source save fixture v13 and synthetic v18/v19 roundtrip PASS; actual player files SHA256 unchanged. Story screenshots reviewed.
+Acceptance: backups C:/Users/Всеволод/Documents/ChikagoShop-backup-20261122-125200: main-working, nested-working, archived-nested, user-data, verified repository.bundle; SHA2561224projectfiles verified. Original dirty changes also protected by backup/main-working-20261122=eea1e93. Source copied opaquely for backup and never inspected. Only root project.godot is registered for this project; workspace folders=[.].
+Read-set exception: existing ProjectTest.Ui.cs and ZoomResponsiveUi.cs read to diagnose general-runner failure; coordinator authorized this necessary diagnostic, no changes there.
+Risks/blocker: general legacy runner FAIL TestUiLayoutInvalidation: expects TradePanel pivot=Size/2, while existing main uses lower-center pivot; both files unchanged from main. Headless/rendered same result; no claim of all-suite PASS. No focused acceptance blocker. Historical versions remain in external backups and Git branches.
+Next: coordinator accepts focused checks and fast-forwards main, then publishes and verifies remote reference.
+```
 ### HF-205 — проверка и интеграция ChikagoShop_Final.zip
 
 Статус: `DONE` (интегрировано по прямому разрешению пользователя); координатор/исполнитель `/root`; 2026-11-22; зависимости HF-204 DONE. Пользователь после review явно разрешил принять архивный баланс/прочие изменения, исправить fullscreen, объединить, удалить ZIP и push main. Приёмка уточнена под новую механику целевыми suites; старый общий runner остаётся отдельной диагностикой.

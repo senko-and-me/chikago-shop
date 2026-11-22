@@ -1,21 +1,31 @@
 [gd_scene format=3 uid="uid://4j1i60hag1el"]
 
 [ext_resource type="Script" uid="uid://bbdbrlsqvmgia" path="res://scripts/MainMenu.cs" id="1_script"]
+
 [ext_resource type="Texture2D" uid="uid://byqyjwldbq35i" path="res://art/ui/button_settings.png" id="2_settings"]
+
 [ext_resource type="Texture2D" uid="uid://bda7bxwxwttqa" path="res://art/ui/button_quit.png" id="3_quit"]
+
 [ext_resource type="Texture2D" uid="uid://blr5mo3usryyx" path="res://art/ui/button_back.png" id="4_back"]
+
 [ext_resource type="Texture2D" uid="uid://e5kmc4ojg427" path="res://art/ui/button_play.png" id="5_play"]
+
 [ext_resource type="Texture2D" uid="uid://7bwj2nywuk1p" path="res://art/ui/menu_background.png" id="6_background"]
+
 [ext_resource type="Texture2D" uid="uid://dfkvkw5r50k4v" path="res://art/ui/logo.png" id="7_logo"]
+
 [ext_resource type="FontFile" uid="uid://q8nuqkeci347" path="res://art/fonts/game.ttf" id="8_font"]
+
 [ext_resource type="Texture2D" uid="uid://j27bt53frben" path="res://art/ui/ru/fullscreen_off.png" id="9_5dd4i"]
+
 [ext_resource type="Texture2D" uid="uid://ti6uump1r481" path="res://art/ui/settings_panel.png" id="9_settings_panel"]
+
 [ext_resource type="AudioStream" uid="uid://dapsv2fl4qete" path="res://audio/music/menu_theme_loop.wav" id="10_menu_music"]
+
 [ext_resource type="Script" uid="uid://cg33sfinb6h1a" path="res://scripts/Audio/IntroMusicDirector.cs" id="11_music_director"]
-[ext_resource type="AudioStream" path="res://audio/music/thoughtful_loop.wav" id="12_thoughtful_music"]
-[ext_resource type="AudioStream" path="res://audio/music/sinister_loop.wav" id="13_sinister_music"]
 
 [ext_resource type="PackedScene" path="res://scenes/UI/MusicVolumeControl.tscn" id="14_volume"]
+
 [ext_resource type="Texture2D" path="res://art/ui/panel_small.png" id="15_paper"]
 
 [sub_resource type="ButtonGroup" id="LanguageGroup"]
@@ -63,17 +73,9 @@ autoplay = true
 
 [node name="MusicDirector" type="Node" parent="." unique_id=1010500646]
 script = ExtResource("11_music_director")
-MenuVolumeDb = -12.0
 IntroVolumeDb = -12.0
 ThoughtfulVolumeDb = -12.0
 SinisterVolumeDb = -12.0
-ThoughtfulCompensation = 1.0
-SinisterCompensation = 1.0
-ThoughtfulStream = ExtResource("12_thoughtful_music")
-SinisterStream = ExtResource("13_sinister_music")
-IntroFadeSeconds = 4.0
-CrossfadeSeconds = 2.5
-ExitFadeSeconds = 1.5
 
 [node name="Background" type="TextureRect" parent="." unique_id=1737544570]
 layout_mode = 1
@@ -105,10 +107,10 @@ layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = -260.0
-offset_top = -96.745
-offset_right = 260.0
-offset_bottom = 423.255
+offset_left = -196.0
+offset_top = -105.0
+offset_right = 615.0
+offset_bottom = 867.0
 grow_horizontal = 2
 texture = ExtResource("7_logo")
 expand_mode = 4
@@ -119,10 +121,10 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 1.0
-offset_top = 107.0
-offset_right = 1.0
-offset_bottom = 107.0
+offset_left = -365.0
+offset_top = 26.0
+offset_right = -365.0
+offset_bottom = 26.0
 grow_horizontal = 2
 grow_vertical = 2
 
@@ -214,7 +216,7 @@ theme_override_font_sizes/font_size = 24
 text = "Полный экран"
 vertical_alignment = 1
 
-[node name="MusicVolume" parent="SettingsMenuContainer/Settings" instance=ExtResource("14_volume")]
+[node name="MusicVolume" parent="SettingsMenuContainer/Settings" unique_id=1884032349 instance=ExtResource("14_volume")]
 custom_minimum_size = Vector2(500, 100)
 layout_mode = 2
 
@@ -223,13 +225,13 @@ custom_minimum_size = Vector2(500, 100)
 layout_mode = 2
 ControlsSoundEffects = true
 
-[node name="LanguageRow" type="HBoxContainer" parent="SettingsMenuContainer/Settings"]
+[node name="LanguageRow" type="HBoxContainer" parent="SettingsMenuContainer/Settings" unique_id=1713369841]
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_constants/separation = 12
 alignment = 1
 
-[node name="LanguageLabel" type="Label" parent="SettingsMenuContainer/Settings/LanguageRow"]
+[node name="LanguageLabel" type="Label" parent="SettingsMenuContainer/Settings/LanguageRow" unique_id=1227003346]
 custom_minimum_size = Vector2(128, 0)
 layout_mode = 2
 auto_translate_mode = 2
@@ -239,7 +241,7 @@ text = "Язык"
 clip_text = true
 vertical_alignment = 1
 
-[node name="EnglishButton" type="Button" parent="SettingsMenuContainer/Settings/LanguageRow"]
+[node name="EnglishButton" type="Button" parent="SettingsMenuContainer/Settings/LanguageRow" unique_id=558163948]
 custom_minimum_size = Vector2(160, 52)
 layout_mode = 2
 auto_translate_mode = 2
@@ -258,7 +260,7 @@ toggle_mode = true
 button_group = SubResource("LanguageGroup")
 text = "English"
 
-[node name="RussianButton" type="Button" parent="SettingsMenuContainer/Settings/LanguageRow"]
+[node name="RussianButton" type="Button" parent="SettingsMenuContainer/Settings/LanguageRow" unique_id=1729965360]
 custom_minimum_size = Vector2(160, 52)
 layout_mode = 2
 auto_translate_mode = 2

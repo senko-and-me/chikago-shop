@@ -8,6 +8,90 @@ using ChikagoShop.Domain.Crafting;
 // Subsystem checks share the ProjectTest runner and fixture helpers.
 public partial class ProjectTest
 {
+    private async Task TestPolishingStart()
+    {
+        Vector2I originalSize = Root.Size;
+        string locale = TranslationServer.GetLocale();
+        TradeScene game = null;
+        try
+        {
+            foreach (var size in new[] { new Vector2I(1280, 720), new Vector2I(960, 540), new Vector2I(1920, 1080) })
+            foreach (string language in new[] { "ru", "en" })
+            {
+                Root.Size = size;
+                TranslationServer.SetLocale(language);
+                game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
+                game.SavePath = "";
+                game.GetNode<FirstTradeTutorial>("FirstTradeTutorial").ProgressPath = "";
+                Root.AddChild(game); game.SetProcess(false);
+                game.EndDay(); game.Score = 10000; game.TryUnlockMusicWorkshop();
+                var craft = game.GetNode<EmbroideryGame>("PolishingGame");
+                game.GetItemFromMusicWorkshop();
+                Check(craft.IsOpen, "Unlocked room must open polishing");
+                await ToSignal(this, SignalName.ProcessFrame);
+                var cloth = craft.GetNode<Sprite2D>("Surface/PolishingCursor");
+                Check(Input.MouseMode == Input.MouseModeEnum.Visible && !cloth.Visible,
+                    "Ready buttons need the native pointer: the centered cloth must not hide their click hotspot");
+                await ClickControl(game, "PolishingGame/Surface/Cancel");
+                Check(!craft.IsOpen && !Paused && Input.MouseMode == Input.MouseModeEnum.Visible,
+                    "Cancel must restore the pointer and leave the preview reusable");
+                game.GetItemFromMusicWorkshop();
+                await ToSignal(this, SignalName.ProcessFrame);
+                int money = game.Score, energy = game.EnergyRemaining;
+                var button = craft.GetNode<Button>("Surface/Action");
+                Vector2 point = button.GetGlobalTransformWithCanvas() * (button.Size / 2);
+                Root.PushInput(new InputEventMouseMotion { Position = point, GlobalPosition = point }, true);
+                await ToSignal(this, SignalName.ProcessFrame);
+                Root.PushInput(new InputEventMouseButton { Position = point, GlobalPosition = point,
+                    ButtonIndex = MouseButton.Left, Pressed = true, ButtonMask = MouseButtonMask.Left }, true);
+                for (int i = 0; i < 5; i++) await ToSignal(this, SignalName.ProcessFrame);
+                Root.PushInput(new InputEventMouseButton { Position = point, GlobalPosition = point,
+                    ButtonIndex = MouseButton.Left, Pressed = false }, true);
+                await ToSignal(this, SignalName.ProcessFrame);
+                Check(craft.ActiveSession.State == EmbroideryState.Playing,
+                    $"Normal held mouse click must start music mini-game ({size}, {language})");
+                Check(Input.MouseMode == Input.MouseModeEnum.Hidden && cloth.Visible,
+                    "Playing must switch from the UI pointer to the polishing cloth");
+                Check(game.StoredItems.Length == EconomyConfigProvider.Load().Days.ItemsPerCraft,
+                    "Start must grant the paid batch exactly once");
+                Check(game.Score == money - WorkshopItemCatalog.CraftCost("music") && game.EnergyRemaining == energy - 1,
+                    "Start must charge its price and one energy exactly once");
+                var board = craft.GetNode<PolishingSurface>("Surface/Polishing");
+                var cell = craft.Polishing.Cells.First(value => value.Inside && craft.Polishing.Inside(value.X + 14, value.Y));
+                Vector2 left = board.LogicalToScreen(new Vector2((float)cell.X, (float)cell.Y));
+                Vector2 right = board.LogicalToScreen(new Vector2((float)cell.X + 14, (float)cell.Y));
+                Root.PushInput(new InputEventMouseMotion { Position = left, GlobalPosition = left }, true);
+                Root.PushInput(new InputEventMouseButton { Position = left, GlobalPosition = left,
+                    ButtonIndex = MouseButton.Left, Pressed = true, ButtonMask = MouseButtonMask.Left }, true);
+                for (int i = 0; i < 12; i++)
+                {
+                    await ToSignal(this, SignalName.ProcessFrame);
+                    Vector2 stroke = i % 2 == 0 ? right : left;
+                    Root.PushInput(new InputEventMouseMotion { Position = stroke, GlobalPosition = stroke,
+                        ButtonMask = MouseButtonMask.Left }, true);
+                }
+                Root.PushInput(new InputEventMouseButton { Position = left, GlobalPosition = left,
+                    ButtonIndex = MouseButton.Left, Pressed = false }, true);
+                Check(craft.Polishing.Progress > 0, "Held mouse strokes after Start must polish the instrument");
+                craft.FinishForTesting(true);
+                Check(Input.MouseMode == Input.MouseModeEnum.Visible && !cloth.Visible,
+                    "Collect must immediately restore the native pointer even before the next frame");
+                await ClickControl(game, "PolishingGame/Surface/Action");
+                Check(!craft.IsOpen && !Paused, "Collect must close polishing and restore gameplay");
+                game.QueueFree(); game = null;
+                await ToSignal(this, SignalName.ProcessFrame);
+            }
+        }
+        finally
+        {
+            Paused = false;
+            if (GodotObject.IsInstanceValid(game)) game.QueueFree();
+            Root.Size = originalSize;
+            TranslationServer.SetLocale(locale);
+            await ToSignal(this, SignalName.ProcessFrame);
+        }
+    }
+
     private async Task TestPolishingReward()
     {
         var scene = GD.Load<PackedScene>("res://scenes/trade_scene.tscn");
@@ -23,7 +107,7 @@ public partial class ProjectTest
             craft.SetProcess(false);
             var board = craft.GetNode<PolishingSurface>("Surface/Polishing");
             int[] music = WorkshopItemCatalog.Items.Select((item, index) => (item, index))
-                .Where(entry => entry.item.WorkshopId == "music").Select(entry => entry.index).ToArray();
+                .Where(entry => entry.index < WorkshopItemCatalog.ActiveItemCount && entry.item.WorkshopId == "music").Select(entry => entry.index).ToArray();
             foreach (int level in new[] { 0, 3 })
             {
                 var upgrades = new DayUpgradeSession();

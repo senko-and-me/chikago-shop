@@ -1,53 +1,75 @@
 [gd_scene format=3 uid="uid://6ciouuso5bqi"]
 
 [ext_resource type="Script" path="res://scripts/Presentation/RoomCurtainPresentation.cs" id="34_curtain"]
+
 [ext_resource type="Script" uid="uid://bj66ajuqbshg0" path="res://scripts/TradeScene.cs" id="1_main"]
+
 [ext_resource type="Script" uid="uid://c6334skyxf3jy" path="res://scripts/CounterWorld.cs" id="2_world"]
+
 [ext_resource type="Texture2D" uid="uid://bc8clisawybhl" path="res://art/rooms/music_room.jpg" id="4_pi35y"]
+
 [ext_resource type="PackedScene" uid="uid://u2ve41t8yhqn" path="res://scenes/customer.tscn" id="5_customer"]
+
 [ext_resource type="Texture2D" uid="uid://opqiutt7np6v" path="res://art/rooms/showroom.jpg" id="9_bkxpd"]
+
 [ext_resource type="PackedScene" uid="uid://4wqv2sl2gvaw" path="res://scenes/UI/InventoryUI.tscn" id="9_cppqn"]
+
 [ext_resource type="PackedScene" uid="uid://wj2ymug80tk2" path="res://scenes/UI/ShowcaseSlot.tscn" id="10_showcase"]
+
 [ext_resource type="Texture2D" uid="uid://cq6tis3xjvmup" path="res://art/rooms/atelier.jpg" id="11_atelier"]
+
 [ext_resource type="Texture2D" uid="uid://d21j3cp04fmi5" path="res://art/rooms/cashier_closed.jpg" id="12_cashier"]
+
 [ext_resource type="Texture2D" uid="uid://7i21ur522dc7" path="res://art/rooms/upper_corridor_closed.jpg" id="13_58qc8"]
+
 [ext_resource type="Texture2D" uid="uid://dcj7da0lpr1fq" path="res://art/rooms/room_layout.jpg" id="14_layout"]
+
 [ext_resource type="Texture2D" uid="uid://dfxl3bik7r087" path="res://art/ui/panel_large.png" id="16_panel_large"]
+
 [ext_resource type="Texture2D" uid="uid://bf1y5qehuwoj" path="res://art/ui/panel_small.png" id="17_panel_small"]
+
 [ext_resource type="PackedScene" path="res://scenes/UI/RarityPanel.tscn" id="19_rarity_panel"]
+
 [ext_resource type="Script" uid="uid://dxn8wgvls5a4a" path="res://scripts/UI/PauseMenu.cs" id="20_pause"]
+
 [ext_resource type="Script" uid="uid://bdswgixl6srw1" path="res://scripts/UI/ZoomResponsiveUi.cs" id="21_zoom_ui"]
+
 [ext_resource type="Script" uid="uid://dqhunfpycjxyp" path="res://scripts/UI/ProgressPanel.cs" id="22_progress"]
+
 [ext_resource type="PackedScene" path="res://scenes/UI/CigaretteProgress.tscn" id="32_cigarette_progress"]
+
 [ext_resource type="PackedScene" path="res://scenes/UI/PulloutNotebook.tscn" id="34_notebook"]
+
 [ext_resource type="Script" path="res://scripts/Presentation/TradingRoomPosterHotspot.cs" id="35_poster_hotspot"]
+
 [ext_resource type="PackedScene" path="res://scenes/UI/EnergyPanel.tscn" id="33_energy_panel"]
+
 [ext_resource type="Script" uid="uid://cnnctojfahevu" path="res://scripts/Camera/WorldCamera.cs" id="23_world_camera"]
+
 [ext_resource type="Script" uid="uid://moiorwdg8bcp" path="res://scripts/Presentation/RoomDoorwayPresentation.cs" id="24_doorways"]
+
 [ext_resource type="Texture2D" uid="uid://cog2ypvb6uqtj" path="res://art/ui/panel_inverted.png" id="25_inverted"]
+
 [ext_resource type="Script" uid="uid://6v4lxl6qtq6y" path="res://scripts/Audio/GameplayMusicDirector.cs" id="26_game_music"]
+
 [ext_resource type="AudioStream" uid="uid://dapsv2fl4qete" path="res://audio/music/menu_theme_loop.wav" id="27_day_music"]
+
 [ext_resource type="AudioStream" uid="uid://chjxk4p6834ac" path="res://audio/music/thoughtful_loop.wav" id="28_upgrade_music"]
+
 [ext_resource type="Texture2D" uid="uid://b8xud5umuwi61" path="res://art/rooms/night_time.png" id="background_1_jqty7"]
+
 [ext_resource type="Texture2D" uid="uid://dcpdw0kad8qlu" path="res://art/rooms/day_time.png" id="background_2_31fg5"]
+
 [ext_resource type="Texture2D" uid="uid://bj3pbvpqnrv7g" path="res://art/ui/camera_frame.png" id="background_4_00ccd"]
+
 [ext_resource type="Texture2D" uid="uid://deul0bfifm5rg" path="res://art/rooms/locked_curtain.png" id="background_6_2e12l"]
+
 [ext_resource type="PackedScene" path="res://scenes/UI/FirstTradeTutorial.tscn" id="30_tutorial"]
 
 [ext_resource type="PackedScene" path="res://scenes/UI/CraftButton.tscn" id="31_craft_button"]
+
 [ext_resource type="PackedScene" path="res://scenes/UI/MusicWorkshopUnlockPanel.tscn" id="36_unlock_panel"]
 
-[ext_resource type="Texture2D" path="res://art/items/maracas.png" id="item_2"]
-[ext_resource type="Texture2D" path="res://art/items/metronome.png" id="item_3"]
-[ext_resource type="Texture2D" path="res://art/items/jacket.png" id="item_5"]
-[ext_resource type="Texture2D" path="res://art/items/fur_stole.png" id="item_6"]
-[ext_resource type="Texture2D" path="res://art/items/trumpet.png" id="item_7"]
-[ext_resource type="Texture2D" path="res://art/items/violin.png" id="item_8"]
-[ext_resource type="Texture2D" path="res://art/items/gramophone.png" id="item_9"]
-[ext_resource type="Texture2D" path="res://art/items/dress.png" id="item_12"]
-[ext_resource type="Texture2D" path="res://art/items/tambourine.png" id="item_13"]
-[ext_resource type="Texture2D" path="res://art/items/saxophone.png" id="item_14"]
-[ext_resource type="Texture2D" path="res://art/items/cello.png" id="item_15"]
 
 [sub_resource type="AtlasTexture" id="InvertedHeaderTexture"]
 atlas = ExtResource("25_inverted")
@@ -204,7 +226,6 @@ offset_left = 735.0
 offset_top = 849.0
 offset_right = 1185.0
 offset_bottom = 1039.0
-mouse_default_cursor_shape = 2
 
 [node name="PriceHint" type="PanelContainer" parent="World/Atelier/GetItemButton" unique_id=672506262]
 visible = false
@@ -307,7 +328,6 @@ offset_left = 735.0
 offset_top = 849.0
 offset_right = 1185.0
 offset_bottom = 1039.0
-mouse_default_cursor_shape = 2
 
 [node name="PriceHint" type="PanelContainer" parent="World/MusicWorkshop/GetItemButton" unique_id=1906600376]
 visible = false
@@ -625,92 +645,6 @@ color = Color(0.475051, 0.475051, 0.475051, 1)
 visible = false
 position = Vector2(676, 651)
 
-[node name="Hat" type="Sprite2D" parent="World/TradingRoom/Item"]
-visible = false
-position = Vector2(64, -48)
-
-[node name="Gloves" type="Sprite2D" parent="World/TradingRoom/Item"]
-visible = false
-position = Vector2(64, -48)
-
-[node name="Guitar" type="Sprite2D" parent="World/TradingRoom/Item"]
-visible = false
-position = Vector2(64, -48)
-scale = Vector2(0.08333333, 0.08333333)
-texture = ExtResource("item_2")
-
-[node name="Trumpet" type="Sprite2D" parent="World/TradingRoom/Item"]
-visible = false
-position = Vector2(64, -48)
-scale = Vector2(0.10207337, 0.10207337)
-texture = ExtResource("item_3")
-
-[node name="Clothing_first" type="Sprite2D" parent="World/TradingRoom/Item"]
-visible = false
-position = Vector2(64, -48)
-
-[node name="Clothing_exclusive" type="Sprite2D" parent="World/TradingRoom/Item"]
-visible = false
-position = Vector2(64, -48)
-scale = Vector2(0.08333333, 0.08333333)
-texture = ExtResource("item_5")
-
-[node name="Clothing_unique" type="Sprite2D" parent="World/TradingRoom/Item"]
-visible = false
-position = Vector2(64, -48)
-scale = Vector2(0.09756098, 0.09756098)
-texture = ExtResource("item_6")
-
-[node name="Music_first" type="Sprite2D" parent="World/TradingRoom/Item"]
-visible = false
-position = Vector2(64, -48)
-scale = Vector2(0.08333333, 0.08333333)
-texture = ExtResource("item_7")
-
-[node name="Music_exclusive" type="Sprite2D" parent="World/TradingRoom/Item"]
-visible = false
-position = Vector2(64, -48)
-scale = Vector2(0.10207337, 0.10207337)
-texture = ExtResource("item_8")
-
-[node name="Music_unique" type="Sprite2D" parent="World/TradingRoom/Item"]
-visible = false
-position = Vector2(64, -48)
-scale = Vector2(0.09756098, 0.09756098)
-texture = ExtResource("item_9")
-
-[node name="Cloche_hat" type="Sprite2D" parent="World/TradingRoom/Item"]
-visible = false
-position = Vector2(64, -48)
-
-[node name="Shoes" type="Sprite2D" parent="World/TradingRoom/Item"]
-visible = false
-position = Vector2(64, -48)
-
-[node name="Dress" type="Sprite2D" parent="World/TradingRoom/Item"]
-visible = false
-position = Vector2(64, -48)
-scale = Vector2(0.08333333, 0.08333333)
-texture = ExtResource("item_12")
-
-[node name="Tambourine" type="Sprite2D" parent="World/TradingRoom/Item"]
-visible = false
-position = Vector2(64, -48)
-scale = Vector2(0.08333333, 0.08333333)
-texture = ExtResource("item_13")
-
-[node name="Saxophone" type="Sprite2D" parent="World/TradingRoom/Item"]
-visible = false
-position = Vector2(64, -48)
-scale = Vector2(0.10207337, 0.10207337)
-texture = ExtResource("item_14")
-
-[node name="Cello" type="Sprite2D" parent="World/TradingRoom/Item"]
-visible = false
-position = Vector2(64, -48)
-scale = Vector2(0.08333333, 0.08333333)
-texture = ExtResource("item_15")
-
 [node name="TradePanel" type="PanelContainer" parent="World/TradingRoom/Item" unique_id=703097951]
 visible = false
 custom_minimum_size = Vector2(320, 200)
@@ -911,7 +845,7 @@ scale = Vector2(1.2631578, 1.2631578)
 texture = ExtResource("background_2_31fg5")
 centered = false
 
-[node name="Camera2D" type="Camera2D" parent="." unique_id=550359116 node_paths=PackedStringArray("BoundsSource")]
+[node name="Camera2D" type="Camera2D" parent="." node_paths=PackedStringArray("BoundsSource") unique_id=550359116]
 position = Vector2(2880, 1620.6316)
 zoom = Vector2(0.39583334, 0.39583334)
 script = ExtResource("23_world_camera")
@@ -1041,7 +975,7 @@ theme_override_styles/pressed = SubResource("DeclinePressed")
 theme_override_styles/hover = SubResource("DeclineHover")
 text = "Начать заново"
 
-[node name="ProgressToggleButton" type="Button" parent="HUD/Root" unique_id=989856316 groups=["button_feedback_local"]]
+[node name="ProgressToggleButton" type="Button" parent="HUD/Root" groups=["button_feedback_local"] unique_id=989856316]
 z_index = 2
 layout_mode = 0
 offset_top = 24.0
@@ -1079,4 +1013,4 @@ script = ExtResource("21_zoom_ui")
 [node name="RoomDoorways" type="Node" parent="." unique_id=1292616752]
 script = ExtResource("24_doorways")
 
-[node name="FirstTradeTutorial" parent="." instance=ExtResource("30_tutorial")]
+[node name="FirstTradeTutorial" parent="." unique_id=1552818122 instance=ExtResource("30_tutorial")]

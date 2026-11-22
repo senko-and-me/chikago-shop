@@ -12,6 +12,8 @@ public partial class DialoguePlayer : Control
     [Export(PropertyHint.File, "*.json")]
     public string DialoguePath { get; set; } = "res://dialogue/intro.ru.json";
     public bool IsPrologue { get; set; } = true;
+    public Texture2D StoryBackground { get; set; }
+    public Texture2D StoryPortrait { get; set; }
     public int SavedPageStart => _pageStart;
     public bool SavedPageRevealed => !IsRevealing;
     private RichTextLabel _text;
@@ -20,7 +22,9 @@ public partial class DialoguePlayer : Control
     private string _localizedText = "";
     private int _pageStart;
     private int _pageEnd;
+    private const double CharactersPerSecond = 48;
     private double _characters;
+    private StoryPortraitController _portraits;
     private bool _closed;
     private Tween _portraitTransition;
     public bool IsRevealing => _text.VisibleCharacters >= 0;
@@ -29,6 +33,7 @@ public partial class DialoguePlayer : Control
     {
         if (_portraitTransition?.IsValid() == true) _portraitTransition.Kill();
         if (IsPrologue) GetNode<PrologueCharacterMotion>("Characters").Stop();
+        _portraits?.ShowSpeech(null, lineComplete: true);
         _closed = true;
         SetProcess(false);
     }
@@ -41,26 +46,38 @@ public partial class DialoguePlayer : Control
         Theme = GD.Load<Theme>("res://themes/game_theme.tres");
         Session = DialogueSession.FromJson(FileAccess.GetFileAsString(DialoguePath));
         _heading = GetNode<Label>("Heading");
-        if (!IsPrologue)
+        StoryDialogueLayout.StyleHeading(_heading);
+        GetNode<ColorRect>("Shade").Color = StoryDialogueLayout.Shade;
+        var background = GetNode<TextureRect>("Background");
+        var left = GetNode<TextureRect>("Characters/Castello");
+        var right = GetNode<TextureRect>("Characters/Frankie");
+        if (IsPrologue)
         {
-            GetNode<Control>("Background").Hide();
-            GetNode<Control>("Characters").Hide();
+            StoryDialogueLayout.FrameShowroom(background);
+            _portraits = new StoryPortraitController(left, StoryPortraitController.Castello,
+                right, StoryPortraitController.Frankie);
+        }
+        else
+        {
+            background.Texture = StoryBackground;
+            background.Visible = StoryBackground != null;
+            var characters = GetNode<Control>("Characters");
+            foreach (var portrait in characters.GetChildren())
+                ((CanvasItem)portrait).Hide();
+            if (StoryPortrait != null)
+                StoryDialogueLayout.AddPortrait(characters, "Son", StoryPortrait, 0.68f);
             _heading.Hide();
         }
         _speaker = GetNode<Label>("Panel/Content/Speaker");
         _text = GetNode<RichTextLabel>("Panel/Content/Text");
-        var panel = GetNode<PanelContainer>("Panel");
-        void LayoutPanel()
-        {
-            panel.OffsetTop = -Math.Clamp(Size.Y * 0.34f, 260, 280) - 16;
-            panel.OffsetBottom = -16;
-        }
-        Resized += LayoutPanel;
-        LayoutPanel();
+        StoryDialogueLayout.StylePanel(GetNode<PanelContainer>("Panel"), _speaker);
+        _text.AddThemeColorOverride("default_color", StoryDialogueLayout.TextColor);
+        _text.AddThemeConstantOverride("line_separation", 5);
+        _text.AddThemeFontSizeOverride("normal_font_size", StoryDialogueLayout.BodySize);
         foreach (string font in new[] { "normal_font", "bold_font", "italics_font", "bold_italics_font", "mono_font" })
             _text.AddThemeFontOverride(font, Theme.DefaultFont);
         _text.CustomMinimumSize = new Vector2(0,
-            Mathf.Ceil(_text.GetThemeFont("normal_font").GetHeight(20) * 3 +
+            Mathf.Ceil(_text.GetThemeFont("normal_font").GetHeight(StoryDialogueLayout.BodySize) * 3 +
                 _text.GetThemeConstant("line_separation") * 3 +
                 _text.GetThemeStylebox("normal").GetMinimumSize().Y));
         var scrollbar = _text.GetVScrollBar();
@@ -69,21 +86,11 @@ public partial class DialoguePlayer : Control
         _text.Resized += () => Callable.From(() =>
         {
             if (_closed) return;
-            bool preserveReveal = !IsPrologue && _text.VisibleCharacters == -1;
-            DisplayPage();
-            if (preserveReveal) _text.VisibleCharacters = -1;
+            int visibleUntil = _text.VisibleCharacters < 0 ? _pageEnd : _pageStart + _text.VisibleCharacters;
+            DisplayPage(visibleUntil);
         }).CallDeferred();
         DisplayLine();
     }
-
-    private static StyleBoxFlat ScrollStyle(string color, int radius) => new()
-    {
-        BgColor = new Color(color),
-        CornerRadiusTopLeft = radius, CornerRadiusTopRight = radius,
-        CornerRadiusBottomLeft = radius, CornerRadiusBottomRight = radius,
-        ContentMarginLeft = 4, ContentMarginRight = 4,
-        ContentMarginTop = 8, ContentMarginBottom = 8
-    };
 
     private void DisplayLine()
     {
@@ -103,6 +110,7 @@ public partial class DialoguePlayer : Control
             UpdatePortraits();
             GetNode<PrologueCharacterMotion>("Characters").SyncLine(Session.Index, Session.Current.Speaker);
         }
+        _portraits?.SetLine(Session.Current);
         _localizedText = GameLocalization.Text(Session.Current.Text);
         _pageStart = 0;
         DisplayPage();
@@ -115,7 +123,7 @@ public partial class DialoguePlayer : Control
         foreach (var entry in new[] { ("Frankie", "Френки"), ("Castello", "Кастелло"), ("Customer", "Покупательница") })
         {
             var portrait = GetNode<TextureRect>("Characters/" + entry.Item1);
-            float tone = Session.Current.Speaker == entry.Item2 ? 0 : 0.32f;
+            float tone = Session.Current.Speaker == entry.Item2 ? 0 : StoryDialogueLayout.InactivePortraitTone;
             _portraitTransition.TweenProperty(portrait.Material, "shader_parameter/lighten", tone, 0.2)
                 .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
         }
@@ -123,15 +131,14 @@ public partial class DialoguePlayer : Control
 
     public override void _Notification(int what)
     {
-        if (what == NotificationTranslationChanged && _text != null && _heading != null && Session != null)
+        if (what == NotificationTranslationChanged && !_closed && _text != null && _heading != null && Session != null)
             RefreshLocalizedLine();
     }
 
-    private void DisplayPage()
+    private void DisplayPage(int visibleUntil = 0)
     {
         if (_text.Size.X <= 0 || _text.Size.Y <= 0) return;
         _text.VisibleCharacters = -1;
-        _text.AddThemeFontSizeOverride("normal_font_size", 20);
         _text.ScrollActive = false;
         string source = _localizedText;
         // Measure with the actual shaped label, including its font, wrapping and
@@ -144,21 +151,29 @@ public partial class DialoguePlayer : Control
         _text.Text = source.Substring(_pageStart, _pageEnd - _pageStart);
         _text.ScrollActive = _text.GetContentHeight() > _text.Size.Y;
         _text.ScrollToLine(0);
-        _text.VisibleCharacters = 0;
-        _characters = 0;
+        _characters = Math.Max(0, visibleUntil - _pageStart);
+        bool revealed = visibleUntil >= _pageEnd;
+        _text.VisibleCharacters = revealed ? -1 : (int)_characters;
+        UpdateMouths();
     }
 
     public override void _Process(double delta)
     {
         if (_closed || !IsRevealing) return;
-        _characters += delta * 48;
+        _characters += delta * CharactersPerSecond;
         _text.VisibleCharacters = (int)_characters;
         if (_text.VisibleCharacters >= _text.GetTotalCharacterCount()) Reveal();
+        else UpdateMouths();
     }
+
+    private void UpdateMouths() =>
+        _portraits?.ShowSpeech(IsRevealing ? _characters / CharactersPerSecond : null,
+            !IsRevealing && _pageEnd >= _localizedText.Length);
 
     private void Reveal()
     {
         _text.VisibleCharacters = -1;
+        UpdateMouths();
         PageProgressed?.Invoke();
     }
 

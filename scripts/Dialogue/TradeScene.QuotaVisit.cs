@@ -19,7 +19,7 @@ public partial class TradeScene
 
     private void InitializeQuotaVisit()
     {
-        var texture = GD.Load<Texture2D>("res://art/items/quota_visitor.png");
+        var texture = GD.Load<Texture2D>("res://art/characters/quota_visitor.png");
         var tone = new ShaderMaterial { Shader = GD.Load<Shader>("res://shaders/dialogue_portrait.gdshader") };
         tone.SetShaderParameter("lighten", 0f);
         var mask = new Bitmap();
@@ -48,7 +48,7 @@ public partial class TradeScene
 
     public void ResumeQuotaVisit()
     {
-        if (!QuotaVisitPending || MafiaNoticePending || _quotaVisitor.Visible) return;
+        if (!QuotaVisitPending || MafiaNoticePending || _quotaDialogue != null || _quotaVisitor.Visible) return;
         _customer.Hide();
         _quotaVisitor.Show();
         var frame = _customer.GetParent().GetNode<Control>("RoomFrame");
@@ -69,7 +69,10 @@ public partial class TradeScene
         var dialogue = GD.Load<PackedScene>("res://scenes/UI/DialoguePlayer.tscn").Instantiate<DialoguePlayer>();
         dialogue.DialoguePath = "res://dialogue/quota_visitor.ru.json";
         dialogue.IsPrologue = false;
+        dialogue.StoryPortrait = _quotaVisitor.TextureNormal;
+        dialogue.StoryBackground = _quotaVisitor.GetParent().GetNode<Sprite2D>("TradingRoomBackground").Texture;
         _quotaDialogue = dialogue;
+        _quotaVisitor.Hide();
         _quotaDialogueLayer.AddChild(dialogue);
         dialogue.Finished += CompleteQuotaVisit;
         dialogue.Cancelled += CancelQuotaDialogue;
@@ -90,6 +93,7 @@ public partial class TradeScene
     {
         CloseQuotaDialogue();
         _quotaVisit = QuotaVisitStage.AwaitingVisitor;
+        _quotaVisitor.Show();
         ClearQuotaDialoguePage();
         SaveProgress();
     }
@@ -101,11 +105,7 @@ public partial class TradeScene
         Score += QuotaGift;
         CheckpointScore += QuotaGift;
         ResetQuotaVisitPresentation();
-        if (CustomerIndex >= 0 && CustomerIndex < _customer.GetAppearanceCount())
-        {
-            _customer.SetAppearance(CustomerIndex);
-            _customer.Show();
-        }
+        _customer.Hide();
         RefreshDayPresentation();
         _dayCycle.FinishQuotaVisit();
     }

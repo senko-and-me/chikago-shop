@@ -13,11 +13,11 @@ public partial class ProjectTest
         game.SavePath = "";
         game.GetNode<FirstTradeTutorial>("FirstTradeTutorial").ProgressPath = "";
         var item = game.GetNode<Node2D>("World/TradingRoom/Item");
-        var sprites = item.GetChildren().OfType<Sprite2D>().ToArray();
-        var authoredScales = sprites.Where(sprite => sprite.Texture != null).ToDictionary(sprite => sprite, sprite => sprite.Scale);
         Vector2I originalWindow = Root.Size;
         Root.AddChild(game);
         game.SetProcess(false);
+        var sprites = item.GetChildren().OfType<Sprite2D>().ToArray();
+        Check(sprites.Length == 10, "Each catalogue item must have a counter sprite");
         var camera = game.GetNode<WorldCamera>("Camera2D");
         camera.SetProcess(false);
         var world = game.GetNode<CounterWorld>("World");
@@ -48,15 +48,13 @@ public partial class ProjectTest
                     Vector2 expected = background.ToGlobal(new Vector2(930, 744));
                     Check(actual.DistanceTo(expected) < 0.1f,
                         $"{sprite.Name}: the visible bottom edge must touch the cashier countertop, actual={actual}, expected={expected}");
-                    bool fitted = authoredScales.TryGetValue(sprite, out var authoredScale)
-                        ? sprite.Scale == authoredScale
-                        : Mathf.IsEqualApprox(Mathf.Max(sprite.Texture.GetWidth(), sprite.Texture.GetHeight()) * sprite.Scale.X, 128)
-                          && sprite.Scale.X == sprite.Scale.Y;
+                    float expectedScale = Math.Min(232f / ink.Size.X, 224f / ink.Size.Y);
+                    bool fitted = Mathf.IsEqualApprox(sprite.Scale.X, expectedScale) && sprite.Scale.X == sprite.Scale.Y;
                     Check(fitted && panel.Position == panelPosition,
                         "Counter alignment must preserve authored scales, fit new art and keep the independent trade panel position");
                     Rect2 visibleBounds = sprite.GlobalTransform * new Rect2(sprite.GetRect().Position + (Vector2)ink.Position, ink.Size);
                     Check(!panel.GetGlobalRect().Intersects(visibleBounds), "The trade panel must leave the counter item visible");
-                    if (window.X == 1280 && zoom > 1 && sprite.Name.ToString().ToLowerInvariant() is "hat" or "gloves" or "clothing_first" or "guitar" or "cello")
+                    if (window.X == 1280 && zoom > 1)
                     {
                         await ToSignal(CreateTimer(0.08), SceneTreeTimer.SignalName.Timeout);
                         Check(sprite.IsVisibleInTree(), "The sampled counter item must stay visible while rendering");
@@ -192,11 +190,11 @@ public partial class ProjectTest
         foreach (string room in new[] { "ShowroomLeft", "Showroom" })
             Check(!game.HasNode($"World/{room}/PlaceItemButton") && !game.HasNode($"World/{room}/TrashBin"),
                 "The game must initialize without automatic placement or disposal controls");
-        foreach (string kind in new[] { "Hat", "Gloves", "Guitar", "Trumpet" })
+        foreach (string kind in new[] { "hat", "vest", "guitar", "drum" })
             Check(game.GetNode<Sprite2D>($"World/TradingRoom/Item/{kind}").Texture != null,
                 $"The {kind} item must have an illustration");
-        Check(TradeScene.GetItemArtPath(0).EndsWith("atelier_hat.png") &&
-              TradeScene.GetItemArtPath(1).EndsWith("atelier_vest.png"),
+        Check(TradeScene.GetItemArtPath(0).EndsWith("hat.png") &&
+              TradeScene.GetItemArtPath(1).EndsWith("vest.png"),
             "Atelier items must use the transparent-background PNG artwork");
         Check(TradeScene.GetItemRarity(0) == "Ширпотреб" && TradeScene.GetItemRerollLimit(0) == 3 &&
               TradeScene.GetItemRarity(1) == "Заурядная" && TradeScene.GetItemRerollLimit(1) == 2 &&
@@ -365,8 +363,8 @@ public partial class ProjectTest
               game.StoredItems.SequenceEqual(remainingStored) &&
               !game.GetNode<Button>("World/ShowroomLeft/Showcases/Slot1").Disabled,
             "Clicking an occupied showcase must neither replace nor discard goods");
-        foreach (string kind in new[] { "hat", "gloves", "guitar", "trumpet" })
-            Check(game.GetNode<Sprite2D>($"World/TradingRoom/Item/{char.ToUpperInvariant(kind[0])}{kind[1..]}").Visible ==
+        foreach (string kind in new[] { "hat", "vest", "guitar", "drum" })
+            Check(game.GetNode<Sprite2D>($"World/TradingRoom/Item/{kind}").Visible ==
                   (kind == TradeScene.GetItemKind(firstItem)), "Only the selected item illustration must be visible");
         Check(game.Percentage is >= -30 and <= 30, "Offer percentage is out of range");
         Check(game.OfferedPrice == TradeScene.PriceForPercent(TradeScene.GetItemBasePrice(firstItem), game.Percentage),

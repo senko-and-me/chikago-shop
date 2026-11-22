@@ -89,7 +89,7 @@ public partial class RarityPanel : Control
 		string workshop = GetParent().Name == "MusicWorkshop" ? "music" : "atelier";
 		string[] rarities = ["common", "ordinary", "first_class", "exclusive", "unique"];
 		var game = _game as TradeScene;
-		var items = WorkshopItemCatalog.Items.Where(item => item.WorkshopId == workshop).ToArray();
+		var items = WorkshopItemCatalog.ActiveItems.Where(item => item.WorkshopId == workshop).ToArray();
 		var baseWeights = WorkshopItemCatalog.RarityWeights(workshop);
 		var currentWeights = game?.PreviewRarityWeights(workshop) ?? baseWeights;
 		int baseTotal = baseWeights.Values.Sum();

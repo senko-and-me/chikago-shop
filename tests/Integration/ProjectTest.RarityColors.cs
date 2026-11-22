@@ -36,7 +36,7 @@ public partial class ProjectTest
                 var panel = game.GetNode<RarityPanel>($"World/{room}/RarityPanel");
                 panel.Show();
                 var catalog = WorkshopItemCatalog.Items.Select((item, index) => (item, index))
-                    .Where(entry => entry.item.WorkshopId == workshop).ToArray();
+                    .Where(entry => entry.index < WorkshopItemCatalog.ActiveItemCount && entry.item.WorkshopId == workshop).ToArray();
                 int[] Tickets(DayUpgradeSession upgrades, int shift) =>
                     Enumerable.Range(0, WorkshopItemCatalog.TotalWeight(workshop, upgrades, shift))
                         .Select(ticket => WorkshopItemCatalog.Roll(workshop, ticket, upgrades, shift)).ToArray();
