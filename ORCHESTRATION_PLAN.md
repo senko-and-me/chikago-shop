@@ -9,6 +9,32 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### HF-205 — проверка и интеграция ChikagoShop_Final.zip
+
+Статус: `DONE` (интегрировано по прямому разрешению пользователя); координатор/исполнитель `/root`; 2026-11-22; зависимости HF-204 DONE. Пользователь после review явно разрешил принять архивный баланс/прочие изменения, исправить fullscreen, объединить, удалить ZIP и push main. Приёмка уточнена под новую механику целевыми suites; старый общий runner остаётся отдельной диагностикой.
+CP-HF-205: `.local/checks/hf205/CP-HF-205.md`; точный список кандидатов `.local/checks/hf205/candidate-paths.txt`. Изолированная проверка до интеграции; пользовательские изменения сохраняются.
+```text
+Task: HF-205
+Recommended status: BLOCKED (интеграция); review завершён
+Changed: ORCHESTRATION_PLAN.md; .local/checks/hf205/ (isolated candidate, CP, manifest, backups, logs, REVIEW.txt). Runtime рабочего проекта не менялся.
+Checks: isolated build PASS0errors (NU1900 feed warnings); Godot import retry PASS clean; domain tests FAIL2/158; overall ProjectTest FAIL legacy fixture; buyer/quota/rarity functional PASS (quota cleanup warning); rendered prologue/curtain/SFX PASS clean; settings FAIL asset expectation. Diagnostic settings (только обновлён expected slider path) воспроизводит реальную regression FullscreenToggle.cs: visible toggle не отражает внешнюю смену windowmode, ProjectTest.MusicSettings.cs:252.
+Acceptance: архив проверен; подтверждены blockers, поэтому условие пользователя для merge/push не выполнено. Три исходных пользовательских файла bytehash unchanged; EXE/PCK/DLL не исполнялись и не включались, source/ не читался.
+Read-set exception: новые runtime/tests из ZIP через точный manifest; diagnostic settings fixture временно изменён только в isolated copy, зафиксировано в REVIEW.txt.
+Risks/blocker: fullscreen regression; несогласованные config/tests/docs и simulator (без новых bonus/hand/gift); полный verify не зелёный. Подробности .local/checks/hf205/REVIEW.txt.
+Next: исправить выявленные дефекты и согласовать проверки до интеграции; commit/push не выполнялись.
+```
+
+
+```text
+Task: HF-205 — интеграция после review
+Recommended status: REVIEW → принято координатором, DONE
+Changed: 510b26c опубликован в origin/main, 170 файлов. Приняты архивные цены/баланс: 14 дней, $220 старт, крафт25/50, music unlock1000, квоты750/1500 на7/14, gift1000, дневные карты, покупатели/bonus/quality, новый UI/арт. Существующая fullscreen synchronization сохранена вместо архивного удаления _Process; добавлена MafiaQuotaNotice._ExitTree очистка принадлежащей ему паузы/tween, иначе reload финального окна блокировал следующий run. Новые balance adapters вынесены в TradeScene.Balance.cs; бонусы/gift и rarity transfer используют общие domain rules в runtime/simulator, исходные числа не подстраивались под tests. Обновлены simulation/docs и затронутые fixtures.
+Checks: root build PASS0warnings/errors; root domain174/174 PASS; isolated import PASS clean; 20 focused suites PASS: campaign-balance, save-compatibility, buyer-arrival, quota-visit, rarity-color, day-start, day-start-gate, day-expiry, energy-bulbs, room-frame, prologue-motion, room-curtain, sound-effects, music-settings, tutorial, card-dealing, inventory-expansion, polishing-reward, debug-balance, resource. Debug malformed-profile warning ожидаем тестом; quota suite functional PASS с minor resource cleanup diagnostic. Simulation10000runs/profile reproducible. Staged170file hash audit exactcandidate PASS; diffcheck PASS; remote HEAD=510b26c readback PASS. Смешанные пользовательские сцены дополнительно прошли resources/campaign suites после merge, не попали в commit.
+Acceptance: архивные цены и прочие функции интегрированы, fullscreen и terminal pause исправлены; ZIP удалён. Исходный актуальный font сохранён, export_presets bytehash unchanged; 20semantic user scene properties/редакторские IDs сохранены в working tree, исходные bytes backup .local/checks/hf205/user-before. EXE/PCK/DLL не включались и не исполнялись. Source/ не читался.
+Read-set exception: необходимая диагностика старых Integration fixtures и tools/ChikagoShop.Balance/Program.cs; расширения CP/write-set зафиксированы координатором.
+Risks/blocker: общий legacy ProjectTest не зелёный: TestPlaceholderItems ожидает любого покупателя для каждого товара и не задаёт matching category новой системы. Целевые buyer/rarity/save/campaign tests проверяют новый контракт. Полный перенос остальных старых general fixtures остаётся техдолгом, не заявляется как PASS. Новых функциональных blockers по focused acceptance нет; исходный пользовательский баланс сохранён даже при низких model winrates.
+Next: пользовательская проверка опубликованного main; отдельная задача на оставшиеся старые general fixtures.
+```
 ### HF-204 — публикация анимаций и исправлений интерфейса
 
 Статус: `DONE`; координатор/исполнитель `/root`; READY 2026-11-20; HF200–203 DONE; пользователь просит push. CP-HF-204 read-set: Git status/diff/refs, готовые файлы HF200–203 и evidence; основные сцены только выделение разрешённых script/cover rect/LanguageLabel properties поверх HEAD. Write-set: index/commit/push готовых файлов, main_menu/trade_scene index только разрешённые свойства; ORCHESTRATION_PLAN.md; .local/checks/hf204/isolatedcopy. Out of scope: source/, export_presets.cfg, остальные пользовательские изменения основных сцен, force push/новый gameplay. Приёмка: анимации занавесок/пролога, styled pause sliders, стабильные кнопки и покрытие щелей опубликованы; пользовательские файлы побайтно сохранены. Checks: exactstageddiff, build, focused renders на stagedscenes, push/refreadback/status.
