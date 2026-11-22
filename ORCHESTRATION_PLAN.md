@@ -9,6 +9,20 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### HF-208 — скрыть нижний край персонажей за облачком диалога
+
+Статус: `DONE`; принято координатором; координатор/исполнитель `/root`; HF207 DONE; CP `.local/checks/hf208/CP-HF-208.md`. Write-set shared StoryDialogueLayout, composition test, plan/local evidence. Приёмка: спрайты немного опущены и перекрыты облачком; текст читаем; rendered720p/1080p, portraits/motion и build PASS; source/ вне scope.
+
+```text
+Task: HF-208
+Recommended status: REVIEW -> accepted DONE
+Changed: StoryDialogueLayout places cloud in front of Characters and shifts portrait anchors down3.5% viewport height (25px at720p), preserving size. Shared prologue/visitor/quota presentation; text layout unchanged. Composition regression asserts foreground ordering and art/cloud overlap at720p/1080p.
+Checks: root/isolated build PASS0warnings/errors; rendered dialogue-portraits PASS (all shared story layouts, RU/EN, tone/alpha); prologue-motion PASS (arrival/departure/resize/restart); screenshot prologue720p reviewed; diffcheck PASS.
+Acceptance: lower sprite edges tuck behind wispy cloud; faces and text remain clear; movement unchanged.
+Read-set exception: none.
+Risks/blocker: none new; historical general-runner fixture mismatch remains documented above.
+Next: view root project prologue.
+```
 ### HF-207 — Git merge polishing → main
 
 Статус: `DONE`; принято координатором; координатор/исполнитель `/root`; 2026-11-22; dependency HF-206 DONE. CP-HF-207: `.local/checks/hf207/CP-HF-207.md`. Read-set Git/current-front; write-set plan, local evidence, merge commit and origin/main; runtime/source/ вне scope. Все изменения polishing уже перенесены и согласованы в HF-206; задача связывает истории Git, сохраняя проверенное каноническое дерево. Приёмка: polishing ancestor main, два merge parents, runtime tree unchanged, remote readback, clean worktree.

@@ -31,9 +31,14 @@ internal static class StoryDialogueLayout
 
     public static void StylePanel(PanelContainer panel, Label speaker)
     {
-        // Draw the wispy top edge behind the portraits. The text starts in the
-        // reserved lower band, where it cannot cover any of the character art.
-        panel.GetParent().MoveChild(panel, panel.GetParent().GetNode("Shade").GetIndex() + 1);
+        // Tuck the cut-off portrait edges behind the cloud's wispy foreground.
+        var characters = panel.GetParent().GetNode<Control>("Characters");
+        foreach (TextureRect portrait in characters.GetChildren())
+        {
+            portrait.AnchorTop += 0.035f;
+            portrait.AnchorBottom += 0.035f;
+        }
+        panel.GetParent().MoveChild(panel, characters.GetIndex() + 1);
         panel.AnchorLeft = 0.11f;
         panel.AnchorRight = 0.89f;
         panel.AnchorTop = 0.754f;

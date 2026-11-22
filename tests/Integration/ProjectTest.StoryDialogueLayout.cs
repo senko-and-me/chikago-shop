@@ -90,6 +90,9 @@ public partial class ProjectTest
         Rect2 bounds = root.GetGlobalRect();
         Rect2 content = root.GetNode<Control>(panel + "/Content").GetGlobalRect();
         Check(bounds.Grow(1).Encloses(content), "The dialogue text and choices must remain on screen");
+        var cloud = root.GetNode<Control>(panel);
+        Check(cloud.GetIndex() > root.GetNode<Control>("Characters").GetIndex(),
+            "The dialogue cloud must draw in front of the cut-off portrait edges");
         foreach (string name in portraits)
         {
             var portrait = root.GetNode<TextureRect>("Characters/" + name);
@@ -100,9 +103,10 @@ public partial class ProjectTest
             Rect2 art = new(slot.GetCenter() - drawSize / 2, drawSize);
             Check(portrait.IsVisibleInTree() && portrait.Modulate.A == 1 &&
                 portrait.StretchMode == TextureRect.StretchModeEnum.KeepAspectCentered &&
-                bounds.Encloses(art) && art.End.Y < content.Position.Y &&
+                bounds.Encloses(art) && art.End.Y > cloud.GetGlobalRect().Position.Y - 43 &&
+                art.End.Y < content.Position.Y + bounds.Size.Y * 0.04f &&
                 art.Size.Y >= bounds.Size.Y * 0.45f,
-                $"{name} must be visible in proportion, above the dialogue and at least 45% of screen height");
+                $"{name} must tuck into the cloud, remain in proportion and at least 45% of screen height");
         }
     }
 }
