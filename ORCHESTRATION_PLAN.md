@@ -9,6 +9,20 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### HF-211 — размеры предметов и десятисекундное ожидание покупателя
+
+Статус: `DONE`; принято координатором после проверок; координатор/исполнитель `/root`; HF210 DONE; CP `.local/checks/hf211/CP-HF-211.md`; exact write-set `.local/checks/hf211/write-set.txt`. User screenshot8–10: smaller ordinary clothing/drum at counter, smaller drum polishing mask, buyer10s. Приёмка: сохранён контакт со столом/размер Matteo, реальная площадь полировки уменьшена, reward максимум5 сохранён, oldsave clamp/RUEN/build/domain/rendered PASS. Source/ вне scope.
+
+```text
+Task: HF-211
+Recommended status: REVIEW -> accepted DONE
+Changed: ordinary hat/vest/gloves counter scale75%, drum65%, bottom-center contact preserved; Matteo and other variants unchanged. Drum polishing raster and actual alpha mask70% (about49% area), same brush/duration. Shared buyer duration10s, same maximum5-dollar speed reward over five2s bands; RU/EN tutorial/docs/simulation assumptions updated. Existing persistence clamp handles old remaining12/20s. Updated focused timer/presentation fixtures and independent save assertion; report regenerated10000runs/profile.
+Checks: root/isolated build PASS0warnings/errors; domain205/205 PASS; rendered6suites PASS: counter-item (all10 silhouettes/zooms/resize), polishing-start (compact drum actual cells/rubbing + mouse/locales/resize), buyer-arrival (includes availability/patience, pause/craft/reroll/reload/expiry), canonical-migration (old12s ->10s and real-save copy), tutorial, campaign-balance. Screenshots counter hat/drum + compact drum reviewed. Final root/candidate exact-byte audit PASS; git diffcheck PASS; origin/main unchanged before commit.
+Acceptance: screenshot items8-10 implemented; size changes affect actual drum work area; game prices/quality/quota rules untouched. Economy model reflects shorter patience: ordinary first-quota26.7%, both0.1%; careful50.8%/3.1% (model, not human playtest). Sample size in existing rare-win regression expanded1000 ->10000 for ordinary profile rather than weakening its victory assertion.
+Read-set exception: EconomyBalanceTests.cs + simulation/tool report diagnosed after shorter timer made rare win absent in1000runs; coordinator expanded exact write-set for test sample and updated report/docs. Source/ never inspected.
+Risks/blocker: shorter patience intentionally makes model outcomes harder; unrelated historical general-runner fixture mismatch remains out of scope. No focused blocker. ZIP untouched.
+Next: publish verified main commit and read back remote reference; use root project.godot.
+```
 ### HF-210 — интеграция проверенных interface fixes
 
 Статус: `DONE`; принято координатором; координатор/исполнитель `/root`; HF209 DONE; user explicitly approves main integration; CP `.local/checks/hf210/CP-HF-210.md`; exact write-set `.local/checks/hf210/write-set.txt`. Приёмка: approved11files + obsolete UI fixtures, build/domain/focused suites, main merge/push/readback. Баланс/каталог/save schema/cloud/source/ и ZIP removal вне scope.

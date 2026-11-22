@@ -41,6 +41,12 @@ public partial class CounterWorld : Node2D
             Rect2I ink = image.GetUsedRect();
             if (ink.Size == Vector2I.Zero) continue;
             float scale = Math.Min(232f / ink.Size.X, 224f / ink.Size.Y);
+            scale *= item.Kind switch
+            {
+                "hat" or "vest" or "gloves" => 0.75f,
+                "drum" => 0.65f,
+                _ => 1f
+            };
             var sprite = new Sprite2D { Name = item.Kind, Texture = texture, Scale = Vector2.One * scale, Visible = false };
             Vector2 bottomCenter = (Vector2)ink.Position + new Vector2(ink.Size.X / 2f, ink.Size.Y);
             Vector2 localContact = sprite.GetRect().Position + bottomCenter;

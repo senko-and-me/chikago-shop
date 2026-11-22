@@ -53,7 +53,7 @@ public partial class ProjectTest
             game.AcceptTrade();
             Check(game.Score == expected, "Repeated accept must not pay twice");
             game._Process(0);
-            Check(game.BuyerWaitRemaining == 20 && !game.TradeActive, "The next customer must reset their patience");
+            Check(game.BuyerWaitRemaining == 10 && !game.TradeActive, "The next customer must reset their patience");
             game.SelectInventoryItem(0); game.PlaceItemInShowcase(0); game._Process(0);
             Check(game.TradeActive && game.Percentage >= -30 && !game.GetNode<Button>(buttons + "DeclineButton").Disabled,
                 "The next buyer must use a normal offer and available rerolls");

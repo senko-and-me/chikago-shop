@@ -320,7 +320,7 @@ public partial class FirstTradeTutorial : CanvasLayer
         else if (_game.TradeActive && !_buyerRequestRead) SetStep(Step.BuyerRequest, BuyerRequestMessage,
             _game.GetNode<Control>("World/TradingRoom/BuyerWaitingThought/ThoughtBubble"));
         else if (_game.TradeActive) SetStep(Step.Offer,
-            "«✓» продаёт товар. «×» или F тратит попытку и меняет покупателя и цену. Красная полоска отсчитывает 20 секунд. Таймер не сбрасывается, а цена может упасть. Скорость продажи и качество товара дают надбавки.",
+            "«✓» продаёт товар. «×» или F тратит попытку и меняет покупателя и цену. Красная полоска отсчитывает 10 секунд. Таймер не сбрасывается, а цена может упасть. Скорость продажи и качество товара дают надбавки.",
             _game.GetNode<Control>("World/TradingRoom/Item/TradePanel"));
         else if (_game.DayClosed) SetStep(Step.Start,
             "Время вышло. В паузе можно начать с чекпоинта и попробовать снова или пропустить обучение.", null);
@@ -328,7 +328,7 @@ public partial class FirstTradeTutorial : CanvasLayer
             "Нажмите «Начать» на часах, чтобы открыть магазин. Часы показывают, сколько времени осталось до закрытия.",
             _game.GetNode<Control>("HUD/DayClock/Root/DayTimer/StartButton"));
         else if (_game.ShowcaseItems.Any(item => item >= 0)) SetStep(Step.WaitBuyer,
-            "Покупатель приходит сразу после открытия магазина или продажи. Когда он появляется, красная полоска отсчитывает 20 секунд для надбавки за скорость.",
+            "Покупатель приходит сразу после открытия магазина или продажи. Когда он появляется, красная полоска отсчитывает 10 секунд для надбавки за скорость.",
             _game.GetNode<Control>("World/ShowroomLeft/Showcases/Slot1"));
         else if (_game.StoredItems.Length > 0)
         {

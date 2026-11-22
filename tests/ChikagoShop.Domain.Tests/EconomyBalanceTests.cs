@@ -26,7 +26,8 @@ public sealed class EconomyBalanceTests
     public void ReproducibleWeekRewardsTradingDecisionsWithoutGuaranteeingVictory()
     {
         var config = Config();
-        var ordinary = WeekBalanceSimulator.Run(config, WeekBalanceSimulator.Profiles[0], 1000);
+        // Full wins are rare with ten-second patience; sample enough runs to observe them.
+        var ordinary = WeekBalanceSimulator.Run(config, WeekBalanceSimulator.Profiles[0], 10000);
         var careful = WeekBalanceSimulator.Run(config, WeekBalanceSimulator.Profiles[1], 1000);
         var passive = WeekBalanceSimulator.Run(config, WeekBalanceSimulator.Profiles[5], 1000);
         Assert.That(ordinary.FirstQuotaPassRate, Is.InRange(0.01, 0.99), "The imported balance must allow both first-quota outcomes");
@@ -34,6 +35,6 @@ public sealed class EconomyBalanceTests
         Assert.That(ordinary.WinRate, Is.LessThanOrEqualTo(ordinary.FirstQuotaPassRate));
         Assert.That(careful.WinRate, Is.GreaterThanOrEqualTo(ordinary.WinRate));
         Assert.That(passive.FirstQuotaPassRate + passive.WinRate, Is.Zero);
-        Assert.That(WeekBalanceSimulator.Run(config, WeekBalanceSimulator.Profiles[0], 1000), Is.EqualTo(ordinary));
+        Assert.That(WeekBalanceSimulator.Run(config, WeekBalanceSimulator.Profiles[0], 10000), Is.EqualTo(ordinary));
     }
 }

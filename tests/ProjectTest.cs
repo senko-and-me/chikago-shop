@@ -75,7 +75,7 @@ public partial class ProjectTest : SceneTree
             if (OS.GetCmdlineUserArgs().Contains("--buyer-arrival-checks"))
             {
                 await TestBuyerArrival();
-                GD.Print("BUYER_ARRIVAL_CHECKS_PASS: immediate buyers, 20-second wait, tips, modal pause, saves, unlock panel and atelier art");
+                GD.Print("BUYER_ARRIVAL_CHECKS_PASS: immediate buyers, 10-second wait, tips, modal pause, saves, unlock panel and atelier art");
                 Quit();
                 return;
             }
