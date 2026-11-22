@@ -4,7 +4,8 @@ using Godot;
 // Observes gameplay during practice and resets the practice run through the existing NewGame action on exit.
 public partial class FirstTradeTutorial : CanvasLayer
 {
-    public enum Step { Camera, Start, Craft, Select, Place, WaitBuyer, Offer, Summary, CameraZoom, RoomFocus }
+    public enum Step { Camera, Start, Craft, Select, Place, WaitBuyer, Offer, Summary, CameraZoom, RoomFocus, BuyerRequest }
+    private const string BuyerRequestMessage = "Каждый покупатель ищет определённый тип товара: одежду или музыкальный инструмент. Обратите внимание на облачко над покупателем — оно показывает, какой товар ему нужен";
     private const float PanGoal = 3000;
     private const int ZoomGoal = 16;
     private static readonly (string Title, string Body)[] SummaryPages =
@@ -35,6 +36,8 @@ public partial class FirstTradeTutorial : CanvasLayer
     private bool _initialized;
     private int _acceptedAtStart;
     private bool _sawSale;
+    private bool _buyerRequestRead;
+    public bool BlocksFirstOffer => IsActive && _cameraHandoffDone && !_sawSale && !_buyerRequestRead;
     private int _lastAccepted;
     private WorldCamera _camera;
     private ProgressBar _cameraProgress;
@@ -74,7 +77,7 @@ public partial class FirstTradeTutorial : CanvasLayer
         GetNode<Button>("Root/SkipConfirmation/Center/Panel/Content/Actions/Confirm").Pressed += ConfirmSkip;
         GetNode<Button>("Root/SkipConfirmation/Center/Panel/Content/Actions/Cancel").Pressed += CancelSkip;
         _game.NewGameStarted += OnNewGameStarted;
-        _done.Pressed += AdvanceSummary;
+        _done.Pressed += AdvanceInstruction;
         Callable.From(Initialize).CallDeferred();
     }
 
@@ -106,6 +109,8 @@ public partial class FirstTradeTutorial : CanvasLayer
             _acceptedAtStart = restored ? config.GetValue("tutorial", "accepted_at_start", _game.Accepted).AsInt32() : _game.Accepted;
             _lastAccepted = _game.Accepted;
             _sawSale = _game.Accepted > _acceptedAtStart;
+            _buyerRequestRead = restored && config.GetValue("tutorial", "buyer_request_read", false).AsBool();
+            _game.RefreshTutorialTradeActions();
             if (_sawSale && restored)
                 _summaryPage = Mathf.Clamp(config.GetValue("tutorial", "summary_page", 0).AsInt32(), 0, SummaryPages.Length - 1);
             // Establish the run before its first day starts, so Continue can restore camera practice.
@@ -130,7 +135,9 @@ public partial class FirstTradeTutorial : CanvasLayer
         _acceptedAtStart = _game.Accepted;
         _lastAccepted = _game.Accepted;
         _sawSale = false;
+        _buyerRequestRead = false;
         _summaryPage = 0;
+        _game.RefreshTutorialTradeActions();
         Save(false);
         Refresh();
     }
@@ -173,9 +180,18 @@ public partial class FirstTradeTutorial : CanvasLayer
         Finish();
     }
 
-    private void AdvanceSummary()
+    private void AdvanceInstruction()
     {
-        if (!IsActive || !_sawSale || CurrentStep != Step.Summary || !IsShowing || GetTree().Paused) return;
+        if (!IsActive || !IsShowing || GetTree().Paused) return;
+        if (CurrentStep == Step.BuyerRequest)
+        {
+            _buyerRequestRead = true;
+            _game.RefreshTutorialTradeActions();
+            Save(false);
+            Refresh();
+            return;
+        }
+        if (CurrentStep != Step.Summary || !_sawSale) return;
         if (_summaryPage == SummaryPages.Length - 1)
         {
             Finish();
@@ -228,6 +244,7 @@ public partial class FirstTradeTutorial : CanvasLayer
         config.SetValue("tutorial", "camera_zoom_steps", _zoomSteps);
         config.SetValue("tutorial", "camera_zoom_started", _cameraZoomStarted);
         config.SetValue("tutorial", "summary_page", _summaryPage);
+        config.SetValue("tutorial", "buyer_request_read", _buyerRequestRead);
         Error error = config.Save(ProgressPath);
         if (error != Error.Ok) GD.PushWarning($"Tutorial progress could not be saved: {error}");
         _progressDirty = false;
@@ -300,8 +317,10 @@ public partial class FirstTradeTutorial : CanvasLayer
         }
         else if (_sawSale) SetStep(Step.Summary, SummaryPages[_summaryPage].Body,
             _summaryPage == 0 ? _game.GetNode<Control>("HUD/Root/ProgressToggleButton") : null);
+        else if (_game.TradeActive && !_buyerRequestRead) SetStep(Step.BuyerRequest, BuyerRequestMessage,
+            _game.GetNode<Control>("World/TradingRoom/BuyerWaitingThought/ThoughtBubble"));
         else if (_game.TradeActive) SetStep(Step.Offer,
-            "«✓» продаёт товар. «×» или F тратит попытку и меняет покупателя и цену. Таймер не сбрасывается, а цена может упасть. Скорость продажи и качество товара дают надбавки.",
+            "«✓» продаёт товар. «×» или F тратит попытку и меняет покупателя и цену. Красная полоска отсчитывает 20 секунд. Таймер не сбрасывается, а цена может упасть. Скорость продажи и качество товара дают надбавки.",
             _game.GetNode<Control>("World/TradingRoom/Item/TradePanel"));
         else if (_game.DayClosed) SetStep(Step.Start,
             "Время вышло. В паузе можно начать с чекпоинта и попробовать снова или пропустить обучение.", null);
@@ -331,33 +350,35 @@ public partial class FirstTradeTutorial : CanvasLayer
     private void SetStep(Step step, string message, Control target)
     {
         bool cameraStep = step is Step.Camera or Step.CameraZoom or Step.RoomFocus;
-        bool continuingPractice = (_appliedCameraStep is Step.Camera or Step.CameraZoom or Step.RoomFocus) && cameraStep;
+        bool continuingPractice = _appliedCameraStep == Step.Camera && cameraStep;
         CurrentStep = step;
         _camera.NavigationLocked = !cameraStep;
         _body.Text = message;
         Target = target;
-        _done.Visible = step == Step.Summary;
-        _done.Text = _summaryPage < SummaryPages.Length - 1 ? "Далее" : "Понятно";
+        _done.Visible = step is Step.Summary or Step.BuyerRequest;
+        _done.Text = step == Step.BuyerRequest || _summaryPage < SummaryPages.Length - 1 ? "Далее" : "Понятно";
         _title.Text = step switch
         {
             Step.Camera => "Передвижение камеры",
             Step.CameraZoom => "Масштабирование",
             Step.RoomFocus => "Приближение комнаты",
+            Step.BuyerRequest => "Запрос покупателя",
             Step.Summary => SummaryPages[_summaryPage].Title,
             _ => "Первая продажа"
         };
         _cameraProgress.Visible = cameraStep && step != Step.RoomFocus;
         _cameraProgress.Value = step == Step.Camera ? CameraPanProgress : CameraZoomProgress;
-        if (_appliedCameraStep != step && !_game.DayTransitionOpen)
+        Step cameraCheckpoint = cameraStep ? Step.Camera : step == Step.BuyerRequest ? Step.Offer : step;
+        if (_appliedCameraStep != cameraCheckpoint && !_game.DayTransitionOpen)
         {
             // Restoring completed practice must not replay its entry flight before handing off.
             if (!IsCameraCompletionPending && !continuingPractice)
             {
-                string checkpoint = "CameraCheckpoints/" + (cameraStep ? Step.Camera : step);
+                string checkpoint = "CameraCheckpoints/" + cameraCheckpoint;
                 GetNode<TutorialCameraCheckpoint>(checkpoint).MoveCamera(_game, _camera, CameraTravelSeconds);
                 _ownsOverview = GetNode<TutorialCameraCheckpoint>(checkpoint).Overview;
             }
-            _appliedCameraStep = step;
+            _appliedCameraStep = cameraCheckpoint;
         }
     }
 

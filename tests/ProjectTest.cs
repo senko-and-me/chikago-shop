@@ -16,6 +16,13 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--interface-fixes-checks"))
+            {
+                await TestInterfaceFixes();
+                GD.Print("INTERFACE_FIXES_CHECKS_PASS: instruments, 10 pack cycles, stationary notebook and all pause buttons at 720p/1080p");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--canonical-migration-checks"))
             {
                 await TestCanonicalMigration();
@@ -303,7 +310,7 @@ public partial class ProjectTest : SceneTree
             if (OS.GetCmdlineUserArgs().Contains("--progress-toggle-checks"))
             {
                 await TestCollapsibleProgress();
-                GD.Print("PROGRESS_TOGGLE_CHECKS_PASS: cigarette pack hover, animation, live quotas, keyboard and recovery");
+                GD.Print("PROGRESS_TOGGLE_CHECKS_PASS: cigarette pack hover, animation, live quotas, keyboard and reload");
                 Quit();
                 return;
             }

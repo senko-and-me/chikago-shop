@@ -9,6 +9,34 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### HF-210 — интеграция проверенных interface fixes
+
+Статус: `REVIEW`; координатор/исполнитель `/root`; HF209 DONE; user explicitly approves main integration; CP `.local/checks/hf210/CP-HF-210.md`; exact write-set `.local/checks/hf210/write-set.txt`. Приёмка: approved11files + obsolete UI fixtures, build/domain/focused suites, main merge/push/readback. Баланс/каталог/save schema/cloud/source/ и ZIP removal вне scope.
+
+```text
+Task: HF-210
+Recommended status: REVIEW
+Changed: approved11 archive files selectively applied on integration/interface-fixes, keeping main orchestration/economy/schema/catalogue/cloud. Added tutorial reload-before-acknowledge + frozen-day-clock assertion. Updated button fixture for valid Atelier card, current affordability and authored Back Scale mode; colored premium card art is not subjected to an obsolete global grayscale assertion (controller grayscale tests remain). Progress fixture covers pack geometry/captions/hover/pause/keyboard/reload with current quota; removed retired hidden-action clicks and duplicated outdated campaign assertions, independently verified by campaign suite.
+Checks: root/isolated build PASS0warnings/errors; root domain204/204 PASS.10 focused rendered suites PASS (7HF209 acceptance suites + updated tutorial rerun, button-feedback, progress-toggle, campaign-balance; tutorial counted once). Final root candidate byte-equality for every runtime/test change PASS; diffcheck PASS; fetched origin/main unchanged before integration.
+Acceptance: UI fixes preserve canonical catalogue/save format/economy/fullscreen/story overlap; both old failing UI suites now pass; tutorial blocks sale/reroll and both timers across reload until acknowledgment. No extra art/doc EOL churn or archived plan copied. ZIP untouched/untracked.
+Read-set exception: scenes/main_menu.tscn, scripts/MainMenu.cs and domain DayUpgradeSession/Rules read to diagnose old test expectations; no edits there. Source/ not inspected.
+Risks/blocker: known unrelated general-runner layout fixture mismatch from HF206 remains; full suite not claimed PASS. No focused blocker.
+Next: fast-forward main and publish; verify remote reference.
+```
+### HF-209 — review ChikagoShop_Interface_Fixes_FULL.zip
+
+Статус: `DONE` (review); принято координатором; координатор/исполнитель `/root`; HF208 DONE; CP `.local/checks/hf209/CP-HF-209.md`. Write-set plan и isolated review evidence; runtime/архив/публикация вне scope этого review. Exact read-set `.local/checks/hf209/manifest.json`:610same/17different/2new; source/ и binaries исключены. Приёмка: review функциональных diff, build/domain/focused checks и оценка сохранности последних исправлений.
+
+```text
+Task: HF-209
+Recommended status: REVIEW -> review accepted DONE
+Changed: plan + .local/checks/hf209/{CP,manifest,incoming,candidate,diffs,logs,REVIEW.txt}. Root runtime untouched; ZIP preserved.
+Checks: isolated build0warnings/errors, domain204/204, clean import retry PASS. Rendered7suites PASS: interface-fixes, tutorial, canonical-migration, buyer-arrival(+availability/patience), day-expiry, music-settings/fullscreen, dialogue-portraits/shared layout. Showcase/tutorial screenshots reviewed. Additional2legacy suites FAIL: button-feedback grayscale check rejects existing gold cash card; progress-toggle hardcodes quota250 rather than750. Detailed paths/evidence in REVIEW.txt.
+Acceptance: all functional changes inspected;11meaningful files (9existing+2new), no missing tracked files. Current balance/catalogue/schema/cloud retained; no focused functional blocker. Selective integration recommended with fixture maintenance, not wholesale replacement.
+Read-set exception: ProjectTest.Presentation.cs/Ui.cs/Helpers.cs, DayTransitionCard.cs and TradeScene.BuyerBonuses.cs for necessary failed-test/timer diagnosis; coordinator authorized diagnostic read, no root edits there.
+Risks/blocker: extra legacy test assumptions above; no all-suite PASS claim. No merge/push/archive removal requested explicitly in this turn or performed.
+Next: selective integration of reviewed UI changes, preserving canonical project and fixing obsolete test expectations.
+```
 ### HF-208 — скрыть нижний край персонажей за облачком диалога
 
 Статус: `DONE`; принято координатором; координатор/исполнитель `/root`; HF207 DONE; CP `.local/checks/hf208/CP-HF-208.md`. Write-set shared StoryDialogueLayout, composition test, plan/local evidence. Приёмка: спрайты немного опущены и перекрыты облачком; текст читаем; rendered720p/1080p, portraits/motion и build PASS; source/ вне scope.

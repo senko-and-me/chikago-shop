@@ -320,7 +320,7 @@ public partial class ProjectTest
                 GameLocalization.SelectLanguage(language);
                 await ToSignal(this, SignalName.ProcessFrame);
                 await ToSignal(this, SignalName.ProcessFrame);
-                Check(Caption(0).Text.Contains("1") && Caption(1).Text.Contains("250") && Caption(2).Text.Contains("7"),
+                Check(Caption(0).Text.Contains("1") && Caption(1).Text.Contains(game.FirstQuota.ToString()) && Caption(2).Text.Contains("7"),
                     "Current day, upcoming quota and inclusive countdown must be localized from live state");
                 foreach (var stick in sticks)
                 {
@@ -331,18 +331,7 @@ public partial class ProjectTest
                 }
                 using (await CapturePresentation($"cigarette-{language}-{size.X}")) { }
             }
-            await ClickControl(game, "HUD/Root/ProgressPanel/Content/EndDayButton");
-            Check(game.DayStarted, "The existing Start action remains wired to the real day cycle");
-            await ClickControl(game, "HUD/Root/ProgressPanel/Content/EndDayButton");
-            Check(game.DayClosed, "The existing End Day action still closes the shop");
-            await ClickControl(game, "HUD/DayClock/Root/ClockActionButton");
-            await WaitForDayCardAnimation(game);
-            var dayCard = game.GetNode<DayTransitionCard>("DayTransitionCard");
-            Check(game.CurrentDay == 2 && dayCard.IsOpen, "Clicking the closed clock must open the next day and its cards");
-            dayCard.Skip();
-            await WaitForDayCardAnimation(game);
-            await Settle();
-            Check(!content.Visible && !game.DayStarted, "Returning from cards keeps legacy controls hidden and waits for Start");
+            // Day controls now live on the clock; this fixture covers the information pack.
             MoveButtonPointer(ScreenBounds(toggle).GetCenter());
             await Settle();
             MoveButtonPointer(new Vector2(600, 350));
@@ -376,36 +365,10 @@ public partial class ProjectTest
             game.RefreshDayPresentation();
             await ToSignal(this, SignalName.ProcessFrame);
             await ToSignal(this, SignalName.ProcessFrame);
-            Check(Caption(1).Text.Contains("999") && Caption(2).Text == "Quota due today",
+            Check(Caption(1).Text.Contains("999") && Caption(2).Text.Contains("1 day"),
                 $"Live balance and deadline refresh while closed: {Caption(1).Text}; {Caption(2).Text}");
-            game.Score = 2000;
-            game.AdvanceToNextDay();
-            await ToSignal(this, SignalName.ProcessFrame);
-            await ToSignal(this, SignalName.ProcessFrame);
-            Check(game.QuotaStage == 1 && Caption(0).Text.Contains("8") && Caption(1).Text.Contains("1500") && Caption(2).Text.Contains("7 days"),
-                "Paying the first quota switches both the target and deadline to the final quota");
-            game.CurrentDay = 14;
-            game.AdvanceToNextDay();
-            await Settle();
-            Check(game.Completed && !content.Visible && Caption(1).Text == "All quotas paid" && Caption(2).Text == "Debt repaid",
-                "Victory replaces obsolete countdowns without adding any extra information");
+            // Quota visits and recovery are covered by the campaign/save suites.
             game.NewGame();
-            game.CurrentDay = 7;
-            game.Score = 0;
-            game.AdvanceToNextDay();
-            await Settle();
-            Check(game.Failed && !content.Visible && Caption(2).Text == "Quota deadline passed",
-                "Failure must not expose the old status or buttons in the pack");
-            game.GetNode<PauseMenu>("PauseMenu").Open();
-            await ClickControl(game, "PauseMenu/Root/Overlay/Center/Panel/Content/Menu/CheckpointButton");
-            Check(!game.Failed && game.CurrentDay == 1, "Checkpoint recovery remains wired");
-            game.CurrentDay = 7;
-            game.Score = 0;
-            game.AdvanceToNextDay();
-            await Settle();
-            game.GetNode<PauseMenu>("PauseMenu").Open();
-            await ClickControl(game, "PauseMenu/Root/Overlay/Center/Panel/Content/Menu/NewGameButton");
-            Check(!game.Failed && game.CurrentDay == 1 && game.Score == game.StartingMoney, "New game remains wired");
             const string reloadPath = "user://hf150_pack_reload.json";
             game.SavePath = reloadPath;
             game.CurrentDay = 3;
@@ -423,7 +386,7 @@ public partial class ProjectTest
                 var restoredPanel = restored.GetNode<ProgressPanel>("HUD/Root/ProgressPanel");
                 Check(restored.CurrentDay == 3 && restored.Score == 888 &&
                     restoredPanel.GetNode<Label>("Visual/Day/Caption").Text.Contains("3") &&
-                    restoredPanel.GetNode<Label>("Visual/Deadline/Caption").Text.Contains("2 days") &&
+                    restoredPanel.GetNode<Label>("Visual/Deadline/Caption").Text.Contains("5 days") &&
                     !restoredPanel.GetNode<Control>("Content").Visible,
                     "Reload must populate the new cigarettes without showing legacy controls");
             }
@@ -441,7 +404,7 @@ public partial class ProjectTest
             game.QueueFree();
             await ToSignal(this, SignalName.ProcessFrame);
         }
-        GD.Print("Cigarette pack: hover, staggered slides, localized live quotas, keyboard and recovery passed");
+        GD.Print("Cigarette pack: hover, staggered slides, localized live quotas, keyboard and reload passed");
     }
 
     private async Task TestRarityPopupGeometry()

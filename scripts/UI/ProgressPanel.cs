@@ -7,7 +7,8 @@ public partial class ProgressPanel : Control
 {
     [Export] public double SlideSeconds { get; set; } = 0.32;
     [Export] public double StaggerSeconds { get; set; } = 0.065;
-    [Export] public float ClosedX { get; set; } = -350;
+    public float ClosedX { get; private set; }
+    private Rect2 _closedHotspot;
     [Export] public float OpenX { get; set; } = 22;
     public bool Expanded { get; private set; }
     public bool Pinned { get; private set; }
@@ -30,6 +31,12 @@ public partial class ProgressPanel : Control
         _toggle = GetNode<Button>("../ProgressToggleButton");
         _content = GetNode<Control>("Content");
         _sticks = new[] { "Day", "Quota", "Deadline" }.Select(name => GetNode<TextureRect>("Visual/" + name)).ToArray();
+        ClosedX = _sticks[0].Position.X;
+        var packBack = GetNode<Control>("Visual/Back");
+        // The scene positions the pack and its tips together in their resting pose.
+        float exposedWidth = Mathf.Max(packBack.GetRect().End.X, _sticks.Max(stick => stick.GetRect().End.X));
+        _closedHotspot = new Rect2(0, 0, exposedWidth, Size.Y);
+        _toggle.Size = new Vector2(exposedWidth, _toggle.Size.Y);
         _captions = _sticks.Select(stick => stick.GetNode<Label>("Caption")).ToArray();
         _toggle.Pressed += () => { Pinned = !Pinned; SetExpanded(Pinned); };
         _toggle.GuiInput += input =>
@@ -59,9 +66,9 @@ public partial class ProgressPanel : Control
             return;
         }
         _wasVisible = true;
-        Size = new Vector2(Expanded ? 384 : 46, 208);
+        Size = new Vector2(Expanded ? 384 : _closedHotspot.Size.X, _closedHotspot.Size.Y);
         Vector2 pointer = _pointer.HasValue ? GetGlobalTransformWithCanvas().AffineInverse() * _pointer.Value : GetLocalMousePosition();
-        bool onPack = new Rect2(0, 0, 46, 208).HasPoint(pointer);
+        bool onPack = _closedHotspot.HasPoint(pointer);
         bool onOpen = Expanded && new Rect2(0, 0, 384, 208).HasPoint(pointer);
         Control focused = GetViewport().GuiGetFocusOwner();
         HoveringHotspot = onPack || onOpen;

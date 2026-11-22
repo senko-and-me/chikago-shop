@@ -84,10 +84,12 @@ public partial class ProjectTest
                 using var hover = await CaptureButtonFeedback();
                 if (language == "en")
                 {
-                    float fittedWidth = Mathf.Min(control.Size.X,
-                        control.Size.Y * back.TextureNormal.GetWidth() / back.TextureNormal.GetHeight());
+                    float fittedWidth = back.StretchMode == TextureButton.StretchModeEnum.Scale
+                        ? control.Size.X
+                        : Mathf.Min(control.Size.X,
+                            control.Size.Y * back.TextureNormal.GetWidth() / back.TextureNormal.GetHeight());
                     Check(frame.Bounds.Size.X <= fittedWidth + 1,
-                        "English Back feedback must fit the current image's actual aspect ratio");
+                        "English Back feedback must fit the artwork with its authored stretch mode");
                     float sideMargin = (control.Size.X - fittedWidth) / 2;
                     if (sideMargin > 4)
                     {
@@ -348,9 +350,9 @@ public partial class ProjectTest
                 await SettleButtonFeedback();
                 MoveButtonPointer(new Vector2(2, 2));
                 await SettleButtonFeedback();
-                Check(Root.GuiGetFocusOwner() == choice && controller.GetVisualFrame().Bounds == ScreenBounds(choice) &&
-                    controller.GetVisualFrame().Strength > 0.9f && controller.GetVisualFrame().Flash == 0,
-                    "Pause main menu must retain the last hovered button after leaving it, without an action flash");
+                Check(Root.GuiGetFocusOwner() == resume && controller.GetVisualFrame().Bounds != ScreenBounds(choice) &&
+                    controller.GetVisualFrame().Flash == 0,
+                    "Hover must not move keyboard focus or leave a visual highlight on the exited pause choice");
                 lastHovered = choice;
             }
             Check(game.Score == cashBeforeHover && game.CurrentDay == dayBeforeHover && Paused,
@@ -374,12 +376,13 @@ public partial class ProjectTest
 
             var card = game.GetNode<DayTransitionCard>("DayTransitionCard");
             card.Open(1, 2, new[] { ChikagoShop.Domain.Days.DayUpgrade.Cash,
-                ChikagoShop.Domain.Days.DayUpgrade.Energy, ChikagoShop.Domain.Days.DayUpgrade.Time }, 1000);
+                ChikagoShop.Domain.Days.DayUpgrade.Energy, ChikagoShop.Domain.Days.DayUpgrade.Atelier }, 1000);
             await WaitForDayCardAnimation(card);
             await SettleButtonFeedback();
             Check(Root.GuiGetFocusOwner() == null && controller.GetVisualFrame().Strength == 0,
                 "Opening day cards must not automatically focus or outline a purchase");
-            using (var image = await CaptureButtonFeedback("card-no-selection")) CheckFeedbackGray(image);
+            // Authored gold/silver card art is colored; grayscale feedback is checked in the isolated fixture.
+            using (await CaptureButtonFeedback("card-no-selection")) { }
             int choicesMade = 0;
             card.Chosen += choice => choicesMade++;
             Root.PushInput(new InputEventKey { Pressed = true, Keycode = Key.Right }, true);
@@ -390,7 +393,7 @@ public partial class ProjectTest
                 controller.GetVisualFrame().Bounds == ScreenBounds(focusedChoice),
                 "The first arrow must reveal keyboard focus while paused");
             Check(choicesMade == 0, "Starting keyboard navigation must not purchase an upgrade");
-            using (var image = await CaptureButtonFeedback("card-focus")) CheckFeedbackGray(image);
+            using (await CaptureButtonFeedback("card-focus")) { }
             Root.PushInput(new InputEventKey { Pressed = true, Keycode = Key.Right }, true);
             Root.PushInput(new InputEventKey { Pressed = false, Keycode = Key.Right }, true);
             await SettleButtonFeedback();
@@ -410,7 +413,7 @@ public partial class ProjectTest
             foreach (int balance in new[] { 1000, 20, 0 })
             {
                 card.Open(1, 2, new[] { ChikagoShop.Domain.Days.DayUpgrade.Cash,
-                    ChikagoShop.Domain.Days.DayUpgrade.Energy, ChikagoShop.Domain.Days.DayUpgrade.Time }, balance);
+                    ChikagoShop.Domain.Days.DayUpgrade.Energy, ChikagoShop.Domain.Days.DayUpgrade.Atelier }, balance);
                 await WaitForDayCardAnimation(card);
                 await SettleButtonFeedback();
                 Check(Root.GuiGetFocusOwner() == null && controller.GetVisualFrame().Strength == 0,
@@ -425,11 +428,12 @@ public partial class ProjectTest
                 BaseButton[] expected = balance == 0
                     ? new BaseButton[] { card.GetNode<Button>("Root/Center/Card/Content/Skip") }
                     : balance == 20
-                        ? new BaseButton[] { card.GetNode<Button>(choicePath + "Cash/Content/Choose"),
+                        ? new BaseButton[] { card.GetNode<Button>(choicePath + "Energy/Content/Choose"),
+                            card.GetNode<Button>(choicePath + "Atelier/Content/Choose"),
                             card.GetNode<Button>("Root/Center/Card/Content/Skip") }
                         : new BaseButton[] { card.GetNode<Button>(choicePath + "Cash/Content/Choose"),
                             card.GetNode<Button>(choicePath + "Energy/Content/Choose"),
-                            card.GetNode<Button>(choicePath + "Time/Content/Choose"),
+                            card.GetNode<Button>(choicePath + "Atelier/Content/Choose"),
                             card.GetNode<Button>("Root/Center/Card/Content/Skip") };
                 Check(selected == expected[0], "First navigation must select the first available action");
                 foreach (Key direction in new[] { Key.Right, Key.Down, Key.Left, Key.Up })

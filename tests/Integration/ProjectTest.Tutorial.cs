@@ -24,6 +24,17 @@ public partial class ProjectTest
             }
             await Frame();
         }
+        async Task<bool> CheckBuyerRequestLesson()
+        {
+            var body = tutorial.GetNode<Label>("Root/Panel/Content/Body");
+            TranslationServer.SetLocale("en");
+            await Frame();
+            bool english = body.Tr(body.Text).Contains("clothing or a musical instrument");
+            TranslationServer.SetLocale("ru");
+            await Frame();
+            return english && body.Text.Contains("одежду или музыкальный инструмент") &&
+                tutorial.GetNode<Button>("Root/Panel/Content/Actions/Done").Visible;
+        }
         void MouseButtonAt(Vector2 point, MouseButton button, bool pressed) => Root.PushInput(new InputEventMouseButton
         { Position = point, GlobalPosition = point, ButtonIndex = button, Pressed = pressed,
             ButtonMask = pressed && button == MouseButton.Left ? MouseButtonMask.Left : 0 }, true);
@@ -358,6 +369,39 @@ public partial class ProjectTest
             await CheckCameraLocked();
             game._Process(0);
             await Frame();
+            Step(FirstTradeTutorial.Step.BuyerRequest);
+            await CameraSettled();
+            const string thought = "World/TradingRoom/BuyerWaitingThought/ThoughtBubble";
+            const string continueInstruction = "FirstTradeTutorial/Root/Panel/Content/Actions/Done";
+            foreach (var viewport in new[] { new Vector2I(1280, 720), new Vector2I(1920, 1080) })
+            {
+                Root.Size = viewport;
+                await Frame();
+                await CameraSettled();
+                Check(tutorial.Target == game.GetNode<Control>(thought), "Buyer request must outline the actual thought bubble");
+                Highlight();
+                Check(await CheckBuyerRequestLesson(), "Buyer request must explain both categories and require acknowledgment");
+                using var screenshot = await CapturePresentation($"tutorial-buyer-request-{viewport.X}");
+                Check(screenshot.GetSize() == viewport, "Buyer lesson must be checked at the requested native resolution");
+            }
+            Root.Size = new Vector2I(1280, 720);
+            await Frame();
+            await CameraSettled();
+            await Reload();
+            Step(FirstTradeTutorial.Step.BuyerRequest);
+            Check(tutorial.BlocksFirstOffer, "Reload must preserve an unacknowledged buyer lesson");
+            double heldTime = game.BuyerWaitRemaining;
+            double heldDayTime = game.DayRemainingSeconds;
+            int rerolls = game.RerollsRemaining;
+            game._Process(1);
+            game.AcceptTrade();
+            game.RerollCustomer();
+            Check(game.Accepted == 0 && game.BuyerWaitRemaining == heldTime &&
+                game.DayRemainingSeconds == heldDayTime && game.RerollsRemaining == rerolls,
+                "Reading the buyer request must preserve the time, rerolls and first sale");
+            await ClickControl(game, continueInstruction);
+            Step(FirstTradeTutorial.Step.Offer);
+            await Reload();
             Step(FirstTradeTutorial.Step.Offer);
             await CheckTutorialEndBlocked();
             await CheckCameraLocked();

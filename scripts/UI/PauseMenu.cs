@@ -156,12 +156,16 @@ public partial class PauseMenu : CanvasLayer
 	{
 		button.AddThemeStyleboxOverride("normal", PaperStyle(Colors.White));
 		button.AddThemeStyleboxOverride("hover", PaperStyle(new Color(0.88f, 0.88f, 0.88f)));
-		button.AddThemeStyleboxOverride("pressed", PaperStyle(new Color(0.67f, 0.67f, 0.67f)));
+		var pressed = PaperStyle(new Color(0.67f, 0.67f, 0.67f));
+		button.AddThemeStyleboxOverride("pressed", pressed);
+		button.AddThemeStyleboxOverride("hover_pressed", pressed);
 		button.AddThemeStyleboxOverride("disabled", PaperStyle(new Color(0.48f, 0.48f, 0.48f)));
 		button.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
 		button.AddThemeColorOverride("font_color", new Color(0.10f, 0.10f, 0.10f));
 		button.AddThemeColorOverride("font_hover_color", new Color(0.10f, 0.10f, 0.10f));
 		button.AddThemeColorOverride("font_pressed_color", new Color(0.10f, 0.10f, 0.10f));
+		button.AddThemeColorOverride("font_hover_pressed_color", new Color(0.10f, 0.10f, 0.10f));
+		button.AddThemeColorOverride("font_focus_color", new Color(0.10f, 0.10f, 0.10f));
 		button.AddThemeColorOverride("font_disabled_color", new Color(0.30f, 0.30f, 0.30f));
 		button.AddThemeFontSizeOverride("font_size", 24);
 		button.MouseDefaultCursorShape = Control.CursorShape.PointingHand;
@@ -172,20 +176,26 @@ public partial class PauseMenu : CanvasLayer
 		button.AddThemeStyleboxOverride("normal", PaperStyle(Colors.White));
 		button.AddThemeStyleboxOverride("hover", PaperStyle(new Color(0.85f, 0.85f, 0.85f)));
 		button.AddThemeStyleboxOverride("pressed", PaperStyle(new Color(0.47f, 0.47f, 0.47f)));
-		button.AddThemeStyleboxOverride("hover_pressed", PaperStyle(new Color(0.47f, 0.47f, 0.47f)));
+		button.AddThemeStyleboxOverride("hover_pressed", button.GetThemeStylebox("pressed"));
+		button.AddThemeStyleboxOverride("disabled", PaperStyle(new Color(0.48f, 0.48f, 0.48f)));
 		button.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
 		button.AddThemeColorOverride("font_color", new Color(0.08f, 0.08f, 0.08f));
 		button.AddThemeColorOverride("font_hover_color", new Color(0.08f, 0.08f, 0.08f));
 		button.AddThemeColorOverride("font_pressed_color", Colors.White);
 		button.AddThemeColorOverride("font_hover_pressed_color", Colors.White);
+		button.AddThemeColorOverride("font_disabled_color", new Color(0.30f, 0.30f, 0.30f));
 		button.MouseDefaultCursorShape = Control.CursorShape.PointingHand;
 	}
 
 	private void RefreshLanguageSelection()
 	{
 		if (_russian == null || _english == null) return;
-		_russian.SetPressedNoSignal(GameLocalization.Language == "ru");
-		_english.SetPressedNoSignal(GameLocalization.Language == "en");
+		bool english = GameLocalization.Language == "en";
+		_russian.SetPressedNoSignal(!english);
+		_english.SetPressedNoSignal(english);
+		var ink = new Color(0.08f, 0.08f, 0.08f);
+		_russian.AddThemeColorOverride("font_focus_color", english ? ink : Colors.White);
+		_english.AddThemeColorOverride("font_focus_color", english ? Colors.White : ink);
 	}
 
 	public override void _Notification(int what)
@@ -212,7 +222,6 @@ public partial class PauseMenu : CanvasLayer
 			{
 				if (button.Disabled || !button.IsVisibleInTree()) return;
 				_lastHoveredMenuButton = button;
-				button.GrabFocus();
 			};
 		return button;
 	}
