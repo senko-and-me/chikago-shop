@@ -5,168 +5,168 @@ using Godot;
 
 public partial class EmbroideryGame : CanvasLayer
 {
-    private readonly MiniGameVariantPicker _variants = new(4);
-    public EmbroiderySession Session { get; private set; } = new();
-    public PolishingSession Polishing { get; private set; } = null!;
-    public bool IsPolishing { get; }
-    public ICraftSession ActiveSession => IsPolishing ? Polishing : Session;
-    private PolishingSurface _polishingSurface = null!;
-    private Sprite2D _polishingCursor = null!;
-    // Small pointer-sized cloth; the texture is always shown during polishing.
-    private const float PolishingCursorSize = 112f; // Longest edge in viewport pixels.
-    private Input.MouseModeEnum _previousCursorMode = Input.MouseModeEnum.Visible;
-    private bool _polishingCursorHidden;
-    public bool IsOpen => _surface != null && _surface.Visible;
-    private EmbroiderySurface _surface = null!;
-    private Label _title = null!, _hint = null!, _quality = null!;
-    private Label _qualityHeading = null!;
-    private readonly Control[] _statCards = new Control[3];
-    private readonly Label[] _statValues = new Label[3];
-    private readonly Label[] _statHeadings = new Label[3];
-    private Button _action = null!, _cancel = null!;
-    private readonly Action _acquire;
-    private bool _ownsPause;
-    private bool? _primaryAction;
-    public int? PreparedItemIndex { get; private set; }
-    private string _preparedInstrument;
-    private bool _preparedItemClaimed;
-    private bool _qualityRecorded;
-    private TradeScene _game = null!;
+	private readonly MiniGameVariantPicker _variants = new(4);
+	public EmbroiderySession Session { get; private set; } = new();
+	public PolishingSession Polishing { get; private set; } = null!;
+	public bool IsPolishing { get; }
+	public ICraftSession ActiveSession => IsPolishing ? Polishing : Session;
+	private PolishingSurface _polishingSurface = null!;
+	private Sprite2D _polishingCursor = null!;
+	// Small pointer-sized cloth; the texture is always shown during polishing.
+	private const float PolishingCursorSize = 112f; // Longest edge in viewport pixels.
+	private Input.MouseModeEnum _previousCursorMode = Input.MouseModeEnum.Visible;
+	private bool _polishingCursorHidden;
+	public bool IsOpen => _surface != null && _surface.Visible;
+	private EmbroiderySurface _surface = null!;
+	private Label _title = null!, _hint = null!, _quality = null!;
+	private Label _qualityHeading = null!;
+	private readonly Control[] _statCards = new Control[3];
+	private readonly Label[] _statValues = new Label[3];
+	private readonly Label[] _statHeadings = new Label[3];
+	private Button _action = null!, _cancel = null!;
+	private readonly Action _acquire;
+	private bool _ownsPause;
+	private bool? _primaryAction;
+	public int? PreparedItemIndex { get; private set; }
+	private string _preparedInstrument;
+	private bool _preparedItemClaimed;
+	private bool _qualityRecorded;
+	private TradeScene _game = null!;
 
-    public EmbroideryGame(Action acquire, bool polishing = false)
-    {
-        _acquire = acquire;
-        IsPolishing = polishing;
-    }
+	public EmbroideryGame(Action acquire, bool polishing = false)
+	{
+		_acquire = acquire;
+		IsPolishing = polishing;
+	}
 
-    public override void _Ready()
-    {
-        Name = IsPolishing ? "PolishingGame" : "EmbroideryGame";
-        Layer = 110;
-        ProcessMode = ProcessModeEnum.Always;
-        _game = GetParent<TradeScene>();
-        _game.NewGameStarted += ResetPreparedItem;
+	public override void _Ready()
+	{
+		Name = IsPolishing ? "PolishingGame" : "EmbroideryGame";
+		Layer = 110;
+		ProcessMode = ProcessModeEnum.Always;
+		_game = GetParent<TradeScene>();
+		_game.NewGameStarted += ResetPreparedItem;
 
-        _surface = new EmbroiderySurface
-        {
-            Name = "Surface",
-            Game = this,
-            Visible = false
-        };
-        AddChild(_surface);
-        _surface.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+		_surface = new EmbroiderySurface
+		{
+			Name = "Surface",
+			Game = this,
+			Visible = false
+		};
+		AddChild(_surface);
+		_surface.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
 
-        if (IsPolishing)
-        {
-            _polishingSurface = new PolishingSurface
-            {
-                Name = "Polishing",
-                MouseFilter = Control.MouseFilterEnum.Stop,
-                ClipContents = true
-            };
-            _surface.AddChild(_polishingSurface);
-        }
+		if (IsPolishing)
+		{
+			_polishingSurface = new PolishingSurface
+			{
+				Name = "Polishing",
+				MouseFilter = Control.MouseFilterEnum.Stop,
+				ClipContents = true
+			};
+			_surface.AddChild(_polishingSurface);
+		}
 
-        _title = AddLabel("Title", 28);
-        _qualityHeading = AddLabel("QualityHeading", 14);
-        _title.HorizontalAlignment = HorizontalAlignment.Left;
+		_title = AddLabel("Title", 28);
+		_qualityHeading = AddLabel("QualityHeading", 14);
+		_title.HorizontalAlignment = HorizontalAlignment.Left;
 
-        string[] statNames = ["Time", "Stitches", "Misses"];
-        string[] statTitles = ["ВРЕМЯ", "СТЕЖКИ", "ПРОМАХИ"];
+		string[] statNames = ["Time", "Stitches", "Misses"];
+		string[] statTitles = ["ВРЕМЯ", "СТЕЖКИ", "ПРОМАХИ"];
 
-        for (int i = 0; i < _statCards.Length; i++)
-        {
-            var card = new Panel
-            {
-                Name = "Stat" + statNames[i],
-                MouseFilter = Control.MouseFilterEnum.Ignore
-            };
-            card.AddThemeStyleboxOverride("panel", new StyleBoxFlat
-            {
-                BgColor = Colors.White,
-                BorderColor = Colors.Black,
-                BorderWidthLeft = 1,
-                BorderWidthRight = 1,
-                BorderWidthTop = 1,
-                BorderWidthBottom = 1,
-                CornerRadiusTopLeft = 7,
-                CornerRadiusTopRight = 7,
-                CornerRadiusBottomLeft = 7,
-                CornerRadiusBottomRight = 7
-            });
-            _surface.AddChild(card);
-            _statCards[i] = card;
+		for (int i = 0; i < _statCards.Length; i++)
+		{
+			var card = new Panel
+			{
+				Name = "Stat" + statNames[i],
+				MouseFilter = Control.MouseFilterEnum.Ignore
+			};
+			card.AddThemeStyleboxOverride("panel", new StyleBoxFlat
+			{
+				BgColor = Colors.White,
+				BorderColor = Colors.Black,
+				BorderWidthLeft = 1,
+				BorderWidthRight = 1,
+				BorderWidthTop = 1,
+				BorderWidthBottom = 1,
+				CornerRadiusTopLeft = 7,
+				CornerRadiusTopRight = 7,
+				CornerRadiusBottomLeft = 7,
+				CornerRadiusBottomRight = 7
+			});
+			_surface.AddChild(card);
+			_statCards[i] = card;
 
-            var heading = new Label
-            {
-                Name = "Heading",
-                Text = statTitles[i],
-                Position = new Vector2(14, 7),
-                Size = new Vector2(76, 18),
-                MouseFilter = Control.MouseFilterEnum.Ignore
-            };
-            heading.AddThemeFontSizeOverride("font_size", 14);
-            heading.AddThemeColorOverride("font_color", Colors.Black);
-            heading.AddThemeConstantOverride("outline_size", 0);
-            card.AddChild(heading);
-            _statHeadings[i] = heading;
+			var heading = new Label
+			{
+				Name = "Heading",
+				Text = statTitles[i],
+				Position = new Vector2(14, 7),
+				Size = new Vector2(76, 18),
+				MouseFilter = Control.MouseFilterEnum.Ignore
+			};
+			heading.AddThemeFontSizeOverride("font_size", 14);
+			heading.AddThemeColorOverride("font_color", Colors.Black);
+			heading.AddThemeConstantOverride("outline_size", 0);
+			card.AddChild(heading);
+			_statHeadings[i] = heading;
 
-            var value = new Label
-            {
-                Name = "Value",
-                Position = new Vector2(14, 25),
-                Size = new Vector2(76, 28),
-                MouseFilter = Control.MouseFilterEnum.Ignore
-            };
-            value.AddThemeFontSizeOverride("font_size", 22);
-            value.AddThemeColorOverride("font_color", Colors.Black);
-            value.AddThemeConstantOverride("outline_size", 0);
-            card.AddChild(value);
-            _statValues[i] = value;
-        }
+			var value = new Label
+			{
+				Name = "Value",
+				Position = new Vector2(14, 25),
+				Size = new Vector2(76, 28),
+				MouseFilter = Control.MouseFilterEnum.Ignore
+			};
+			value.AddThemeFontSizeOverride("font_size", 22);
+			value.AddThemeColorOverride("font_color", Colors.Black);
+			value.AddThemeConstantOverride("outline_size", 0);
+			card.AddChild(value);
+			_statValues[i] = value;
+		}
 
-        _hint = AddLabel("Hint", 16);
-        _quality = AddLabel("Quality", 25);
-        _action = new Button
-        {
-            Name = "Action",
-            MouseDefaultCursorShape = Control.CursorShape.PointingHand
-        };
-        _cancel = new Button { Name = "Cancel", Text = "Назад" };
-        _surface.AddChild(_action);
-        _surface.AddChild(_cancel);
+		_hint = AddLabel("Hint", 16);
+		_quality = AddLabel("Quality", 25);
+		_action = new Button
+		{
+			Name = "Action",
+			MouseDefaultCursorShape = Control.CursorShape.PointingHand
+		};
+		_cancel = new Button { Name = "Cancel", Text = "Назад" };
+		_surface.AddChild(_action);
+		_surface.AddChild(_cancel);
 
-        foreach (var button in new[] { _action, _cancel })
-        {
-            button.AddThemeFontSizeOverride("font_size", 20);
-            foreach (string state in new[] { "normal", "hover", "pressed", "hover_pressed", "focus", "disabled" })
-            {
-                var style = new StyleBoxFlat
-                {
-                    BgColor = state is "pressed" or "hover_pressed" ? new Color("c4c4c4") :
-                        state == "hover" ? new Color("dedede") : new Color("eeeeee"),
-                    BorderColor = Colors.Black,
-                    BorderWidthLeft = 1, BorderWidthRight = 1, BorderWidthTop = 1, BorderWidthBottom = 1,
-                    CornerRadiusTopLeft = 6, CornerRadiusTopRight = 6,
-                    CornerRadiusBottomLeft = 6, CornerRadiusBottomRight = 6,
-                    DrawCenter = state != "focus"
-                };
-                button.AddThemeStyleboxOverride(state, style);
-            }
-            foreach (string color in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color", "font_disabled_color" })
-                button.AddThemeColorOverride(color, Colors.Black);
-            button.AddThemeConstantOverride("outline_size", 0);
-        }
+		foreach (var button in new[] { _action, _cancel })
+		{
+			button.AddThemeFontSizeOverride("font_size", 20);
+			foreach (string state in new[] { "normal", "hover", "pressed", "hover_pressed", "focus", "disabled" })
+			{
+				var style = new StyleBoxFlat
+				{
+					BgColor = state is "pressed" or "hover_pressed" ? new Color("c4c4c4") :
+						state == "hover" ? new Color("dedede") : new Color("eeeeee"),
+					BorderColor = Colors.Black,
+					BorderWidthLeft = 1, BorderWidthRight = 1, BorderWidthTop = 1, BorderWidthBottom = 1,
+					CornerRadiusTopLeft = 6, CornerRadiusTopRight = 6,
+					CornerRadiusBottomLeft = 6, CornerRadiusBottomRight = 6,
+					DrawCenter = state != "focus"
+				};
+				button.AddThemeStyleboxOverride(state, style);
+			}
+			foreach (string color in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color", "font_disabled_color" })
+				button.AddThemeColorOverride(color, Colors.Black);
+			button.AddThemeConstantOverride("outline_size", 0);
+		}
 
-        _action.Pressed += Activate;
-        _cancel.Pressed += Close;
+		_action.Pressed += Activate;
+		_cancel.Pressed += Close;
 
-        if (IsPolishing)
-        {
-            // Use the cloth while playing; ready/result buttons keep the native UI pointer.
-            _polishingSurface.DrawClothAtPointer = false;
-            // Sprite2D uses an explicit scale calculated from the source artwork.
-            // TextureRect's old centering could render the native 2048px texture
+		if (IsPolishing)
+		{
+			// Use the cloth while playing; ready/result buttons keep the native UI pointer.
+			_polishingSurface.DrawClothAtPointer = false;
+			// Sprite2D uses an explicit scale calculated from the source artwork.
+			// TextureRect's old centering could render the native 2048px texture
             // despite a 32x32 minimum size; that caused the giant cloth bug.
             Texture2D cloth = GD.Load<Texture2D>("res://art/minigames/polishing_cloth.png");
             float clothScale = PolishingCursorSize / Mathf.Max(cloth.GetWidth(), cloth.GetHeight());
