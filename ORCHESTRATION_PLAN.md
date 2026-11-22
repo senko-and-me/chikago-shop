@@ -9,6 +9,20 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### HF-207 — Git merge polishing → main
+
+Статус: `DONE`; принято координатором; координатор/исполнитель `/root`; 2026-11-22; dependency HF-206 DONE. CP-HF-207: `.local/checks/hf207/CP-HF-207.md`. Read-set Git/current-front; write-set plan, local evidence, merge commit and origin/main; runtime/source/ вне scope. Все изменения polishing уже перенесены и согласованы в HF-206; задача связывает истории Git, сохраняя проверенное каноническое дерево. Приёмка: polishing ancestor main, два merge parents, runtime tree unchanged, remote readback, clean worktree.
+
+```text
+Task: HF-207
+Recommended status: REVIEW -> accepted DONE
+Changed: merge main0654dec + polishing dbf5633 using ours strategy, because all polishing work was already ported/reconciled in HF206; only orchestration evidence differs from canonical main.
+Checks: fetched refs unchanged; precommit index runtime diff empty PASS; merge parents/ancestor and final tree equality required for publication; previous HF206 build/domain204/25focused checks still apply to identical code/assets.
+Acceptance: Git history now records both branches without overwriting canonical fixes or user's layouts. No behavior changes or new tests needed.
+Read-set exception: none.
+Risks/blocker: existing general-runner fixture mismatch documented in HF206; no new blocker.
+Next: publish merge main and verify remote ref; keep polishing branch for history.
+```
 ### HF-206 — единая каноническая версия проекта
 
 Статус: `DONE`; принято координатором по focused acceptance; координатор/исполнитель `/root`; 2026-11-22; HF-205 DONE. CP-HF-206: `.local/checks/hf206/CP-HF-206.md`; exact write-set `.local/checks/hf206/write-set.txt`. Main remains the integration base; user explicitly authorized backups, consolidation, migration checks, main merge and one active project path.
