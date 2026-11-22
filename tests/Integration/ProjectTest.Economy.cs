@@ -16,6 +16,7 @@ public partial class ProjectTest
         {
             var loaded = scene.Instantiate<TradeScene>();
             loaded.SavePath = path;
+            loaded.GetNode<FirstTradeTutorial>("FirstTradeTutorial").ProgressPath = "";
             Root.AddChild(loaded);
             loaded.SetProcess(false);
             await ToSignal(this, SignalName.ProcessFrame);
@@ -70,7 +71,7 @@ public partial class ProjectTest
                 Check(!TradeScene.GetItemArtPath(index).Contains("placeholder_"), "Every item must use the new artist artwork");
             }
             using (var file = FileAccess.Open(path, FileAccess.ModeFlags.Write))
-                file.StoreString("{\"save_version\":8,\"day_remaining_seconds\":120,\"score\":1000,\"energy_remaining\":2,\"stored_items\":[" +
+                file.StoreString("{\"save_version\":8,\"day_remaining_seconds\":120,\"score\":1000,\"energy_remaining\":2,\"music_workshop_unlocked\":true,\"stored_items\":[" +
                     string.Join(",", Enumerable.Range(0, WorkshopItemCatalog.Items.Count)) + "]}");
             game = await Load();
             for(int index=0;index<WorkshopItemCatalog.Items.Count;index++)
@@ -78,14 +79,16 @@ public partial class ProjectTest
                 var inventory = game.GetNode<HBoxContainer>("HUD/InventoryUI/ScrollContainer/HBoxContainer");
                 var slot = inventory.GetChild<SlotUI>(0);
                 string art = TradeScene.GetItemArtPath(index);
+                string expectedTooltip = GameLocalization.Format("{0}\nРедкость: {1}\nКачество: {3} (+{4}$)\nСтоимость: {2}$",
+                    TradeScene.GetItemName(index), TradeScene.GetItemRarity(index), game.GetItemPrice(index), "D", 0);
                 Check(game.StoredItems[0] == index && slot.GetNode<TextureRect>("Icon").Texture.ResourcePath == art &&
-                      slot.ItemInfo == ExpectedItemTooltip(index),
+                      slot.ItemInfo == expectedTooltip,
                     "New placeholder identity, art and tooltip must survive inventory reload");
                 SelectInventorySlot(game,0);
                 game.PlaceItemInShowcase(0);
                 Check(game.GetNode<TextureRect>("World/ShowroomLeft/Showcases/Slot1/Icon").Texture.ResourcePath == art,
                     "Showcases must display matching catalogue artwork");
-                game._Process(game.BuyerCountdown+0.001);
+                game._Process(0);
                 var visible = game.GetNode<Node2D>("World/TradingRoom/Item").GetChildren().OfType<Sprite2D>()
                     .Where(sprite => sprite.Visible).ToArray();
                 Check(game.ItemIndex == index && visible.Length == 1 && visible[0].Texture.ResourcePath == art &&
@@ -101,8 +104,9 @@ public partial class ProjectTest
                 int cash = game.Score, offer = game.OfferedPrice;
                 Check(offer == TradeScene.PriceForPercent(TradeScene.GetItemBasePrice(index), game.Percentage),
                     "High-rarity offers must use the correct workshop base price");
+                int tip = TradeScene.SpeedBonus(game.BuyerWaitRemaining) + TradeScene.QualityBonus(game.ActiveTradeQualityRank);
                 game.AcceptTrade();
-                Check(game.Score == cash+offer && !game.TradeActive,
+                Check(game.Score == cash + offer + tip && !game.TradeActive,
                     "Placeholder sales must credit their offer and finish the trade");
             }
         }
@@ -123,9 +127,9 @@ public partial class ProjectTest
         Check(config.Workshops.Count == 2 && config.Rarities.Count == 5 && config.OfferRanges.Count == 3,
             "The game and domain tests must share the complete economy v1 source");
         Check(config.StartingMoney == 220 && config.Workshops[0].SpinCost == 25 &&
-              config.Workshops[1].SpinCost == 50 && config.Workshops[1].UnlockCost == 100 &&
-		      config.Quotas[0].Amount == 250 &&
-              config.Quotas[1].Amount == 450,
+              config.Workshops[1].SpinCost == 50 && config.Workshops[1].UnlockCost == 1000 &&
+		      config.Quotas[0].Amount == 750 &&
+              config.Quotas[1].Amount == 1500,
             "The runtime must load the provisional paid-spin and raised-quota balance");
     }
 
@@ -139,7 +143,7 @@ public partial class ProjectTest
         {
             if (FileAccess.FileExists(SavePath)) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(SavePath));
             game = await CreateGame(scene);
-            Check(game.StartingMoney == config.StartingMoney && game.FirstQuota == 250 && game.SecondQuota == 450,
+            Check(game.StartingMoney == config.StartingMoney && game.FirstQuota == 750 && game.SecondQuota == 1500,
                 "The live game must read the same starting money and quotas as the simulator");
             foreach (string language in new[] { "ru", "en" })
             {

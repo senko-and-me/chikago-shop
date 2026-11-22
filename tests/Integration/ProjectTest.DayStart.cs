@@ -6,6 +6,8 @@ public partial class ProjectTest
     private async Task TestDayStart()
     {
         const string save = "user://hf106_day_start.json";
+        int duration = WorkshopItemCatalog.DayDurationSeconds;
+        string afterOneSecond = (duration - 1).ToString("00");
         var packed = GD.Load<PackedScene>("res://scenes/trade_scene.tscn");
         TradeScene game = null;
         Vector2I oldSize = Root.Size;
@@ -63,24 +65,24 @@ public partial class ProjectTest
                 start.ReleaseFocus();
             }
             game._Process(15);
-            Check(game.DayRemainingSeconds == 90 && !game.DayStarted, "The day must not tick before Start");
+            Check(game.DayRemainingSeconds == duration && !game.DayStarted, "The day must not tick before Start");
             game.PersistProgress();
             await Reload();
-            Check(!game.DayStarted && game.DayRemainingSeconds == 90, "Reload must preserve waiting for Start");
+            Check(!game.DayStarted && game.DayRemainingSeconds == duration, "Reload must preserve waiting for Start");
             TranslationServer.SetLocale("en");
             start = game.GetNode<Button>("HUD/DayClock/Root/DayTimer/StartButton");
             Check(start.Tr(start.Text) == "Start", "Start must have an English translation");
             TranslationServer.SetLocale("ru");
             await ClickControl(game, "HUD/DayClock/Root/DayTimer/StartButton");
             timer = game.GetNode<Label>("HUD/DayClock/Root/DayTimer");
-            Check(game.DayStarted && !start.Visible && game.DayRemainingSeconds == 90, "A real click must start exactly once");
+            Check(game.DayStarted && !start.Visible && game.DayRemainingSeconds == duration, "A real click must start exactly once");
             Root.PushInput(new InputEventMouseMotion { Position = new Vector2(800, 400), Relative = Vector2.One }, true);
             using (await CapturePresentation()) { }
             Check(game.GetNode<TextureRect>("HUD/DayClock/Root/DayTimer/Clock").SelfModulate == Colors.White,
                 "Starting the day must clear the hover darkening");
             start.EmitSignal(BaseButton.SignalName.Pressed);
             game._Process(1);
-            Check(game.DayRemainingSeconds == 89 && game.GetNode<Label>("HUD/DayClock/Root/DayTimer").Text == "89",
+            Check(game.DayRemainingSeconds == duration - 1 && timer.Text == afterOneSecond,
                 "After Start the timer must count down in seconds");
             var clockAction = game.GetNode<Button>("HUD/DayClock/Root/ClockActionButton");
             var endCaption = game.GetNode<Label>("HUD/DayClock/Root/DayTimer/EndDayCaption");
@@ -102,12 +104,13 @@ public partial class ProjectTest
             TranslationServer.SetLocale("ru");
             Root.PushInput(new InputEventMouseMotion { Position = new Vector2(800, 400), Relative = Vector2.One }, true);
             using (await CapturePresentation()) { }
-            Check(!endCaption.Visible && timer.Text == "89", "Leaving the clock must restore the remaining seconds");
+            Check(!endCaption.Visible && timer.Text == afterOneSecond, "Leaving the clock must restore the remaining seconds");
             clockAction.GrabFocus();
             Check(endCaption.Visible, "Keyboard focus must reveal the same end-day action");
             clockAction.ReleaseFocus();
             await Reload();
-            Check(game.DayStarted && game.DayRemainingSeconds > 88 && game.DayRemainingSeconds <= 89, "Reload of a running day must not demand another Start");
+            Check(game.DayStarted && game.DayRemainingSeconds > duration - 2 && game.DayRemainingSeconds <= duration - 1,
+                "Reload of a running day must not demand another Start");
             clockAction = game.GetNode<Button>("HUD/DayClock/Root/ClockActionButton");
             Vector2 clickPoint = ScreenBounds(clockAction).GetCenter();
             int clockClicks = 0;
@@ -140,7 +143,7 @@ public partial class ProjectTest
             Check(game.CurrentDay == 2 && !game.DayStarted && !game.DayUpgrades.Pending,
                 "Choosing or skipping the upgrade must leave the next day waiting for Start");
             game._Process(5);
-            Check(game.DayRemainingSeconds == 90, "The next day must not lose time before Start");
+            Check(game.DayRemainingSeconds == duration, "The next day must not lose time before Start");
             game.EndDay(); // The existing day button is also a Start action while waiting.
             Check(game.DayStarted, "The existing day button must also start a waiting day");
             game.ReturnToCheckpoint();
@@ -163,13 +166,13 @@ public partial class ProjectTest
             await Reload();
             Check(game.DayStarted && game.DayRemainingSeconds == 42, "Saves without the new field must continue their running day");
             using (var file = FileAccess.Open(save, FileAccess.ModeFlags.Write))
-                file.StoreString("{\"save_version\":13,\"day\":1,\"score\":220,\"energy_remaining\":3,\"day_remaining_seconds\":90,\"day_started\":false,\"showcase_items\":[0,-1,-1,-1,-1,-1]}");
+                file.StoreString($$"""{"save_version":13,"day":1,"score":220,"energy_remaining":3,"day_remaining_seconds":{{duration}},"day_started":false,"showcase_items":[0,-1,-1,-1,-1,-1]}""");
             await Reload();
             game._Process(5);
-            Check(!game.TradeActive && game.DayRemainingSeconds == 90, "Displayed goods must not attract buyers before Start");
+            Check(!game.TradeActive && game.DayRemainingSeconds == duration, "Displayed goods must not attract buyers before Start");
             game.EndDay();
-            game._Process(5);
-            Check(game.TradeActive, "Buyers must resume normally after Start");
+            Check(game.TradeActive && game.BuyerWaitRemaining == TradeScene.BuyerWaitDuration,
+                "Start must immediately bring the first buyer with the full wait timer");
         }
         finally
         {

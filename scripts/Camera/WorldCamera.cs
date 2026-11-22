@@ -38,6 +38,7 @@ public partial class WorldCamera : Camera2D
     }
     public event Action<Vector2> UserPanned;
     public event Action UserZoomed;
+    public event Action UserFocusedRoom;
     public event Action OverviewReset;
     public bool IsFocusing => _focusTween?.IsRunning() == true;
     public bool IsReturningToOverview => _overviewTween?.IsRunning() == true;
@@ -138,6 +139,16 @@ public partial class WorldCamera : Camera2D
         Vector2 ratio = GetViewportRect().Size / view;
         float destinationZoom = Mathf.Clamp(Mathf.Max(ratio.X, ratio.Y), MinZoom, ZoomLimit);
         Vector2 destination = ClampPosition(worldPosition, destinationZoom);
+        if (duration <= 0)
+        {
+            Zoom = Vector2.One * destinationZoom;
+            Position = destination;
+            _targetZoom = destinationZoom;
+            _zoomAnchor = GetViewportRect().Size / 2f;
+            ClampToBounds();
+            ForceUpdateScroll();
+            return;
+        }
         Vector2 startPosition = Position;
         float startZoom = Zoom.X;
         _focusTween = CreateTween().SetPauseMode(Tween.TweenPauseMode.Stop)
@@ -248,6 +259,7 @@ public partial class WorldCamera : Camera2D
             Vector2 view = HasReference && CloseupSize.X > 0 && CloseupSize.Y > 0
                 ? CloseupSize : HasReference ? bounds.Size / WorldBounds.Size * ReferenceSize : bounds.Size;
             FocusOn(bounds.GetCenter(), view, 0.45);
+            UserFocusedRoom?.Invoke();
             return true;
         }
         return false;

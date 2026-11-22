@@ -13,13 +13,16 @@ public sealed class BalanceProfileTests
     [Test]
     public void ProfileRoundTripsAndClonesWithoutSharingEditableDictionaries()
     {
-        var profile = new BalanceProfile { Numbers = new() { ["count"] = 3 }, ItemRarities = new() { ["cap"] = "unique" } };
+        var profile = new BalanceProfile { FirstQuotaBaselineRevision = 1, EconomyBaselineRevision = 1, Numbers = new() { ["count"] = 3 }, ItemRarities = new() { ["cap"] = "unique" } };
         var loaded = BalanceProfile.FromJson(profile.ToJson());
         Validate(loaded);
         Assert.AreEqual(3, loaded.Number("count", 1));
         Assert.AreEqual("unique", loaded.ItemRarities["cap"]);
         var clone = loaded.Clone(); clone.Numbers["count"] = 5;
         Assert.AreEqual(3, loaded.Numbers["count"]);
+        Assert.AreEqual(1, clone.FirstQuotaBaselineRevision);
+        Assert.AreEqual(1, loaded.EconomyBaselineRevision);
+        Assert.AreEqual(1, clone.EconomyBaselineRevision);
     }
 
     [TestCase(-1)] [TestCase(0)] [TestCase(1.5)] [TestCase(51)] [TestCase(double.NaN)] [TestCase(double.PositiveInfinity)]

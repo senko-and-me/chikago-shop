@@ -110,7 +110,7 @@ public partial class ProjectTest
             await ClickControl(panel, content + "/Actions/Apply");
             Check(FileAccess.FileExists(profilePath) && DebugBalanceSettings.Number("start.cash") == 555,
                 $"Apply must commit focused typed input and persist the profile to disk: {DebugBalanceSettings.Number("start.cash")}, {panel.GetNode<Label>(content + "/Status").Text}");
-            Check(game.Score == cash && game.EnergyRemaining == energy && Math.Abs(game.DayRemainingSeconds - (remaining + 90)) < 0.1,
+            Check(game.Score == cash && game.EnergyRemaining == energy && Math.Abs(game.DayRemainingSeconds - (remaining + 180 - EconomyConfigProvider.Baseline.Days.DurationSeconds)) < 0.1,
                 "Live apply must retain money/energy and elapsed time while changing the configured day duration");
             Check(TradeScene.GetItemBasePrice(0) == 123 && TradeScene.GetItemRerollLimit(0) == 4 &&
                 WorkshopItemCatalog.Items[0].RarityId == "unique", $"Live apply must rebuild item prices, rerolls and rarity: {TradeScene.GetItemBasePrice(0)}/{TradeScene.GetItemRerollLimit(0)}/{WorkshopItemCatalog.Items[0].RarityId}");
@@ -139,7 +139,7 @@ public partial class ProjectTest
             craft.FinishForTesting(true); craft.Activate();
             Check(!Paused && !craft.IsOpen, "Collect must retain the normal craft pause lifecycle");
             game.SelectInventoryItem(0); game.PlaceItemInShowcase(0);
-            game._Process(game.BuyerCountdown + 0.01);
+            game._Process(0);
             Check(game.TradeActive && game.OfferedPrice == TradeScene.PriceForPercent(123, game.Percentage),
                 "A real buyer must calculate its offer from the edited item price");
             game.AcceptTrade();
@@ -190,8 +190,8 @@ public partial class ProjectTest
                 "Invalid typed input must be reported without discarding or publishing the active profile");
             await ClickControl(panel, content + "/Actions/Defaults");
             await ClickControl(panel, content + "/Actions/Apply");
-            Check(TradeScene.GetItemBasePrice(0) == 30 && WorkshopItemCatalog.Items[0].RarityId == "common" &&
-                DebugBalanceSettings.CardRules.Cost(DayUpgrade.Cash) == 20, "Applying defaults must clear item and card overrides");
+            Check(TradeScene.GetItemBasePrice(0) == 25 && WorkshopItemCatalog.Items[0].RarityId == "common" &&
+                DebugBalanceSettings.CardRules.Cost(DayUpgrade.Cash) == 35, "Applying defaults must clear item and card overrides");
             await Press(Key.F10);
             int revision = DebugBalanceSettings.Revision;
             DebugBalanceSettings.StoragePath = "user://missing_balance_folder/profile.json";

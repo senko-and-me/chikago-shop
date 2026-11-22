@@ -102,7 +102,7 @@ public partial class ProjectTest
                 Check(camera.Position == before && !game.MusicWorkshopUnlocked && game.Score == 220 &&
                       game.StoredItems.Length == 0, "Releasing drag must stop panning without buying or crafting");
             }
-            await ClickControl(game, "World/MusicWorkshop/LockedOverlay/UnlockButton");
+            await ClickControl(game, "World/MusicWorkshop/LockedOverlay/UnlockPanel/Content/UnlockButton");
             Check(game.MusicWorkshopUnlocked && game.Score == 120,
                 "The unlock button must still work after dragging the closed room");
         }
@@ -144,7 +144,7 @@ public partial class ProjectTest
         Check(!inventoryUi.ItemPopup.Visible, "Leaving the inventory must hide item information");
         await ToSignal(this, SignalName.ProcessFrame);
         Check(!game.TradeActive, "Mouse placement must wait for a buyer");
-        game._Process(game.BuyerCountdown + 0.001);
+        game._Process(0);
         Check(game.TradeActive && game.StoredItems.Length == 2 && world.ItemVisible,
             "Placing an existing item with the mouse must start a real trade");
         int rerolls = game.RerollsRemaining;
@@ -161,7 +161,7 @@ public partial class ProjectTest
         await ClickControl(game, "HUD/InventoryUI/ScrollContainer/HBoxContainer/" + inventory.GetChild(0).Name);
         await ClickControl(game, "World/Showroom/Showcases/Slot4");
         await ToSignal(this, SignalName.ProcessFrame);
-        game._Process(game.BuyerCountdown + 0.001);
+        game._Process(0);
         Check(game.TradeActive && game.StoredItems.Length == 4,
             "The second showroom must also place a selected item with the mouse");
         await ClickControl(game, "World/TradingRoom/Item/TradePanel/Content/Buttons/AcceptButton");
@@ -175,7 +175,7 @@ public partial class ProjectTest
         await PressEscapeForTest();
         await ClickControl(game, "PauseMenu/Root/Overlay/Center/Panel/Content/Menu/CheckpointButton");
         Check(game.CurrentDay == 1 && game.Score == 220, "Checkpoint handler must be connected");
-        await ClickControl(game, "World/MusicWorkshop/LockedOverlay/UnlockButton");
+        await ClickControl(game, "World/MusicWorkshop/LockedOverlay/UnlockPanel/Content/UnlockButton");
         Check(game.MusicWorkshopUnlocked, "Unlock must accept mouse input");
         game.Score = 140;
         game.RefreshItemButtons();
@@ -303,7 +303,7 @@ public partial class ProjectTest
         await DragTo(first);
         Check(game.StoredItems.Length == count - 1 && game.ShowcaseItems[0] == item,
             "Dropping on an occupied showcase must leave both items untouched");
-        game._Process(game.BuyerCountdown + 0.01);
+        game._Process(0);
         Check(game.TradeActive, "The displayed item must become reserved for a trade");
         await DragTo(first);
         Check(game.StoredItems.Length == count - 2 && game.ShowcaseItems[0] >= 0 && game.ItemIndex == item,

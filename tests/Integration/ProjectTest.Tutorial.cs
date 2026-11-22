@@ -264,10 +264,31 @@ public partial class ProjectTest
                 Check(CameraBar().Value == (i + 2) * 6.25, "Each accepted wheel step in either direction must advance zoom by 6.25%");
                 if (i < 14) Step(FirstTradeTutorial.Step.CameraZoom);
             }
-            Check(tutorial.CameraZoomDone && !tutorial.IsCameraCompletionPending &&
-                game.GetNode<WorldCamera>("Camera2D").NavigationLocked &&
-                game.GetNode<WorldCamera>("Camera2D").IsReturningToOverview,
-                "The sixteenth accepted wheel step must start the next camera flight immediately, without a completion timer");
+            Step(FirstTradeTutorial.Step.RoomFocus);
+            Check(tutorial.CameraZoomDone && !tutorial.RoomFocusDone, "Wheel practice must lead to the room focus step");
+            var focusHint = tutorial.GetNode<Label>("Root/Panel/Content/Body");
+            TranslationServer.SetLocale("en");
+            Check(focusHint.Tr(focusHint.Text).StartsWith("Double-click a room"), "The actual focus step must explain the gesture in English");
+            TranslationServer.SetLocale("ru");
+            Check(focusHint.Text.StartsWith("Дважды нажмите ЛКМ по комнате"), "The actual focus step must explain the gesture in Russian");
+            var focusCamera = game.GetNode<WorldCamera>("Camera2D");
+            focusCamera.ResetToOverview();
+            await Frame();
+            await CameraSettled();
+            var corridor = game.GetNode<Control>("World/Corridor/RoomFrame");
+            Rect2 visibleRoom = ScreenBounds(corridor).Intersection(Root.GetVisibleRect());
+            Vector2 focusPoint = visibleRoom.Position + visibleRoom.Size * new Vector2(0.15f, 0.75f);
+            MoveButtonPointer(focusPoint);
+            await Frame();
+            MouseButtonAt(focusPoint, MouseButton.Left, true);
+            MouseButtonAt(focusPoint, MouseButton.Left, false);
+            Check(!tutorial.RoomFocusDone, "A single click must not finish room focus");
+            Root.PushInput(new InputEventMouseButton { Position = focusPoint, GlobalPosition = focusPoint,
+                ButtonIndex = MouseButton.Left, Pressed = true, DoubleClick = true, ButtonMask = MouseButtonMask.Left }, true);
+            MouseButtonAt(focusPoint, MouseButton.Left, false);
+            Check(tutorial.RoomFocusDone && focusCamera.IsFocusing, "A successful real double click must finish room focus");
+            await CameraSettled();
+            await Frame();
             Step(FirstTradeTutorial.Step.Start);
             await CheckCameraLocked();
             Check(!tutorial.HasNode("Root/Panel/Content/Navigation"), "Later steps must not repeat manual navigation instructions");
@@ -301,6 +322,7 @@ public partial class ProjectTest
             Check(!tutorial.IsCameraCompletionPending,
                 "A save from the removed waiting phase must hand off immediately after loading");
             legacyTutorial.EraseSectionKey("tutorial", "camera_handoff_done");
+            legacyTutorial.EraseSectionKey("tutorial", "room_focus_done");
             legacyTutorial.Save(progress);
             await Reload();
             Step(FirstTradeTutorial.Step.Select);
@@ -334,7 +356,7 @@ public partial class ProjectTest
             await Frame();
             Step(FirstTradeTutorial.Step.WaitBuyer);
             await CheckCameraLocked();
-            game._Process(game.BuyerCountdown + 0.01);
+            game._Process(0);
             await Frame();
             Step(FirstTradeTutorial.Step.Offer);
             await CheckTutorialEndBlocked();
@@ -343,7 +365,8 @@ public partial class ProjectTest
             var buyerHint = tutorial.GetNode<Label>("Root/Panel/Content/Body");
             Check(buyerHint.Text.Contains("✓") && buyerHint.Text.Contains("×"),
                 "Offer instructions must identify buttons by their visible symbols, without relying on color");
-            int cash = game.Score, offer = game.OfferedPrice;
+            int cash = game.Score, offer = game.OfferedPrice + TradeScene.SpeedBonus(game.BuyerWaitRemaining) +
+                TradeScene.QualityBonus(game.ActiveTradeQualityRank);
             await ClickControl(game, "World/TradingRoom/Item/TradePanel/Content/Buttons/AcceptButton");
             await Frame();
             Step(FirstTradeTutorial.Step.Summary);
@@ -369,7 +392,22 @@ public partial class ProjectTest
             await CheckTutorialEndBlocked();
             Check(!game.GetNode<ProgressPanel>("HUD/Root/ProgressPanel").Expanded,
                 "Reloading Summary must not open the pack without player input");
-            await ClickControl(game, "FirstTradeTutorial/Root/Panel/Content/Actions/Done");
+            const string summaryButton = "FirstTradeTutorial/Root/Panel/Content/Actions/Done";
+            await ClickControl(game, summaryButton);
+            await Reload();
+            Step(FirstTradeTutorial.Step.Summary);
+            var summaryTitle = tutorial.GetNode<Label>("Root/Panel/Content/Title");
+            var summaryBody = tutorial.GetNode<Label>("Root/Panel/Content/Body");
+            TranslationServer.SetLocale("en");
+            await Frame();
+            Check(summaryTitle.Tr(summaryTitle.Text) == "Music workshop" && summaryBody.Tr(summaryBody.Text).Contains("hold the left mouse button"),
+                "Reload must resume the localized workshop page and explain polishing");
+            await ClickControl(game, summaryButton);
+            Check(summaryTitle.Tr(summaryTitle.Text) == "Pause and saving" && summaryBody.Tr(summaryBody.Text).Contains("return to a checkpoint"),
+                "The last page must cover pause and persistence");
+            TranslationServer.SetLocale("ru");
+            await Frame();
+            await ClickControl(game, summaryButton);
             Check(!tutorial.IsActive && !tutorial.IsShowing, "Acknowledging the summary must complete onboarding");
             CheckFreshRun();
             Check(game.GetNode<WorldCamera>("Camera2D").IsReturningToOverview, "Completing onboarding must fly back to the initial overview");

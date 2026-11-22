@@ -8,6 +8,7 @@ public partial class MusicVolumeControl : PanelContainer
     private Label _percentage;
     private MusicSettings _settings;
     private SoundEffects _effects;
+    private bool _dragging;
 
     public override void _Ready()
     {
@@ -27,11 +28,27 @@ public partial class MusicVolumeControl : PanelContainer
             UpdateValue(_settings.Volume);
             _settings.VolumeChanged += UpdateValue;
         }
+        _slider.DragStarted += () => _dragging = true;
+        _slider.DragEnded += changed =>
+        {
+            _dragging = false;
+            if (changed) SaveVolume(_slider.Value);
+        };
         _slider.ValueChanged += value =>
         {
-            Error error = ControlsSoundEffects ? _effects.SetVolume(value / 100) : _settings.SetVolume(value / 100);
-            if (error != Error.Ok) GD.PushWarning($"Audio volume could not be saved: {error}");
+            if (_dragging)
+            {
+                if (ControlsSoundEffects) _effects.PreviewVolume(value / 100);
+                else _settings.PreviewVolume(value / 100);
+            }
+            else SaveVolume(value);
         };
+    }
+
+    private void SaveVolume(double value)
+    {
+        Error error = ControlsSoundEffects ? _effects.SetVolume(value / 100) : _settings.SetVolume(value / 100);
+        if (error != Error.Ok) GD.PushWarning($"Audio volume could not be saved: {error}");
     }
 
     private void ApplyPlainStyle()

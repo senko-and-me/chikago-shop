@@ -32,9 +32,16 @@ public partial class PauseMenu : CanvasLayer
 		var center = new CenterContainer { Name = "Center" };
 		_overlay.AddChild(center);
 		center.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-		var panel = new PanelContainer { Name = "Panel", CustomMinimumSize = new Vector2(440, 0) };
-		var style = new StyleBoxTexture { Texture = GD.Load<Texture2D>("res://art/ui/panel_large.png") };
-		style.SetContentMarginAll(32);
+		// Reuse the main menu's dark hand-drawn settings backdrop.
+		var panel = new PanelContainer { Name = "Panel", CustomMinimumSize = new Vector2(630, 0) };
+		var style = new StyleBoxTexture
+		{
+			Texture = GD.Load<Texture2D>("res://art/ui/settings_panel.png")
+		};
+		style.ContentMarginLeft = 42;
+		style.ContentMarginRight = 42;
+		style.ContentMarginTop = 32;
+		style.ContentMarginBottom = 32;
 		panel.AddThemeStyleboxOverride("panel", style);
 		center.AddChild(panel);
 		var content = new VBoxContainer { Name = "Content" };
@@ -55,6 +62,7 @@ public partial class PauseMenu : CanvasLayer
 			GetParent<TradeScene>().NewGame();
 			Close();
 		});
+		AddButton(_menu, "TutorialButton", "Повторить обучение", ReplayTutorial);
 		AddButton(_menu, "MainMenuButton", "В главное меню", () =>
 		{
 			var tree = GetTree();
@@ -92,7 +100,7 @@ public partial class PauseMenu : CanvasLayer
 			SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
 			VerticalAlignment = VerticalAlignment.Center
 		};
-		languageLabel.AddThemeColorOverride("font_color", new Color(0.19706f, 0.19706f, 0.19706f));
+		languageLabel.AddThemeColorOverride("font_color", Colors.White);
 		languages.AddChild(languageLabel);
 		var languageGroup = new ButtonGroup();
 		_english = AddLanguageButton(languages, languageGroup, "EnglishButton", "English", "en");
@@ -106,14 +114,21 @@ public partial class PauseMenu : CanvasLayer
 		_settings.GetNode<Button>("BackButton").AddThemeFontSizeOverride("font_size", 24);
 	}
 
+	private void ReplayTutorial()
+	{
+		Close();
+		GetParent<TradeScene>().GetNode<FirstTradeTutorial>("FirstTradeTutorial").Restart();
+	}
+
 	private static Button AddLanguageButton(HBoxContainer row, ButtonGroup group, string name, string text, string language)
 	{
 		var button = new Button
 		{
 			Name = name, Text = text, ToggleMode = true, ButtonGroup = group,
-			CustomMinimumSize = new Vector2(120, 44),
+			CustomMinimumSize = new Vector2(142, 52),
 			AutoTranslateMode = Control.AutoTranslateModeEnum.Disabled
 		};
+		ApplyLanguageStyle(button);
 		row.AddChild(button);
 		button.Pressed += () =>
 		{
@@ -121,6 +136,49 @@ public partial class PauseMenu : CanvasLayer
 			if (error != Error.Ok) GD.PushWarning($"Language preference could not be saved: {error}");
 		};
 		return button;
+	}
+
+	private static StyleBoxTexture PaperStyle(Color tint)
+	{
+		var style = new StyleBoxTexture
+		{
+			Texture = GD.Load<Texture2D>("res://art/ui/panel_small.png"),
+			ModulateColor = tint
+		};
+		style.ContentMarginLeft = 14;
+		style.ContentMarginRight = 14;
+		style.ContentMarginTop = 8;
+		style.ContentMarginBottom = 8;
+		return style;
+	}
+
+	private static void ApplyPaperButtonStyle(Button button)
+	{
+		button.AddThemeStyleboxOverride("normal", PaperStyle(Colors.White));
+		button.AddThemeStyleboxOverride("hover", PaperStyle(new Color(0.88f, 0.88f, 0.88f)));
+		button.AddThemeStyleboxOverride("pressed", PaperStyle(new Color(0.67f, 0.67f, 0.67f)));
+		button.AddThemeStyleboxOverride("disabled", PaperStyle(new Color(0.48f, 0.48f, 0.48f)));
+		button.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
+		button.AddThemeColorOverride("font_color", new Color(0.10f, 0.10f, 0.10f));
+		button.AddThemeColorOverride("font_hover_color", new Color(0.10f, 0.10f, 0.10f));
+		button.AddThemeColorOverride("font_pressed_color", new Color(0.10f, 0.10f, 0.10f));
+		button.AddThemeColorOverride("font_disabled_color", new Color(0.30f, 0.30f, 0.30f));
+		button.AddThemeFontSizeOverride("font_size", 24);
+		button.MouseDefaultCursorShape = Control.CursorShape.PointingHand;
+	}
+
+	private static void ApplyLanguageStyle(Button button)
+	{
+		button.AddThemeStyleboxOverride("normal", PaperStyle(Colors.White));
+		button.AddThemeStyleboxOverride("hover", PaperStyle(new Color(0.85f, 0.85f, 0.85f)));
+		button.AddThemeStyleboxOverride("pressed", PaperStyle(new Color(0.47f, 0.47f, 0.47f)));
+		button.AddThemeStyleboxOverride("hover_pressed", PaperStyle(new Color(0.47f, 0.47f, 0.47f)));
+		button.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
+		button.AddThemeColorOverride("font_color", new Color(0.08f, 0.08f, 0.08f));
+		button.AddThemeColorOverride("font_hover_color", new Color(0.08f, 0.08f, 0.08f));
+		button.AddThemeColorOverride("font_pressed_color", Colors.White);
+		button.AddThemeColorOverride("font_hover_pressed_color", Colors.White);
+		button.MouseDefaultCursorShape = Control.CursorShape.PointingHand;
 	}
 
 	private void RefreshLanguageSelection()
@@ -139,13 +197,14 @@ public partial class PauseMenu : CanvasLayer
 	{
 		var title = new Label { Text = text, HorizontalAlignment = HorizontalAlignment.Center };
 		title.AddThemeFontSizeOverride("font_size", 32);
-		title.AddThemeColorOverride("font_color", new Color(0.19706f, 0.19706f, 0.19706f));
+		title.AddThemeColorOverride("font_color", Colors.White);
 		parent.AddChild(title);
 	}
 
 	private Button AddButton(VBoxContainer parent, string name, string text, System.Action action)
 	{
-		var button = new Button { Name = name, Text = text, CustomMinimumSize = new Vector2(0, 48) };
+		var button = new Button { Name = name, Text = text, CustomMinimumSize = new Vector2(0, 52) };
+		ApplyPaperButtonStyle(button);
 		parent.AddChild(button);
 		button.Pressed += action;
 		if (parent == _menu)

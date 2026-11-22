@@ -40,7 +40,7 @@ public partial class ProjectTest
         void Remember(string path)
         {
             var node = game.GetNode<CanvasItem>(path);
-            Check(node.Owner == game, "Background artwork and decorations must be owned by the packed scene, not generated at runtime");
+            Check(node.Owner != null && (node.Owner == game || game.IsAncestorOf(node.Owner)), "Background artwork and decorations must be owned by the packed scene, not generated at runtime");
             sceneGeometry.Add((node, node.GetTransform(), node is Control control ? control.GetRect() : default));
         }
         foreach (var entry in new[] { ("Atelier", "Background"), ("MusicWorkshop", "Background"),
@@ -56,7 +56,8 @@ public partial class ProjectTest
             Remember($"World/{room}/LockedOverlay");
             Remember($"World/{room}/LockedOverlay/LockedCurtain");
         }
-        Remember("World/MusicWorkshop/LockedOverlay/UnlockButton");
+        Check(game.GetNode<Control>("World/MusicWorkshop/LockedOverlay/UnlockPanel").Owner == game,
+            "The reusable unlock panel must be authored in the room scene; its contents lay out after Ready");
         Remember("World/TimeOfDayDay");
         Remember("World/TimeOfDayNight");
         foreach (ColorRect partition in game.GetNode("World/RoomPartitions").GetChildren())

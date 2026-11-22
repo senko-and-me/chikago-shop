@@ -1,19 +1,20 @@
 using ChikagoShop.Domain.Configuration;
 using ChikagoShop.Domain.Crafting;
 using ChikagoShop.Domain.Days;
+using ChikagoShop.Domain.Economy;
 using ChikagoShop.Domain.Trading;
 
 namespace ChikagoShop.Domain.Simulation;
 
 public sealed record BalanceProfile(string Name, double CycleSeconds, bool Reroll, bool UnlockMusic,
-    bool BuyUpgrades = false, bool Produce = true);
+    bool BuyUpgrades = false, bool Produce = true, string QualityRank = "B", bool HiddenBalance = true);
 public sealed record BalanceSummary(string Profile, int Runs, double FirstQuotaPassRate, double WinRate,
     int CashBeforeFinalP10, int CashBeforeFinalMedian, int CashBeforeFinalP90, double MeanItems);
 
 public static class WeekBalanceSimulator
 {
-    // CycleSeconds includes a full 10-second craft and player interaction, but not
-    // the actual random buyer delay or 0.8 seconds per reroll. No offline earnings.
+    // A cycle includes a full 10-second craft and player interaction. The buyer
+    // timer pauses during crafting; rerolls consume another 0.8 seconds each.
     public static readonly BalanceProfile[] Profiles =
     [
         new("Ordinary: immediate sales", 15, false, true),
@@ -39,13 +40,15 @@ public static class WeekBalanceSimulator
             var rng = new Random(unchecked(seed + run * 8191));
             var upgrades = new DayUpgradeSession();
             int cash = config.StartingMoney;
+            int checkpointCash = cash;
+            var hand = new InvisibleHandDirector();
             bool unlocked = false;
             for (int day = 1; day <= config.Days.TotalDays; day++)
             {
                 upgrades.Reset(preserveCategories: true);
                 if (day > 1)
                 {
-                    upgrades.Offer(day);
+                    upgrades.Offer(day, unlocked);
                     DayUpgrade choice = DayUpgrade.None;
                     if (profile.BuyUpgrades)
                     {
@@ -67,24 +70,35 @@ public static class WeekBalanceSimulator
                 if (profile.Produce && profile.UnlockMusic && !unlocked && day >= 2 && cash >= music.UnlockCost + music.SpinCost + 25)
                 { cash -= music.UnlockCost; unlocked = true; }
                 int energy = upgrades.EnergyCapacityFor(unlocked ? config.Days.EnergyAfterMusicUnlock : config.Days.EnergyBeforeMusicUnlock);
-                double remaining = config.Days.DurationSeconds + (upgrades.Selected == DayUpgrade.Time ? 30 : 0);
-                var tables = new Dictionary<string, WeightedItemTable>();
-                foreach (var workshop in config.Workshops)
-                    tables[workshop.Id] = new WeightedItemTable(config.Rarities.Select((rarity, index) =>
-                        (index, upgrades.Weight(workshop.Id, rarity.Id, rarity.Weight, commonWeight))));
+                double remaining = config.Days.DurationSeconds + (unlocked ? 30 : 0);
+                double duration = remaining;
+                void Observe(double stock = 0)
+                {
+                    bool first = day <= firstDeadline;
+                    var quota = config.Quotas.Single(entry => entry.DeadlineDay == (first ? firstDeadline : config.Days.TotalDays));
+                    hand.Observe(cash, stock, checkpointCash, day, first ? 1 : firstDeadline + 1,
+                        quota.DeadlineDay, 1 - remaining / duration, quota.Amount, profile.HiddenBalance);
+                }
+                Observe();
                 while (profile.Produce && energy > 0)
                 {
                     var workshop = unlocked && cash >= music.SpinCost ? music : atelier;
-                    double cycle = profile.CycleSeconds + 0.5 + rng.NextDouble() * 1.5;
+                    double cycle = profile.CycleSeconds;
                     if (cash < workshop.SpinCost || remaining < cycle) break;
+                    Observe();
+                    var weights = config.Rarities.ToDictionary(rarity => rarity.Id,
+                        rarity => upgrades.Weight(workshop.Id, rarity.Id, rarity.Weight, commonWeight));
+                    InvisibleHandDirector.ApplyRarityShift(weights, hand.RarityShift(weights.Values.Sum(), 5));
+                    var table = new WeightedItemTable(config.Rarities.Select((rarity, index) => (index, weights[rarity.Id])));
                     remaining -= cycle;
                     cash -= workshop.SpinCost;
                     energy--;
                     items++;
-                    var table = tables[workshop.Id];
                     var rarity = config.Rarities[table.Select(rng.Next(table.TotalWeight))];
                     int basePrice = upgrades.Price(workshop.Id, rarity.BasePrices[workshop.Id]);
-                    int percent = TradeOfferRules.InitialPercent(rng.Next(61));
+                    Observe(basePrice);
+                    int percent = hand.AdjustInitialOffer(TradeOfferRules.InitialPercent(rng.Next(61)), 3);
+                    double buyerRemaining = RunRewardRules.BuyerWaitDuration - Math.Max(0, cycle - 10);
                     int rerolls = rarity.Rerolls;
                     while (profile.Reroll && percent < 5 && rerolls-- > 0)
                     {
@@ -92,15 +106,24 @@ public static class WeekBalanceSimulator
                             rng.NextDouble() < TradeOfferRules.HigherRerollChance);
                         percent = options[rng.Next(options.Length)];
                         remaining -= 0.8; // The final active trade can finish after closing.
+                        buyerRemaining -= 0.8;
                     }
-                    cash += TradeOfferRules.Price(basePrice, percent);
+                    cash += TradeOfferRules.Price(basePrice, percent) + RunRewardRules.SpeedBonus(buyerRemaining) +
+                        RunRewardRules.QualityBonus(profile.QualityRank);
+                    Observe();
                 }
                 if (day == config.Days.TotalDays) cashAtFinal[run] = cash;
                 var quota = config.Quotas.SingleOrDefault(quota => quota.DeadlineDay == day);
                 if (quota == null) continue;
                 if (cash < quota.Amount) break;
                 cash -= quota.Amount;
-                if (day == firstDeadline) firstPassed++;
+                if (day == firstDeadline)
+                {
+                    firstPassed++;
+                    checkpointCash = cash;
+                    cash += RunRewardRules.FirstQuotaGift;
+                    hand.Reset();
+                }
                 if (day == config.Days.TotalDays) won++;
             }
         }

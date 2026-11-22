@@ -196,7 +196,7 @@ public partial class ProjectTest
             game.NewGame();
             CraftAtelier(game);
             Check(game.GetNode<Label>("HUD/Root/ScorePanel/ScoreLabel").Text == "Cash: $130" &&
-                  game.GetNode<Label>("HUD/Root/ProgressPanel/Content/DayLabel").Text == "Day: 1 / 7",
+                  game.GetNode<Label>("HUD/Root/ProgressPanel/Content/DayLabel").Text == "Day: 1 / 14",
                 "Dynamic cash and day labels must use English with their actual values");
             Check(game.GetNode<Label>("HUD/Root/ProgressPanel/Content/StatusLabel").Text == "New game.",
                 "Saved Russian status messages must display in English");
@@ -210,7 +210,7 @@ public partial class ProjectTest
             game.PlaceItemInShowcase(0);
             Check(!System.Text.RegularExpressions.Regex.IsMatch(game.GetNode<Label>("World/ShowroomLeft/Showcases/Slot1/ItemLabel").Text, "[А-Яа-яЁё]"),
                 "An occupied showcase must display the localized item name");
-            game._Process(game.BuyerCountdown + 0.01);
+            game._Process(0);
             Check(game.GetNode<Label>("World/TradingRoom/Item/TradePanel/Content/OfferLabel").Text == $"You get: ${game.OfferedPrice}",
                 "Offer text must translate while retaining the actual offer value");
             string saveBefore = FileAccess.GetFileAsString(SavePath);

@@ -12,8 +12,13 @@ public static class ProgressMigration
         if (!data.DayClosed)
             remaining = DaySession.MigrateRemaining(remaining, data.SaveVersion, music,
                 data.SaveVersion >= 9 && data.SelectedUpgrade == (int)DayUpgrade.Time);
+        // Old seven-day saves that had already paid the first quota resume
+        // at the equivalent point in the second week (old day 5 -> new day 8).
+        int day = data.SaveVersion < 14 && data.QuotaStage == 1 && !data.Completed
+            ? data.Day + 3 : data.Day;
         return data with
         {
+            Day = day,
             MusicWorkshopUnlocked = music,
             CheckpointMusicWorkshopUnlocked = data.SaveVersion >= 7 && data.CheckpointMusicWorkshopUnlocked,
             DayRemainingSeconds = remaining,

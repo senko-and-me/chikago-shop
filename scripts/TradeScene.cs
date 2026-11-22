@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using ChikagoShop.Domain.Trading;
+using ChikagoShop.Domain.Economy;
 using Godot;
 
 public partial class TradeScene : Node2D
@@ -56,7 +57,7 @@ public partial class TradeScene : Node2D
 	private Button _atelierGetItemButton = null!;
 	private Button _musicGetItemButton = null!;
 	private RoomCurtainPresentation _musicLockedOverlay = null!;
-	private Button _musicUnlockButton = null!;
+	private MusicWorkshopUnlockPanel _musicUnlockPanel = null!;
 
 	private readonly Control[] _rarityPanels = new Control[2];
 	private readonly Control[] _rarityHotspots = new Control[2];
@@ -70,8 +71,8 @@ public partial class TradeScene : Node2D
 	private RoomCurtainPresentation _rightShowroomOverlay = null!;
 	private InventoryUI _inventoryUI = null!;
 
+	private readonly InvisibleHandDirector _invisibleHand = new();
 	private readonly RandomNumberGenerator _rng = new();
-	private readonly RandomNumberGenerator _buyerArrivalRng = new();
 	private readonly List<int> _storedItems = new();
 	private readonly List<int> _checkpointItems = new();
 	private readonly int[] _showcaseItems = new int[ShowcaseCapacity];
@@ -79,15 +80,17 @@ public partial class TradeScene : Node2D
 		new int[ShowcaseCapacity];
 
 	private int _activeShowcaseIndex = -1;
-	private double _buyerCountdown;
 	private DayCycleController _dayCycle = null!;
 	private EmbroideryGame _embroidery = null!;
 	private EmbroideryGame _polishing = null!;
 	private int _energyRemaining = EnergyBeforeMusicUnlock;
 	private bool _localizationReady;
 
-	private float NextBuyerDelay() =>
-		_buyerArrivalRng.RandfRange((float)DebugBalanceSettings.Number("buyer.min"), (float)DebugBalanceSettings.Number("buyer.max"));
+	public void AcknowledgeMafiaNotice()
+	{
+		MafiaNoticePending = false;
+		SaveProgress();
+	}
 
 	public int SelectedInventoryIndex { get; set; } = -1;
 	public bool CraftMiniGameOpen =>
@@ -98,7 +101,7 @@ public partial class TradeScene : Node2D
 	public bool DayStarted => _dayCycle.Started;
 	public bool RequireStartedDay() => _dayCycle.RequireStartedDay();
 	public bool DayTransitionOpen =>
-		_dayCycle?.TransitionOpen ?? false;
+		(_dayCycle?.TransitionOpen ?? false) || _quotaDialogue != null;
 
 	public ChikagoShop.Domain.Days.DayUpgradeSession DayUpgrades =>
 		_dayCycle?.Upgrades;
@@ -108,7 +111,6 @@ public partial class TradeScene : Node2D
 
 	public int[] StoredItems => _storedItems.ToArray();
 	public int[] ShowcaseItems => (int[])_showcaseItems.Clone();
-	public double BuyerCountdown => _buyerCountdown;
 
 	public static string GetItemKind(int index) => Items[index].Kind;
 	public static string GetItemName(int index) =>
@@ -158,9 +160,11 @@ public partial class TradeScene : Node2D
 			Mathf.Clamp(value, 0, EnergyCapacity);
 	}
 
+	public bool MafiaNoticePending { get; private set; }
 	public int QuotaStage { get; private set; }
 	public int CheckpointDay { get; private set; } = 1;
 	public int CheckpointScore { get; private set; }
+	private double _checkpointInvisibleHandPressure;
 	public int CheckpointAccepted { get; private set; }
 	public int CheckpointDeclined { get; private set; }
 
@@ -249,6 +253,8 @@ public partial class TradeScene : Node2D
 			"World/MusicWorkshop/GetItemButton/PriceHint");
 
 		Array.Fill(_showcaseItems, -1);
+		Array.Fill(_showcaseGrades, "D");
+		Array.Fill(_checkpointShowcaseGrades, "D");
 		Array.Fill(_checkpointShowcaseItems, -1);
 		NormalizeLeftShowcaseNames();
 
@@ -284,16 +290,16 @@ public partial class TradeScene : Node2D
 
 		_inventoryUI = GetNode<InventoryUI>("HUD/InventoryUI");
 		_inventoryUI.Initialize(this);
+		InitializeBuyerWaitWidget();
 
 		_rng.Randomize();
-		_buyerArrivalRng.Randomize();
 
 		_acceptButton.Pressed += AcceptTrade;
 		_declineButton.Pressed += RerollCustomer;
 		_endDayButton.Pressed += EndDay;
 		_atelierGetItemButton.Pressed += GetItemFromAtelier;
 		_musicGetItemButton.Pressed += GetItemFromMusicWorkshop;
-		_musicUnlockButton.Pressed += TryUnlockMusicWorkshop;
+		_musicUnlockPanel.UnlockButton.Pressed += TryUnlockMusicWorkshop;
 
 		for (int i = 0; i < _rarityHotspots.Length; i++)
 		{
@@ -337,6 +343,7 @@ public partial class TradeScene : Node2D
 		CheckpointEnergy = EnergyCapacity;
 
 		_dayCycle = new DayCycleController(this);
+		InitializeQuotaVisit();
 
 		_embroidery = new EmbroideryGame(
 			() => AcquireItem("atelier", AtelierSpinCost));
@@ -358,15 +365,15 @@ public partial class TradeScene : Node2D
 
 		if (restored)
 		{
-			if (TradeActive)
-				ShowTrade();
+			if (TradeActive) ShowTrade();
+			else if (_waitingBuyer && _dayCycle.CanReceiveBuyers) ShowWaitingBuyer();
 			else
+			{
 				FinishTrade();
+				SynchronizeDayState();
+			}
 		}
-		else
-		{
-			FinishTrade();
-		}
+		else FinishTrade();
 
 		RefreshItemButtons();
 		LogStoredItems();
@@ -426,9 +433,7 @@ public partial class TradeScene : Node2D
 		_musicLockedOverlay =
 			workshop.GetNode<RoomCurtainPresentation>("LockedOverlay");
 
-		_musicUnlockButton =
-			workshop.GetNode<Button>(
-				"LockedOverlay/UnlockButton");
+		_musicUnlockPanel = workshop.GetNode<MusicWorkshopUnlockPanel>("LockedOverlay/UnlockPanel");
 	}
 
 	private void RefreshCraftLabels()
@@ -491,7 +496,8 @@ public partial class TradeScene : Node2D
 			return;
 
 		_dayCycle.Tick(delta);
-		TickBuyers(delta);
+		TickBuyerWait(delta);
+		RefreshBuyers();
 	}
 
 	public override void _Input(InputEvent @event)
@@ -542,6 +548,7 @@ public partial class TradeScene : Node2D
 			EnergyBeforeMusicUnlock;
 
 		_dayCycle.SynchronizeRoomDuration();
+		RecalculateInvisibleHand();
 
 		StatusText = "Музыкальная мастерская открыта.";
 
@@ -562,6 +569,8 @@ public partial class TradeScene : Node2D
 			Score < cost)
 			return;
 
+		RecalculateInvisibleHand();
+		int hiddenShift = CraftRarityShift(workshop, _invisibleHand);
 		Score -= cost;
 		EnergyRemaining--;
 
@@ -573,10 +582,12 @@ public partial class TradeScene : Node2D
 				workshop,
 				_rng.RandiRange(
 					0,
-					WorkshopItemCatalog.TotalWeight(workshop, DayUpgrades) - 1),
-				DayUpgrades);
+					WorkshopItemCatalog.TotalWeight(workshop, DayUpgrades, hiddenShift) - 1),
+				DayUpgrades, hiddenShift);
 
 			_storedItems.Add(index);
+			_storedGrades.Add("D");
+			_pendingCraftStorageIndex = _storedGrades.Count - 1;
 
 			GD.Print(
 				$"{workshop}: получен предмет {Items[index].Name} (индекс {index}).");
@@ -613,23 +624,16 @@ public partial class TradeScene : Node2D
 			SelectedInventoryIndex >= _storedItems.Count)
 			return;
 
-		bool firstItem = Array.TrueForAll(
-			_showcaseItems, item => item == -1);
-
 		_showcaseItems[slotIndex] =
 			_storedItems[SelectedInventoryIndex];
 
+		_showcaseGrades[slotIndex] = GetStoredItemQualityRank(SelectedInventoryIndex);
 		_storedItems.RemoveAt(SelectedInventoryIndex);
+		_storedGrades.RemoveAt(SelectedInventoryIndex);
+		if (_pendingCraftStorageIndex >= SelectedInventoryIndex) _pendingCraftStorageIndex--;
 
 		_inventoryUI.DeselectAll();
 		_inventoryUI.UpdateUI(_storedItems);
-
-		if (firstItem &&
-			!TradeActive &&
-			_dayCycle.CanReceiveBuyers)
-		{
-			_buyerCountdown = NextBuyerDelay();
-		}
 
 		RefreshItemButtons();
 		LogStoredItems();
@@ -648,49 +652,24 @@ public partial class TradeScene : Node2D
 		PlaceItemInShowcase(slotIndex);
 	}
 
-	private void TickBuyers(double delta)
+	private void RefreshBuyers()
 	{
-		if (!_dayCycle.CanReceiveBuyers ||
-			TradeActive ||
-			Array.TrueForAll(
-				_showcaseItems, item => item == -1))
-			return;
-
-		_buyerCountdown -= delta;
-
-		if (_buyerCountdown > 0)
-			return;
-
-		var occupied = new List<int>();
-
-		for (int i = 0; i < ShowcaseCapacity; i++)
-		{
-			if (_showcaseItems[i] >= 0)
-				occupied.Add(i);
-		}
-
-		_activeShowcaseIndex = occupied[
-			_rng.RandiRange(0, occupied.Count - 1)];
-
-		ItemIndex = _showcaseItems[_activeShowcaseIndex];
-		_showcaseItems[_activeShowcaseIndex] = -1;
-		_buyerCountdown = 0;
-
-		RefreshShowcases();
-		StartBuyerOffer();
+		if (!_dayCycle.CanReceiveBuyers || GetTree().Paused || DayTransitionOpen || TradeActive) return;
+		if (!_waitingBuyer) StartWaitingBuyer();
+		TryServeWaitingBuyer();
 	}
 
 	private void StartBuyerOffer()
 	{
-		Percentage = TradeOfferRules.InitialPercent(_rng.RandiRange(0, 60));
+		RecalculateInvisibleHand();
+		Percentage = _invisibleHand.AdjustInitialOffer(
+			TradeOfferRules.InitialPercent(_rng.RandiRange(0, 60)),
+			DebugBalanceSettings.Number("hand.offer"));
 		RerollsRemaining = GetItemRerollLimit(ItemIndex);
 
-		CustomerIndex = _rng.RandiRange(
-			0, _customer.GetAppearanceCount() - 1);
-
+		_waitingBuyer = false;
 		TradeActive = true;
 		ShowTrade();
-		BuyerArrived?.Invoke();
 		SaveProgress();
 	}
 
@@ -702,6 +681,7 @@ public partial class TradeScene : Node2D
 		_customer.SetAppearance(CustomerIndex);
 		_customer.Visible = true;
 		_tradePanel.Visible = true;
+		_buyerWaitWidget.SetState(Items[ItemIndex].WorkshopId == "music", _buyerWaitRemaining);
 
 		_acceptButton.Disabled = false;
 		_declineButton.Disabled = false;
@@ -728,10 +708,7 @@ public partial class TradeScene : Node2D
 
 		_musicLockedOverlay.SetLocked(!MusicWorkshopUnlocked);
 
-		_musicUnlockButton.Disabled =
-			Failed ||
-			Completed ||
-			Score < MusicUnlockCost;
+		_musicUnlockPanel.SetOffer(MusicUnlockCost, !Failed && !Completed && Score >= MusicUnlockCost);
 
 		RefreshShowcases();
 	}
@@ -798,7 +775,9 @@ public partial class TradeScene : Node2D
 					continue;
 
 				_storedItems.Add(_showcaseItems[i]);
+				_storedGrades.Add(NormalizeRank(_showcaseGrades[i]));
 				_showcaseItems[i] = -1;
+				_showcaseGrades[i] = "D";
 			}
 		}
 
@@ -810,10 +789,10 @@ public partial class TradeScene : Node2D
 				if (_checkpointShowcaseItems[i] < 0)
 					continue;
 
-				_checkpointItems.Add(
-					_checkpointShowcaseItems[i]);
-
+				_checkpointItems.Add(_checkpointShowcaseItems[i]);
+				_checkpointGrades.Add(NormalizeRank(_checkpointShowcaseGrades[i]));
 				_checkpointShowcaseItems[i] = -1;
+				_checkpointShowcaseGrades[i] = "D";
 			}
 		}
 	}
@@ -833,8 +812,14 @@ public partial class TradeScene : Node2D
 			Percentage >= 0 ? "+" : "",
 			Percentage);
 
-		_offerLabel.Text = GameLocalization.Format(
-			"Получим: {0}$", OfferedPrice);
+		// Present the magnitude of the existing offer; no effect on the trading formula.
+		float intensity = Mathf.Clamp(Mathf.Abs(Percentage) / 30f, 0f, 1f);
+		Color ink = new Color("202020");
+		Color strong = Percentage >= 0 ? new Color("268d48") : new Color("c32b38");
+		_percentLabel.AddThemeColorOverride("font_color", ink.Lerp(strong, intensity));
+		_percentLabel.AddThemeFontSizeOverride("font_size", Mathf.RoundToInt(22f * (1f + 0.10f * intensity)));
+
+		RefreshTotalOfferDisplay();
 
 		_declineButton.Text = $"× ({RerollsRemaining})";
 		_declineButton.Disabled = !TradeOfferRules.CanReroll(TradeActive, DayClosed, RerollsRemaining);
@@ -882,11 +867,14 @@ public partial class TradeScene : Node2D
 		if (!TradeActive)
 			return;
 
-		Score += OfferedPrice;
+		int speedTip = SpeedBonus(_buyerWaitRemaining);
+		int gradeTip = QualityBonus(_activeTradeGrade);
+		Score += OfferedPrice + speedTip + gradeTip;
 		Accepted++;
 
 		RefreshScore();
 		FinishTrade();
+		RecalculateInvisibleHand();
 		RefreshProgress();
 		SaveProgress();
 	}
@@ -898,20 +886,12 @@ public partial class TradeScene : Node2D
 
 	private void FinishTrade()
 	{
-		bool hadActiveTrade = TradeActive;
+		_waitingBuyer = false;
 		TradeActive = false;
 		ItemIndex = -1;
 		_activeShowcaseIndex = -1;
-
-		if (hadActiveTrade)
-		{
-			_buyerCountdown =
-				_dayCycle.CanReceiveBuyers &&
-				Array.Exists(
-					_showcaseItems, item => item >= 0)
-					? NextBuyerDelay()
-					: 0;
-		}
+		_activeTradeGrade = "D";
+		_buyerWaitWidget?.EndTrade();
 
 		_world.ItemVisible = false;
 		_customer.Visible = false;
@@ -985,7 +965,11 @@ public partial class TradeScene : Node2D
 
 	public void SynchronizeDayState()
 	{
-		_buyerCountdown = 0;
+		if (!_dayCycle.CanReceiveBuyers)
+		{
+			if (_waitingBuyer) HideWaitingBuyer();
+		}
+		else RefreshBuyers();
 		RefreshDayPresentation();
 	}
 
@@ -1001,7 +985,7 @@ public partial class TradeScene : Node2D
 
 	public void AdvanceToNextDay()
 	{
-		if (Failed || Completed || TradeActive)
+		if (Failed || Completed || TradeActive || QuotaVisitPending)
 			return;
 
 		FinishTrade();
@@ -1012,6 +996,7 @@ public partial class TradeScene : Node2D
 
 		if (CurrentDay >= deadline)
 		{
+			MafiaNoticePending = true;
 			int target = QuotaStage == 0
 				? FirstQuota
 				: SecondQuota;
@@ -1026,9 +1011,13 @@ public partial class TradeScene : Node2D
 			{
 				Score -= target;
 				QuotaStage = 1;
+				_checkpointQuotaVisit = _quotaVisit = ChikagoShop.Domain.Persistence.QuotaVisitStage.AwaitingVisitor;
 				CurrentDay = FirstDeadline + 1;
 				CheckpointDay = CurrentDay;
 				CheckpointScore = Score;
+				// Each quota stage starts with a neutral hidden balance state.
+				_invisibleHand.Reset();
+				_checkpointInvisibleHandPressure = 0;
 				CheckpointAccepted = Accepted;
 				CheckpointDeclined = Declined;
 
@@ -1041,6 +1030,9 @@ public partial class TradeScene : Node2D
 
 				_checkpointItems.Clear();
 				_checkpointItems.AddRange(_storedItems);
+				_checkpointGrades.Clear();
+				_checkpointGrades.AddRange(_storedGrades);
+				Array.Copy(_showcaseGrades, _checkpointShowcaseGrades, ShowcaseCapacity);
 
 				Array.Copy(
 					_showcaseItems,
@@ -1064,12 +1056,8 @@ public partial class TradeScene : Node2D
 			StatusText = "Начался новый день.";
 		}
 
-		_buyerCountdown = Array.Exists(
-			_showcaseItems,
-			item => item >= 0)
-			? NextBuyerDelay()
-			: 0;
 
+		RecalculateInvisibleHand();
 		RefreshScore();
 		RefreshProgress();
 		RefreshItemButtons();
@@ -1078,27 +1066,31 @@ public partial class TradeScene : Node2D
 
 	public void ReturnToCheckpoint()
 	{
+		ResetQuotaVisitPresentation();
+		_quotaVisit = _checkpointQuotaVisit;
 		_dayCycle.Reset();
 		FinishTrade();
 
 		_storedItems.Clear();
 		_storedItems.AddRange(_checkpointItems);
+		_storedGrades.Clear();
+		_storedGrades.AddRange(_checkpointGrades);
+		Array.Copy(_checkpointShowcaseGrades, _showcaseGrades, ShowcaseCapacity);
+		_pendingCraftStorageIndex = -1;
 
 		Array.Copy(
 			_checkpointShowcaseItems,
 			_showcaseItems,
 			ShowcaseCapacity);
 
-		_buyerCountdown = Array.Exists(
-			_showcaseItems, item => item >= 0)
-			? NextBuyerDelay()
-			: 0;
 
 		_inventoryUI.DeselectAll();
 		CurrentDay = CheckpointDay;
 		_dayCycle.RestoreCheckpointUpgrades();
 
 		Score = CheckpointScore;
+		_invisibleHand.Restore(_checkpointInvisibleHandPressure);
+		MafiaNoticePending = false;
 		MusicWorkshopUnlocked =
 			CheckpointMusicWorkshopUnlocked;
 
@@ -1122,6 +1114,7 @@ public partial class TradeScene : Node2D
 		_inventoryUI.UpdateUI(_storedItems);
 		RefreshShowcases();
 		SaveProgress();
+		_dayCycle.ResumeUpgradeChoice();
 	}
 
 	public void RefreshDebugBalance()
@@ -1130,6 +1123,7 @@ public partial class TradeScene : Node2D
 		FirstQuota = Economy.Quotas.Single(entry => entry.Id == "first").Amount;
 		SecondQuota = Economy.Quotas.Single(entry => entry.Id == "final").Amount;
 		_dayCycle.ApplyDebugBalance();
+		RecalculateInvisibleHand();
 		RefreshCraftLabels();
 		RefreshDayPresentation();
 		RefreshShowcases();
@@ -1139,6 +1133,8 @@ public partial class TradeScene : Node2D
 
 	public void NewGame()
 	{
+		ResetQuotaVisitPresentation();
+		_checkpointQuotaVisit = _quotaVisit = ChikagoShop.Domain.Persistence.QuotaVisitStage.Unavailable;
 		LoadedSavedGame = false;
 		GetNode<WorldCamera>("Camera2D").ResetToOverview();
 		_dayCycle.Reset();
@@ -1146,12 +1142,19 @@ public partial class TradeScene : Node2D
 
 		_storedItems.Clear();
 		_checkpointItems.Clear();
+		_storedGrades.Clear();
+		_checkpointGrades.Clear();
+		_pendingCraftStorageIndex = -1;
+		Array.Fill(_showcaseGrades, "D");
+		Array.Fill(_checkpointShowcaseGrades, "D");
 		Array.Fill(_showcaseItems, -1);
 		Array.Fill(_checkpointShowcaseItems, -1);
-		_buyerCountdown = 0;
 		_inventoryUI.DeselectAll();
 
 		CurrentDay = 1;
+		_invisibleHand.Reset();
+		_checkpointInvisibleHandPressure = 0;
+		MafiaNoticePending = false;
 		Score = StartingMoney;
 		MusicWorkshopUnlocked = false;
 		CheckpointMusicWorkshopUnlocked = false;

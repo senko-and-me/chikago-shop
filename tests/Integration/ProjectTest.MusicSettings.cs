@@ -82,7 +82,7 @@ public partial class ProjectTest
                     Check(control.GetThemeStylebox("panel") is StyleBoxTexture paper &&
                           paper.Texture.ResourcePath == "res://art/ui/panel_small.png" &&
                           control.GetNode<HSlider>("Content/Slider").GetThemeIcon("grabber").ResourcePath ==
-                              "res://art/ui/music_slider_grip.svg",
+                              "res://art/ui/slider_grabber_horizontal.png",
                         "Pause volume must retain paper artwork and the illustrated slider handle");
                     var toggle = fullscreen as FullscreenToggle;
                     bool enabled = DisplayServer.WindowGetMode() is DisplayServer.WindowMode.Fullscreen or DisplayServer.WindowMode.ExclusiveFullscreen;

@@ -4,9 +4,15 @@ using Godot;
 // Observes gameplay during practice and resets the practice run through the existing NewGame action on exit.
 public partial class FirstTradeTutorial : CanvasLayer
 {
-    public enum Step { Camera, Start, Craft, Select, Place, WaitBuyer, Offer, Summary, CameraZoom }
+    public enum Step { Camera, Start, Craft, Select, Place, WaitBuyer, Offer, Summary, CameraZoom, RoomFocus }
     private const float PanGoal = 3000;
     private const int ZoomGoal = 16;
+    private static readonly (string Title, string Body)[] SummaryPages =
+    [
+        ("Дни и квоты", "Наведите мышь на пачку сигарет, чтобы узнать день, сумму и срок квоты. Магазин закрывается по таймеру или по щелчку на часах. Между днями можно купить одно улучшение или пропустить выбор."),
+        ("Музыкальная мастерская", "Открытие мастерской за деньги даёт новые витрины и больше энергии. Создание инструмента тратит деньги и энергию. Для полировки зажмите ЛКМ и протирайте инструмент туда-сюда."),
+        ("Пауза и сохранение", "Esc ставит игру на паузу. В меню можно изменить настройки, вернуться к чекпоинту или повторить обучение. Прогресс сохраняется автоматически. После обучения первый день начнётся заново.")
+    ];
     [Export] public double CameraTravelSeconds { get; set; } = 0.8;
     public Step CurrentStep { get; private set; }
     public bool IsActive { get; private set; }
@@ -15,9 +21,10 @@ public partial class FirstTradeTutorial : CanvasLayer
     public Control Target { get; private set; }
     public bool CameraPanDone { get; private set; }
     public bool CameraZoomDone { get; private set; }
+    public bool RoomFocusDone { get; private set; }
     public float CameraPanProgress => CameraPanDone ? 100 : _panDistance / PanGoal * 100;
     public float CameraZoomProgress => CameraZoomDone ? 100 : _zoomSteps * 100f / ZoomGoal;
-    public bool IsCameraCompletionPending => IsActive && _cameraZoomStarted && CameraPanDone && CameraZoomDone && !_cameraHandoffDone;
+    public bool IsCameraCompletionPending => IsActive && _cameraZoomStarted && CameraPanDone && CameraZoomDone && RoomFocusDone && !_cameraHandoffDone;
     public bool IsSkipConfirmationOpen => _confirmation?.Visible == true;
     private TradeScene _game;
     private Control _root;
@@ -45,6 +52,7 @@ public partial class FirstTradeTutorial : CanvasLayer
     private bool _ownsConfirmationPause;
     private bool _finishing;
     private bool _cameraHandoffDone;
+    private int _summaryPage;
 
     public override void _Ready()
     {
@@ -59,13 +67,14 @@ public partial class FirstTradeTutorial : CanvasLayer
         _camera = _game.GetNode<WorldCamera>("Camera2D");
         _camera.UserPanned += OnUserPanned;
         _camera.UserZoomed += OnUserZoomed;
+        _camera.UserFocusedRoom += OnUserFocusedRoom;
         _camera.OverviewReset += OnOverviewReset;
         _confirmation = GetNode<Control>("Root/SkipConfirmation");
         GetNode<Button>("Root/Panel/Content/Actions/Skip").Pressed += ShowSkipConfirmation;
         GetNode<Button>("Root/SkipConfirmation/Center/Panel/Content/Actions/Confirm").Pressed += ConfirmSkip;
         GetNode<Button>("Root/SkipConfirmation/Center/Panel/Content/Actions/Cancel").Pressed += CancelSkip;
         _game.NewGameStarted += OnNewGameStarted;
-        _done.Pressed += Finish;
+        _done.Pressed += AdvanceSummary;
         Callable.From(Initialize).CallDeferred();
     }
 
@@ -87,6 +96,8 @@ public partial class FirstTradeTutorial : CanvasLayer
         // Older saves with both actions done have already moved on from camera practice.
         _cameraHandoffDone = CameraPanDone && CameraZoomDone &&
             config.GetValue("tutorial", "camera_handoff_done", true).AsBool();
+        RoomFocusDone = restored && config.GetValue("tutorial", "room_focus_done", _cameraHandoffDone).AsBool();
+        _cameraHandoffDone &= RoomFocusDone;
         _initialized = true;
         // Empty SavePath is a transient scene preview/test; explicit Restart still works there.
         if (!finished && !string.IsNullOrEmpty(ProgressPath) && (restored || _game.CurrentDay == 1))
@@ -95,16 +106,13 @@ public partial class FirstTradeTutorial : CanvasLayer
             _acceptedAtStart = restored ? config.GetValue("tutorial", "accepted_at_start", _game.Accepted).AsInt32() : _game.Accepted;
             _lastAccepted = _game.Accepted;
             _sawSale = _game.Accepted > _acceptedAtStart;
+            if (_sawSale && restored)
+                _summaryPage = Mathf.Clamp(config.GetValue("tutorial", "summary_page", 0).AsInt32(), 0, SummaryPages.Length - 1);
             // Establish the run before its first day starts, so Continue can restore camera practice.
             _game.PersistProgress();
             Save(false);
             Refresh();
         }
-        var replay = GetNode<Button>("Replay");
-        replay.Reparent(_game.GetNode("PauseMenu/Root/Overlay/Center/Panel/Content/Menu"));
-        replay.Name = "TutorialButton";
-        replay.Show();
-        replay.Pressed += () => { _game.GetNode<PauseMenu>("PauseMenu").Close(); Restart(); };
     }
 
     public void Restart()
@@ -112,6 +120,7 @@ public partial class FirstTradeTutorial : CanvasLayer
         CloseConfirmation();
         StopCamera();
         CameraPanDone = CameraZoomDone = false;
+        RoomFocusDone = false;
         _cameraHandoffDone = false;
         _panDistance = 0;
         _zoomSteps = 0;
@@ -121,6 +130,7 @@ public partial class FirstTradeTutorial : CanvasLayer
         _acceptedAtStart = _game.Accepted;
         _lastAccepted = _game.Accepted;
         _sawSale = false;
+        _summaryPage = 0;
         Save(false);
         Refresh();
     }
@@ -163,6 +173,20 @@ public partial class FirstTradeTutorial : CanvasLayer
         Finish();
     }
 
+    private void AdvanceSummary()
+    {
+        if (!IsActive || !_sawSale || CurrentStep != Step.Summary || !IsShowing || GetTree().Paused) return;
+        if (_summaryPage == SummaryPages.Length - 1)
+        {
+            Finish();
+            return;
+        }
+
+        _summaryPage++;
+        Save(false);
+        Refresh();
+    }
+
     public override void _Input(InputEvent input)
     {
         if (!IsSkipConfirmationOpen || input is not InputEventKey { Pressed: true, Echo: false, Keycode: Key.Escape }) return;
@@ -199,9 +223,11 @@ public partial class FirstTradeTutorial : CanvasLayer
         config.SetValue("tutorial", "camera_pan_done", CameraPanDone);
         config.SetValue("tutorial", "camera_zoom_done", CameraZoomDone);
         config.SetValue("tutorial", "camera_handoff_done", _cameraHandoffDone);
+        config.SetValue("tutorial", "room_focus_done", RoomFocusDone);
         config.SetValue("tutorial", "camera_pan_distance", _panDistance);
         config.SetValue("tutorial", "camera_zoom_steps", _zoomSteps);
         config.SetValue("tutorial", "camera_zoom_started", _cameraZoomStarted);
+        config.SetValue("tutorial", "summary_page", _summaryPage);
         Error error = config.Save(ProgressPath);
         if (error != Error.Ok) GD.PushWarning($"Tutorial progress could not be saved: {error}");
         _progressDirty = false;
@@ -230,7 +256,13 @@ public partial class FirstTradeTutorial : CanvasLayer
             _cameraHandoffDone = true;
             Save(false);
         }
-        if (_game.Accepted < _lastAccepted) { _acceptedAtStart = _game.Accepted; _sawSale = false; Save(false); }
+        if (_game.Accepted < _lastAccepted)
+        {
+            _acceptedAtStart = _game.Accepted;
+            _sawSale = false;
+            _summaryPage = 0;
+            Save(false);
+        }
         _lastAccepted = _game.Accepted;
         _sawSale |= _game.Accepted > _acceptedAtStart;
         Refresh();
@@ -261,52 +293,60 @@ public partial class FirstTradeTutorial : CanvasLayer
             if (!_cameraZoomStarted) SetStep(Step.Camera,
                 CameraPanDone ? "Готово. Дальше — масштаб."
                     : "Зажмите ЛКМ на фоне и двигайте мышь до 100%.", null);
-            else SetStep(Step.CameraZoom,
-                "Крутите колесо в обе стороны до 100%.", null);
+            else if (!CameraZoomDone)
+                SetStep(Step.CameraZoom, "Крутите колесо в обе стороны до 100%.", null);
+            else SetStep(Step.RoomFocus,
+                "Дважды нажмите ЛКМ по комнате, чтобы приблизить её и расположить по центру экрана.", null);
         }
-        else if (_sawSale) SetStep(Step.Summary, "Наведите мышь на пачку сигарет: там день и квота. Затем нажмите «Понятно».",
-            _game.GetNode<Control>("HUD/Root/ProgressToggleButton"));
+        else if (_sawSale) SetStep(Step.Summary, SummaryPages[_summaryPage].Body,
+            _summaryPage == 0 ? _game.GetNode<Control>("HUD/Root/ProgressToggleButton") : null);
         else if (_game.TradeActive) SetStep(Step.Offer,
-            "«✓» — продать. «×» — сменить покупателя за попытку; цена может упасть. Продайте предмет.",
+            "«✓» продаёт товар. «×» или F тратит попытку и меняет покупателя и цену. Таймер не сбрасывается, а цена может упасть. Скорость продажи и качество товара дают надбавки.",
             _game.GetNode<Control>("World/TradingRoom/Item/TradePanel"));
         else if (_game.DayClosed) SetStep(Step.Start,
-            "Магазин закрыт. Завершите текущую сделку — начнётся следующий день.",
-            _game.GetNode<Control>("HUD/DayClock/Root/ClockActionButton"));
+            "Время вышло. В паузе можно начать с чекпоинта и попробовать снова или пропустить обучение.", null);
         else if (!_game.DayStarted) SetStep(Step.Start,
-            "Нажмите «Начать» на часах, чтобы запустить день.",
+            "Нажмите «Начать» на часах, чтобы открыть магазин. Часы показывают, сколько времени осталось до закрытия.",
             _game.GetNode<Control>("HUD/DayClock/Root/DayTimer/StartButton"));
         else if (_game.ShowcaseItems.Any(item => item >= 0)) SetStep(Step.WaitBuyer,
-            "Ждите покупателя. Цена появится у кассы.",
+            "Покупатель приходит сразу после открытия магазина или продажи. Когда он появляется, красная полоска отсчитывает 20 секунд для надбавки за скорость.",
             _game.GetNode<Control>("World/ShowroomLeft/Showcases/Slot1"));
         else if (_game.StoredItems.Length > 0)
         {
             if (_game.SelectedInventoryIndex < 0) SetStep(Step.Select,
-                "Выберите предмет внизу. Наведите мышь, чтобы узнать цену и редкость.",
+                "Выберите предмет в инвентаре внизу. Наведите мышь, чтобы узнать его цену, редкость и качество.",
                 _game.GetNode<InventoryUI>("HUD/InventoryUI").Container.GetChild<Control>(0));
             else SetStep(Step.Place,
                 "Нажмите на свободную витрину слева или перетащите туда предмет.",
                 _game.GetNode<Control>("World/ShowroomLeft/Showcases/Slot1"));
         }
         else if (_game.EnergyRemaining <= 0) SetStep(Step.Start,
-            "Нет энергии. Завершите день нажатием на часы. Предметы сохранятся.",
-            _game.GetNode<Control>("HUD/DayClock/Root/ClockActionButton"));
+            "Энергия закончилась. Она восстанавливается на следующий день. В паузе можно начать с чекпоинта и попробовать снова.", null);
         else SetStep(Step.Craft,
-            "Нажмите «Создать предметы» в ателье. Мини-игра тратит деньги и энергию.",
+            "Нажмите «Создать предметы» в ателье. Запуск вышивки тратит деньги и энергию. Нажимайте на светящиеся точки. Значок «?» показывает шансы редкости.",
             _game.GetNode<Control>("World/Atelier/GetItemButton"));
         Layout();
     }
 
     private void SetStep(Step step, string message, Control target)
     {
-        bool cameraStep = step is Step.Camera or Step.CameraZoom;
-        bool continuingPractice = (_appliedCameraStep is Step.Camera or Step.CameraZoom) && cameraStep;
+        bool cameraStep = step is Step.Camera or Step.CameraZoom or Step.RoomFocus;
+        bool continuingPractice = (_appliedCameraStep is Step.Camera or Step.CameraZoom or Step.RoomFocus) && cameraStep;
         CurrentStep = step;
         _camera.NavigationLocked = !cameraStep;
         _body.Text = message;
         Target = target;
         _done.Visible = step == Step.Summary;
-        _title.Text = step == Step.Camera ? "Передвижение камеры" : step == Step.CameraZoom ? "Масштабирование" : "Первая продажа";
-        _cameraProgress.Visible = cameraStep;
+        _done.Text = _summaryPage < SummaryPages.Length - 1 ? "Далее" : "Понятно";
+        _title.Text = step switch
+        {
+            Step.Camera => "Передвижение камеры",
+            Step.CameraZoom => "Масштабирование",
+            Step.RoomFocus => "Приближение комнаты",
+            Step.Summary => SummaryPages[_summaryPage].Title,
+            _ => "Первая продажа"
+        };
+        _cameraProgress.Visible = cameraStep && step != Step.RoomFocus;
         _cameraProgress.Value = step == Step.Camera ? CameraPanProgress : CameraZoomProgress;
         if (_appliedCameraStep != step && !_game.DayTransitionOpen)
         {
@@ -321,7 +361,14 @@ public partial class FirstTradeTutorial : CanvasLayer
         }
     }
 
-    private bool Practicing => IsActive && IsShowing && (CurrentStep is Step.Camera or Step.CameraZoom) && !GetTree().Paused;
+    private bool Practicing => IsActive && IsShowing && (CurrentStep is Step.Camera or Step.CameraZoom or Step.RoomFocus) && !GetTree().Paused;
+
+    private void OnUserFocusedRoom()
+    {
+        if (!Practicing || CurrentStep != Step.RoomFocus || RoomFocusDone) return;
+        RoomFocusDone = true;
+        Save(false);
+    }
 
     private void OnUserPanned(Vector2 displacement)
     {
@@ -364,6 +411,7 @@ public partial class FirstTradeTutorial : CanvasLayer
         _camera.NavigationLocked = false;
         _camera.UserPanned -= OnUserPanned;
         _camera.UserZoomed -= OnUserZoomed;
+        _camera.UserFocusedRoom -= OnUserFocusedRoom;
         _camera.OverviewReset -= OnOverviewReset;
         StopCamera();
     }

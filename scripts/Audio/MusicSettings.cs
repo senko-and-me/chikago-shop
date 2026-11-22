@@ -34,6 +34,9 @@ public partial class MusicSettings : Node
         Apply(volume);
     }
 
+    // Runtime preview while dragging the slider: do not write to disk per mouse movement.
+    public void PreviewVolume(double volume) => Apply(volume);
+
     public Error SetVolume(double volume)
     {
         Apply(volume);

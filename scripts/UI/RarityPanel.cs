@@ -4,6 +4,8 @@ using Godot;
 
 public partial class RarityPanel : Control
 {
+	private static readonly Color IncreaseColor = new("268d48");
+	private static readonly Color DecreaseColor = new("c32b38");
 	[Export] public int Price0 { get; set; } = 30;
 	[Export] public int Price1 { get; set; } = 50;
 	[Export] public int Price2 { get; set; } = 80;
@@ -86,28 +88,41 @@ public partial class RarityPanel : Control
 	{
 		string workshop = GetParent().Name == "MusicWorkshop" ? "music" : "atelier";
 		string[] rarities = ["common", "ordinary", "first_class", "exclusive", "unique"];
-		var upgrades = (_game as TradeScene)?.DayUpgrades;
+		var game = _game as TradeScene;
 		var items = WorkshopItemCatalog.Items.Where(item => item.WorkshopId == workshop).ToArray();
-		var populated = items.Select(item => item.RarityId).ToHashSet();
-		double total = rarities.Where(populated.Contains).Sum(rarity => WorkshopItemCatalog.RarityWeight(workshop, rarity, upgrades));
-		double baseTotal = rarities.Where(populated.Contains).Sum(WorkshopItemCatalog.BaselineWeight);
+		var baseWeights = WorkshopItemCatalog.RarityWeights(workshop);
+		var currentWeights = game?.PreviewRarityWeights(workshop) ?? baseWeights;
+		int baseTotal = baseWeights.Values.Sum();
+		int total = currentWeights.Values.Sum();
 		for (int i = 0; i < rarities.Length; i++)
 		{
-			double baseline = populated.Contains(rarities[i]) && baseTotal > 0 ? WorkshopItemCatalog.BaselineWeight(rarities[i]) / baseTotal * 100 : 0;
-			double current = populated.Contains(rarities[i]) && total > 0 ? WorkshopItemCatalog.RarityWeight(workshop, rarities[i], upgrades) / total * 100 : 0;
+			int baseWeight = baseWeights[rarities[i]];
+			int currentWeight = currentWeights[rarities[i]];
+			double baseline = baseTotal > 0 ? baseWeight * 100.0 / baseTotal : 0;
+			double current = total > 0 ? currentWeight * 100.0 / total : 0;
 			var label = Values.GetNode<Label>($"Chance{i}");
 			label.Text = $"{current:0.#}%";
-			label.TooltipText = GameLocalization.Format("Базовый шанс: {0}%", baseline);
-			label.AddThemeColorOverride("font_color", Colors.Black);
+			label.TooltipText = GameLocalization.Format("Базовый шанс: {0:0.#}%", baseline);
+			SetChangeColor(label, ((long)currentWeight * baseTotal).CompareTo((long)baseWeight * total));
 			var category = items.Where(item => item.RarityId == rarities[i]).ToArray();
 			int average = category.Length > 0 ? (int)Math.Round(category.Average(item => item.BasePrice)) : 0;
-			int price = upgrades?.Price(workshop, average) ?? average;
+			int price = category.Length > 0
+				? (int)Math.Round(category.Average(item => game?.DayUpgrades?.Price(workshop, item.BasePrice) ?? item.BasePrice))
+				: 0;
 			var priceLabel = Values.GetNode<Label>($"Price{i}");
 			priceLabel.Text = $"{price}$";
-			priceLabel.AddThemeColorOverride("font_color", Colors.Black);
+			SetChangeColor(priceLabel, price.CompareTo(average));
 			Values.GetNode<Label>($"Rerolls{i}").Text = WorkshopItemCatalog.RerollsFor(rarities[i]).ToString();
 		}
 	}
+
+	private static void SetChangeColor(Label label, int difference) =>
+		label.AddThemeColorOverride("font_color", difference switch
+		{
+			> 0 => IncreaseColor,
+			< 0 => DecreaseColor,
+			_ => Colors.Black
+		});
 
 	public void UpdatePlacement()
 	{

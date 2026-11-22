@@ -3,6 +3,7 @@
 [ext_resource type="Script" path="res://scripts/UI/DayTransitionCard.cs" id="1_card"]
 [ext_resource type="Theme" path="res://themes/game_theme.tres" id="2_theme"]
 [ext_resource type="Script" path="res://scripts/UI/PokerCardBack.cs" id="3_back"]
+[ext_resource type="Texture2D" path="res://art/ui/panel_small.png" id="4_button_paper"]
 
 [sub_resource type="StyleBoxFlat" id="Tray"]
 resource_local_to_scene = true
@@ -11,6 +12,37 @@ content_margin_top = 24.0
 content_margin_right = 24.0
 content_margin_bottom = 24.0
 bg_color = Color(0, 0, 0, 0)
+
+[sub_resource type="StyleBoxTexture" id="SkipNormal"]
+texture = ExtResource("4_button_paper")
+content_margin_left = 14.0
+content_margin_right = 14.0
+content_margin_top = 6.0
+content_margin_bottom = 6.0
+
+[sub_resource type="StyleBoxTexture" id="SkipHover"]
+texture = ExtResource("4_button_paper")
+modulate_color = Color(0.9, 0.9, 0.9, 1)
+content_margin_left = 14.0
+content_margin_right = 14.0
+content_margin_top = 6.0
+content_margin_bottom = 6.0
+
+[sub_resource type="StyleBoxTexture" id="SkipPressed"]
+texture = ExtResource("4_button_paper")
+modulate_color = Color(0.74, 0.74, 0.74, 1)
+content_margin_left = 14.0
+content_margin_right = 14.0
+content_margin_top = 6.0
+content_margin_bottom = 6.0
+
+[sub_resource type="StyleBoxTexture" id="SkipDisabled"]
+texture = ExtResource("4_button_paper")
+modulate_color = Color(0.65, 0.65, 0.65, 1)
+content_margin_left = 14.0
+content_margin_right = 14.0
+content_margin_top = 6.0
+content_margin_bottom = 6.0
 
 [node name="DayTransitionCard" type="CanvasLayer"]
 process_mode = 3
@@ -81,5 +113,15 @@ mouse_filter = 2
 
 [node name="Skip" type="Button" parent="Root/Center/Card/Content"]
 layout_mode = 2
-custom_minimum_size = Vector2(0, 36)
+custom_minimum_size = Vector2(252, 45)
+size_flags_horizontal = 4
+mouse_default_cursor_shape = 2
 text = "Пропустить"
+theme_override_colors/font_color = Color(0.09, 0.09, 0.09, 1)
+theme_override_colors/font_hover_color = Color(0.09, 0.09, 0.09, 1)
+theme_override_colors/font_pressed_color = Color(0.09, 0.09, 0.09, 1)
+theme_override_colors/font_disabled_color = Color(0.36, 0.36, 0.36, 1)
+theme_override_styles/normal = SubResource("SkipNormal")
+theme_override_styles/hover = SubResource("SkipHover")
+theme_override_styles/pressed = SubResource("SkipPressed")
+theme_override_styles/disabled = SubResource("SkipDisabled")

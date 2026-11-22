@@ -13,6 +13,7 @@ public partial class ProjectTest
         {
             var instance = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
             instance.SavePath = save;
+            instance.GetNode<FirstTradeTutorial>("FirstTradeTutorial").ProgressPath = "";
             Root.AddChild(instance);
             instance.SetProcess(false);
             instance.GetNode<Camera2D>("Camera2D").SetProcess(false);
@@ -25,14 +26,16 @@ public partial class ProjectTest
             if (FileAccess.FileExists(save)) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(save));
             game = Create();
             await Wait(0.1);
+            game.EndDay();
             game.GetItemFromAtelier();
             FinishEmbroidery(game);
             int itemCount = game.StoredItems.Length;
-            game.Score = 500;
+            game.Score = 2000;
             var inventory = game.GetNode<InventoryUI>("HUD/InventoryUI");
             var layer = inventory.GetNode<Control>("ExpansionAnimation");
             var background = inventory.GetNode<TextureRect>("InventorySlotBackground");
             float startX = background.Position.X;
+            if (!game.DayStarted) game.EndDay();
             game.TryUnlockMusicWorkshop();
             Check(inventory.IsExpanding && layer.GetChildCount() == 6 && inventory.Container.GetChildCount() == 6,
                 "An in-game capacity increase must animate six visual slots while the real inventory already has its final capacity");
@@ -65,16 +68,18 @@ public partial class ProjectTest
             using (var image = await CapturePresentation("inventory-expansion")) { }
             await Wait(0.7);
             Check(!inventory.IsExpanding && layer.GetChildCount() == 0 && inventory.Scroller.Modulate == Colors.White &&
-                background.Modulate == Colors.White && game.StoredItems.Length == itemCount && game.Score == 400,
+                background.Modulate == Colors.White && game.StoredItems.Length == itemCount && game.Score == 1000,
                 "Finishing the expansion must reveal the actual inventory without losing items or charging extra");
             game.NewGame();
-            game.Score = 500;
+            game.Score = 2000;
+            if (!game.DayStarted) game.EndDay();
             game.TryUnlockMusicWorkshop();
             game.NewGame();
             await Wait(0.1);
             Check(!inventory.IsExpanding && inventory.Container.GetChildCount() == 3 && layer.GetChildCount() == 0 &&
                 background.Modulate == Colors.White, "NewGame must cancel the expansion and restore the three-slot layout");
-            game.Score = 500;
+            game.Score = 2000;
+            if (!game.DayStarted) game.EndDay();
             game.TryUnlockMusicWorkshop();
             Root.Size = new Vector2I(1000, 800);
             await Wait(0.1);

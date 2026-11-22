@@ -6,7 +6,7 @@ namespace ChikagoShop.Domain.Tests;
 
 public sealed class EconomyConfigTests
 {
-    [TestCase("duration_seconds", 60)]
+    [TestCase("duration_seconds", 0)]
     [TestCase("items_per_craft", 3)]
     [TestCase("energy_before_music_unlock", 0)]
     [TestCase("energy_after_music_unlock", 1)]
@@ -28,12 +28,12 @@ public sealed class EconomyConfigTests
         {
             Assert.That(config.SchemaVersion, Is.EqualTo(1));
             Assert.That(config.IsProvisional, Is.True);
-            Assert.That(config.Days.TotalDays, Is.EqualTo(7));
+            Assert.That(config.Days.TotalDays, Is.EqualTo(14));
             Assert.That(config.StartingMoney, Is.EqualTo(220));
             Assert.That(config.Workshops.Select(value => value.Id), Is.EqualTo(new[] { "atelier", "music" }));
             Assert.That(config.Workshops.Select(value => value.SpinCost), Is.EqualTo(new[] { 25, 50 }));
-            Assert.That(config.Workshops.Select(value => value.UnlockCost), Is.EqualTo(new[] { 0, 100 }));
-            Assert.That(config.Quotas.Select(value => value.Amount), Is.EqualTo(new[] { 250, 450 }));
+            Assert.That(config.Workshops.Select(value => value.UnlockCost), Is.EqualTo(new[] { 0, 1000 }));
+            Assert.That(config.Quotas.Select(value => value.Amount), Is.EqualTo(new[] { 750, 1500 }));
             Assert.That(config.Rarities.Select(value => value.Weight), Is.EqualTo(new[] { 60, 25, 10, 4, 1 }));
             Assert.That(config.OfferRanges.Sum(value => value.ChancePercent), Is.EqualTo(100));
         });

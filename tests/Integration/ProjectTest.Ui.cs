@@ -320,7 +320,7 @@ public partial class ProjectTest
                 GameLocalization.SelectLanguage(language);
                 await ToSignal(this, SignalName.ProcessFrame);
                 await ToSignal(this, SignalName.ProcessFrame);
-                Check(Caption(0).Text.Contains("1") && Caption(1).Text.Contains("250") && Caption(2).Text.Contains("4"),
+                Check(Caption(0).Text.Contains("1") && Caption(1).Text.Contains("250") && Caption(2).Text.Contains("7"),
                     "Current day, upcoming quota and inclusive countdown must be localized from live state");
                 foreach (var stick in sticks)
                 {
@@ -372,7 +372,7 @@ public partial class ProjectTest
             await Settle();
             Check(!panel.Pinned && !panel.Expanded, $"Clicking again unpins and restores hover behavior: pinned={panel.Pinned}, expanded={panel.Expanded}, focus={toggle.HasFocus()}, failed={game.Failed}");
             game.FirstQuota = 999;
-            game.CurrentDay = 4;
+            game.CurrentDay = 7;
             game.RefreshDayPresentation();
             await ToSignal(this, SignalName.ProcessFrame);
             await ToSignal(this, SignalName.ProcessFrame);
@@ -382,15 +382,15 @@ public partial class ProjectTest
             game.AdvanceToNextDay();
             await ToSignal(this, SignalName.ProcessFrame);
             await ToSignal(this, SignalName.ProcessFrame);
-            Check(game.QuotaStage == 1 && Caption(0).Text.Contains("5") && Caption(1).Text.Contains("450") && Caption(2).Text.Contains("3 days"),
+            Check(game.QuotaStage == 1 && Caption(0).Text.Contains("8") && Caption(1).Text.Contains("1500") && Caption(2).Text.Contains("7 days"),
                 "Paying the first quota switches both the target and deadline to the final quota");
-            game.CurrentDay = 7;
+            game.CurrentDay = 14;
             game.AdvanceToNextDay();
             await Settle();
             Check(game.Completed && !content.Visible && Caption(1).Text == "All quotas paid" && Caption(2).Text == "Debt repaid",
                 "Victory replaces obsolete countdowns without adding any extra information");
             game.NewGame();
-            game.CurrentDay = 4;
+            game.CurrentDay = 7;
             game.Score = 0;
             game.AdvanceToNextDay();
             await Settle();
@@ -399,7 +399,7 @@ public partial class ProjectTest
             game.GetNode<PauseMenu>("PauseMenu").Open();
             await ClickControl(game, "PauseMenu/Root/Overlay/Center/Panel/Content/Menu/CheckpointButton");
             Check(!game.Failed && game.CurrentDay == 1, "Checkpoint recovery remains wired");
-            game.CurrentDay = 4;
+            game.CurrentDay = 7;
             game.Score = 0;
             game.AdvanceToNextDay();
             await Settle();

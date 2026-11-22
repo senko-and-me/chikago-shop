@@ -12,6 +12,7 @@ public partial class PolishingSurface : Control
 
 	public PolishingSession Session { get; private set; } = null!;
 	public string InstrumentKind { get; private set; } = "violin";
+	public bool DrawClothAtPointer { get; set; } = true;
 
 	public Rect2 InstrumentRect
 	{
@@ -310,7 +311,7 @@ void fragment() {
 		if (_instrument == null)
 			return;
 
-		if (_pointer != -2)
+		if (DrawClothAtPointer && _pointer != -2)
 		{
 			Vector2 pointer = _cloth;
 

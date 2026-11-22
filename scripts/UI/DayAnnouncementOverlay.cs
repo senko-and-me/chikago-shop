@@ -9,6 +9,7 @@ public partial class DayAnnouncementOverlay : CanvasLayer
     private int _day, _totalDays, _firstDeadline;
     private bool _openingPending = true, _midpointShown, _closedShown;
     private double _elapsed;
+    private System.Action _afterReward;
     public bool IsShowing => _root.Visible;
     public float Opacity => _root.Modulate.A;
 
@@ -152,6 +153,7 @@ public partial class DayAnnouncementOverlay : CanvasLayer
 
     private void ShowMessage(string message, bool showDetails = false)
     {
+        _afterReward = null;
         _title.Text = message; // Godot translates on display and on locale changes.
         _details.Visible = showDetails;
         UpdateFont();
@@ -161,8 +163,15 @@ public partial class DayAnnouncementOverlay : CanvasLayer
         SetProcess(true);
     }
 
+    public void ShowReward(string message, System.Action after)
+    {
+        ShowMessage(message);
+        _afterReward = after;
+    }
+
     public void Dismiss()
     {
+        _afterReward = null;
         _root.Hide();
         SetProcess(false);
     }
@@ -170,7 +179,13 @@ public partial class DayAnnouncementOverlay : CanvasLayer
     public override void _Process(double delta)
     {
         _elapsed += delta;
-        if (_elapsed >= FadeIn + Hold + FadeOut) { Dismiss(); return; }
+        if (_elapsed >= FadeIn + Hold + FadeOut)
+        {
+            var after = _afterReward;
+            Dismiss();
+            after?.Invoke();
+            return;
+        }
         float alpha = _elapsed < FadeIn ? (float)(_elapsed / FadeIn)
             : _elapsed < FadeIn + Hold ? 1 : 1 - (float)((_elapsed - FadeIn - Hold) / FadeOut);
         alpha = Mathf.SmoothStep(0, 1, alpha);

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using ChikagoShop.Domain.Crafting;
@@ -13,22 +14,22 @@ public static class WorkshopItemCatalog
     public static IReadOnlyList<CraftItem> BaselineItems { get; } = System.Array.AsReadOnly(new[]
     {
         // Preserve the first ten save indices, internal kinds and rarity/price tiers.
-        Item("atelier", "common", "hat", "кепка", "cap.png"),
-        Item("atelier", "ordinary", "gloves", "рубашка", "shirt.png"),
-        Item("music", "common", "guitar", "маракасы", "maracas.png"),
-        Item("music", "ordinary", "trumpet", "метроном", "metronome.png"),
-        Item("atelier", "first_class", "clothing_first", "перчатки", "gloves.png"),
-        Item("atelier", "exclusive", "clothing_exclusive", "пиджак", "jacket.png"),
-        Item("atelier", "unique", "clothing_unique", "меховая накидка", "fur_stole.png"),
-        Item("music", "first_class", "music_first", "труба", "trumpet.png"),
+        Item("atelier", "common", "hat", "Шляпка", "atelier_hat.png"),
+        Item("atelier", "ordinary", "gloves", "Жилетка", "atelier_vest.png"),
+        Item("music", "common", "guitar", "банджо", "maracas.png"),
+        Item("music", "ordinary", "trumpet", "гитара", "metronome.png"),
+        Item("atelier", "first_class", "clothing_first", "Перчатки", "atelier_gloves.png"),
+        Item("atelier", "exclusive", "clothing_exclusive", "шляпа Маттео", "jacket.png"),
+        Item("atelier", "unique", "clothing_unique", "лорнет", "fur_stole.png"),
+        Item("music", "first_class", "music_first", "туба", "trumpet.png"),
         Item("music", "exclusive", "music_exclusive", "скрипка", "violin.png"),
-        Item("music", "unique", "music_unique", "граммофон", "gramophone.png"),
-        Item("atelier", "ordinary", "cloche_hat", "шляпка-клош", "cloche_hat.png"),
-        Item("atelier", "first_class", "shoes", "туфли", "shoes.png"),
+        Item("music", "unique", "music_unique", "барабан", "gramophone.png"),
+        Item("atelier", "ordinary", "cloche_hat", "Жилетка", "atelier_vest.png"),
+        Item("atelier", "first_class", "shoes", "Перчатки", "atelier_gloves.png"),
         Item("atelier", "exclusive", "dress", "платье", "dress.png"),
-        Item("music", "common", "tambourine", "бубен", "tambourine.png"),
-        Item("music", "exclusive", "saxophone", "саксофон", "saxophone.png"),
-        Item("music", "unique", "cello", "виолончель", "cello.png")
+        Item("music", "common", "tambourine", "гитара", "tambourine.png"),
+        Item("music", "exclusive", "saxophone", "скрипка", "saxophone.png"),
+        Item("music", "unique", "cello", "барабан", "cello.png")
     });
     private static int _revision = -1;
     private static IReadOnlyList<CraftItem> _items;
@@ -49,17 +50,40 @@ public static class WorkshopItemCatalog
             return _items;
         }
     }
-    private static RarityItemTable Table(string workshop, DayUpgradeSession upgrades = null) => new(
-        Items.Select((item, index) => (item, index)).Where(entry => entry.item.WorkshopId == workshop)
-            .Select(entry => (entry.index, entry.item.RarityId)),
-        Config.Rarities.ToDictionary(rarity => rarity.Id, rarity => RarityWeight(workshop, rarity.Id, upgrades)));
-    public static int TotalWeight(string workshop, DayUpgradeSession upgrades = null) => Table(workshop, upgrades).TotalWeight;
+    private static RarityItemTable Table(string workshop, DayUpgradeSession upgrades = null, int hiddenShift = 0)
+    {
+        var entries = Items.Select((item, index) => (item, index))
+            .Where(entry => entry.item.WorkshopId == workshop).ToArray();
+        return new RarityItemTable(entries.Select(entry => (entry.index, entry.item.RarityId)),
+            RarityWeights(workshop, upgrades, hiddenShift));
+    }
+
+    public static IReadOnlyDictionary<string, int> RarityWeights(string workshop, DayUpgradeSession upgrades = null, int hiddenShift = 0)
+    {
+        var available = Items.Where(item => item.WorkshopId == workshop).Select(item => item.RarityId).ToHashSet();
+        var weights = Config.Rarities.ToDictionary(rarity => rarity.Id,
+            rarity => available.Contains(rarity.Id) ? RarityWeight(workshop, rarity.Id, upgrades) : 0);
+        ApplyHiddenShift(weights, hiddenShift);
+        return weights;
+    }
+
+    private static void ApplyHiddenShift(Dictionary<string, int> weights, int requested) =>
+        ChikagoShop.Domain.Economy.InvisibleHandDirector.ApplyRarityShift(weights, requested);
+
+    // The selection table expands tickets to distribute each rarity across its items.
+    // Use the original rarity-weight sum (not its expanded ticket count) for a percentage-point shift.
+    public static int RarityWeightTotal(string workshop, DayUpgradeSession upgrades = null) =>
+        Config.Rarities.Where(rarity => Items.Any(item => item.WorkshopId == workshop && item.RarityId == rarity.Id))
+            .Sum(rarity => RarityWeight(workshop, rarity.Id, upgrades));
+    public static int TotalWeight(string workshop, DayUpgradeSession upgrades = null, int hiddenShift = 0) =>
+        Table(workshop, upgrades, hiddenShift).TotalWeight;
     public static int CraftCost(string workshop) => Config.Workshops.Single(entry => entry.Id == workshop).SpinCost;
     public static int DayDurationSeconds => Config.Days.DurationSeconds;
-    public static int Roll(string workshop, int ticket, DayUpgradeSession upgrades = null) => Table(workshop, upgrades).Select(ticket);
-    public static (int ItemIndex, string InstrumentKind) PreparePolishing(int ticket, DayUpgradeSession upgrades = null)
+    public static int Roll(string workshop, int ticket, DayUpgradeSession upgrades = null, int hiddenShift = 0) =>
+        Table(workshop, upgrades, hiddenShift).Select(ticket);
+    public static (int ItemIndex, string InstrumentKind) PreparePolishing(int ticket, DayUpgradeSession upgrades = null, int hiddenShift = 0)
     {
-        int index = Roll("music", ticket, upgrades);
+        int index = Roll("music", ticket, upgrades, hiddenShift);
         // Legacy save kinds do not always match the pictured instrument (for example guitar is maracas).
         return (index, System.IO.Path.GetFileNameWithoutExtension(Items[index].ArtPath));
     }

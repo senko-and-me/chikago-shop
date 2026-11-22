@@ -7,10 +7,11 @@ public partial class ProgressPanel : Control
 {
     [Export] public double SlideSeconds { get; set; } = 0.32;
     [Export] public double StaggerSeconds { get; set; } = 0.065;
-    [Export] public float ClosedX { get; set; } = -286;
+    [Export] public float ClosedX { get; set; } = -350;
     [Export] public float OpenX { get; set; } = 22;
     public bool Expanded { get; private set; }
     public bool Pinned { get; private set; }
+    public bool HoveringHotspot { get; private set; }
     public bool IsAnimating => _slide?.IsRunning() == true;
     private TradeScene _game;
     private Button _toggle;
@@ -22,7 +23,6 @@ public partial class ProgressPanel : Control
     private bool _wasVisible = true;
     private string _lastText;
     private Vector2? _pointer;
-    private float _collapsedWidth;
 
     public override void _Ready()
     {
@@ -31,8 +31,6 @@ public partial class ProgressPanel : Control
         _content = GetNode<Control>("Content");
         _sticks = new[] { "Day", "Quota", "Deadline" }.Select(name => GetNode<TextureRect>("Visual/" + name)).ToArray();
         _captions = _sticks.Select(stick => stick.GetNode<Label>("Caption")).ToArray();
-        _collapsedWidth = Mathf.Max(_toggle.Size.X, ClosedX + _sticks.Max(stick => stick.Size.X) + 2);
-        _toggle.Size = new Vector2(_collapsedWidth, _toggle.Size.Y);
         _toggle.Pressed += () => { Pinned = !Pinned; SetExpanded(Pinned); };
         _toggle.GuiInput += input =>
         {
@@ -61,12 +59,13 @@ public partial class ProgressPanel : Control
             return;
         }
         _wasVisible = true;
-        Size = new Vector2(Expanded ? 384 : _collapsedWidth, 208);
+        Size = new Vector2(Expanded ? 384 : 46, 208);
         Vector2 pointer = _pointer.HasValue ? GetGlobalTransformWithCanvas().AffineInverse() * _pointer.Value : GetLocalMousePosition();
-        bool onPack = new Rect2(0, 0, _collapsedWidth, 208).HasPoint(pointer);
+        bool onPack = new Rect2(0, 0, 46, 208).HasPoint(pointer);
         bool onOpen = Expanded && new Rect2(0, 0, 384, 208).HasPoint(pointer);
         Control focused = GetViewport().GuiGetFocusOwner();
-        bool wanted = onPack || onOpen || Pinned || _toggle.HasFocus() ||
+        HoveringHotspot = onPack || onOpen;
+        bool wanted = HoveringHotspot || Pinned || _toggle.HasFocus() ||
             focused != null && (focused == _content || _content.IsAncestorOf(focused)) || _game.Failed || _game.Completed;
         _leaveTime = wanted ? 0 : _leaveTime + delta;
         if (wanted) SetExpanded(true);
@@ -75,19 +74,16 @@ public partial class ProgressPanel : Control
 
     private void RefreshCaptions()
     {
-        if (_captions == null || !_game.IsNodeReady()) return;
+        if (_captions == null) return;
         var config = EconomyConfigProvider.Load();
         int deadline = _game.QuotaStage == 0 ? config.Quotas.Single(quota => quota.Id == "first").DeadlineDay : config.Days.TotalDays;
-        int days = Math.Max(0, deadline - _game.CurrentDay + (_game.DayClosed ? 0 : 1));
+        int days = Math.Max(0, deadline - _game.CurrentDay + 1);
         string day = GameLocalization.Format("День {0}", _game.CurrentDay);
         string quota = _game.Completed ? GameLocalization.Text("Все квоты выплачены") :
             GameLocalization.Format("Следующая квота: {0}$", _game.QuotaStage == 0 ? _game.FirstQuota : _game.SecondQuota);
         string key = days % 10 == 1 && days % 100 != 11 ? "До квоты: {0} день" :
             days % 10 is >= 2 and <= 4 && days % 100 is not (>= 12 and <= 14) ? "До квоты: {0} дня" : "До квоты: {0} дней";
-        string remaining = _game.Completed ? GameLocalization.Text("Долг погашен") :
-            _game.Failed ? GameLocalization.Text("Срок квоты истёк") :
-            days == 0 ? GameLocalization.Text("Квота: сейчас") :
-            _game.CurrentDay == deadline ? GameLocalization.Text("Квота: сегодня") : GameLocalization.Format(key, days);
+        string remaining = _game.Completed ? GameLocalization.Text("Долг погашен") : GameLocalization.Format(key, days);
         string signature = day + "|" + quota + "|" + remaining;
         if (_lastText == signature) return;
         _lastText = signature;

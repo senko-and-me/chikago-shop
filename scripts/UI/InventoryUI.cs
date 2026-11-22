@@ -346,11 +346,14 @@ public partial class InventoryUI : Control
 					TradeScene.GetItemArtPath(itemIndex))
 			);
 
+			string grade = _tradeScene.GetStoredItemQualityRank(index);
 			slot.ItemInfo = GameLocalization.Format(
-				"{0}\nРедкость: {1}\nСтоимость: {2}$",
+				"{0}\nРедкость: {1}\nКачество: {3} (+{4}$)\nСтоимость: {2}$",
 				TradeScene.GetItemName(itemIndex),
 				TradeScene.GetItemRarity(itemIndex),
-				_tradeScene.GetItemPrice(itemIndex)
+				_tradeScene.GetItemPrice(itemIndex),
+				grade,
+				TradeScene.QualityBonus(grade)
 			);
 		}
 

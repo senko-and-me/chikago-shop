@@ -63,6 +63,9 @@ public partial class SoundEffects : Node
         ApplyVolume(volume);
     }
 
+    // Runtime preview while dragging the slider: do not write to disk per mouse movement.
+    public void PreviewVolume(double volume) => ApplyVolume(volume);
+
     public Error SetVolume(double volume)
     {
         ApplyVolume(volume);

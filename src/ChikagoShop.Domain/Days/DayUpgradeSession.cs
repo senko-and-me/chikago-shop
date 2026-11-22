@@ -1,38 +1,51 @@
 namespace ChikagoShop.Domain.Days;
 
+// Serialized enum values must remain stable; Time is retired, not renumbered.
 public enum DayUpgrade { None, Cash, Energy, Time, Atelier, Music, AtelierPrice, MusicPrice }
 
-// One temporary upgrade per new day; cash is an immediate, one-off reward.
+// Every purchased upgrade is effective only during the upcoming day.
+// Legacy level fields remain readable for save compatibility but no longer affect gameplay.
 public sealed class DayUpgradeSession
 {
     public bool Pending { get; private set; }
     public DayUpgrade Selected { get; private set; }
     public int Day { get; private set; } = 2;
-    public int AtelierLevel { get; private set; }
-    public int MusicLevel { get; private set; }
-    public int AtelierPriceLevel { get; private set; }
-    public int MusicPriceLevel { get; private set; }
+    public bool MusicUnlocked { get; private set; }
+    public int AtelierLevel => 0;
+    public int MusicLevel => 0;
+    public int AtelierPriceLevel => 0;
+    public int MusicPriceLevel => 0;
     public DayUpgradeRules Rules { get; set; } = new();
-    public IReadOnlyList<DayUpgrade> Options => Rules.Options(Day);
+    public IReadOnlyList<DayUpgrade> Options => Rules.Options(Day, MusicUnlocked);
     public int CostFor(DayUpgrade upgrade) => Rules.Cost(upgrade);
     public int EnergyCapacity => EnergyCapacityFor(2);
     public int EnergyCapacityFor(int baseline) => baseline + (Selected == DayUpgrade.Energy ? 1 : 0);
-    public double Duration => DaySession.DurationSeconds + (Selected == DayUpgrade.Time ? 30 : 0);
+    public double Duration => DaySession.DurationSeconds;
     public int CashReward => 50;
 
-    public void Offer(int day = 2) { Day = Math.Clamp(day, 2, 7); Pending = true; Selected = DayUpgrade.None; }
+    public void Offer(int day = 2, bool musicUnlocked = false)
+    {
+        Day = Math.Max(2, day);
+        MusicUnlocked = musicUnlocked;
+        Pending = true;
+        Selected = DayUpgrade.None;
+    }
+
     public void Reset(bool preserveCategories = false)
     {
-        Pending = false; Selected = DayUpgrade.None;
-        if (!preserveCategories) { AtelierLevel = 0; MusicLevel = 0; AtelierPriceLevel = 0; MusicPriceLevel = 0; }
+        Pending = false;
+        Selected = DayUpgrade.None;
+        // preserveCategories is intentionally ignored: category bonuses no longer stack.
     }
 
     public static int Cost(DayUpgrade upgrade) => upgrade switch
     {
-        DayUpgrade.Cash => 20,
-        DayUpgrade.Energy or DayUpgrade.Time => 40,
-        DayUpgrade.Atelier or DayUpgrade.Music => 80,
-        DayUpgrade.AtelierPrice or DayUpgrade.MusicPrice => 100,
+        DayUpgrade.Cash => 35,
+        DayUpgrade.Energy => 10,
+        DayUpgrade.Atelier => 15,
+        DayUpgrade.Music => 25,
+        DayUpgrade.AtelierPrice => 10,
+        DayUpgrade.MusicPrice => 20,
         _ => throw new ArgumentOutOfRangeException(nameof(upgrade))
     };
 
@@ -45,10 +58,6 @@ public sealed class DayUpgradeSession
         remainingBalance = balance - cost;
         Selected = upgrade;
         Pending = false;
-        if (upgrade == DayUpgrade.Atelier) AtelierLevel = Math.Min(6, AtelierLevel + 1);
-        if (upgrade == DayUpgrade.Music) MusicLevel = Math.Min(6, MusicLevel + 1);
-        if (upgrade == DayUpgrade.AtelierPrice) AtelierPriceLevel = Math.Min(6, AtelierPriceLevel + 1);
-        if (upgrade == DayUpgrade.MusicPrice) MusicPriceLevel = Math.Min(6, MusicPriceLevel + 1);
         return true;
     }
 
@@ -61,30 +70,34 @@ public sealed class DayUpgradeSession
     }
 
     public void Restore(bool pending, DayUpgrade selected, int day = 2, int atelierLevel = 0, int musicLevel = 0,
-        int atelierPriceLevel = 0, int musicPriceLevel = 0)
+        int atelierPriceLevel = 0, int musicPriceLevel = 0, bool musicUnlocked = false)
     {
-        Day = Math.Clamp(day, 2, 7);
-        AtelierLevel = Math.Clamp(atelierLevel, 0, 6);
-        MusicLevel = Math.Clamp(musicLevel, 0, 6);
-        AtelierPriceLevel = Math.Clamp(atelierPriceLevel, 0, 6);
-        MusicPriceLevel = Math.Clamp(musicPriceLevel, 0, 6);
-        Selected = Enum.IsDefined(selected) ? selected : DayUpgrade.None;
+        Day = Math.Max(2, day);
+        MusicUnlocked = musicUnlocked;
+        // Permanent bonuses in legacy saves do not carry over to the new day-only system.
+        Selected = Enum.IsDefined(selected) && selected != DayUpgrade.Time ? selected : DayUpgrade.None;
+        if (!MusicUnlocked && (Selected is DayUpgrade.Music or DayUpgrade.MusicPrice)) Selected = DayUpgrade.None;
         Pending = pending && Selected == DayUpgrade.None;
     }
 
     public int Price(string workshop, int baseline)
     {
         if (baseline < 0) throw new ArgumentOutOfRangeException(nameof(baseline));
-        int level = workshop == "atelier" ? AtelierPriceLevel : workshop == "music" ? MusicPriceLevel : 0;
-        return checked((int)decimal.Round((decimal)baseline * (100 + level * 20) / 100, 0, MidpointRounding.AwayFromZero));
+        bool boosted = (workshop == "atelier" && Selected == DayUpgrade.AtelierPrice) ||
+                       (workshop == "music" && Selected == DayUpgrade.MusicPrice);
+        return boosted
+            ? checked((int)decimal.Round((decimal)baseline * 120 / 100, 0, MidpointRounding.AwayFromZero))
+            : baseline;
     }
 
     public int Weight(string workshop, string rarity, int baseline, int commonBaseline)
     {
-        int level = workshop == "atelier" ? AtelierLevel : workshop == "music" ? MusicLevel : 0;
-        int transfer = Math.Min(Math.Max(0, commonBaseline - 1), level * 15);
-        int first = transfer * 8 / 15;
-        int exclusive = transfer * 5 / 15;
+        bool boosted = (workshop == "atelier" && Selected == DayUpgrade.Atelier) ||
+                       (workshop == "music" && Selected == DayUpgrade.Music);
+        if (!boosted) return baseline;
+        int transfer = Math.Min(12, Math.Max(0, commonBaseline - 1));
+        int first = transfer * 6 / 12;
+        int exclusive = transfer * 4 / 12;
         return baseline + (rarity switch
         {
             "common" => -transfer,

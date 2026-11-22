@@ -30,12 +30,13 @@ public sealed class DayCycleController
 	private const string TutorialEndMessage = "Сначала завершите или пропустите обучение.";
 	private bool TutorialActive => _game.GetNodeOrNull<FirstTradeTutorial>("FirstTradeTutorial")?.IsActive == true;
 	private readonly DayTransitionCard _card;
+	private readonly MafiaQuotaNotice _mafia;
 	private readonly DayNightBackground _dayNight;
 	private readonly DayAnnouncementOverlay _announcements;
 	private readonly DayStartGate _actionGate;
 	private double ExpectedDuration => WorkshopItemCatalog.DayDurationSeconds
-		+ (Upgrades.Selected == DayUpgrade.Time ? 30 : 0);
-	public bool TransitionOpen => _card.IsOpen;
+		+ (_game.MusicWorkshopUnlocked ? 30 : 0);
+	public bool TransitionOpen => _card.IsOpen || _mafia.IsOpen;
 
 	public DayCycleController(TradeScene game)
 	{
@@ -50,6 +51,21 @@ public sealed class DayCycleController
 		_card.Chosen += ChooseUpgrade;
 		_card.Skipped += SkipUpgrade;
 		game.AddChild(_card);
+		_mafia = new MafiaQuotaNotice();
+		_mafia.Dismissed += () =>
+		{
+			_game.AcknowledgeMafiaNotice();
+			ResumeUpgradeChoice();
+		};
+		_mafia.RestartRequested += _game.NewGame;
+		_mafia.CheckpointRequested += _game.ReturnToCheckpoint;
+		_mafia.MainMenuRequested += () =>
+		{
+			_game.GetTree().Paused = false;
+			Error error = _game.GetTree().ChangeSceneToFile("res://scenes/main_menu.tscn");
+			if (error != Error.Ok) GD.PushError($"Не удалось открыть главное меню: {error}");
+		};
+		game.AddChild(_mafia);
 		_timer = new Label
 		{
 			Name = "DayTimer", HorizontalAlignment = HorizontalAlignment.Center,
@@ -124,14 +140,14 @@ public sealed class DayCycleController
 		UpdateDayNightBackground();
 	}
 
-	public bool CanReceiveBuyers => Started && Session.CanReceiveBuyers && !_game.Failed && !_game.Completed;
+	public bool CanReceiveBuyers => Started && Session.CanReceiveBuyers && !Upgrades.Pending && !_game.Failed && !_game.Completed;
 	public bool RequireStartedDay() => _actionGate.AllowAction();
-
 	public void StartDay()
 	{
-		if (Started || Session.IsClosed || Upgrades.Pending || _game.GetTree().Paused || _game.Failed || _game.Completed) return;
+		if (Started || Session.IsClosed || Upgrades.Pending || _game.QuotaVisitPending || _game.GetTree().Paused || _game.Failed || _game.Completed) return;
 		Started = true;
 		_actionGate.Dismiss();
+		_game.RecalculateInvisibleHand();
 		_announcements.Observe(Session.RemainingSeconds, Session.Duration, false, _game.CurrentDay, TotalDays, FirstQuotaDay);
 		RefreshTimer();
 		_game.SynchronizeDayState();
@@ -170,7 +186,7 @@ public sealed class DayCycleController
 
 	public void EndDay()
 	{
-		if (_game.Failed || _game.Completed || TransitionOpen || Upgrades.Pending || _game.CraftMiniGameOpen) return;
+		if (_game.Failed || _game.Completed || TransitionOpen || Upgrades.Pending || _game.QuotaVisitPending || _game.CraftMiniGameOpen) return;
 		if (!Started && !Session.IsClosed) { StartDay(); return; }
 		if (TutorialActive)
 		{
@@ -190,7 +206,7 @@ public sealed class DayCycleController
 			case EndDayAction.Advance:
 				int previousDay = _game.CurrentDay;
 				Reset(preserveCategories: true);
-				if (previousDay < 7) Upgrades.Offer(previousDay + 1);
+				if (previousDay < TotalDays) Upgrades.Offer(previousDay + 1, _game.MusicWorkshopUnlocked);
 				_game.AdvanceToNextDay();
 				if (_game.Failed || _game.Completed)
 				{
@@ -200,7 +216,7 @@ public sealed class DayCycleController
 					UpdateDayNightBackground();
 					_game.SynchronizeDayState();
 				}
-				else _card.Open(previousDay, _game.CurrentDay, Upgrades.Options, _game.Score);
+				ResumeUpgradeChoice();
 				break;
 		}
 	}
@@ -211,6 +227,7 @@ public sealed class DayCycleController
 		_actionGate.Dismiss();
 		_advanceWhenClosed = false;
 		_card.Close();
+		_mafia.CloseSilently();
 		Upgrades.Reset(preserveCategories);
 		Session.Reset(ExpectedDuration);
 		Started = false;
@@ -224,7 +241,8 @@ public sealed class DayCycleController
 		int atelierPriceLevel = 0, int musicPriceLevel = 0, int checkpointAtelierPriceLevel = 0, int checkpointMusicPriceLevel = 0,
 		bool started = true)
 	{
-		Upgrades.Restore(pending, selected, day, atelierLevel, musicLevel, atelierPriceLevel, musicPriceLevel);
+		Upgrades.Restore(pending, selected, day, atelierLevel, musicLevel, atelierPriceLevel, musicPriceLevel,
+			_game.MusicWorkshopUnlocked);
 		CheckpointAtelierLevel = Math.Clamp(checkpointAtelierLevel, 0, 6);
 		CheckpointMusicLevel = Math.Clamp(checkpointMusicLevel, 0, 6);
 		CheckpointAtelierPriceLevel = Math.Clamp(checkpointAtelierPriceLevel, 0, 6);
@@ -239,11 +257,32 @@ public sealed class DayCycleController
 		UpdateDayNightBackground();
 	}
 
+	private void ShowMafiaNotice() => _mafia.Open(
+		_game.CurrentDay >= TotalDays || _game.QuotaStage == 2
+			? _game.SecondQuota : _game.FirstQuota,
+		_game.Score, !_game.Failed, _game.Completed);
+
 	public void ResumeUpgradeChoice()
 	{
-		if (Upgrades.Pending && !_game.Failed && !_game.Completed && !Session.IsClosed && _game.CurrentDay is >= 2 and <= 7)
+		UpdateDayNightBackground();
+		if (_game.MafiaNoticePending || _game.Failed || _game.Completed)
+		{
+			// Old saves may already have dismissed the former text-only notice.
+			// Still show an ending screen so the player can restart or return to menu.
+			ShowMafiaNotice();
+			return;
+		}
+		if (_game.QuotaVisitPending)
+		{
+			_game.ResumeQuotaVisit();
+			return;
+		}
+		if (Upgrades.Pending && !Session.IsClosed && _game.CurrentDay >= 2 && _game.CurrentDay <= TotalDays)
 			_card.Open(_game.CurrentDay - 1, _game.CurrentDay, Upgrades.Options, _game.Score);
 	}
+
+	public void FinishQuotaVisit() =>
+		_announcements.ShowReward(GameLocalization.Format("Получено {0}$", TradeScene.QuotaGift), ResumeUpgradeChoice);
 
 	public void CaptureCheckpointUpgrades()
 	{
@@ -265,7 +304,6 @@ public sealed class DayCycleController
 		{
 			case DayUpgrade.Cash: _game.Score += Upgrades.CashReward; break;
 			case DayUpgrade.Energy: _game.EnergyRemaining++; break;
-			case DayUpgrade.Time: Session.ConfigureDuration(ExpectedDuration); break;
 		}
 		RefreshTimer();
 		UpdateDayNightBackground();
@@ -294,7 +332,7 @@ public sealed class DayCycleController
 	}
 
 	private void UpdateDayNightBackground() =>
-		_dayNight.Update(Session.RemainingSeconds, Session.Duration);
+		_dayNight.Update(_game.QuotaVisitPending ? 0 : Session.RemainingSeconds, Session.Duration);
 
 	public void UpdateEndButton(Button button)
 	{

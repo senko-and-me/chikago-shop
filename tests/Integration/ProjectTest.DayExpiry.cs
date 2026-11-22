@@ -46,7 +46,7 @@ public partial class ProjectTest
             {
                 game.NewGame(); game.EndDay();
                 CraftAtelier(game); SelectInventorySlot(game, 0); game.PlaceItemInShowcase(0);
-                game._Process(game.BuyerCountdown + 0.01);
+                game._Process(0);
                 Check(game.TradeActive, "The expiry fixture must have a real active buyer");
                 if (manual) await ClickControl(game, "HUD/DayClock/Root/ClockActionButton");
                 else game._Process(game.DayRemainingSeconds + 0.01);

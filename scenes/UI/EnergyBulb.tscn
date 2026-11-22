@@ -4,13 +4,13 @@
 
 [sub_resource type="AtlasTexture" id="BulbArtwork"]
 atlas = ExtResource("1_art")
-region = Rect2(526, 213, 984, 1612)
+region = Rect2(478, 168, 1057, 1682)
 
 [node name="Bulb" type="TextureRect"]
-custom_minimum_size = Vector2(40, 64)
-offset_right = 40.0
-offset_bottom = 64.0
-size_flags_horizontal = 3
+custom_minimum_size = Vector2(19, 34)
+offset_right = 19.0
+offset_bottom = 34.0
+size_flags_horizontal = 4
 size_flags_vertical = 4
 mouse_filter = 2
 texture = SubResource("BulbArtwork")

@@ -9,11 +9,18 @@ public sealed record BalanceField(string Key, string Section, string Label, doub
 public sealed class BalanceProfile
 {
     public int SchemaVersion { get; set; } = 1;
+    // Old profiles can still contain the former default quota; this flag keeps the one-time
+    // baseline migration from overriding later explicit edits in the F10 editor.
+    public int FirstQuotaBaselineRevision { get; set; }
+    // Distinguish legacy shipped second-quota/workshop costs from explicit new edits in F10.
+    public int EconomyBaselineRevision { get; set; }
     public Dictionary<string, double> Numbers { get; set; } = new();
     public Dictionary<string, string> ItemRarities { get; set; } = new();
     public double Number(string key, double fallback) => Numbers.GetValueOrDefault(key, fallback);
     public BalanceProfile Clone() => new()
     {
+        SchemaVersion = SchemaVersion, FirstQuotaBaselineRevision = FirstQuotaBaselineRevision,
+        EconomyBaselineRevision = EconomyBaselineRevision,
         Numbers = new(Numbers), ItemRarities = new(ItemRarities)
     };
     public string ToJson() => JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });

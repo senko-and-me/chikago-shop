@@ -19,6 +19,8 @@
 [ext_resource type="Script" uid="uid://bdswgixl6srw1" path="res://scripts/UI/ZoomResponsiveUi.cs" id="21_zoom_ui"]
 [ext_resource type="Script" uid="uid://dqhunfpycjxyp" path="res://scripts/UI/ProgressPanel.cs" id="22_progress"]
 [ext_resource type="PackedScene" path="res://scenes/UI/CigaretteProgress.tscn" id="32_cigarette_progress"]
+[ext_resource type="PackedScene" path="res://scenes/UI/PulloutNotebook.tscn" id="34_notebook"]
+[ext_resource type="Script" path="res://scripts/Presentation/TradingRoomPosterHotspot.cs" id="35_poster_hotspot"]
 [ext_resource type="PackedScene" path="res://scenes/UI/EnergyPanel.tscn" id="33_energy_panel"]
 [ext_resource type="Script" uid="uid://cnnctojfahevu" path="res://scripts/Camera/WorldCamera.cs" id="23_world_camera"]
 [ext_resource type="Script" uid="uid://moiorwdg8bcp" path="res://scripts/Presentation/RoomDoorwayPresentation.cs" id="24_doorways"]
@@ -33,19 +35,15 @@
 [ext_resource type="PackedScene" path="res://scenes/UI/FirstTradeTutorial.tscn" id="30_tutorial"]
 
 [ext_resource type="PackedScene" path="res://scenes/UI/CraftButton.tscn" id="31_craft_button"]
+[ext_resource type="PackedScene" path="res://scenes/UI/MusicWorkshopUnlockPanel.tscn" id="36_unlock_panel"]
 
-[ext_resource type="Texture2D" path="res://art/items/cap.png" id="item_0"]
-[ext_resource type="Texture2D" path="res://art/items/shirt.png" id="item_1"]
 [ext_resource type="Texture2D" path="res://art/items/maracas.png" id="item_2"]
 [ext_resource type="Texture2D" path="res://art/items/metronome.png" id="item_3"]
-[ext_resource type="Texture2D" path="res://art/items/gloves.png" id="item_4"]
 [ext_resource type="Texture2D" path="res://art/items/jacket.png" id="item_5"]
 [ext_resource type="Texture2D" path="res://art/items/fur_stole.png" id="item_6"]
 [ext_resource type="Texture2D" path="res://art/items/trumpet.png" id="item_7"]
 [ext_resource type="Texture2D" path="res://art/items/violin.png" id="item_8"]
 [ext_resource type="Texture2D" path="res://art/items/gramophone.png" id="item_9"]
-[ext_resource type="Texture2D" path="res://art/items/cloche_hat.png" id="item_10"]
-[ext_resource type="Texture2D" path="res://art/items/shoes.png" id="item_11"]
 [ext_resource type="Texture2D" path="res://art/items/dress.png" id="item_12"]
 [ext_resource type="Texture2D" path="res://art/items/tambourine.png" id="item_13"]
 [ext_resource type="Texture2D" path="res://art/items/saxophone.png" id="item_14"]
@@ -129,6 +127,9 @@ bg_color = Color(0.335576, 0.335576, 0.335576, 1)
 bg_color = Color(0.489788, 0.489788, 0.489788, 1)
 
 [sub_resource type="StyleBoxEmpty" id="ProgressEmpty"]
+
+[sub_resource type="RectangleShape2D" id="ShowPosterShape"]
+size = Vector2(111, 166)
 
 [node name="TradeScene" type="Node2D" unique_id=620028237]
 script = ExtResource("1_main")
@@ -379,17 +380,8 @@ texture = ExtResource("background_6_2e12l")
 expand_mode = 1
 stretch_mode = 6
 
-[node name="UnlockButton" type="Button" parent="World/MusicWorkshop/LockedOverlay" unique_id=1687329513]
-layout_mode = 0
-offset_left = 688.0
-offset_top = 494.0
-offset_right = 1288.0
-offset_bottom = 664.0
-tooltip_text = "Открыть музыкальную комнату за 100$"
-mouse_default_cursor_shape = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 38
-text = "ОТКРЫТЬ ЗА 100$"
+[node name="UnlockPanel" parent="World/MusicWorkshop/LockedOverlay" instance=ExtResource("36_unlock_panel")]
+layout_mode = 1
 
 [node name="Showroom" type="Node2D" parent="World" unique_id=1166953855]
 position = Vector2(3250.1052, 1638.3158)
@@ -600,6 +592,20 @@ scale = Vector2(1.0052866, 1.0237135)
 texture = ExtResource("12_cashier")
 centered = false
 
+[node name="ShowPoster" type="Node2D" parent="World/TradingRoom"]
+position = Vector2(496, 392)
+script = ExtResource("35_poster_hotspot")
+
+[node name="PosterSprite" type="Sprite2D" parent="World/TradingRoom/ShowPoster"]
+centered = false
+
+[node name="HitArea" type="Area2D" parent="World/TradingRoom/ShowPoster"]
+input_pickable = true
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="World/TradingRoom/ShowPoster/HitArea"]
+position = Vector2(55.5, 83)
+shape = SubResource("ShowPosterShape")
+
 [node name="Customer" parent="World/TradingRoom" unique_id=1498939060 instance=ExtResource("5_customer")]
 visible = false
 position = Vector2(1015, 1007)
@@ -622,14 +628,10 @@ position = Vector2(676, 651)
 [node name="Hat" type="Sprite2D" parent="World/TradingRoom/Item"]
 visible = false
 position = Vector2(64, -48)
-scale = Vector2(0.08333333, 0.08333333)
-texture = ExtResource("item_0")
 
 [node name="Gloves" type="Sprite2D" parent="World/TradingRoom/Item"]
 visible = false
 position = Vector2(64, -48)
-scale = Vector2(0.08839779, 0.08839779)
-texture = ExtResource("item_1")
 
 [node name="Guitar" type="Sprite2D" parent="World/TradingRoom/Item"]
 visible = false
@@ -646,8 +648,6 @@ texture = ExtResource("item_3")
 [node name="Clothing_first" type="Sprite2D" parent="World/TradingRoom/Item"]
 visible = false
 position = Vector2(64, -48)
-scale = Vector2(0.08333333, 0.08333333)
-texture = ExtResource("item_4")
 
 [node name="Clothing_exclusive" type="Sprite2D" parent="World/TradingRoom/Item"]
 visible = false
@@ -682,14 +682,10 @@ texture = ExtResource("item_9")
 [node name="Cloche_hat" type="Sprite2D" parent="World/TradingRoom/Item"]
 visible = false
 position = Vector2(64, -48)
-scale = Vector2(0.08333333, 0.08333333)
-texture = ExtResource("item_10")
 
 [node name="Shoes" type="Sprite2D" parent="World/TradingRoom/Item"]
 visible = false
 position = Vector2(64, -48)
-scale = Vector2(0.08333333, 0.08333333)
-texture = ExtResource("item_11")
 
 [node name="Dress" type="Sprite2D" parent="World/TradingRoom/Item"]
 visible = false
@@ -722,6 +718,8 @@ offset_left = -137.0
 offset_top = -416.0
 offset_right = 183.0
 offset_bottom = -216.0
+pivot_offset = Vector2(160, 200)
+scale = Vector2(1.25, 1.25)
 theme_override_styles/panel = SubResource("TradePanelStyle")
 
 [node name="Content" type="VBoxContainer" parent="World/TradingRoom/Item/TradePanel" unique_id=2136036310]
@@ -939,7 +937,7 @@ layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -204.0
+offset_left = -254.0
 offset_top = 24.0
 offset_right = -24.0
 offset_bottom = 88.0
@@ -967,6 +965,13 @@ mouse_filter = 2
 script = ExtResource("22_progress")
 
 [node name="Visual" parent="HUD/Root/ProgressPanel" instance=ExtResource("32_cigarette_progress")]
+
+[node name="PulloutNotebook" parent="HUD/Root" instance=ExtResource("34_notebook")]
+layout_mode = 0
+offset_left = 950.0
+offset_top = 204.0
+offset_right = 1262.0
+offset_bottom = 614.0
 
 [node name="Content" type="VBoxContainer" parent="HUD/Root/ProgressPanel" unique_id=1283382676]
 visible = false

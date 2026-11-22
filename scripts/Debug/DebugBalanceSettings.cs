@@ -33,10 +33,10 @@ public static class DebugBalanceSettings
         WeightedSelection = Number("cards.weighted") == 1,
         Seed = (int)Number("cards.seed")
     };
-    public static DayUpgrade[] Cards => Enum.GetValues<DayUpgrade>().Where(card => card != DayUpgrade.None).ToArray();
+    public static DayUpgrade[] Cards => Enum.GetValues<DayUpgrade>().Where(card => card is not (DayUpgrade.None or DayUpgrade.Time)).ToArray();
     public static string CardName(DayUpgrade card) => card switch
     {
-        DayUpgrade.Cash => "Оборотные средства", DayUpgrade.Energy => "Второе дыхание", DayUpgrade.Time => "Длинная смена",
+        DayUpgrade.Cash => "Оборотные средства", DayUpgrade.Energy => "Второе дыхание",
         DayUpgrade.Atelier => "Мастерство портного", DayUpgrade.Music => "Мастерство мастера",
         DayUpgrade.AtelierPrice => "Имя на этикетке", _ => "Коллекционный звук"
     };
@@ -48,7 +48,25 @@ public static class DebugBalanceSettings
         {
             var profile = OS.IsDebugBuild() && Godot.FileAccess.FileExists(StoragePath)
                 ? BalanceProfile.FromJson(Godot.FileAccess.GetFileAsString(StoragePath)) : new BalanceProfile();
+            RemoveRetiredOverrides(profile);
+            // One-time migration of the old shipped first-quota defaults in existing F10 profiles.
+            // Later explicit changes (even back to 250 or 500) remain fully editable.
+            bool migrated = MigrateFirstQuotaBaseline(profile) | MigrateEconomyBaseline(profile);
             Validate(profile);
+            if (migrated && OS.IsDebugBuild() && Godot.FileAccess.FileExists(StoragePath))
+            {
+                try
+                {
+                    string path = ProjectSettings.GlobalizePath(StoragePath);
+                    string temporary = path + ".economy1500.tmp";
+                    System.IO.File.WriteAllText(temporary, profile.ToJson());
+                    System.IO.File.Move(temporary, path, overwrite: true);
+                }
+                catch (Exception exception)
+                {
+                    GD.PushWarning("Не удалось сохранить обновлённый профиль квоты: " + exception.Message);
+                }
+            }
             Publish(profile);
             error = "";
             return true;
@@ -67,6 +85,10 @@ public static class DebugBalanceSettings
         try
         {
             if (!OS.IsDebugBuild()) throw new InvalidOperationException("Панель доступна только в debug-сборке.");
+            RemoveRetiredOverrides(profile);
+            // This is an explicit edit, so do not migrate this first-quota choice later.
+            profile.FirstQuotaBaselineRevision = 1;
+            profile.EconomyBaselineRevision = 1;
             Validate(profile);
             string path = ProjectSettings.GlobalizePath(StoragePath);
             temporary = path + ".tmp";
@@ -78,6 +100,43 @@ public static class DebugBalanceSettings
         }
         catch (Exception exception) { error = exception.Message; return false; }
         finally { if (temporary != null && System.IO.File.Exists(temporary)) System.IO.File.Delete(temporary); }
+    }
+    private static bool MigrateFirstQuotaBaseline(BalanceProfile profile)
+    {
+        if (profile.FirstQuotaBaselineRevision >= 1) return false;
+        if (profile.Numbers != null && profile.Numbers.TryGetValue("quota.first", out double oldQuota) &&
+            (oldQuota == 250 || oldQuota == 500))
+            profile.Numbers.Remove("quota.first");
+        profile.FirstQuotaBaselineRevision = 1;
+        return true;
+    }
+
+    private static bool MigrateEconomyBaseline(BalanceProfile profile)
+    {
+        // Older F10 profiles can pin the old defaults even after the game's config changes.
+        // Replace only known shipped values; preserve different deliberate user settings.
+        if (profile.EconomyBaselineRevision >= 1) return false;
+        if (profile.Numbers != null)
+        {
+            if (profile.Numbers.TryGetValue("quota.final", out double finalQuota) && finalQuota == 450)
+                profile.Numbers.Remove("quota.final");
+            if (profile.Numbers.TryGetValue("workshop.music.unlock", out double unlockCost) &&
+                (unlockCost == 100 || unlockCost == 500))
+                profile.Numbers.Remove("workshop.music.unlock");
+        }
+        profile.EconomyBaselineRevision = 1;
+        return true;
+    }
+
+    private static void RemoveRetiredOverrides(BalanceProfile profile)
+    {
+        profile.Numbers?.Remove("card.Time.cost");
+        profile.Numbers?.Remove("card.Time.weight");
+        profile.Numbers?.Remove("buyer.min");
+        profile.Numbers?.Remove("buyer.max");
+        // A legacy profile may have disabled every other card and relied on Time.
+        if (profile.Numbers != null && Cards.All(card => profile.Numbers.GetValueOrDefault($"card.{card}.weight", 1) == 0))
+            profile.Numbers["card.Cash.weight"] = 1;
     }
     private static void Publish(BalanceProfile profile)
     {
@@ -92,7 +151,6 @@ public static class DebugBalanceSettings
             baseline.Rarities.Select(rarity => rarity.Id).ToHashSet());
         double Get(string key) => profile.Number(key, Fields.Single(field => field.Key == key).Default);
         if (Get("energy.after") < Get("energy.before")) throw new ArgumentException("Энергия после открытия мастерской должна быть не ниже начальной.");
-        if (Get("buyer.max") < Get("buyer.min")) throw new ArgumentException("Максимальное ожидание покупателя должно быть не меньше минимального.");
         if (Cards.Sum(card => Get($"card.{card}.weight")) <= 0) throw new ArgumentException("Хотя бы одна карта должна иметь положительный вес.");
         foreach (string workshop in new[] { "atelier", "music" })
         {
@@ -140,12 +198,13 @@ public static class DebugBalanceSettings
             new("start.cash", "Партия", "Стартовые деньги ($) · новая игра", config.StartingMoney, 0, 1000000),
             new("energy.before", "Партия", "Энергия до открытия музыки · новая игра", config.Days.EnergyBeforeMusicUnlock, 1, 99),
             new("energy.after", "Партия", "Энергия после открытия музыки", config.Days.EnergyAfterMusicUnlock, 1, 99),
-            new("day.seconds", "Партия", "Длительность дня (сек.)", config.Days.DurationSeconds, 5, 3600),
+            new("day.seconds", "Партия", "День до музыки (сек.; после +30)", config.Days.DurationSeconds, 5, 3600),
             new("craft.count", "Создание", "Предметов за один крафт", config.Days.ItemsPerCraft, 1, 50),
+            new("hand.enabled", "Партия", "Невидимая рука: 0 — выкл., 1 — вкл.", 1, 0, 1),
+            new("hand.rarity", "Редкости", "Невидимая рука: предел редкости (п.п.)", 5, 0, 5),
+            new("hand.offer", "Партия", "Невидимая рука: предел предложения (п.п.)", 3, 0, 3),
             new("craft.atelier.seconds", "Создание", "Время вышивки (сек.)", 10, 1, 600),
             new("craft.music.seconds", "Создание", "Время полировки (сек.)", 10, 1, 600),
-            new("buyer.min", "Партия", "Минимальное ожидание покупателя (сек.)", 0.5, 0.1, 60, 0.1),
-            new("buyer.max", "Партия", "Максимальное ожидание покупателя (сек.)", 2, 0.1, 60, 0.1),
             new("cards.weighted", "Карты", "Выбор карт: 0 — расписание, 1 — по весам", 0, 0, 1),
             new("cards.seed", "Карты", "Seed выбора карт (повторяемый результат)", 1, 0, 1000000)
         };

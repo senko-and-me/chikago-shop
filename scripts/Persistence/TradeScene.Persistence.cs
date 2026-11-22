@@ -38,6 +38,14 @@ public partial class TradeScene
 			Accepted = Accepted,
 			Declined = Declined,
 			QuotaStage = QuotaStage,
+			InvisibleHandPressure = _invisibleHand.Pressure,
+			CheckpointInvisibleHandPressure = _checkpointInvisibleHandPressure,
+			MafiaNoticePending = MafiaNoticePending,
+			QuotaVisit = _quotaVisit,
+			CheckpointQuotaVisit = _checkpointQuotaVisit,
+			QuotaDialoguePage = _quotaDialoguePage,
+			QuotaDialogueRevealed = _quotaDialogueRevealed,
+			QuotaDialogueLanguage = _quotaDialogueLanguage,
 			CheckpointDay = CheckpointDay,
 			CheckpointScore = CheckpointScore,
 			CheckpointEnergy = CheckpointEnergy,
@@ -60,7 +68,14 @@ public partial class TradeScene
 			CheckpointShowcaseItems =
 				(int[])_checkpointShowcaseItems.Clone(),
 			ActiveShowcaseIndex = _activeShowcaseIndex,
-			BuyerCountdown = _buyerCountdown
+			BuyerWaitRemaining = _buyerWaitRemaining,
+			WaitingBuyerPresent = _waitingBuyer,
+			WaitingBuyerMusic = _waitingBuyerMusic,
+			StoredGrades = _storedGrades.ToArray(),
+			ShowcaseGrades = (string[])_showcaseGrades.Clone(),
+			CheckpointGrades = _checkpointGrades.ToArray(),
+			CheckpointShowcaseGrades = (string[])_checkpointShowcaseGrades.Clone(),
+			ActiveTradeGrade = _activeTradeGrade
 		};
 
 		ProgressSaveStore.Save(SavePath, data);
@@ -133,16 +148,16 @@ public partial class TradeScene
 			}
 		}
 
-		MoveItemsOutOfLockedShowcases();
+		LoadLegacyGradeArrays(data.StoredGrades, data.ShowcaseGrades);
+		_checkpointGrades.Clear();
+		for (int i = 0; i < _checkpointItems.Count; i++)
+			_checkpointGrades.Add(data.CheckpointGrades != null && i < data.CheckpointGrades.Length
+				? NormalizeRank(data.CheckpointGrades[i]) : "D");
+		for (int i = 0; i < ShowcaseCapacity; i++)
+			_checkpointShowcaseGrades[i] = data.CheckpointShowcaseGrades != null && i < data.CheckpointShowcaseGrades.Length
+				? NormalizeRank(data.CheckpointShowcaseGrades[i]) : "D";
 
-		_buyerCountdown = Array.Exists(
-			_showcaseItems, item => item >= 0)
-			? double.IsFinite(data.BuyerCountdown) &&
-			  data.BuyerCountdown > 0 &&
-			  data.BuyerCountdown <= 2
-				? data.BuyerCountdown
-				: NextBuyerDelay()
-			: 0;
+		MoveItemsOutOfLockedShowcases();
 
 		_activeShowcaseIndex =
 			data.ActiveShowcaseIndex >= 0 &&
@@ -159,6 +174,15 @@ public partial class TradeScene
 		Accepted = Mathf.Max(0, data.Accepted);
 		Declined = Mathf.Max(0, data.Declined);
 		QuotaStage = Mathf.Clamp(data.QuotaStage, 0, 2);
+		_invisibleHand.Restore(data.InvisibleHandPressure);
+		_checkpointInvisibleHandPressure = double.IsFinite(data.CheckpointInvisibleHandPressure)
+			? Math.Clamp(data.CheckpointInvisibleHandPressure, -1, 1) : 0;
+		MafiaNoticePending = data.MafiaNoticePending;
+		_quotaVisit = data.QuotaVisit;
+		_checkpointQuotaVisit = data.CheckpointQuotaVisit;
+		_quotaDialoguePage = data.QuotaDialoguePage;
+		_quotaDialogueRevealed = data.QuotaDialogueRevealed;
+		_quotaDialogueLanguage = data.QuotaDialogueLanguage;
 
 		CheckpointDay = data.CheckpointDay > 1
 			? FirstDeadline + 1
@@ -195,6 +219,13 @@ public partial class TradeScene
 			ItemIndex >= 0 && ItemIndex < Items.Count ? GetItemRerollLimit(ItemIndex) : -1);
 
 		TradeActive = data.TradeActive;
+		_activeTradeGrade = NormalizeRank(data.ActiveTradeGrade);
+		_buyerWaitRemaining = data.SaveVersion >= 15 && data.BuyerWaitRemaining is double remaining && double.IsFinite(remaining)
+			? Math.Clamp(remaining, 0, BuyerWaitDuration) : BuyerWaitDuration;
+		_waitingBuyer = data.SaveVersion >= 16 && data.WaitingBuyerPresent && !TradeActive &&
+			!data.DayClosed && data.DayStarted && !Failed && !Completed &&
+			CustomerIndex >= 0 && CustomerIndex < _customer.GetAppearanceCount();
+		_waitingBuyerMusic = data.SaveVersion >= 16 && data.WaitingBuyerMusic;
 
 		if (ItemIndex < 0 ||
 			ItemIndex >= Items.Count ||
@@ -208,9 +239,6 @@ public partial class TradeScene
 
 		if (!TradeActive)
 			_activeShowcaseIndex = -1;
-
-		if (DayClosed)
-			_buyerCountdown = 0;
 
 		if (_inventoryUI != null)
 			_inventoryUI.UpdateUI(_storedItems);

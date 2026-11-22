@@ -2,19 +2,27 @@ namespace ChikagoShop.Domain.Days;
 
 public sealed class DayUpgradeRules
 {
+    // Keep the legacy Time enum value for old saves, but never offer that card.
+    private static readonly DayUpgrade[] Available =
+    [
+        DayUpgrade.Cash, DayUpgrade.Energy, DayUpgrade.Atelier,
+        DayUpgrade.Music, DayUpgrade.AtelierPrice, DayUpgrade.MusicPrice
+    ];
+
     public IReadOnlyDictionary<DayUpgrade, int> Costs { get; init; } = new Dictionary<DayUpgrade, int>();
     public IReadOnlyDictionary<DayUpgrade, int> Weights { get; init; } = new Dictionary<DayUpgrade, int>();
     public bool WeightedSelection { get; init; }
     public int Seed { get; init; } = 1;
     public int Cost(DayUpgrade upgrade) => Costs.TryGetValue(upgrade, out int cost) ? cost : DayUpgradeSession.Cost(upgrade);
 
-    // A fixed seed makes edited weights reproducible and keeps pending choices stable across Continue.
-    public IReadOnlyList<DayUpgrade> Options(int day)
+    // Fixed day/seed retains a pending hand on Continue; locked-room cards cannot appear.
+    public IReadOnlyList<DayUpgrade> Options(int day, bool musicUnlocked = false)
     {
-        if (!WeightedSelection) return Enumerable.Range(0, 3)
-            .Select(offset => (DayUpgrade)(1 + (day - 2 + offset) % 7)).ToArray();
-        var pool = Enum.GetValues<DayUpgrade>().Where(value => value != DayUpgrade.None && Weight(value) > 0).ToList();
-        if (pool.Count == 0) throw new InvalidOperationException("Хотя бы одна карта должна иметь положительный вес.");
+        var eligible = Available.Where(card => musicUnlocked || card is not (DayUpgrade.Music or DayUpgrade.MusicPrice)).ToArray();
+        if (!WeightedSelection)
+            return Enumerable.Range(0, 3).Select(offset => eligible[(day - 2 + offset) % eligible.Length]).ToArray();
+
+        var pool = eligible.Where(card => Weight(card) > 0).ToList();
         var random = new Random(unchecked(Seed * 397 ^ day));
         var result = new List<DayUpgrade>();
         while (result.Count < 3 && pool.Count > 0)
@@ -31,5 +39,6 @@ public sealed class DayUpgradeRules
         }
         return result;
     }
+
     private int Weight(DayUpgrade upgrade) => Weights.GetValueOrDefault(upgrade, 1);
 }

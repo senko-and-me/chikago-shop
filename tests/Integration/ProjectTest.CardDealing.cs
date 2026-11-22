@@ -85,7 +85,7 @@ public partial class ProjectTest
                         "The deck and flying backs must load the original textured, transparent card art");
                 if (language == "ru" && size.X == 1280) await Capture("dealing");
                 await WaitForDayCardAnimation(card);
-                Check(Root.GuiGetFocusOwner() == null && game.DayRemainingSeconds == 90,
+                Check(Root.GuiGetFocusOwner() == null && game.DayRemainingSeconds == 60,
                     "Finishing the deal must not preselect a purchase or consume day time");
                 foreach (var upgrade in card.Options)
                 {
@@ -94,9 +94,12 @@ public partial class ProjectTest
                         !face.GetNode<Control>("Back").Visible && Root.GetVisibleRect().Encloses(face.GetGlobalRect()) &&
                         face.Size.Y > face.Size.X,
                         "Settled portrait cards must fit the viewport in both languages and sizes");
+                    int cardCost = game.DayUpgrades.CostFor(upgrade);
+                    string expectedArt = cardCost >= 30 ? "res://art/ui/day_card_gold.png" :
+                        cardCost >= 20 ? "res://art/ui/day_card_silver.png" : "res://art/ui/card_face.png";
                     Check(face.GetThemeStylebox("panel") is StyleBoxTexture faceArt &&
-                        faceArt.Texture.ResourcePath == "res://art/ui/card_face.png",
-                        "Every upgrade face must reuse the original hand-drawn card art");
+                        faceArt.Texture.ResourcePath == expectedArt,
+                        "Card artwork must match the configured price tier");
                     foreach (string name in new[] { "Amount", "Title", "Description", "Duration", "Choose" })
                     {
                         var entry = face.GetNode<Control>("Content/" + name);
@@ -108,10 +111,11 @@ public partial class ProjectTest
                     var purchase = face.GetNode<Button>("Content/Choose");
                     foreach (string state in new[] { "normal", "hover", "pressed", "disabled" })
                         Check(purchase.GetThemeStylebox(state) is StyleBoxTexture paper &&
-                            paper.Texture.ResourcePath == "res://art/ui/panel_small.png",
+                            paper.Texture.ResourcePath == (cardCost >= 30 ? "res://art/ui/card_buy_gold.png" :
+                                cardCost >= 20 ? "res://art/ui/card_buy_silver.png" : "res://art/ui/panel_small.png"),
                             "Purchase states must retain the existing drawn paper border");
-                    Check(purchase.GetThemeColor("font_color").R < 0.1f &&
-                        purchase.GetThemeColor("font_pressed_color").R > 0.9f,
+                    Check(purchase.GetThemeColor("font_color").R < 0.2f &&
+                        (cardCost >= 20 ? purchase.GetThemeColor("font_pressed_color").R < 0.2f : purchase.GetThemeColor("font_pressed_color").R > 0.9f),
                         "Purchase text must contrast with light paper and the dark pressed state");
                 }
                 await Capture("ready-" + language + "-" + size.X);
@@ -152,7 +156,7 @@ public partial class ProjectTest
                 card.Choose(DayUpgrade.Energy); card.Skip();
                 await WaitForDayCardAnimation(card);
                 Check(!card.IsOpen && !Paused && !game.DayUpgrades.Pending && game.CurrentDay == 2 &&
-                    game.Score == (buy ? 250 : 220) && game.DayUpgrades.Selected == (buy ? DayUpgrade.Cash : DayUpgrade.None),
+                    game.Score == (buy ? 235 : 220) && game.DayUpgrades.Selected == (buy ? DayUpgrade.Cash : DayUpgrade.None),
                     "Exactly one purchase or free skip must apply after exit and resume the new day");
                 Check(hud.Visible && clock.Visible && clock.Modulate == Colors.White && hud.Modulate == Colors.White && game.GetNode<Control>("HUD/InventoryUI").Visible &&
                     game.GetNode<Control>("World/Atelier/GetItemButton").Visible,

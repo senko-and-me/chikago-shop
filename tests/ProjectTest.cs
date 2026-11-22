@@ -16,6 +16,41 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--campaign-balance-checks"))
+            {
+                await TestCampaignBalance();
+                GD.Print("CAMPAIGN_BALANCE_CHECKS_PASS: fourteen days, exact final quota, win/loss, terminal reload and reset");
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--save-compatibility-checks"))
+            {
+                await TestSaveCompatibility();
+                GD.Print("SAVE_COMPATIBILITY_CHECKS_PASS: legacy versions, active trade, checkpoint, current rewrite and invalid JSON");
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--quota-visit-checks"))
+            {
+                await TestQuotaVisit();
+                GD.Print("QUOTA_VISIT_CHECKS_PASS: greeting, dialogue reload, gift, checkpoint, failure, notebook and unlock");
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--rarity-color-checks"))
+            {
+                await TestRarityColors();
+                GD.Print("RARITY_COLOR_CHECKS_PASS: both workshops, roll tickets, prices, both languages, reload and reset");
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--buyer-arrival-checks"))
+            {
+                await TestBuyerArrival();
+                GD.Print("BUYER_ARRIVAL_CHECKS_PASS: immediate buyers, 20-second wait, tips, modal pause, saves, unlock panel and atelier art");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--prologue-motion-checks"))
             {
                 await TestPrologueMotion();
