@@ -65,6 +65,9 @@ public partial class TradeScene : Node2D
 	private readonly Button[] _showcaseSlots = new Button[ShowcaseCapacity];
 	private readonly ColorRect[] _showcaseGlass = new ColorRect[ShowcaseCapacity];
 	private readonly TextureRect[] _showcaseIcons = new TextureRect[ShowcaseCapacity];
+	private FirstTradeTutorial _tutorial;
+	private readonly Rect2[] _showcaseIconBounds = new Rect2[ShowcaseCapacity];
+	private readonly Dictionary<string, Texture2D> _showcaseArt = new();
 	private readonly Label[] _showcaseLabels = new Label[ShowcaseCapacity];
 
 	private Label _extraShowroomHint = null!;
@@ -256,6 +259,7 @@ public partial class TradeScene : Node2D
 		Array.Fill(_showcaseGrades, "D");
 		Array.Fill(_checkpointShowcaseGrades, "D");
 		Array.Fill(_checkpointShowcaseItems, -1);
+		_tutorial = GetNode<FirstTradeTutorial>("FirstTradeTutorial");
 		NormalizeLeftShowcaseNames();
 
 		string[] showcasePaths =
@@ -276,6 +280,7 @@ public partial class TradeScene : Node2D
 				_showcaseSlots[i].GetNode<ColorRect>("Glass");
 			_showcaseIcons[i] =
 				_showcaseSlots[i].GetNode<TextureRect>("Icon");
+			_showcaseIconBounds[i] = _showcaseIcons[i].GetRect();
 			_showcaseLabels[i] =
 				_showcaseSlots[i].GetNode<Label>("ItemLabel");
 
@@ -495,8 +500,11 @@ public partial class TradeScene : Node2D
 		if (GetTree().Paused)
 			return;
 
-		_dayCycle.Tick(delta);
-		TickBuyerWait(delta);
+		if (!TradeActive || !_tutorial.BlocksFirstOffer)
+		{
+			_dayCycle.Tick(delta);
+			TickBuyerWait(delta);
+		}
 		RefreshBuyers();
 	}
 
@@ -654,6 +662,7 @@ public partial class TradeScene : Node2D
 
 	private void RefreshBuyers()
 	{
+		if (DeferTutorialBuyerArrival()) return;
 		if (!_dayCycle.CanReceiveBuyers || GetTree().Paused || DayTransitionOpen || TradeActive) return;
 		if (!_waitingBuyer) StartWaitingBuyer();
 		TryServeWaitingBuyer();
@@ -682,9 +691,6 @@ public partial class TradeScene : Node2D
 		_customer.Visible = true;
 		_tradePanel.Visible = true;
 		_buyerWaitWidget.SetState(Items[ItemIndex].WorkshopId == "music", _buyerWaitRemaining);
-
-		_acceptButton.Disabled = false;
-		_declineButton.Disabled = false;
 
 		RefreshOffer();
 		RefreshItemButtons();
@@ -724,10 +730,7 @@ public partial class TradeScene : Node2D
 
 			int itemIndex = _showcaseItems[i];
 
-			_showcaseIcons[i].Texture = itemIndex < 0
-				? null
-				: GD.Load<Texture2D>(
-					Items[itemIndex].ArtPath);
+			SetShowcaseArt(i, itemIndex);
 
 			_showcaseLabels[i].Text = locked
 				? GameLocalization.Language == "en"
@@ -762,6 +765,34 @@ public partial class TradeScene : Node2D
 			: GameLocalization.Language == "en"
 				? "Select an inventory item and an empty display"
 				: "Выберите предмет в инвентаре и свободную витрину";
+	}
+
+	private void SetShowcaseArt(int slot, int itemIndex)
+	{
+		var icon = _showcaseIcons[slot];
+		Rect2 bounds = _showcaseIconBounds[slot];
+		Texture2D art = null;
+		if (itemIndex >= 0)
+		{
+			var item = Items[itemIndex];
+			var source = GD.Load<Texture2D>(item.ArtPath);
+			art = source;
+			if (item.Kind is "guitar" or "violin" or "banjo")
+			{
+				if (!_showcaseArt.TryGetValue(item.ArtPath, out art))
+				{
+					using var image = source.GetImage();
+					art = new AtlasTexture { Atlas = source, Region = image.GetUsedRect(), FilterClip = true };
+					_showcaseArt[item.ArtPath] = art;
+				}
+				Vector2 fit = bounds.Size / source.GetSize();
+				Vector2 enlarged = art.GetSize() * (1.35f * Mathf.Min(fit.X, fit.Y));
+				bounds = new Rect2(bounds.GetCenter() - enlarged / 2, enlarged);
+			}
+		}
+		icon.Texture = art;
+		icon.Position = bounds.Position;
+		icon.Size = bounds.Size;
 	}
 
 	private void MoveItemsOutOfLockedShowcases()
@@ -824,7 +855,14 @@ public partial class TradeScene : Node2D
 		RefreshTotalOfferDisplay();
 
 		_declineButton.Text = $"× ({RerollsRemaining})";
-		_declineButton.Disabled = !CanRerollCurrentBuyer;
+		RefreshTutorialTradeActions();
+	}
+
+	internal void RefreshTutorialTradeActions()
+	{
+		DeferTutorialBuyerArrival();
+		_acceptButton.Disabled = !TradeActive || _tutorial.BlocksFirstOffer;
+		_declineButton.Disabled = _tutorial.BlocksFirstOffer || !CanRerollCurrentBuyer;
 	}
 
 	public static int PriceForPercent(int basePrice, int value)
@@ -835,7 +873,7 @@ public partial class TradeScene : Node2D
 	public void RerollCustomer()
 	{
 		if (!RequireStartedDay()) return;
-		if (!CanRerollCurrentBuyer)
+		if (_tutorial.BlocksFirstOffer || !CanRerollCurrentBuyer)
 			return;
 
 		RerollsRemaining--;
@@ -866,7 +904,7 @@ public partial class TradeScene : Node2D
 	public void AcceptTrade()
 	{
 		if (!RequireStartedDay()) return;
-		if (!TradeActive)
+		if (!TradeActive || _tutorial.BlocksFirstOffer)
 			return;
 
 		Score += CurrentBuyerPayout;
@@ -958,6 +996,9 @@ public partial class TradeScene : Node2D
 		_dayCycle.Tick(delta);
 	}
 
+	internal void SynchronizeTutorialClock(bool restart) => _dayCycle.SynchronizeTutorialClock(restart);
+	internal bool OpenTutorialUpgradeChoice(Action finished) => _dayCycle.OpenTutorialUpgradeChoice(finished);
+
 	public void PersistProgress()
 	{
 		SaveProgress();
@@ -976,7 +1017,7 @@ public partial class TradeScene : Node2D
 	public void RefreshDayPresentation()
 	{
 		RefreshClosedBuyerOffer();
-		_declineButton.Disabled = !CanRerollCurrentBuyer;
+		RefreshTutorialTradeActions();
 		_inventoryUI.UpdateUI(_storedItems);
 		RefreshScore();
 		RefreshProgress();

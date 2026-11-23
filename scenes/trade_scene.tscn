@@ -1,75 +1,39 @@
 [gd_scene format=3 uid="uid://6ciouuso5bqi"]
 
-[ext_resource type="Script" path="res://scripts/Presentation/RoomCurtainPresentation.cs" id="34_curtain"]
-
 [ext_resource type="Script" uid="uid://bj66ajuqbshg0" path="res://scripts/TradeScene.cs" id="1_main"]
-
 [ext_resource type="Script" uid="uid://c6334skyxf3jy" path="res://scripts/CounterWorld.cs" id="2_world"]
-
 [ext_resource type="Texture2D" uid="uid://bc8clisawybhl" path="res://art/rooms/music_room.jpg" id="4_pi35y"]
-
 [ext_resource type="PackedScene" uid="uid://u2ve41t8yhqn" path="res://scenes/customer.tscn" id="5_customer"]
-
 [ext_resource type="Texture2D" uid="uid://opqiutt7np6v" path="res://art/rooms/showroom.jpg" id="9_bkxpd"]
-
 [ext_resource type="PackedScene" uid="uid://4wqv2sl2gvaw" path="res://scenes/UI/InventoryUI.tscn" id="9_cppqn"]
-
 [ext_resource type="PackedScene" uid="uid://wj2ymug80tk2" path="res://scenes/UI/ShowcaseSlot.tscn" id="10_showcase"]
-
 [ext_resource type="Texture2D" uid="uid://cq6tis3xjvmup" path="res://art/rooms/atelier.jpg" id="11_atelier"]
-
 [ext_resource type="Texture2D" uid="uid://d21j3cp04fmi5" path="res://art/rooms/cashier_closed.jpg" id="12_cashier"]
-
 [ext_resource type="Texture2D" uid="uid://7i21ur522dc7" path="res://art/rooms/upper_corridor_closed.jpg" id="13_58qc8"]
-
 [ext_resource type="Texture2D" uid="uid://dcj7da0lpr1fq" path="res://art/rooms/room_layout.jpg" id="14_layout"]
-
-[ext_resource type="Texture2D" uid="uid://dfxl3bik7r087" path="res://art/ui/panel_large.png" id="16_panel_large"]
-
 [ext_resource type="Texture2D" uid="uid://bf1y5qehuwoj" path="res://art/ui/panel_small.png" id="17_panel_small"]
-
 [ext_resource type="PackedScene" path="res://scenes/UI/RarityPanel.tscn" id="19_rarity_panel"]
-
 [ext_resource type="Script" uid="uid://dxn8wgvls5a4a" path="res://scripts/UI/PauseMenu.cs" id="20_pause"]
-
 [ext_resource type="Script" uid="uid://bdswgixl6srw1" path="res://scripts/UI/ZoomResponsiveUi.cs" id="21_zoom_ui"]
-
 [ext_resource type="Script" uid="uid://dqhunfpycjxyp" path="res://scripts/UI/ProgressPanel.cs" id="22_progress"]
-
-[ext_resource type="PackedScene" path="res://scenes/UI/CigaretteProgress.tscn" id="32_cigarette_progress"]
-
-[ext_resource type="PackedScene" path="res://scenes/UI/PulloutNotebook.tscn" id="34_notebook"]
-
-[ext_resource type="Script" path="res://scripts/Presentation/TradingRoomPosterHotspot.cs" id="35_poster_hotspot"]
-
-[ext_resource type="PackedScene" path="res://scenes/UI/EnergyPanel.tscn" id="33_energy_panel"]
-
 [ext_resource type="Script" uid="uid://cnnctojfahevu" path="res://scripts/Camera/WorldCamera.cs" id="23_world_camera"]
-
 [ext_resource type="Script" uid="uid://moiorwdg8bcp" path="res://scripts/Presentation/RoomDoorwayPresentation.cs" id="24_doorways"]
-
 [ext_resource type="Texture2D" uid="uid://cog2ypvb6uqtj" path="res://art/ui/panel_inverted.png" id="25_inverted"]
-
 [ext_resource type="Script" uid="uid://6v4lxl6qtq6y" path="res://scripts/Audio/GameplayMusicDirector.cs" id="26_game_music"]
-
 [ext_resource type="AudioStream" uid="uid://dapsv2fl4qete" path="res://audio/music/menu_theme_loop.wav" id="27_day_music"]
-
 [ext_resource type="AudioStream" uid="uid://chjxk4p6834ac" path="res://audio/music/thoughtful_loop.wav" id="28_upgrade_music"]
-
-[ext_resource type="Texture2D" uid="uid://b8xud5umuwi61" path="res://art/rooms/night_time.png" id="background_1_jqty7"]
-
-[ext_resource type="Texture2D" uid="uid://dcpdw0kad8qlu" path="res://art/rooms/day_time.png" id="background_2_31fg5"]
-
-[ext_resource type="Texture2D" uid="uid://bj3pbvpqnrv7g" path="res://art/ui/camera_frame.png" id="background_4_00ccd"]
-
-[ext_resource type="Texture2D" uid="uid://deul0bfifm5rg" path="res://art/rooms/locked_curtain.png" id="background_6_2e12l"]
-
 [ext_resource type="PackedScene" path="res://scenes/UI/FirstTradeTutorial.tscn" id="30_tutorial"]
-
 [ext_resource type="PackedScene" path="res://scenes/UI/CraftButton.tscn" id="31_craft_button"]
-
+[ext_resource type="PackedScene" path="res://scenes/UI/CigaretteProgress.tscn" id="32_cigarette_progress"]
+[ext_resource type="PackedScene" uid="uid://wged5cxnn4t5" path="res://scenes/UI/EnergyPanel.tscn" id="33_energy_panel"]
+[ext_resource type="Script" uid="uid://dc8nesm1ehm43" path="res://scripts/Presentation/RoomCurtainPresentation.cs" id="34_curtain"]
+[ext_resource type="PackedScene" path="res://scenes/UI/PulloutNotebook.tscn" id="34_notebook"]
+[ext_resource type="Script" uid="uid://bb6netwd3fjho" path="res://scripts/Presentation/TradingRoomPosterHotspot.cs" id="35_poster_hotspot"]
 [ext_resource type="PackedScene" path="res://scenes/UI/MusicWorkshopUnlockPanel.tscn" id="36_unlock_panel"]
-
+[ext_resource type="Texture2D" uid="uid://b8xud5umuwi61" path="res://art/rooms/night_time.png" id="background_1_jqty7"]
+[ext_resource type="Texture2D" uid="uid://dcpdw0kad8qlu" path="res://art/rooms/day_time.png" id="background_2_31fg5"]
+[ext_resource type="Texture2D" uid="uid://bj3pbvpqnrv7g" path="res://art/ui/camera_frame.png" id="background_4_00ccd"]
+[ext_resource type="Texture2D" uid="uid://deul0bfifm5rg" path="res://art/rooms/locked_curtain.png" id="background_6_2e12l"]
 
 [sub_resource type="AtlasTexture" id="InvertedHeaderTexture"]
 atlas = ExtResource("25_inverted")
@@ -95,6 +59,9 @@ border_width_top = 50
 border_width_right = 20
 border_width_bottom = 50
 border_color = Color(0, 0, 0, 1)
+
+[sub_resource type="RectangleShape2D" id="ShowPosterShape"]
+size = Vector2(111, 166)
 
 [sub_resource type="StyleBoxFlat" id="TradePanelStyle"]
 content_margin_left = 15.0
@@ -132,13 +99,6 @@ bg_color = Color(0.515402, 0.515402, 0.515402, 1)
 [sub_resource type="StyleBoxFlat" id="DeclineDisabled"]
 bg_color = Color(0.240239, 0.240239, 0.240239, 1)
 
-[sub_resource type="StyleBoxTexture" id="HudLargePanelStyle"]
-content_margin_left = 18.0
-content_margin_top = 18.0
-content_margin_right = 18.0
-content_margin_bottom = 18.0
-texture = ExtResource("16_panel_large")
-
 [sub_resource type="StyleBoxFlat" id="RerollNormal"]
 bg_color = Color(0.39698, 0.39698, 0.39698, 1)
 
@@ -149,9 +109,6 @@ bg_color = Color(0.335576, 0.335576, 0.335576, 1)
 bg_color = Color(0.489788, 0.489788, 0.489788, 1)
 
 [sub_resource type="StyleBoxEmpty" id="ProgressEmpty"]
-
-[sub_resource type="RectangleShape2D" id="ShowPosterShape"]
-size = Vector2(111, 166)
 
 [node name="TradeScene" type="Node2D" unique_id=620028237]
 script = ExtResource("1_main")
@@ -382,25 +339,25 @@ mouse_filter = 2
 theme_override_styles/panel = SubResource("RoomFrameSealStyle")
 
 [node name="LockedOverlay" type="ColorRect" parent="World/MusicWorkshop" unique_id=1604263624]
-script = ExtResource("34_curtain")
-offset_bottom = 1129.0
-offset_right = 1944.0
-offset_top = -24.0
-offset_left = -28.0
 z_index = 100
+offset_left = -28.0
+offset_top = -24.0
+offset_right = 1944.0
+offset_bottom = 1129.0
 mouse_filter = 1
 color = Color(0, 0, 0, 1)
+script = ExtResource("34_curtain")
 
 [node name="LockedCurtain" type="TextureRect" parent="World/MusicWorkshop/LockedOverlay" unique_id=1953917145]
-offset_bottom = 1153.0
-offset_right = 1972.0
 layout_mode = 0
+offset_right = 1972.0
+offset_bottom = 1153.0
 mouse_filter = 2
 texture = ExtResource("background_6_2e12l")
 expand_mode = 1
 stretch_mode = 6
 
-[node name="UnlockPanel" parent="World/MusicWorkshop/LockedOverlay" instance=ExtResource("36_unlock_panel")]
+[node name="UnlockPanel" parent="World/MusicWorkshop/LockedOverlay" unique_id=1338460370 instance=ExtResource("36_unlock_panel")]
 layout_mode = 1
 
 [node name="Showroom" type="Node2D" parent="World" unique_id=1166953855]
@@ -495,18 +452,18 @@ mouse_filter = 2
 theme_override_styles/panel = SubResource("RoomFrameSealStyle")
 
 [node name="LockedOverlay" type="ColorRect" parent="World/Showroom" unique_id=581286688]
-script = ExtResource("34_curtain")
-offset_bottom = 1104.0
-offset_right = 1944.0
-offset_top = -50.0
-offset_left = -28.0
 z_index = 100
+offset_left = -28.0
+offset_top = -50.0
+offset_right = 1944.0
+offset_bottom = 1104.0
 color = Color(0, 0, 0, 1)
+script = ExtResource("34_curtain")
 
 [node name="LockedCurtain" type="TextureRect" parent="World/Showroom/LockedOverlay" unique_id=744648570]
-offset_bottom = 1154.0
-offset_right = 1972.0
 layout_mode = 0
+offset_right = 1972.0
+offset_bottom = 1154.0
 mouse_filter = 2
 texture = ExtResource("background_6_2e12l")
 expand_mode = 1
@@ -612,17 +569,16 @@ scale = Vector2(1.0052866, 1.0237135)
 texture = ExtResource("12_cashier")
 centered = false
 
-[node name="ShowPoster" type="Node2D" parent="World/TradingRoom"]
-position = Vector2(496, 392)
+[node name="ShowPoster" type="Node2D" parent="World/TradingRoom" unique_id=275296243]
+position = Vector2(480, 392)
 script = ExtResource("35_poster_hotspot")
 
-[node name="PosterSprite" type="Sprite2D" parent="World/TradingRoom/ShowPoster"]
+[node name="PosterSprite" type="Sprite2D" parent="World/TradingRoom/ShowPoster" unique_id=600730508]
 centered = false
 
-[node name="HitArea" type="Area2D" parent="World/TradingRoom/ShowPoster"]
-input_pickable = true
+[node name="HitArea" type="Area2D" parent="World/TradingRoom/ShowPoster" unique_id=596969445]
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="World/TradingRoom/ShowPoster/HitArea"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="World/TradingRoom/ShowPoster/HitArea" unique_id=1705847714]
 position = Vector2(55.5, 83)
 shape = SubResource("ShowPosterShape")
 
@@ -652,8 +608,8 @@ offset_left = -137.0
 offset_top = -416.0
 offset_right = 183.0
 offset_bottom = -216.0
-pivot_offset = Vector2(160, 200)
 scale = Vector2(1.25, 1.25)
+pivot_offset = Vector2(160, 200)
 theme_override_styles/panel = SubResource("TradePanelStyle")
 
 [node name="Content" type="VBoxContainer" parent="World/TradingRoom/Item/TradePanel" unique_id=2136036310]
@@ -845,7 +801,7 @@ scale = Vector2(1.2631578, 1.2631578)
 texture = ExtResource("background_2_31fg5")
 centered = false
 
-[node name="Camera2D" type="Camera2D" parent="." node_paths=PackedStringArray("BoundsSource") unique_id=550359116]
+[node name="Camera2D" type="Camera2D" parent="." unique_id=550359116 node_paths=PackedStringArray("BoundsSource")]
 position = Vector2(2880, 1620.6316)
 zoom = Vector2(0.39583334, 0.39583334)
 script = ExtResource("23_world_camera")
@@ -887,25 +843,19 @@ text = "Счёт: 220$"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="EnergyPanel" parent="HUD/Root" instance=ExtResource("33_energy_panel")]
+[node name="EnergyPanel" parent="HUD/Root" unique_id=1670076939 instance=ExtResource("33_energy_panel")]
 layout_mode = 1
 
 [node name="ProgressPanel" type="Control" parent="HUD/Root" unique_id=1016591818]
-layout_mode = 0
+anchors_preset = 0
 offset_top = 24.0
 offset_right = 46.0
 offset_bottom = 232.0
 mouse_filter = 2
 script = ExtResource("22_progress")
 
-[node name="Visual" parent="HUD/Root/ProgressPanel" instance=ExtResource("32_cigarette_progress")]
-
-[node name="PulloutNotebook" parent="HUD/Root" instance=ExtResource("34_notebook")]
-layout_mode = 0
-offset_left = 950.0
-offset_top = 204.0
-offset_right = 1262.0
-offset_bottom = 614.0
+[node name="Visual" parent="HUD/Root/ProgressPanel" unique_id=1825059871 instance=ExtResource("32_cigarette_progress")]
+anchors_preset = 0
 
 [node name="Content" type="VBoxContainer" parent="HUD/Root/ProgressPanel" unique_id=1283382676]
 visible = false
@@ -975,29 +925,36 @@ theme_override_styles/pressed = SubResource("DeclinePressed")
 theme_override_styles/hover = SubResource("DeclineHover")
 text = "Начать заново"
 
-[node name="ProgressToggleButton" type="Button" parent="HUD/Root" groups=["button_feedback_local"] unique_id=989856316]
+[node name="PulloutNotebook" parent="HUD/Root" unique_id=1632579697 instance=ExtResource("34_notebook")]
+anchors_preset = 0
+offset_left = 950.0
+offset_top = 204.0
+offset_right = 1262.0
+offset_bottom = 614.0
+
+[node name="ProgressToggleButton" type="Button" parent="HUD/Root" unique_id=989856316 groups=["button_feedback_local"]]
 z_index = 2
 layout_mode = 0
 offset_top = 24.0
 offset_right = 44.0
 offset_bottom = 232.0
 mouse_default_cursor_shape = 2
-flat = true
 theme_override_styles/normal = SubResource("ProgressEmpty")
-theme_override_styles/hover = SubResource("ProgressEmpty")
 theme_override_styles/pressed = SubResource("ProgressEmpty")
+theme_override_styles/hover = SubResource("ProgressEmpty")
 theme_override_styles/disabled = SubResource("ProgressEmpty")
+flat = true
 
-[node name="ClockActionButton" type="Button" parent="HUD/Root" groups=["button_feedback_local"]]
+[node name="ClockActionButton" type="Button" parent="HUD/Root" unique_id=1605090605 groups=["button_feedback_local"]]
 visible = false
 layout_mode = 0
 mouse_default_cursor_shape = 2
-flat = true
 theme_override_styles/normal = SubResource("ProgressEmpty")
-theme_override_styles/hover = SubResource("ProgressEmpty")
 theme_override_styles/pressed = SubResource("ProgressEmpty")
+theme_override_styles/hover = SubResource("ProgressEmpty")
 theme_override_styles/disabled = SubResource("ProgressEmpty")
 theme_override_styles/focus = SubResource("ProgressEmpty")
+flat = true
 
 [node name="InventoryUI" parent="HUD" unique_id=1583018025 instance=ExtResource("9_cppqn")]
 offset_top = -3.0

@@ -10,6 +10,7 @@ public sealed class DayCycleController
 	public DaySession Session { get; } = new(5, 3630);
 	public bool Started { get; private set; }
 	private bool _advanceWhenClosed;
+	private Action _tutorialUpgradeFinished;
 	public DayUpgradeSession Upgrades { get; } = new();
 	public int CheckpointAtelierLevel { get; private set; }
 	public int CheckpointMusicLevel { get; private set; }
@@ -26,15 +27,15 @@ public sealed class DayCycleController
 	private readonly Texture2D _clockExpired;
 	private readonly Control _inventoryStrip;
 	private int _displayedSeconds = -1;
-	private double _tutorialEndNotice;
-	private const string TutorialEndMessage = "Сначала завершите или пропустите обучение.";
+	public const double TutorialDuration = 180;
+	private double? _restoredTutorialRemaining;
 	private bool TutorialActive => _game.GetNodeOrNull<FirstTradeTutorial>("FirstTradeTutorial")?.IsActive == true;
 	private readonly DayTransitionCard _card;
 	private readonly MafiaQuotaNotice _mafia;
 	private readonly DayNightBackground _dayNight;
 	private readonly DayAnnouncementOverlay _announcements;
 	private readonly DayStartGate _actionGate;
-	private double ExpectedDuration => WorkshopItemCatalog.DayDurationSeconds
+	private double ExpectedDuration => TutorialActive ? TutorialDuration : WorkshopItemCatalog.DayDurationSeconds
 		+ (_game.MusicWorkshopUnlocked ? 30 : 0);
 	public bool TransitionOpen => _card.IsOpen || _mafia.IsOpen;
 
@@ -165,7 +166,6 @@ public sealed class DayCycleController
 
 	public void Tick(double delta)
 	{
-		_tutorialEndNotice = Math.Max(0, _tutorialEndNotice - delta);
 		bool crafting = _game.CraftMiniGameOpen;
 		if (!Started || Upgrades.Pending || (_game.GetTree().Paused && !crafting) || _game.Failed || _game.Completed) return;
 		// Expiry closes trading immediately, then advances once the current interaction is finished.
@@ -175,7 +175,13 @@ public sealed class DayCycleController
 			EndDay();
 			return;
 		}
-		bool closed = Session.Tick(delta);
+		bool closed;
+		if (TutorialActive)
+		{
+			Session.TickRepeating(delta);
+			closed = false;
+		}
+		else closed = Session.Tick(delta);
 		if (closed) _advanceWhenClosed = true;
 		_announcements.Observe(Session.RemainingSeconds, Session.Duration, Session.IsClosed, _game.CurrentDay, TotalDays, FirstQuotaDay);
 		UpdateDayNightBackground();
@@ -188,12 +194,7 @@ public sealed class DayCycleController
 	{
 		if (_game.Failed || _game.Completed || TransitionOpen || Upgrades.Pending || _game.QuotaVisitPending || _game.CraftMiniGameOpen) return;
 		if (!Started && !Session.IsClosed) { StartDay(); return; }
-		if (TutorialActive)
-		{
-			_tutorialEndNotice = 3;
-			RefreshTimer();
-			return;
-		}
+		if (TutorialActive) return;
 		switch (Session.RequestEnd(_game.TradeActive))
 		{
 			case EndDayAction.Closed:
@@ -223,7 +224,9 @@ public sealed class DayCycleController
 
 	public void Reset(bool preserveCategories = false)
 	{
-		_tutorialEndNotice = 0;
+		_tutorialUpgradeFinished = null;
+		_card.TutorialExplanation = "";
+		_restoredTutorialRemaining = null;
 		_actionGate.Dismiss();
 		_advanceWhenClosed = false;
 		_card.Close();
@@ -247,6 +250,7 @@ public sealed class DayCycleController
 		CheckpointMusicLevel = Math.Clamp(checkpointMusicLevel, 0, 6);
 		CheckpointAtelierPriceLevel = Math.Clamp(checkpointAtelierPriceLevel, 0, 6);
 		CheckpointMusicPriceLevel = Math.Clamp(checkpointMusicPriceLevel, 0, 6);
+		_restoredTutorialRemaining = remaining;
 		Session.Restore(remaining, closed, ExpectedDuration);
 		// Recover saves made in the closed-day state, including before this fix.
 		_advanceWhenClosed = Session.IsClosed;
@@ -309,6 +313,7 @@ public sealed class DayCycleController
 		UpdateDayNightBackground();
 		_game.RefreshDayPresentation();
 		_card.Close();
+		FinishTutorialUpgradeChoice();
 	}
 
 	private void SkipUpgrade()
@@ -316,6 +321,43 @@ public sealed class DayCycleController
 		if (!Upgrades.TrySkip()) return;
 		_game.RefreshDayPresentation();
 		_card.Close();
+		FinishTutorialUpgradeChoice();
+	}
+
+	public bool OpenTutorialUpgradeChoice(Action finished)
+	{
+		if (!TutorialActive || _game.TradeActive || TransitionOpen || _game.GetTree().Paused) return false;
+		_tutorialUpgradeFinished = finished;
+		if (!Upgrades.Pending) Upgrades.Offer(_game.CurrentDay + 1, _game.MusicWorkshopUnlocked);
+		_card.TutorialExplanation = "Выберите карту или нажмите «Пропустить».";
+		_game.PersistProgress();
+		_card.Open(_game.CurrentDay, _game.CurrentDay + 1, Upgrades.Options, _game.Score);
+		return _card.IsOpen;
+	}
+
+	private void FinishTutorialUpgradeChoice()
+	{
+		var finished = _tutorialUpgradeFinished;
+		_tutorialUpgradeFinished = null;
+		_card.TutorialExplanation = "";
+		finished?.Invoke();
+	}
+
+	public void SynchronizeTutorialClock(bool restart)
+	{
+		if (!TutorialActive) return;
+		double remaining = TutorialDuration;
+		if (!restart && _restoredTutorialRemaining is double saved && double.IsFinite(saved) && saved > 0)
+			remaining = Math.Min(saved, TutorialDuration);
+		else if (!restart && Session.Duration == TutorialDuration && !Session.IsClosed)
+			remaining = Session.RemainingSeconds;
+		Session.Restore(remaining, false, TutorialDuration);
+		_restoredTutorialRemaining = null;
+		_advanceWhenClosed = false;
+		if (Started) _announcements.Restore(Session.RemainingSeconds, Session.Duration);
+		else _announcements.BeginDay();
+		RefreshTimer();
+		UpdateDayNightBackground();
 	}
 
 	public void SynchronizeRoomDuration()
@@ -339,8 +381,7 @@ public sealed class DayCycleController
 		RefreshTimer();
 		button.Text = Session.IsClosed ? "Начать следующий день" : Started ? "Завершить день" : "Начать";
 		button.Disabled = _game.Failed || _game.Completed || (Session.IsClosed && _game.TradeActive);
-		button.TooltipText = TutorialActive && Started ? GameLocalization.Text(TutorialEndMessage) :
-			Session.IsClosed && _game.TradeActive ? "Сначала завершите сделку" : "";
+		button.TooltipText = !TutorialActive && Session.IsClosed && _game.TradeActive ? "Сначала завершите сделку" : "";
 	}
 
 	public string DisplayStatus(string status) => GameLocalization.Status(
@@ -357,8 +398,7 @@ public sealed class DayCycleController
 		_startButton.Disabled = Upgrades.Pending;
 		_clockAction.Visible = (Started || Session.IsClosed) && !_game.Failed && !_game.Completed;
 		_clockAction.Disabled = _game.CraftMiniGameOpen || Upgrades.Pending || Session.IsClosed && _game.TradeActive;
-		_clockAction.TooltipText = TutorialActive ? GameLocalization.Text(TutorialEndMessage) :
-			Session.IsClosed ? "Начать следующий день" : "";
+		_clockAction.TooltipText = !TutorialActive && Session.IsClosed ? "Начать следующий день" : "";
 		UpdateClockFeedback();
 		bool changed = seconds != _displayedSeconds;
 		_displayedSeconds = seconds;
@@ -373,12 +413,11 @@ public sealed class DayCycleController
 			_clockAction.Visible && !_clockAction.Disabled && (_clockAction.IsHovered() || _clockAction.HasFocus());
 		_clock.SelfModulate = active ? new Color(0.9f, 0.9f, 0.9f) : Colors.White;
 		if (_endCaption == null) return;
-		bool tutorialNotice = TutorialActive && _tutorialEndNotice > 0;
-		bool showEnd = tutorialNotice || _clockAction.Visible && !_clockAction.Disabled && Started &&
+		bool showEnd = !TutorialActive && _clockAction.Visible && !_clockAction.Disabled && Started &&
 			!Session.IsClosed && Session.RemainingSeconds > 0 &&
 			(_clockAction.IsHovered() || _clockAction.HasFocus());
 		_endCaption.Visible = showEnd;
-		string caption = GameLocalization.Text(TutorialActive ? "Завершите обучение" : "Завершить день");
+		string caption = GameLocalization.Text("Завершить день");
 		_endCaption.Text = caption.Replace(" ", "\n");
 		int baseSize = _startButton.GetThemeFontSize("font_size");
 		float wordWidth = 1;

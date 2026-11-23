@@ -18,6 +18,9 @@ public partial class DayTransitionCard : CanvasLayer
     private DayCardDealAnimator _animation = null!;
     private DayCardSceneTransition _sceneTransition = null!;
     private Label _title = null!;
+    private Label _tutorialExplanation = null!;
+    public string TutorialExplanation { get; set; } = "";
+    private float CardHeight => string.IsNullOrEmpty(TutorialExplanation) ? 460 : 420;
     private enum Phase { Closed, Framing, Dealing, Choosing, Leaving }
     private Phase _phase;
     private int _generation;
@@ -39,6 +42,16 @@ public partial class DayTransitionCard : CanvasLayer
         _panel = GetNode<PanelContainer>("Root/Center/Card");
         _route = GetNode<Label>("Root/Center/Card/Content/Route");
         _title = GetNode<Label>("Root/Center/Card/Content/Title");
+        _tutorialExplanation = new Label
+        {
+            Name = "TutorialExplanation", Visible = false,
+            AutowrapMode = TextServer.AutowrapMode.WordSmart,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            MouseFilter = Control.MouseFilterEnum.Ignore
+        };
+        _tutorialExplanation.AddThemeColorOverride("font_color", new Color("eeeeee"));
+        _title.GetParent().AddChild(_tutorialExplanation);
+        _title.GetParent().MoveChild(_tutorialExplanation, _title.GetIndex() + 1);
         _choices = GetNode<Control>("Root/Center/Card/Content/Choices");
         _skip = GetNode<Button>("Root/Center/Card/Content/Skip");
         _shade = GetNode<ColorRect>("Root/Shade");
@@ -56,14 +69,6 @@ public partial class DayTransitionCard : CanvasLayer
         panel.Name = upgrade.ToString();
         parent.AddChild(panel);
         _cards.Add(panel);
-        // Preserve this build's textured card layout and its purchase button artwork.
-        // Each card receives its own style so mixed rarities never recolor each other.
-        if (panel.GetThemeStylebox("panel") is StyleBoxTexture sharedFace)
-        {
-            var face = (StyleBoxTexture)sharedFace.Duplicate(true);
-            face.Texture = FaceTextureFor(Cost(upgrade));
-            panel.AddThemeStyleboxOverride("panel", face);
-        }
         panel.GetNode<Label>("Content/Amount").Text = amount;
         panel.GetNode<Label>("Content/Title").Text = title;
         panel.GetNode<Label>("Content/Description").Text = description;
@@ -71,50 +76,15 @@ public partial class DayTransitionCard : CanvasLayer
         int cost = Cost(upgrade);
         var button = panel.GetNode<Button>("Content/Choose");
         button.Text = GameLocalization.Format("Купить за {0}$", cost);
-        if (cost >= 30) StylePremiumButton(button, true);
-        else if (cost >= 20) StylePremiumButton(button, false);
         button.Disabled = _balance < cost;
         button.Pressed += () => Choose(upgrade);
         return button;
     }
 
-    private static void StylePremiumButton(Button button, bool gold)
+    public override void _Notification(int what)
     {
-        // Use the real hand-painted frames, not a tinted copy of panel_small.png.
-        // They were converted to horizontal nine-slice artwork, preserving corners.
-        string texturePath = gold
-            ? "res://art/ui/card_buy_gold.png"
-            : "res://art/ui/card_buy_silver.png";
-        Texture2D texture = GD.Load<Texture2D>(texturePath);
-        foreach (var (name, tint) in new (string, string)[]
-        {
-            ("normal", "FFFFFF"), ("hover", "FFFFFF"),
-            ("pressed", "C9C9C9"), ("disabled", "AAAAAA")
-        })
-        {
-            if (button.GetThemeStylebox(name) is not StyleBoxTexture original) continue;
-            var style = (StyleBoxTexture)original.Duplicate(true);
-            style.Texture = texture;
-            style.ModulateColor = new Color(tint);
-            button.AddThemeStyleboxOverride(name, style);
-        }
-        Color ink = new Color(gold ? "21180C" : "202329");
-        foreach (string name in new[]
-        {
-            "font_color", "font_hover_color", "font_pressed_color",
-            "font_focus_color", "font_disabled_color"
-        })
-            button.AddThemeColorOverride(name, ink);
-    }
-
-    private static Texture2D FaceTextureFor(int cost)
-    {
-        string path = cost >= 30
-            ? "res://art/ui/day_card_gold.png"
-            : cost >= 20
-                ? "res://art/ui/day_card_silver.png"
-                : "res://art/ui/card_face.png";
-        return GD.Load<Texture2D>(path);
+        if (what == NotificationTranslationChanged && IsNodeReady())
+            _tutorialExplanation.Text = GameLocalization.Text(TutorialExplanation);
     }
 
     private void Layout()
@@ -126,9 +96,13 @@ public partial class DayTransitionCard : CanvasLayer
         _route.AddThemeFontSizeOverride("font_size", (int)(22 * _layoutScale));
         _title.AddThemeFontSizeOverride("font_size", (int)(30 * _layoutScale));
         _skip.CustomMinimumSize = new Vector2(252 * _layoutScale, 45 * _layoutScale);
-        _choices.CustomMinimumSize = new Vector2(0, 460 * _layoutScale);
+        _tutorialExplanation.Visible = !string.IsNullOrEmpty(TutorialExplanation);
+        _tutorialExplanation.Text = GameLocalization.Text(TutorialExplanation);
+        _tutorialExplanation.AddThemeFontSizeOverride("font_size", Math.Max(12, (int)(18 * _layoutScale)));
+        _tutorialExplanation.CustomMinimumSize = new Vector2(0, 40 * _layoutScale);
+        _choices.CustomMinimumSize = new Vector2(0, CardHeight * _layoutScale);
         _deck.Size = new Vector2(100, 144) * _layoutScale;
-        _deck.Position = new Vector2(8 * _layoutScale, _root.Size.Y - _deck.Size.Y - 28);
+        _deck.Position = new Vector2(_deck.Position.X, _root.Size.Y - _deck.Size.Y - 28);
         foreach (var card in _cards)
         {
             var content = card.GetNode<VBoxContainer>("Content");
@@ -154,10 +128,16 @@ public partial class DayTransitionCard : CanvasLayer
         for (int i = 0; i < _cards.Count; i++)
         {
             var card = _cards[i];
-            card.CustomMinimumSize = new Vector2(width, 460 * _layoutScale);
+            card.CustomMinimumSize = new Vector2(width, CardHeight * _layoutScale);
             card.Size = card.CustomMinimumSize;
             card.Position = new Vector2(start + i * (width + gap), 0);
             card.PivotOffset = card.Size / 2;
+        }
+        if (_cards.Count > 0)
+        {
+            Vector2 firstCard = _root.GetGlobalTransformWithCanvas().AffineInverse() *
+                (_choices.GetGlobalTransformWithCanvas() * new Vector2(start, 0));
+            _deck.Position = new Vector2(Mathf.Max(0, (firstCard.X - _deck.Size.X) / 2), _deck.Position.Y);
         }
     }
 

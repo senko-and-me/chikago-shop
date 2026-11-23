@@ -398,11 +398,18 @@ public partial class EmbroideryGame : CanvasLayer
             GameLocalization.Text(IsPolishing ? "ОЧИЩЕНО" : "СТЕЖКИ");
         _statHeadings[2].Text = GameLocalization.Text("ПРОМАХИ");
 
-        _hint.Text = ready || playing
-            ? GameLocalization.Text(IsPolishing
+        bool tutorial = !IsPolishing && _game.GetNodeOrNull<FirstTradeTutorial>("FirstTradeTutorial")?.IsActive == true;
+        string hint = ready || playing
+            ? (IsPolishing
                 ? "Зажми и протирай туда-сюда"
                 : "Нажимай на светящиеся точки")
             : "";
+        if (tutorial)
+            hint = ready ? "Нажмите «Начать», чтобы приступить к вышивке."
+                : playing ? "Нажимайте на подсвечивающиеся точки по очереди."
+                : "Нажмите «Забрать», чтобы вернуться в магазин.";
+        _hint.Text = GameLocalization.Text(hint);
+        _hint.AddThemeFontSizeOverride("font_size", tutorial ? 18 : 16);
 
         _quality.Text = $"{ActiveSession.Quality}%";
         _action.Text = GameLocalization.Text(ready ? "Начать" : "Забрать");

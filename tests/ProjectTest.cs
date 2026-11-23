@@ -16,6 +16,13 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--interface-fixes-checks"))
+            {
+                await TestInterfaceFixes();
+                GD.Print("INTERFACE_FIXES_CHECKS_PASS: instruments, 10 pack cycles, stationary notebook and all pause buttons at 720p/1080p");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--canonical-migration-checks"))
             {
                 await TestCanonicalMigration();

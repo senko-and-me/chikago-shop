@@ -9,6 +9,248 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### POL-32 — сохранить polishing и включить обновления main
+
+Статус: `IN_PROGRESS`; /root coordinator/executor; 2026-11-23; POL31DONE. CP: .local/checks/pol32-commit-main/CP-POL-32.md. Все текущие изменения сохранить в polishing, затем fetch и merge origin/main. При конфликтах остановиться и запросить решение пользователя. main и удалённые ветки не изменять.
+### POL-31 — блокнот после учебных карточек
+
+Статус: `DONE`; /root coordinator/executor; 2026-11-22; POL30DONE. CP: .local/checks/pol31-notebook-lesson/CP-POL-31.md.
+
+Handoff: Task POL-31; recommended REVIEW → accepted DONE. Changed: scripts/UI/FirstTradeTutorial.cs, localization/en.tres, tests/Integration/ProjectTest.Tutorial.cs, этот план. После покупки/пропуска карточки жёлтая рамка выделяет реальную страницу блокнота, обычное окно просит навести мышь для просмотра заданий/улучшений. Непрерывное реальное наведение 1s продолжает гайд к музыкальной мастерской; уход сбрасывает таймер. Непрочитанный/пройденный шаг сохраняется optional-флагом tutorial.cfg. Блокнот не открывается автоматически и не перемещается.
+
+Checks: dotnet build ChikagoShop.sln --no-restore → PASS (0 warnings/errors); rendered Godot --tutorial-checks → PASS exit0 TUTORIAL_CHECKS_PASS (покупка/пропуск, реальное открытие блокнота, задержка/сброс, reload, подсветка, RU/EN, 960x540/1280x720 и весь остальной гайд); git diff --check → PASS. Evidence: .local/checks/pol31-notebook-lesson/build.log, tutorial.log, tutorial-errors.log. В stderr только существующее предупреждение root certificate store. Read-set exception: нет. Risks/blocker: нет. Next: пользовательская проверка расположения подсказки. Commit/push/export не выполнялись; прежние изменения сохранены.
+
+### POL-30 — пауза и пояснение перед учебными карточками
+
+Статус: `DONE`; /root coordinator/executor;2026-11-22;POL29DONE. CP: .local/checks/pol30-upgrade-intro/CP-POL-30.md.
+Task: POL-30
+Recommended status: REVIEW → принято координатором, DONE
+Changed: FirstTradeTutorial continuous pack-hover1s then UpgradeIntroduction ordinary panel with explicit Открыть окно улучшений; separate optional saved intro flag, reset on replay/leave and actual purchase/skip. DayCycleController card hint shortened to choose-or-skip only; RU/EN translations; Tutorial regression tests; ORCHESTRATION_PLAN.md. All prior dirty edits retained.
+Checks: build PASS0warnings/errors; final rendered --tutorial-checks PASS: subsecond hover no popup/cards, leave resets delay,1s displays normal intro while cards stay closed, intro/button fit and translate960x540/1280x720, reload intro still requires button, explicit click launches actual cards, short menu hint, pending menu reload/purchase/zero-money skip/next-guide and prior regressions PASS. git diff-check PASS. Evidence .local/checks/pol30-upgrade-intro/{build,tutorial-final,tutorial-final-errors}.log.
+Acceptance: hover pack→one-second pause→normal Also-between-days explanation→open-menu button→cards with only choose-or-skip text. No automatic immediate card opening. Existing purchase/skip/continuation preserved; optional tutorial config flag only, no game schema change.
+Read-set exception: PauseMenu.cs83/FullscreenToggle.cs inspected after internal SwapGCHandleForType errors in two long reload test runs. Fixture retains fullscreen Script resource via strong reference and GC.KeepAlive; final fresh-process run clean except known certificate warning. Product pause/fullscreen code not changed, no claim of fixing engine internals. source/ not read.
+Risks/blocker: none for feature/final checks; initial engine-handle logs retained as evidence. No commit/push/exports.
+Next: user checks delayed intro and explicit upgrade menu button.
+### POL-29 — учебный выбор улучшения после пачки
+
+Статус: `DONE`; /root coordinator/executor;2026-11-22;POL28DONE. CP: .local/checks/pol29-upgrade-lesson/CP-POL-29.md.
+Task: POL-29
+Recommended status: REVIEW → принято координатором, DONE
+Changed: FirstTradeTutorial queues UpgradeChoice after pack hover, saves optional pending lesson flag, resumes pending menu on load and continues Summary music page after choice. DayCycleController opens same DayTransitionCard with existing Upgrades rules and buy/skip transactions, invokes lesson callback after close; TradeScene only forwarding method. DayTransitionCard optional RU/EN explanation label, compact420px tutorial-only card height vs normal460, live explanation translation. Tutorial integration coverage and localization; ORCHESTRATION_PLAN.md. Previous dirty work preserved.
+Checks: build PASS0warnings/errors; full rendered --tutorial-checks PASS: actual pack hover opens real animated card menu and hides tutorial panel; RU/EN explanation/card bounds fit960x540/1280x720, pending reload restores menu, actual purchase applies cost/reward once without advancing day/time, duplicate input no charge, zero-funds skip free and continues Music workshop, resolved choice stays resolved on reload, later guide/skip/replay and prior behavior pass. --card-dealing-checks PASS ordinary animated deal/flip/buy/skip/cancel/resize, white card art and centered deck. git diff-check PASS. Evidence .local/checks/pol29-upgrade-lesson/{build,tutorial,card-dealing}.log.
+Acceptance: after quota pack lesson player receives actual between-day cards with explanation, can buy one or skip; only then returns to rest of tutorial. Training day/resources are not reset or advanced; existing cost/effect logic used. Pending tutorial metadata optional, no game schema change; normal between-day menu unaffected.
+Read-set exception: none; domain/scene assets read-only, source/ not read.
+Risks/blocker: none; existing certificate warning only. No commit/push/exports.
+User refinement: explanation now starts Также между днями..., matching EN You can also...; text-only, source/translation key match and diff-check PASS. Next: user plays pack→cards→choose/skip→rest of guide.
+### POL-28 — оставить в Дни и квоты только наведение на пачку
+
+Статус: `DONE`; /root coordinator/executor;2026-11-22;POL27DONE. CP: .local/checks/pol28-quota-copy/CP-POL-28.md.
+Task: POL-28
+Recommended status: REVIEW → принято координатором, DONE
+Changed: FirstTradeTutorial Summary first page and matching EN remove shop-closing sentence; ORCHESTRATION_PLAN.md. Prior dirty edits retained.
+Checks: source/key equality PASS; diff-check PASS. Copy-only, no new tests/runtime rerun.
+Acceptance: Days/quotas body only says Наведите мышь на пачку сигарет, чтобы узнать день, сумму и срок квоты. Hover progression unchanged.
+Read-set exception: none. Risks/blocker: none. No source/assets/commit/push/exports.
+Next: view shortened quota lesson.
+### POL-27 — убрать предложение про облачко из запроса покупателя
+
+Статус: `DONE`; /root coordinator/executor;2026-11-22;POL26DONE. CP: .local/checks/pol27-request-copy/CP-POL-27.md.
+Task: POL-27
+Recommended status: REVIEW → принято координатором, DONE
+Changed: BuyerRequestMessage and matching English translation removed thought-bubble sentence; ORCHESTRATION_PLAN.md. Prior dirty edits retained.
+Checks: source/translation key equality PASS; diff-check PASS. Text-only; existing request tests still assert retained category and atelier request phrases, no new tests/build needed.
+Acceptance: only general clothing/instrument categories and current customer's atelier request remain. Preview/Next/UI behavior untouched.
+Read-set exception: none. Risks/blocker: none. No source/assets/commit/push/exports.
+Next: view shortened buyer-request hint.
+### POL-26 — сократить подсказку запроса инструмента
+
+Статус: `DONE`; /root coordinator/executor;2026-11-22;POL25DONE. CP: .local/checks/pol26-music-copy/CP-POL-26.md.
+Task: POL-26
+Recommended status: REVIEW → принято координатором, DONE
+Changed: MusicRequestMessage now only Такому покупателю нужен инструмент из музыкальной мастерской; matching English entry and existing tutorial text assertion updated; ORCHESTRATION_PLAN.md. Previous dirty work retained.
+Checks: RU/EN key matches source PASS, existing English assertion matches revised translation, diff-check PASS. Copy-only, no behavior change/new tests/full runtime rerun.
+Acceptance: introductory sentence about icon appearance removed; actual icon demonstration/Next unchanged.
+Read-set exception: none. Risks/blocker: none; no source/assets/commit/push/exports.
+Next: view shortened instrument-request hint.
+### POL-25 — продолжить Дни и квоты наведением на пачку
+
+Статус: `DONE`; /root coordinator/executor;2026-11-22;POL24DONE. CP: .local/checks/pol25-pack-lesson/CP-POL-25.md.
+Task: POL-25
+Recommended status: REVIEW → принято координатором, DONE
+Changed: FirstTradeTutorial first Summary page hides Done/Actions, advances via actual ProgressPanel hover+expanded to next summary page once and saves progress; removes upgrade-selection sentence RU/EN. Tutorial integration assertions/flow updated; ORCHESTRATION_PLAN.md. Prior dirty edits retained.
+Checks: build PASS0warnings/errors; full rendered --tutorial-checks PASS: idle first page no Next/no emptyrow/no automatic pack opening, actual hover opens pack and advances exactly one page, next page has Next, leaving pack retracts it, reload resumes workshop page and doesn't open pack, later summary pages/finish/skip persist, prior180/time/offer/first-sale/no-buyers regressions PASS. git diff-check PASS. Evidence .local/checks/pol25-pack-lesson/{build,tutorial}.log.
+Acceptance: Days/quotas continues by hovering actual pack; explanatory text about day upgrades removed. Later Next/Understood and corner skip remain, no pack auto-expansion or domain changes.
+Read-set exception: none; no source/assets/schema/ProgressPanel edits.
+Risks/blocker: none; existing certificate warning only. No commit/push/exports.
+Next: user hovers the pack to advance the quota lesson.
+### POL-24 — подсказки внутри учебной вышивки
+
+Статус: `DONE`; /root coordinator/executor;2026-11-22;POL23DONE. CP: .local/checks/pol24-craft-guide/CP-POL-24.md.
+Task: POL-24
+Recommended status: REVIEW → принято координатором, DONE
+Changed: EmbroideryGame uses tutorial-only stateful in-modal Hint (18px): Ready clickStart, Playing highlighted points in order, Finished clickCollect; normal embroidery/polishing keep their existing16px hints. RU/EN entries; Tutorial integration tests actual start/stitch/collect; EmbroideryTarget fixture starts day; ORCHESTRATION_PLAN.md. Prior dirty edits preserved.
+Checks: build PASS0warnings/errors; rendered --tutorial-checks PASS: three localized hints fit panel960x540/1280x720, actual Start begins play, actual highlighted point increments stitch, Collect unpauses and returns guide to Select; all prior tutorial/time/request/offer/skip/reload behavior PASS. Rendered --embroidery-target-checks PASS after fixing pre-existing day-start fixture; target contrast/positions and actual clicks, STITCH_AUDIO_CHECKS_PASS mouse/touch/3variants/silentmiss PASS. git diff-check PASS. Evidence .local/checks/pol24-craft-guide/{build,tutorial,embroidery-target}.log.
+Acceptance: tutorial instructions are visible inside the crafting modal while main tutorial panel hides; prompts follow ready/play/result and do not appear in ordinary crafting. Mechanics/costs/timers/input unchanged.
+Read-set exception: SoundEffects.cs read-only diagnostics for failed old target fixture; coordinator expanded CP write-set to EmbroideryTarget test one line starting day before Open (previously no modal opened due existing day gate). No product audio change; source/ not read.
+Risks/blocker: none; existing certificate warning only. No commit/push/exports.
+Next: user checks Create→Start→highlighted dots→Collect in tutorial.
+### POL-23 — пояснить досрочное завершение дня по часам
+
+Статус: `DONE`; /root coordinator/executor;2026-11-22;POL22DONE. CP: .local/checks/pol23-start-hint/CP-POL-23.md.
+Task: POL-23
+Recommended status: REVIEW → принято координатором, DONE
+Changed: FirstTradeTutorial Start hint and matching EN localization; ORCHESTRATION_PLAN.md. Previous dirty edits retained.
+Checks: RU/EN key matches source PASS; git diff-check PASS. Text-only, no redundant tests/build.
+Acceptance: appended После начала дня можно нажать на часы, чтобы завершить день досрочно. Existing click/end behavior and training end-day guard unchanged; explains normal gameplay action as requested.
+Read-set exception: none. Risks/blocker: none. No assets/source/commit/push/exports.
+Next: view expanded Start tutorial hint.
+### POL-22 — уточнить стоимость создания предмета в подсказке
+
+Статус: `DONE`; /root coordinator/executor;2026-11-22;POL21DONE. CP: .local/checks/pol22-craft-hint/CP-POL-22.md.
+Task: POL-22
+Recommended status: REVIEW → принято координатором, DONE
+Changed: FirstTradeTutorial Craft copy and matching localization/en.tres entry; ORCHESTRATION_PLAN.md. Prior dirty edits retained.
+Checks: RU/EN source key equality PASS; git diff-check PASS. Text-only change, no new tests or redundant full runtime suite.
+Acceptance: Создание предмета тратит деньги и одну энергию за раз. Removed Нажимайте на светящиеся точки from tutorial Craft hint. Create button and rarity explanation remain; mini-game hint/mechanics unchanged.
+Read-set exception: none. Risks/blocker: none. No source/assets/commit/push/exports.
+Next: view revised crafting tutorial hint.
+### POL-21 — убрать надпись при наведении на часы в обучении
+
+Статус: `DONE`; /root coordinator/executor;2026-11-22;POL20DONE. CP: .local/checks/pol21-clock-hover/CP-POL-21.md.
+Task: POL-21
+Recommended status: REVIEW → принято координатором, DONE
+Changed: DayCycleController suppresses tutorial end caption/tooltip on clock, removes obsolete notice countdown; retains manual-end guard. Tutorial regression asserts numeric clock and no caption/tooltip after actual hover/click; ORCHESTRATION_PLAN.md. All prior dirty changes retained.
+Checks: build PASS0warnings/errors; rendered --tutorial-checks PASS all first-sale/navigation/music/request/180s-loop/skip/reload regressions, including actual clock hover/click remains numeric and cannot end training. --closed-reroll-checks PASS ordinary manual/automatic closure. git diff-check PASS. Evidence .local/checks/pol21-clock-hover/{build,tutorial,closed-reroll}.log.
+Acceptance: Завершите обучение no longer replaces training clock digits or appears as hover tooltip. Ordinary end-day hover unchanged; Start clock action and infinite180 training preserved.
+Read-set exception: none. Risks/blocker: none; existing certificate warning only. No source/assets/schema/economy/commit/push/exports.
+Next: user checks hovering the training clock.
+### POL-20 — запрос одежды и пустая касса после учебной продажи
+
+Статус: `DONE`; /root coordinator/executor;2026-11-22;POL19DONE. CP: .local/checks/pol20-tutorial-counter/CP-POL-20.md.
+Task: POL-20
+Recommended status: REVIEW → принято координатором, DONE
+Changed: FirstTradeTutorial BuyerRequest appends current buyer wants atelier clothing, RU/EN; DefersBuyerArrival extends existing tutorial gate through post-sale Summary using observed sale and live Accepted count; BuyerBonuses adapter renamed property; Tutorial tests; ORCHESTRATION_PLAN.md. All prior dirty edits retained.
+Checks: build PASS0warnings/errors; rendered --tutorial-checks PASS including localized current clothing request, post-sale old figure/thought hidden, no next arrival event/bell even with energy, stock/resources preserved, injected legacy Summary waiting buyer normalized away on reload. Full guide/music demo/Next/180s loop/skip/replay regressions PASS. --buyer-arrival-checks PASS ordinary immediate arrival/availability/patience. git diff-check PASS. Evidence .local/checks/pol20-tutorial-counter/{build,tutorial,buyer-arrival}.log.
+Acceptance: request hint ends “Сейчас этому покупателю нужна одежда из ателье.” Existing FinishTrade removes sold customer; tutorial gate prevents replacement throughout remaining guide, including before tutorial observes Accepted change and after save/reload. Standard buyers outside tutorial unaffected.
+Read-set exception: none. No source/assets/schema/economy changes. Risks/blocker: none; existing certificate warning only. No commit/push/exports.
+Next: user checks request text and empty counter after tutorial sale.
+### POL-19 — бесконечный учебный день по180секунд
+
+Статус: `DONE`; /root coordinator/executor;2026-11-22;POL18DONE. CP: .local/checks/pol19-training-clock/CP-POL-19.md.
+Task: POL-19
+Recommended status: REVIEW → принято координатором, DONE
+Changed: DaySession.TickRepeating generic practice clock; DaySessionTests; DayCycleController tutorial180 duration/sync/restore retention/repeating ticks; FirstTradeTutorial init/restart sync and optional training_clock_duration marker; TradeScene.cs only forwarding call; Tutorial integration checks; ORCHESTRATION_PLAN.md. All previous dirty edits retained.
+Checks: build PASS0warnings/errors; DaySessionTests PASS32/32 including exact/overshoot/repeated180 expiry, invalid delta, energy and ordinary expiry. Rendered --tutorial-checks PASS: start180, nearzero remainsopen, reset180 and repeat through gameplay/craft adapter without changing day/resources/items/guide,172.75s reload preserved despite normal duration clamp, old tutorial marker missing gets180 once; full Offer/request/music/camera/pause/skip/replay/firstsale guide and normal timer after finish/skip pass. --closed-reroll-checks PASS ordinary timeout/manual closure. --buyer-arrival-checks PASS ordinary arrivals/availability/patience. git diff-check PASS. Evidence .local/checks/pol19-training-clock/{build,domain,tutorial,closed-reroll,buyer-arrival}.log.
+Acceptance: active tutorial day never closes naturally: countdown180 refills180, no upgrades/newday/state reset. Normal60/90 outside tutorial unchanged. Tutorial reading holds clocks as POL18; buyer patience remains its existing independent20s. Old training migrates once via optional config marker; remaining time then restores accurately. Game schema unchanged.
+Read-set exception: none; no source/assets/economy configuration changes.
+Risks/blocker: none; prior certificate warning only. No commit/push/exports.
+Next: user checks three-minute repeating training clock.
+### POL-18 — подтверждение инструкции первой продажи
+
+Статус: `DONE`; /root coordinator/executor;2026-11-22;POL17DONE. CP: .local/checks/pol18-offer-confirm/CP-POL-18.md.
+Task: POL-18
+Recommended status: REVIEW → принято координатором, DONE
+Changed: FirstTradeTutorial _offerInstructionRead and optional tutorial-config persistence; BlocksFirstOffer extends across Offer instruction until Next, then hides only hint panel; Next visible on unread Offer. RU/EN copy removes speed sentence portion, quality bonus retained. tests/Integration/ProjectTest.Tutorial.cs and ORCHESTRATION_PLAN.md. Prior dirty edits preserved.
+Checks: build PASS0warnings/errors; rendered --tutorial-checks PASS: reading freezes buyer/day clocks and blocks mouse✓/×, keyboardF and direct API calls; Next hides Panel, retains yellow Highlight and corner skip; real0.5s tick resumes both timers; reload preserves hidden hint/enabled practice; actual rejection spends one attempt and keeps hint hidden; sale resumes Summary with correct payout. Existing request/music demo, camera retention, localization/replay/skip/reload pass. --buyer-arrival-checks PASS ordinary arrivals/patience/availability; git diff-check PASS. Evidence .local/checks/pol18-offer-confirm/{build,tutorial,buyer-arrival}.log.
+Acceptance: no trading or running time while offer instruction is visible. After Next, normal trading and buyer clock with yellow frame continue until accepted, then guide continues. New tutorial config key defaults unread for old config; game schema/economy/speed bonus calculation unchanged, only explanatory speed text removed.
+Read-set exception: none; no source/assets/scenes changes. Risks/blocker: none; existing certificate warning only. No commit/push/exports.
+User refinement: удалена также фраза про надбавку за качество из Offer и matching EN. Только текст, расчёт наград не менялся; проверены совпадение ключа перевода и diff-check. Next: user checks the instruction→Next→trade→guide flow.
+### POL-17 — пояснение кнопок и окончания времени в первой продаже
+
+Статус: `DONE`; /root coordinator/executor;2026-11-22;POL16DONE. CP: .local/checks/pol17-offer-hint/CP-POL-17.md.
+Task: POL-17
+Recommended status: REVIEW → принято координатором, DONE
+Changed: FirstTradeTutorial Offer text and matching localization/en.tres entry; ORCHESTRATION_PLAN.md. Prior dirty edits retained.
+Checks: build PASS0warnings/errors; RU/EN key matches source and requested new copy PASS; git diff-check PASS. Evidence .local/checks/pol17-offer-hint/build.log. Existing symbol/flow tests unchanged; no behavior change warrants new tests.
+Acceptance: click ✓ accepts offer; × changes customer; parentheses explain remaining changes; timeout means accepting reduced price. Red-bar/old countdown paragraph removed from Offer lesson. Speed/quality bonus sentence retained verbatim; EN updated equivalently.
+Read-set exception: none. Risks/blocker: none. No gameplay/layout/assets/schema/source/exports/commit/push changes.
+Next: inspect revised first-sale instruction in game.
+### POL-16 — пример иконки запроса инструмента
+
+Статус: `DONE`; /root coordinator/executor;2026-11-22;POL15DONE. CP: .local/checks/pol16-music-request/CP-POL-16.md.
+Task: POL-16
+Recommended status: REVIEW → принято координатором, DONE
+Changed: FirstTradeTutorial new MusicBuyerRequest step between BuyerRequest and Offer, RU/EN explanation, optional music_request_example tutorial-config bool for reload, preview reset on restart/finish; BuyerWaitWidget temporary category visual override preserving real category; tests/Integration/ProjectTest.Tutorial.cs; localization/en.tres; ORCHESTRATION_PLAN.md. All previous dirty edits retained.
+Checks: build PASS0warnings/errors; rendered --tutorial-checks PASS including real first Next switches clothing→music artwork, highlighted actual bubble, localized music explanation, time/actions blocked, buyer/item/cash/rerolls/music-unlock unchanged, reload stays on example, second Next restores clothing icon and actual offer, ordinary first sale then skip/replay/reload regressions. Rendered --buyer-arrival-checks PASS normal categories/arrival/patience/availability. git diff-check PASS. Evidence .local/checks/pol16-music-request/{build,tutorial,buyer-arrival}.log.
+Acceptance: user sees short example of musical instrument request after general buyer request explanation; pressing Next returns actual clothing request and normal trading. Demonstration changes icon only, without rerolling customer or creating instrument demand/stock. Timer and transaction remain held until both instructions acknowledged. Actual game save schema unchanged; old tutorial config defaults no example.
+Read-set exception: none; source/ not read. Risks/blocker: none; existing certificate warning only. No commit/push/exports.
+Next: user checks the extra music icon example during first-sale tutorial.
+### POL-15 — покупатель появляется на уроке запроса
+
+Статус: `DONE`; /root coordinator/executor;2026-11-22;POL14DONE. CP: .local/checks/pol15-tutorial-buyer/CP-POL-15.md.
+Task: POL-15
+Recommended status: REVIEW → принято координатором, DONE
+Changed: FirstTradeTutorial.DefersFirstBuyerArrival holds first buyer until navigation complete and showcase stock present; TradeScene.BuyerBonuses.DeferTutorialBuyerArrival defers spawning and cleans legacy waiting state; TradeScene.cs only two helper forwarding calls; tests/Integration/ProjectTest.Tutorial.cs; ORCHESTRATION_PLAN.md. Prior dirty edits preserved.
+Checks: build PASS0warnings/errors; rendered --tutorial-checks PASS all existing steps plus no figure/thought during Craft/Select/Place/WaitBuyer, zero arrival on Start, exactly one figure+thought+arrival event with full20s at BuyerRequest, cleanup legacy early-waiting save, unread request reload keeps buyer20s, Next/firstsale/replay/skip regressions. Rendered --buyer-arrival-checks PASS including availability/patience/normal immediate spawn and reloading. git diff-check PASS. Evidence .local/checks/pol15-tutorial-buyer/{build,tutorial,buyer-arrival}.log.
+Acceptance: tutorial buyer appears after first item placed, on request lesson; initialStart no buyer/sound. Waiting legacy buyer removed without consuming stock, resetting new arrival to20s. Regular gameplay unchanged. Request reading continues freezing first offer actions/time until Next.
+Read-set exception: scripts/UI/BuyerWaitWidget.cs read to correct test visibility assertion: EndTrade hides ThoughtBubble child while container remains visible, so assertions now check actual visible artwork. No widget change. source/ not read.
+Risks/blocker: none; prior certificate warning only. No commit/push/exports or save schema changes.
+Next: user verifies first tutorial buyer appears together with request instruction.
+### POL-14 — порядок подсказки: наведение, затем выбор предмета
+
+Статус: `DONE`; /root coordinator/executor;2026-11-22;POL13DONE. CP: .local/checks/pol14-select-hint/CP-POL-14.md.
+Task: POL-14
+Recommended status: REVIEW → принято координатором, DONE
+Changed: scripts/UI/FirstTradeTutorial.cs Select hint; localization/en.tres matching English entry; ORCHESTRATION_PLAN.md. Prior dirty edits preserved.
+Checks: build PASS0warnings/errors; RU/EN translation key matches source PASS; existing Select->Place branch and tutorial regression already verified POL13, no behavior change here; git diff-check PASS. Evidence .local/checks/pol14-select-hint/build.log.
+Acceptance: first hover to inspect price/rarity/quality, then click to select. Existing selection automatically advances to Place; no extra confirmation or mandatory-hover gate added.
+Read-set exception: none. Risks/blocker: none; text-only update, no new tests or exports/commit/push.
+Next: inspect revised tutorial hint in game.
+### POL-13 — отдельная кнопка пропуска справа внизу
+
+Статус: `DONE`; /root coordinator/executor;2026-11-22;POL12DONE. CP: .local/checks/pol13-tutorial-skip/CP-POL-13.md.
+Task: POL-13
+Recommended status: REVIEW → принято координатором, DONE
+Changed: scenes/UI/FirstTradeTutorial.tscn Skip moved from panel Actions to Root/Skip, bottom/right anchored20px; scripts/UI/FirstTradeTutorial.cs binding updated and empty Actions row hidden; tests/Integration/ProjectTest.Tutorial.cs placement and all real click paths updated; ORCHESTRATION_PLAN.md. Prior POL09–12 edits retained.
+Checks: build PASS0warnings/errors; rendered D3D12 --tutorial-checks PASS full onboarding incl camera retention POL12, actual skip/cancel/Esc/confirm, completion/replay/reload. New assertions all tutorial steps: Skip visible, outside hint panel, no old skip child, screen containment and fixed20px bottom/right. Resize960x540/1280x720 and RU/EN checked. git diff-check PASS. Evidence .local/checks/pol13-tutorial-skip/{build,tutorial,tutorial-errors}.log.
+Acceptance: Skip no longer appears inside instructional windows; fixed viewport placement on tutorial hints, only Next/Understood in applicable panels. Prior pause/craft/transition hiding and confirmation behavior preserved; no new modal interruption behavior requested or added.
+Read-set exception: none; no source/assets/economy edits.
+Risks/blocker: none; existing certificate warning only. No commit/push/exports.
+Next: user verifies persistent corner position across tutorial hints.
+### POL-12 — сохранить камеру после двойного клика в обучении
+
+Статус: `DONE`; /root coordinator/executor;2026-11-22;POL11DONE. CP: .local/checks/pol12-tutorial-camera/CP-POL-12.md.
+Task: POL-12
+Recommended status: REVIEW → принято координатором, DONE
+Changed: scripts/UI/FirstTradeTutorial.cs SetStep skip overview checkpoint and unlock manual navigation for Start after completed camera practice while day open; tests/Integration/ProjectTest.Tutorial.cs; ORCHESTRATION_PLAN.md. Supplied POL09 and POL10/11 dirty changes retained.
+Checks: dotnet build ChikagoShop.sln --no-restore PASS0warnings/errors after correcting duplicate local test variable; rendered D3D12 --tutorial-checks PASS full tutorial (camera practice/flights, first sale, UI clicks/highlight, pause/localization, skip/replay/reload). New assertions: no overview flight as double-click focus finishes, position/zoom stable beyond old transition duration, Start navigation unlocked and actual wheel-down changes zoom. Existing guided Craft and later checkpoint flights remain tested. git diff-check PASS. Evidence .local/checks/pol12-tutorial-camera/{build,tutorial,tutorial-errors}.log.
+Acceptance: RoomFocus→Start no longer auto-zooms out or moves selected view; player can zoom/drag manually. Other guided steps/modal restrictions/end-of-tutorial reset unchanged; closed-day retry excluded.
+Read-set exception: none. No scene/assets/domain changes or source/ reads.
+Risks/blocker: none; existing certificate warning. No commit/push/exports.
+Next: user verifies view stays in the double-clicked room before starting the day.
+### POL-11 — плакат левее между проёмом и персонажем
+
+Статус: `DONE`; /root coordinator/executor;2026-11-22;POL10DONE. CP: .local/checks/pol11-poster/CP-POL-11.md.
+Task: POL-11
+Recommended status: REVIEW → принято координатором, DONE
+Changed: scenes/trade_scene.tscn only ShowPoster.position X496→480, Y392 unchanged (после уточнения пользователя:460 слишком влево, поправлено на20 вправо); ORCHESTRATION_PLAN.md. All previous dirty files retained.
+Checks: isolated rendered D3D12 scene load PASS; POSTER_POSITION_CHECK_PASS verifies исходный проверочный parent460/392; после пользовательской коррекции координата480/392 and unchanged child collision55.5/83; screenshot reviewed confirms poster between left arch and keeper, with clearance both sides. git diff-check PASS. Evidence .local/checks/pol11-poster/{preview,preview-errors}.log and .local/checks/pol09-interface-import/poster-preview.png.
+Acceptance: poster moved16 local units left from original496 (20 right from first revision460) without changing size/Y. Sprite and click area move together via parent. No code/assets/behavior changes or unnecessary unit tests.
+Read-set exception: none; cashier_closed.jpg inspected visually, no image editing/source/ reads.
+Risks/blocker: none; existing certificate warning only. No commit/push/exports.
+Next: пользовательская проверка уточнённого положения480/392; размер/высота/collision остаются прежними.
+### POL-10 — колода по центру левого промежутка и единые карты
+
+Статус: `DONE`; /root coordinator/executor;2026-11-22;POL09DONE. CP: .local/checks/pol10-cards/CP-POL-10.md.
+Task: POL-10
+Recommended status: REVIEW → принято координатором, DONE
+Changed: scripts/UI/DayTransitionCard.cs; tests/Integration/ProjectTest.CardDealing.cs; ORCHESTRATION_PLAN.md. Все предыдущие POL09 dirty files сохранены.
+Checks: dotnet build ChikagoShop.sln --no-restore PASS0warnings/errors; isolated rendered D3D12 --card-dealing-checks PASS: центр колоды относительно первого слота, единая обычная текстура лица/кнопок/контраст pressed, RU/EN960x540/1280x720, dealing/flip/purchase/skip/cancel/resize. Screenshot ready-ru-1280 reviewed: белые карты и колода в середине левого промежутка. git diff-check PASS. Evidence .local/checks/pol10-cards/{build,cards,cards-errors}.log, screenshot TEMP/chikago-hf90-ready-ru-1280.png.
+Acceptance: X колоды рассчитывается после layout от фактического левого края первой карты; Y/размер сохраняются. Все стоимости используют исходный DayUpgradeCard style (card_face.png, panel_small.png), удалены gold/silver face/button overrides и premium ink. Стоимость/описания/эффекты/выбор/RNG не менялись.
+Read-set exception: нет. Art assets не редактировались и не удалялись, source/ не читался.
+Risks/blocker: нет; прежний root certificate warning тестовой среды. Без commit/push/exports.
+Next: пользовательская проверка экрана выбора улучшений в polishing.
+### POL-09 — перенос Interface_Fixes_FULL в polishing
+
+Статус: `DONE`; /root coordinator/executor; 2026-11-22. CP: .local/checks/pol09-interface-import/CP-POL-09.md.
+Task: POL-09
+Recommended status: REVIEW → принято координатором, DONE
+Changed:9изменённых+2новых source files из C:/Users/artem/Downloads/ChikagoShop_Interface_Fixes_FULL/chikago-shop-main перенесены в C:/Users/artem/Projects/Chicago/chikago-shop на polishing. Остальные618 совпадали; absent tracked0. Точные пути/хеши manifest.json; прежняя версия c683d05 сохранена в previous-project.zip. Служебные кэши/source/exports не копировались, исходный Downloads не менялся.
+Checks: SHA256 всех629 файлов совпали после копирования; после журнала628 неслужебных файлов всё ещё совпадают, исключение только этот plan. dotnet build ChikagoShop.sln --no-restore PASS0warnings/errors. Изолированный rendered D3D12 --interface-fixes-checks PASS: инструменты на витринах,10циклов пачки без смещения, неподвижный указатель/блокнот, все кнопки паузы720p/1080p. git diff-check PASS. Evidence .local/checks/pol09-interface-import/{manifest.json,build.log,interface.log,interface-errors.log}.
+Acceptance: актуальная рабочая версия в обычном Projects репозитории точно соответствует выбранному пользователем Interface_Fixes_FULL (кроме записи плана); branch polishing. Новые правки интерфейса/обучения сохранены как предоставлены; дополнительных доменных изменений не вносилось. main, GitHub, EXE/ZIP билды и player saves не менялись. Предыдущий stash локальных scene/theme правок сохранён.
+Read-set exception: нет; обход manifest пропускал source/ до рекурсии, supplied tests прочитаны для штатной проверки, cache только собственного Projects для isolated runtime.
+Risks/blocker: блокеров нет; sandbox root certificate warning в тесте, функциональные проверки PASS. Без commit/push.
+Next: работать с проектом в Projects/polishing; перезапустить текущую Godot сессию для новых скриптов.
 ### HF-208 — скрыть нижний край персонажей за облачком диалога
 
 Статус: `DONE`; принято координатором; координатор/исполнитель `/root`; HF207 DONE; CP `.local/checks/hf208/CP-HF-208.md`. Write-set shared StoryDialogueLayout, composition test, plan/local evidence. Приёмка: спрайты немного опущены и перекрыты облачком; текст читаем; rendered720p/1080p, portraits/motion и build PASS; source/ вне scope.

@@ -149,6 +149,17 @@ public partial class TradeScene
         return true;
     }
 
+    private bool DeferTutorialBuyerArrival()
+    {
+        if (_tutorial?.DefersBuyerArrival != true) return false;
+        if (_waitingBuyer)
+        {
+            HideWaitingBuyer();
+            SaveProgress();
+        }
+        return true;
+    }
+
     private bool CanSupplyWaitingBuyer() => BuyerAvailabilityRules.CanWait(
         EnergyRemaining, _storedItems.Count > 0, Array.Exists(_showcaseItems, index => index >= 0));
 

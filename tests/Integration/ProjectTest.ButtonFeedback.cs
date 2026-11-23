@@ -348,9 +348,9 @@ public partial class ProjectTest
                 await SettleButtonFeedback();
                 MoveButtonPointer(new Vector2(2, 2));
                 await SettleButtonFeedback();
-                Check(Root.GuiGetFocusOwner() == choice && controller.GetVisualFrame().Bounds == ScreenBounds(choice) &&
-                    controller.GetVisualFrame().Strength > 0.9f && controller.GetVisualFrame().Flash == 0,
-                    "Pause main menu must retain the last hovered button after leaving it, without an action flash");
+                Check(Root.GuiGetFocusOwner() == resume && controller.GetVisualFrame().Bounds != ScreenBounds(choice) &&
+                    controller.GetVisualFrame().Flash == 0,
+                    "Hover must not move keyboard focus or leave a visual highlight on the exited pause choice");
                 lastHovered = choice;
             }
             Check(game.Score == cashBeforeHover && game.CurrentDay == dayBeforeHover && Paused,
@@ -374,7 +374,7 @@ public partial class ProjectTest
 
             var card = game.GetNode<DayTransitionCard>("DayTransitionCard");
             card.Open(1, 2, new[] { ChikagoShop.Domain.Days.DayUpgrade.Cash,
-                ChikagoShop.Domain.Days.DayUpgrade.Energy, ChikagoShop.Domain.Days.DayUpgrade.Time }, 1000);
+                ChikagoShop.Domain.Days.DayUpgrade.Energy, ChikagoShop.Domain.Days.DayUpgrade.Atelier }, 1000);
             await WaitForDayCardAnimation(card);
             await SettleButtonFeedback();
             Check(Root.GuiGetFocusOwner() == null && controller.GetVisualFrame().Strength == 0,

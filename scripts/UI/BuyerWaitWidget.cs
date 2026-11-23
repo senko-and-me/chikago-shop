@@ -16,6 +16,7 @@ public partial class BuyerWaitWidget : Control
     private ProgressBar _waitBar = null!;
     private Label _seconds = null!;
     private bool _music;
+    private bool? _tutorialCategoryPreview;
 
     public override void _Ready()
     {
@@ -103,16 +104,26 @@ public partial class BuyerWaitWidget : Control
     {
         if (!Visible) Show();
         if (!_thought.Visible) _thought.Show();
-        if (_music != music || _icon.Texture == null)
-        {
-            _music = music;
-            _icon.Texture = GD.Load<Texture2D>(music
-                ? "res://art/ui/buyer_wish_music.png" : "res://art/ui/buyer_wish_atelier.png");
-            _icon.TooltipText = music ? "Музыкальные инструменты" : "Ателье";
-        }
+        _music = music;
+        RefreshCategoryIcon();
         _waitBar.Value = _waitBar.MaxValue - remaining;
         _seconds.Text = $"{Mathf.Max(0, (float)remaining):0.0}s";
         QueueRedraw();
+    }
+
+    // Demonstration only: SetState still retains the customer's real request.
+    public void SetTutorialCategoryPreview(bool? music)
+    {
+        _tutorialCategoryPreview = music;
+        if (_icon != null) RefreshCategoryIcon();
+    }
+
+    private void RefreshCategoryIcon()
+    {
+        bool music = _tutorialCategoryPreview ?? _music;
+        string path = music ? "res://art/ui/buyer_wish_music.png" : "res://art/ui/buyer_wish_atelier.png";
+        if (_icon.Texture?.ResourcePath != path) _icon.Texture = GD.Load<Texture2D>(path);
+        _icon.TooltipText = music ? "Музыкальные инструменты" : "Ателье";
     }
 
     public void EndTrade()

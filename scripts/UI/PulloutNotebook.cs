@@ -27,7 +27,9 @@ public partial class PulloutNotebook : Control
     private float _targetX = float.NaN;
     public bool Expanded => _expanded;
     private bool _pinned;
+    private bool _tabArmed = true;
     private double _leaveTime;
+    private Vector2? _pointer;
     private string _lastSignature = string.Empty;
     private Vector2 _lastViewportSize = Vector2.Zero;
 
@@ -58,6 +60,7 @@ public partial class PulloutNotebook : Control
         _notes.Modulate = new Color(1, 1, 1, 0);
         _targetX = ClosedX;
         _page.GuiInput += OnPageInput;
+        GetWindow().MouseExited += OnPointerLeft;
         UpdateHudAnchor(force: true);
         RefreshNotes();
     }
@@ -71,36 +74,56 @@ public partial class PulloutNotebook : Control
         AcceptEvent();
     }
 
+    public override void _Input(InputEvent input)
+    {
+        if (input is InputEventMouseMotion motion) _pointer = motion.Position;
+    }
+
+    private void OnPointerLeft() => _pointer = new Vector2(-1, -1);
+
     public override void _Process(double delta)
     {
         UpdateHudAnchor();
         if (!IsVisibleInTree())
         {
             _pinned = false;
+            _tabArmed = true;
+            _leaveTime = 0;
             SetExpanded(false, immediate: true);
             return;
         }
 
         RefreshNotes();
-        Vector2 cursor = GetLocalMousePosition();
+        Vector2 cursor = _pointer.HasValue
+            ? GetGlobalTransformWithCanvas().AffineInverse() * _pointer.Value
+            : GetLocalMousePosition();
         Control? hovered = GetViewport().GuiGetHoveredControl();
         bool unobstructed = hovered == null || hovered == _page || _page.IsAncestorOf(hovered);
-        bool wanted = _pinned || unobstructed && HoverBounds.HasPoint(cursor);
+        bool onClosedTab = ClosedHoverBounds.HasPoint(cursor);
+        if (!onClosedTab) _tabArmed = true;
+        // Only the moving page owns the pointer until its slide has settled.
+        if (_slide?.IsRunning() == true) return;
+        bool wanted = _pinned || unobstructed &&
+            (_expanded ? OpenHoverBounds.HasPoint(cursor) : _tabArmed && onClosedTab);
         _leaveTime = wanted ? 0 : _leaveTime + delta;
         if (wanted)
             SetExpanded(true);
-        else if (_leaveTime > 0.22)
+        else if (_expanded && _leaveTime > 0.22)
+        {
+            // A pointer left in the old tab must leave it before reopening.
+            _tabArmed = !onClosedTab;
             SetExpanded(false);
+        }
     }
 
-    public Rect2 HoverBounds
+    private Rect2 ClosedHoverBounds => ExtendHoverLeft(new Rect2(ClosedX, 0, 56, _page.Size.Y));
+    private Rect2 OpenHoverBounds => ExtendHoverLeft(_page.GetRect());
+    public Rect2 HoverBounds => _expanded ? OpenHoverBounds : ClosedHoverBounds;
+
+    private static Rect2 ExtendHoverLeft(Rect2 bounds)
     {
-        get
-        {
-            Rect2 bounds = _expanded ? _page.GetRect() : new Rect2(ClosedX, 0, 56, _page.Size.Y);
-            float extraWidth = bounds.Size.X * 0.2f;
-            return new Rect2(bounds.Position - new Vector2(extraWidth, 0), bounds.Size + new Vector2(extraWidth, 0));
-        }
+        var extra = new Vector2(bounds.Size.X * 0.2f, 0);
+        return new Rect2(bounds.Position - extra, bounds.Size + extra);
     }
 
     private void SetExpanded(bool expand, bool immediate = false, bool suppressed = false)
@@ -176,6 +199,7 @@ public partial class PulloutNotebook : Control
 
     public override void _ExitTree()
     {
+        GetWindow().MouseExited -= OnPointerLeft;
         if (_slide?.IsValid() == true)
             _slide.Kill();
     }

@@ -87,6 +87,9 @@ public partial class ProjectTest
                 await WaitForDayCardAnimation(card);
                 Check(Root.GuiGetFocusOwner() == null && game.DayRemainingSeconds == 60,
                     "Finishing the deal must not preselect a purchase or consume day time");
+                var firstBounds = first.GetGlobalRect();
+                Check(Mathf.IsEqualApprox(deck.GetGlobalRect().GetCenter().X, firstBounds.Position.X / 2),
+                    "The deck must be centered between the left screen edge and the first card");
                 foreach (var upgrade in card.Options)
                 {
                     var face = card.GetNode<PanelContainer>("Root/Center/Card/Content/Choices/" + upgrade);
@@ -94,12 +97,9 @@ public partial class ProjectTest
                         !face.GetNode<Control>("Back").Visible && Root.GetVisibleRect().Encloses(face.GetGlobalRect()) &&
                         face.Size.Y > face.Size.X,
                         "Settled portrait cards must fit the viewport in both languages and sizes");
-                    int cardCost = game.DayUpgrades.CostFor(upgrade);
-                    string expectedArt = cardCost >= 30 ? "res://art/ui/day_card_gold.png" :
-                        cardCost >= 20 ? "res://art/ui/day_card_silver.png" : "res://art/ui/card_face.png";
                     Check(face.GetThemeStylebox("panel") is StyleBoxTexture faceArt &&
-                        faceArt.Texture.ResourcePath == expectedArt,
-                        "Card artwork must match the configured price tier");
+                        faceArt.Texture.ResourcePath == "res://art/ui/card_face.png",
+                        "All upgrades must use the ordinary card artwork regardless of price");
                     foreach (string name in new[] { "Amount", "Title", "Description", "Duration", "Choose" })
                     {
                         var entry = face.GetNode<Control>("Content/" + name);
@@ -111,11 +111,10 @@ public partial class ProjectTest
                     var purchase = face.GetNode<Button>("Content/Choose");
                     foreach (string state in new[] { "normal", "hover", "pressed", "disabled" })
                         Check(purchase.GetThemeStylebox(state) is StyleBoxTexture paper &&
-                            paper.Texture.ResourcePath == (cardCost >= 30 ? "res://art/ui/card_buy_gold.png" :
-                                cardCost >= 20 ? "res://art/ui/card_buy_silver.png" : "res://art/ui/panel_small.png"),
+                            paper.Texture.ResourcePath == "res://art/ui/panel_small.png",
                             "Purchase states must retain the existing drawn paper border");
                     Check(purchase.GetThemeColor("font_color").R < 0.2f &&
-                        (cardCost >= 20 ? purchase.GetThemeColor("font_pressed_color").R < 0.2f : purchase.GetThemeColor("font_pressed_color").R > 0.9f),
+                        purchase.GetThemeColor("font_pressed_color").R > 0.9f,
                         "Purchase text must contrast with light paper and the dark pressed state");
                 }
                 await Capture("ready-" + language + "-" + size.X);
