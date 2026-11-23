@@ -32,7 +32,11 @@ public partial class ProgressPanel : Control
         _content = GetNode<Control>("Content");
         _sticks = new[] { "Day", "Quota", "Deadline" }.Select(name => GetNode<TextureRect>("Visual/" + name)).ToArray();
         ClosedX = _sticks[0].Position.X;
-        var packBack = GetNode<Control>("Visual/Back");
+        var packBack = GetNode<TextureRect>("Visual/Back");
+        ButtonDropShadow.Attach(packBack, ButtonDropShadow.Direction.RightAndBottom);
+        ButtonDropShadow.Attach(GetNode<TextureRect>("Visual/Pack/Front"), ButtonDropShadow.Direction.RightAndBottom);
+        foreach (var stick in _sticks)
+            ButtonDropShadow.Attach(stick, ButtonDropShadow.Direction.RightAndBottom);
         // The scene positions the pack and its tips together in their resting pose.
         float exposedWidth = Mathf.Max(packBack.GetRect().End.X, _sticks.Max(stick => stick.GetRect().End.X));
         _closedHotspot = new Rect2(0, 0, exposedWidth, Size.Y);

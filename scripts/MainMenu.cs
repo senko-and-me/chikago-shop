@@ -85,6 +85,9 @@ public partial class MainMenu : Control
 		_backButton = GetNode<TextureButton>(
 			"SettingsMenuContainer/Settings/BackButton");
 
+		foreach (var button in new[] { _playButton, _settingsButton, _quitButton })
+			ButtonDropShadow.Attach(button, opacity: 0.65f);
+
 		_playRu = _playButton.TextureNormal;
 		_settingsRu = _settingsButton.TextureNormal;
 		_quitRu = _quitButton.TextureNormal;
@@ -185,6 +188,7 @@ public partial class MainMenu : Control
 			new Vector2(350, 100));
 
 		_menuButtons.AddChild(button);
+		ButtonDropShadow.Attach(button, opacity: 0.65f);
 
 		return button;
 	}
@@ -248,6 +252,7 @@ public partial class MainMenu : Control
 		};
 
 		_skipLayer.AddChild(_skipButton);
+		ButtonDropShadow.Attach(_skipButton);
 
 		_skipButton.CustomMinimumSize =
 			new Vector2(180, 54);

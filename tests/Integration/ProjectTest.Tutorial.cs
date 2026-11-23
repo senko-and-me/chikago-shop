@@ -502,13 +502,13 @@ public partial class ProjectTest
             Step(FirstTradeTutorial.Step.BuyerRequest);
             Check(game.GetNode<Node2D>("World/TradingRoom/Customer").Visible &&
                 game.GetNode<Control>("World/TradingRoom/BuyerWaitingThought/ThoughtBubble").IsVisibleInTree() &&
-                game.BuyerWaitRemaining == TradeScene.BuyerWaitDuration && requestArrivals == 1,
+                game.BuyerWaitRemaining == game.BuyerWaitInitial && requestArrivals == 1,
                 "The first customer and bubble must appear together with the request lesson at full patience");
             game.PersistProgress();
             await Reload();
             Step(FirstTradeTutorial.Step.BuyerRequest);
             Check(game.GetNode<Node2D>("World/TradingRoom/Customer").Visible &&
-                game.BuyerWaitRemaining == TradeScene.BuyerWaitDuration,
+                game.BuyerWaitRemaining == game.BuyerWaitInitial,
                 "Reloading the unread request lesson must keep its customer and full patience");
             await CameraSettled();
             const string thought = "World/TradingRoom/BuyerWaitingThought/ThoughtBubble";
@@ -610,7 +610,7 @@ public partial class ProjectTest
                 !tutorial.GetNode<Control>("Root/Panel").Visible,
                 "A real rejection during practice must change the offer without restoring the explanation");
             Highlight();
-            int cash = game.Score, offer = game.OfferedPrice + TradeScene.SpeedBonus(game.BuyerWaitRemaining) +
+            int cash = game.Score, offer = game.OfferedPrice + TradeScene.SpeedBonus(game.BuyerWaitRemaining, game.BuyerWaitInitial) +
                 TradeScene.QualityBonus(game.ActiveTradeQualityRank);
             await ClickControl(game, "World/TradingRoom/Item/TradePanel/Content/Buttons/AcceptButton");
             await Frame();

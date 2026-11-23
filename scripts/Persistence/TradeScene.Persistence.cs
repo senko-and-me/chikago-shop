@@ -69,6 +69,7 @@ public partial class TradeScene
 				(int[])_checkpointShowcaseItems.Clone(),
 			ActiveShowcaseIndex = _activeShowcaseIndex,
 			BuyerWaitRemaining = _buyerWaitRemaining,
+			BuyerWaitInitial = _buyerWaitInitial,
 			WaitingBuyerPresent = _waitingBuyer,
 			WaitingBuyerMusic = _waitingBuyerMusic,
 			StoredGrades = _storedGrades.ToArray(),
@@ -220,8 +221,13 @@ public partial class TradeScene
 
 		TradeActive = data.TradeActive;
 		_activeTradeGrade = NormalizeRank(data.ActiveTradeGrade);
+		bool musicBuyer = TradeActive && ItemIndex >= 0 && ItemIndex < Items.Count
+			? Items[ItemIndex].WorkshopId == "music" : data.WaitingBuyerMusic;
+		var range = ChikagoShop.Domain.Economy.RunRewardRules.BuyerWaitRange(musicBuyer);
+		_buyerWaitInitial = data.BuyerWaitInitial is double initial && initial >= range.Minimum && initial <= range.Maximum
+			? initial : BuyerWaitDuration;
 		_buyerWaitRemaining = data.SaveVersion >= 15 && data.BuyerWaitRemaining is double remaining && double.IsFinite(remaining)
-			? Math.Clamp(remaining, 0, BuyerWaitDuration) : BuyerWaitDuration;
+			? Math.Clamp(remaining, 0, _buyerWaitInitial) : _buyerWaitInitial;
 		_waitingBuyer = data.SaveVersion >= 16 && data.WaitingBuyerPresent && !TradeActive &&
 			!data.DayClosed && data.DayStarted && !Failed && !Completed &&
 			CustomerIndex >= 0 && CustomerIndex < _customer.GetAppearanceCount();

@@ -463,7 +463,7 @@ public partial class FirstTradeTutorial : CanvasLayer
             "Нажмите «Начать» на часах, чтобы открыть магазин. Часы показывают, сколько времени осталось до закрытия. После начала дня можно нажать на часы, чтобы завершить день досрочно.",
             _game.GetNode<Control>("HUD/DayClock/Root/DayTimer/StartButton"));
         else if (_game.ShowcaseItems.Any(item => item >= 0)) SetStep(Step.WaitBuyer,
-            "Покупатель приходит сразу после открытия магазина или продажи. Когда он появляется, красная полоска отсчитывает 10 секунд для надбавки за скорость.",
+            "Покупатель приходит сразу после открытия магазина или продажи. Когда он появляется, красная полоска показывает время для надбавки за скорость: 10–20 секунд для одежды и 15–25 для инструментов.",
             _game.GetNode<Control>("World/ShowroomLeft/Showcases/Slot1"));
         else if (_game.StoredItems.Length > 0)
         {

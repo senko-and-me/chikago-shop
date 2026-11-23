@@ -805,11 +805,11 @@ centered = false
 position = Vector2(2880, 1620.6316)
 zoom = Vector2(0.39583334, 0.39583334)
 script = ExtResource("23_world_camera")
+BoundsSource = NodePath("../World/RoomLayout")
 ReferenceSize = Vector2(4560, 2565)
 NavigationRegion = Rect2(429, 563, 3662, 1440)
 OverviewSize = Vector2(2560, 1440)
 CloseupSize = Vector2(1036, 583)
-BoundsSource = NodePath("../World/RoomLayout")
 
 [node name="HUD" type="CanvasLayer" parent="." unique_id=1744648689]
 

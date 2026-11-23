@@ -9,6 +9,17 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### POL-33 — объединить меню и тени мастерских из архива
+
+Статус: `DONE`; /root coordinator/executor; 2026-11-23; POL32DONE. CP: .local/checks/pol33-archive-integration/CP-POL-33.md.
+
+Task: POL-33
+Recommended status: REVIEW → accepted DONE
+Changed: approved selective integration of ChikagoShop_Menu_And_Workshop_Shadows_FULL.zip onto polishing717b47d; exact scope in CP and integration-review.txt. Import menu/map/workshop/control shadows, reserved-sale item shadow, tilted glass-fitted instruments, random clothing10–20s/music15–25s, proportional tips and optional saved initial patience, buyer ticking during both craft overlays. Retain current tutorial, category preview, offer gates,180s repeating practice clock, upgrade/notebook lessons, bottom-right Skip, reduced counter items/drum mask and white cards/deck layout. Update localized wait hint, documentation and targeted/domain tests. No replacement by old archive snapshot.
+Checks: dotnet build ChikagoShop.sln --no-restore PASS zero warnings/errors; domain PASS220/220 (DOTNET_ROLL_FORWARD=Major); rendered --timed-trades-shadows-checks, --interface-fixes-checks, --tutorial-checks, --buyer-arrival-checks, --buyer-patience-checks, --counter-item-checks, --polishing-start-checks, --card-dealing-checks PASS exit0. git diff --check PASS. Only known root certificate store warning in isolated Godot stderr. Evidence .local/checks/pol33-archive-integration/{manifest.csv,integration-review.txt,build.log,domain.log,*-checks logs}; actual runtime log names use the mode without -checks.
+Acceptance: all four user decisions implemented; real pause freezes clocks, craft overlays tick once, initial/remaining duration survive save and reroll, expiry still forces half price, shadows do not intercept input, instrument fit720p/1080p, complete current guide and purchase/skip/card regressions pass. User saves untouched; optional save field without schema-number change as archive. Balance report explicitly historical; no new Monte Carlo calibration claim.
+Read-set exception: exact serialized-field list in ProgressMigrationTests inspected after new approved optional field made legacy assertion fail; updated test exercises non-null roundtrip and exact field list. Test fixture retains Fullscreen Script through repeated reloads as existing tutorial fixture. Both extensions recorded in CP. source/ not read.
+Risks/blocker: none for approved integration; no additional player-facing decisions found. Next: user tests polishing in editor. No commit/push/export; main untouched.
 ### POL-32 — сохранить polishing и включить обновления main
 
 Статус: `DONE`; /root coordinator/executor; 2026-11-23; POL31DONE. CP: .local/checks/pol32-commit-main/CP-POL-32.md.

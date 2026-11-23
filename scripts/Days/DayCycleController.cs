@@ -87,6 +87,7 @@ public sealed class DayCycleController
 		};
 		_timer.AddChild(_clock);
 		_clock.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+		ButtonDropShadow.Attach(_clock, ButtonDropShadow.Direction.RightAndBottom, offsetAdjustment: new Vector2(-3, 0));
 		_startButton = new Button
 		{
 			Name = "StartButton", Text = "Начать", Flat = true,

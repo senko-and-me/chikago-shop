@@ -45,6 +45,8 @@ public partial class InventoryUI : Control
 			"separation", (int)SlotGap);
 
 		_slotBackground = GetNode<TextureRect>("InventorySlotBackground");
+		// The slot artwork is outside the scroller, so its shadow can extend past the end slots.
+		ButtonDropShadow.Attach(_slotBackground, ButtonDropShadow.Direction.SidesAndBottom);
 		_pageLabel = GetNode<Label>("InventoryPageLabel");
 		_expansion = new InventoryExpansionAnimator(this, GetNode<Control>("ExpansionAnimation"));
 		Resized += () => _expansion.Cancel();

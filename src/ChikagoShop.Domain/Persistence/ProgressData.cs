@@ -59,6 +59,7 @@ public sealed record ProgressData
 	public int[] CheckpointShowcaseItems { get; set; } = [];
 	public int ActiveShowcaseIndex { get; set; } = -1;
 	public double? BuyerWaitRemaining { get; set; }
+	public double? BuyerWaitInitial { get; set; }
 	public bool WaitingBuyerPresent { get; set; }
 	public bool WaitingBuyerMusic { get; set; }
 	public string[] StoredGrades { get; set; } = [];

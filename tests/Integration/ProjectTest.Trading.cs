@@ -405,7 +405,7 @@ public partial class ProjectTest
 		Check(game.GetNode<PanelContainer>("World/TradingRoom/Item/TradePanel").Visible &&
 		      !game.GetNode<Button>("World/TradingRoom/Item/TradePanel/Content/Buttons/AcceptButton").Disabled,
 		    "An item with no rerolls must keep only the active sale controls available");
-        int acceptedOffer = game.OfferedPrice + TradeScene.SpeedBonus(game.BuyerWaitRemaining) +
+        int acceptedOffer = game.OfferedPrice + TradeScene.SpeedBonus(game.BuyerWaitRemaining, game.BuyerWaitInitial) +
             TradeScene.QualityBonus(game.ActiveTradeQualityRank);
         int scoreBeforeSale = game.Score;
         game.AcceptTrade();

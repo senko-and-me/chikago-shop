@@ -100,13 +100,14 @@ public partial class BuyerWaitWidget : Control
         Show();
     }
 
-    public void SetState(bool music, double remaining)
+    public void SetState(bool music, double remaining, double initial)
     {
         if (!Visible) Show();
         if (!_thought.Visible) _thought.Show();
         _music = music;
         RefreshCategoryIcon();
-        _waitBar.Value = _waitBar.MaxValue - remaining;
+        _waitBar.MaxValue = initial;
+        _waitBar.Value = initial - remaining;
         _seconds.Text = $"{Mathf.Max(0, (float)remaining):0.0}s";
         QueueRedraw();
     }

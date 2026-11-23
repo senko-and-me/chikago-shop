@@ -1,5 +1,7 @@
 # Economy calibration — 2026-11-22
 
+Historical simulation: these results predate the 2026-11-23 random buyer patience (clothing 10–20s, instruments 15–25s) and clocks continuing during minigames. The table has not been recalculated for that runtime behavior.
+
 Runs per profile: **10000**. Seed: **20261107**. Starting cash: **$220**. Days: **14**. Day: **60s**, +30s after music unlock. One item per craft.
 
 - atelier: cost **$25**, mean base value **$40.30**, mean margin before buyer variance/rerolls **$15.30**.

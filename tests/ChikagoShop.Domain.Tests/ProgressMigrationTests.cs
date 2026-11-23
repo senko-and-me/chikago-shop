@@ -134,7 +134,7 @@ public sealed class ProgressMigrationTests
             MusicWorkshopUnlocked = true, CheckpointMusicWorkshopUnlocked = true,
             StoredItems = [0, 4, 9], CheckpointItems = [2, 3], ShowcaseItems = [1, -1, 8],
             CheckpointShowcaseItems = [-1, 7], TradeActive = true, ItemIndex = 8,
-            CustomerIndex = 3, RerollsRemaining = 1, ActiveShowcaseIndex = 2, BuyerWaitRemaining = 12.5,
+            CustomerIndex = 3, RerollsRemaining = 1, ActiveShowcaseIndex = 2, BuyerWaitRemaining = 12.5, BuyerWaitInitial = 18,
             DayRemainingSeconds = 35.5, UpgradePending = true, SelectedUpgrade = (int)DayUpgrade.Energy,
             AtelierUpgradeLevel = 2, MusicUpgradeLevel = 3, AtelierPriceLevel = 4, MusicPriceLevel = 5,
             CheckpointAtelierUpgradeLevel = 1, CheckpointMusicUpgradeLevel = 2,
@@ -143,6 +143,7 @@ public sealed class ProgressMigrationTests
         string json = ProgressJson.Serialize(data);
         var restored = ProgressJson.Deserialize(json, 3)!;
         Assert.That(ProgressJson.Serialize(restored), Is.EqualTo(json));
+        Assert.That(restored.BuyerWaitInitial, Is.EqualTo(18));
         using var doc = JsonDocument.Parse(json);
         Assert.That(doc.RootElement.GetProperty("save_version").GetInt32(), Is.EqualTo(ProgressJson.CurrentVersion));
         Assert.That(doc.RootElement.GetProperty("checkpoint_music_price_level").GetInt32(), Is.EqualTo(4));
@@ -158,7 +159,7 @@ public sealed class ProgressMigrationTests
             "quota_visit", "checkpoint_quota_visit", "quota_dialogue_page", "quota_dialogue_revealed", "quota_dialogue_language",
             "status", "trade_active", "item_index", "customer_index", "percentage", "rerolls_remaining", "stored_items",
             "checkpoint_items", "showcase_items", "checkpoint_showcase_items", "active_showcase_index",
-            "buyer_wait_remaining", "waiting_buyer_present", "waiting_buyer_music", "stored_grades", "showcase_grades",
+            "buyer_wait_remaining", "buyer_wait_initial", "waiting_buyer_present", "waiting_buyer_music", "stored_grades", "showcase_grades",
             "checkpoint_grades", "checkpoint_showcase_grades", "active_trade_grade"
         ];
         Assert.That(doc.RootElement.EnumerateObject().Select(property => property.Name),

@@ -115,7 +115,7 @@ public partial class ProjectTest
                 int cash = game.Score, offer = game.OfferedPrice;
                 Check(offer == TradeScene.PriceForPercent(TradeScene.GetItemBasePrice(index), game.Percentage),
                     "High-rarity offers must use the correct workshop base price");
-                int tip = TradeScene.SpeedBonus(game.BuyerWaitRemaining) + TradeScene.QualityBonus(game.ActiveTradeQualityRank);
+                int tip = TradeScene.SpeedBonus(game.BuyerWaitRemaining, game.BuyerWaitInitial) + TradeScene.QualityBonus(game.ActiveTradeQualityRank);
                 game.AcceptTrade();
                 Check(game.Score == cash + offer + tip && !game.TradeActive,
                     "Placeholder sales must credit their offer and finish the trade");

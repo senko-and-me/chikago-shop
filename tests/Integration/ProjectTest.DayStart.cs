@@ -171,7 +171,7 @@ public partial class ProjectTest
             game._Process(5);
             Check(!game.TradeActive && game.DayRemainingSeconds == duration, "Displayed goods must not attract buyers before Start");
             game.EndDay();
-            Check(game.TradeActive && game.BuyerWaitRemaining == TradeScene.BuyerWaitDuration,
+            Check(game.TradeActive && game.BuyerWaitRemaining == game.BuyerWaitInitial && game.BuyerWaitInitial is >= 10 and <= 20,
                 "Start must immediately bring the first buyer with the full wait timer");
         }
         finally

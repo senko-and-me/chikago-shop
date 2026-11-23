@@ -47,6 +47,7 @@ public partial class PulloutNotebook : Control
     {
         _game = GetNode<TradeScene>("../../..");
         _page = GetNode<TextureRect>("Page");
+        ButtonDropShadow.Attach(_page, ButtonDropShadow.Direction.LeftAndBottom);
         _notes = GetNode<Control>("Page/Notes");
         _questsTitle = GetNode<Label>("Page/Notes/QuestsTitle");
         _questDetails = GetNode<Label>("Page/Notes/QuestDetails");

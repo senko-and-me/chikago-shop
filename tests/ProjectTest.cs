@@ -16,6 +16,13 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--timed-trades-shadows-checks"))
+            {
+                await TestTimedTradesAndShadows();
+                GD.Print("TIMED_TRADES_SHADOWS_CHECKS_PASS: random patience, crafting clocks, save/reload, shadows and input");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--interface-fixes-checks"))
             {
                 await TestInterfaceFixes();
@@ -75,7 +82,7 @@ public partial class ProjectTest : SceneTree
             if (OS.GetCmdlineUserArgs().Contains("--buyer-arrival-checks"))
             {
                 await TestBuyerArrival();
-                GD.Print("BUYER_ARRIVAL_CHECKS_PASS: immediate buyers, 10-second wait, tips, modal pause, saves, unlock panel and atelier art");
+                GD.Print("BUYER_ARRIVAL_CHECKS_PASS: immediate buyers, category-based wait, tips, modal pause, saves, unlock panel and atelier art");
                 Quit();
                 return;
             }

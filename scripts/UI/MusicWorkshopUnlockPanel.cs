@@ -12,6 +12,7 @@ public partial class MusicWorkshopUnlockPanel : PanelContainer
     {
         UnlockButton = GetNode<Button>("Content/UnlockButton");
         AddThemeStyleboxOverride("panel", MakePaper(PanelTexture, Colors.White, 46, 34));
+        ButtonDropShadow.Attach(this);
         UnlockButton.AddThemeStyleboxOverride("normal", MakePaper(ButtonTexture, new Color("dedede"), 32, 16));
         UnlockButton.AddThemeStyleboxOverride("hover", MakePaper(ButtonTexture, Colors.White, 32, 16));
         UnlockButton.AddThemeStyleboxOverride("pressed", MakePaper(ButtonTexture, new Color("b8b8b8"), 32, 16));
