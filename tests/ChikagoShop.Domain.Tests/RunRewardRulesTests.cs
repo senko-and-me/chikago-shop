@@ -5,13 +5,21 @@ namespace ChikagoShop.Domain.Tests;
 
 public sealed class RunRewardRulesTests
 {
+    [Test]
+    public void BuyerHasTenSecondsAndKeepsTheFiveDollarMaximum() =>
+        Assert.Multiple(() =>
+        {
+            Assert.That(RunRewardRules.BuyerWaitDuration, Is.EqualTo(10));
+            Assert.That(RunRewardRules.SpeedBonus(10), Is.EqualTo(5));
+        });
+
     [TestCase(0, 0)]
     [TestCase(0.01, 1)]
-    [TestCase(4, 1)]
-    [TestCase(4.01, 2)]
-    [TestCase(16, 4)]
-    [TestCase(16.01, 5)]
-    [TestCase(20, 5)]
+    [TestCase(2, 1)]
+    [TestCase(2.01, 2)]
+    [TestCase(8, 4)]
+    [TestCase(8.01, 5)]
+    [TestCase(10, 5)]
     [TestCase(21, 5)]
     public void SpeedRewardUsesFiveBoundedBands(double seconds, int expected) =>
         Assert.That(RunRewardRules.SpeedBonus(seconds), Is.EqualTo(expected));

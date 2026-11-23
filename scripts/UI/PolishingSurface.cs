@@ -80,6 +80,8 @@ void fragment() {
 			float scale = Math.Min(
 				600f / source.GetWidth(),
 				480f / source.GetHeight());
+			// Shrink the playable silhouette with the art so the drum takes less rubbing.
+			if (kind == "drum") scale *= 0.7f;
 
 			int width = Math.Max(
 				1, Mathf.RoundToInt(source.GetWidth() * scale));

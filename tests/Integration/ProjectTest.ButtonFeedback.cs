@@ -84,10 +84,12 @@ public partial class ProjectTest
                 using var hover = await CaptureButtonFeedback();
                 if (language == "en")
                 {
-                    float fittedWidth = Mathf.Min(control.Size.X,
-                        control.Size.Y * back.TextureNormal.GetWidth() / back.TextureNormal.GetHeight());
+                    float fittedWidth = back.StretchMode == TextureButton.StretchModeEnum.Scale
+                        ? control.Size.X
+                        : Mathf.Min(control.Size.X,
+                            control.Size.Y * back.TextureNormal.GetWidth() / back.TextureNormal.GetHeight());
                     Check(frame.Bounds.Size.X <= fittedWidth + 1,
-                        "English Back feedback must fit the current image's actual aspect ratio");
+                        "English Back feedback must fit the artwork with its authored stretch mode");
                     float sideMargin = (control.Size.X - fittedWidth) / 2;
                     if (sideMargin > 4)
                     {
@@ -410,7 +412,7 @@ public partial class ProjectTest
             foreach (int balance in new[] { 1000, 20, 0 })
             {
                 card.Open(1, 2, new[] { ChikagoShop.Domain.Days.DayUpgrade.Cash,
-                    ChikagoShop.Domain.Days.DayUpgrade.Energy, ChikagoShop.Domain.Days.DayUpgrade.Time }, balance);
+                    ChikagoShop.Domain.Days.DayUpgrade.Energy, ChikagoShop.Domain.Days.DayUpgrade.Atelier }, balance);
                 await WaitForDayCardAnimation(card);
                 await SettleButtonFeedback();
                 Check(Root.GuiGetFocusOwner() == null && controller.GetVisualFrame().Strength == 0,
@@ -425,11 +427,12 @@ public partial class ProjectTest
                 BaseButton[] expected = balance == 0
                     ? new BaseButton[] { card.GetNode<Button>("Root/Center/Card/Content/Skip") }
                     : balance == 20
-                        ? new BaseButton[] { card.GetNode<Button>(choicePath + "Cash/Content/Choose"),
+                        ? new BaseButton[] { card.GetNode<Button>(choicePath + "Energy/Content/Choose"),
+                            card.GetNode<Button>(choicePath + "Atelier/Content/Choose"),
                             card.GetNode<Button>("Root/Center/Card/Content/Skip") }
                         : new BaseButton[] { card.GetNode<Button>(choicePath + "Cash/Content/Choose"),
                             card.GetNode<Button>(choicePath + "Energy/Content/Choose"),
-                            card.GetNode<Button>(choicePath + "Time/Content/Choose"),
+                            card.GetNode<Button>(choicePath + "Atelier/Content/Choose"),
                             card.GetNode<Button>("Root/Center/Card/Content/Skip") };
                 Check(selected == expected[0], "First navigation must select the first available action");
                 foreach (Key direction in new[] { Key.Right, Key.Down, Key.Left, Key.Up })

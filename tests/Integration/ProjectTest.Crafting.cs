@@ -8,8 +8,40 @@ using ChikagoShop.Domain.Crafting;
 // Subsystem checks share the ProjectTest runner and fixture helpers.
 public partial class ProjectTest
 {
+    private async Task TestCompactDrumMask()
+    {
+        var surface = new PolishingSurface { Size = new Vector2(600, 480) };
+        Root.AddChild(surface);
+        try
+        {
+            var session = surface.Begin("drum");
+            surface.Position = (Root.GetVisibleRect().Size - surface.Size) / 2;
+            surface.RefreshArtwork();
+            using var image = GD.Load<Texture2D>("res://art/items/drum.png").GetImage();
+            var ink = image.GetUsedRect();
+            float oldFit = Mathf.Min(600f / image.GetWidth(), 480f / image.GetHeight());
+            Vector2 oldSize = (Vector2)ink.Size * oldFit;
+            var cells = session.Cells.Where(cell => cell.Inside).ToArray();
+            Vector2 size = new((float)(cells.Max(cell => cell.X) - cells.Min(cell => cell.X)),
+                (float)(cells.Max(cell => cell.Y) - cells.Min(cell => cell.Y)));
+            Check(size.X < oldSize.X * 0.74f && size.Y < oldSize.Y * 0.74f &&
+                size.X > oldSize.X * 0.65f && size.Y > oldSize.Y * 0.65f,
+                "The drum's playable mask must shrink with its art, reducing rubbing area to about half");
+            session.Start();
+            var center = cells.OrderBy(cell => Math.Abs(cell.X - 300) + Math.Abs(cell.Y - 240)).First();
+            session.BeginRub(center.X, center.Y);
+            for (int i = 0; i < 12; i++) session.MoveRub(center.X + (i % 2 == 0 ? 14 : 0), center.Y, 20);
+            Check(session.Progress > 0 && session.Misses == 0,
+                "The smaller drum must remain polishable with the existing brush");
+            if (DisplayServer.GetName() != "headless")
+                using (await CapturePresentation("compact-drum-mask")) { }
+        }
+        finally { surface.QueueFree(); await ToSignal(this, SignalName.ProcessFrame); }
+    }
+
     private async Task TestPolishingStart()
     {
+        await TestCompactDrumMask();
         Vector2I originalSize = Root.Size;
         string locale = TranslationServer.GetLocale();
         TradeScene game = null;

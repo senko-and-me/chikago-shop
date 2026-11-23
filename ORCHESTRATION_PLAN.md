@@ -11,7 +11,11 @@
 ## Текущий фронт
 ### POL-32 — сохранить polishing и включить обновления main
 
-Статус: `IN_PROGRESS`; /root coordinator/executor; 2026-11-23; POL31DONE. CP: .local/checks/pol32-commit-main/CP-POL-32.md. Все текущие изменения сохранить в polishing, затем fetch и merge origin/main. При конфликтах остановиться и запросить решение пользователя. main и удалённые ветки не изменять.
+Статус: `DONE`; /root coordinator/executor; 2026-11-23; POL31DONE. CP: .local/checks/pol32-commit-main/CP-POL-32.md.
+
+Task POL-32; recommended REVIEW → accepted DONE. Changed: accumulated UI/tutorial work saved in polishing commit 007e39b; merge origin/main at 28b8060. Five conflicts reported immediately; user explicitly chose our tutorial/interface/localization plus incoming item sizes and 10-second buyer patience. Kept both plan histories, current tutorial and tests, notebook/card steps and 180-second training clock; incorporated main counter sizes, smaller drum art/playable mask, reward timing and corresponding checks. English wait hint adjusted to 10 seconds. Existing monochrome-card checks retained alongside incoming test fixture corrections. main and remote branches untouched.
+
+Checks: dotnet build ChikagoShop.sln --no-restore PASS 0 warnings/errors; domain tests PASS 215/215 with DOTNET_ROLL_FORWARD=Major (installed runtime is newer than target net8); rendered --tutorial-checks, --buyer-arrival-checks, --buyer-patience-checks, --counter-item-checks, --polishing-start-checks all PASS exit0. Root certificate store warning only in isolated Godot runs. Evidence .local/checks/pol32-commit-main/{build-merged,domain,tutorial,buyer-arrival,buyer-patience,counter-item,polishing-start}.log and corresponding stderr logs. Read-set exception: incoming affected test/config files required for merge validation, authorized in CP. Acceptance: user-selected combination built and verified in isolated copy; ordinary arrivals10s/expiry50%/no-reroll, compact drum and full tutorial preserved. Risks/blocker: none. Next: test merged polishing in editor; no push or exports requested.
 ### POL-31 — блокнот после учебных карточек
 
 Статус: `DONE`; /root coordinator/executor; 2026-11-22; POL30DONE. CP: .local/checks/pol31-notebook-lesson/CP-POL-31.md.
@@ -251,6 +255,48 @@ Acceptance: актуальная рабочая версия в обычном P
 Read-set exception: нет; обход manifest пропускал source/ до рекурсии, supplied tests прочитаны для штатной проверки, cache только собственного Projects для isolated runtime.
 Risks/blocker: блокеров нет; sandbox root certificate warning в тесте, функциональные проверки PASS. Без commit/push.
 Next: работать с проектом в Projects/polishing; перезапустить текущую Godot сессию для новых скриптов.
+### HF-211 — размеры предметов и десятисекундное ожидание покупателя
+
+Статус: `DONE`; принято координатором после проверок; координатор/исполнитель `/root`; HF210 DONE; CP `.local/checks/hf211/CP-HF-211.md`; exact write-set `.local/checks/hf211/write-set.txt`. User screenshot8–10: smaller ordinary clothing/drum at counter, smaller drum polishing mask, buyer10s. Приёмка: сохранён контакт со столом/размер Matteo, реальная площадь полировки уменьшена, reward максимум5 сохранён, oldsave clamp/RUEN/build/domain/rendered PASS. Source/ вне scope.
+
+```text
+Task: HF-211
+Recommended status: REVIEW -> accepted DONE
+Changed: ordinary hat/vest/gloves counter scale75%, drum65%, bottom-center contact preserved; Matteo and other variants unchanged. Drum polishing raster and actual alpha mask70% (about49% area), same brush/duration. Shared buyer duration10s, same maximum5-dollar speed reward over five2s bands; RU/EN tutorial/docs/simulation assumptions updated. Existing persistence clamp handles old remaining12/20s. Updated focused timer/presentation fixtures and independent save assertion; report regenerated10000runs/profile.
+Checks: root/isolated build PASS0warnings/errors; domain205/205 PASS; rendered6suites PASS: counter-item (all10 silhouettes/zooms/resize), polishing-start (compact drum actual cells/rubbing + mouse/locales/resize), buyer-arrival (includes availability/patience, pause/craft/reroll/reload/expiry), canonical-migration (old12s ->10s and real-save copy), tutorial, campaign-balance. Screenshots counter hat/drum + compact drum reviewed. Final root/candidate exact-byte audit PASS; git diffcheck PASS; origin/main unchanged before commit.
+Acceptance: screenshot items8-10 implemented; size changes affect actual drum work area; game prices/quality/quota rules untouched. Economy model reflects shorter patience: ordinary first-quota26.7%, both0.1%; careful50.8%/3.1% (model, not human playtest). Sample size in existing rare-win regression expanded1000 ->10000 for ordinary profile rather than weakening its victory assertion.
+Read-set exception: EconomyBalanceTests.cs + simulation/tool report diagnosed after shorter timer made rare win absent in1000runs; coordinator expanded exact write-set for test sample and updated report/docs. Source/ never inspected.
+Risks/blocker: shorter patience intentionally makes model outcomes harder; unrelated historical general-runner fixture mismatch remains out of scope. No focused blocker. ZIP untouched.
+Next: publish verified main commit and read back remote reference; use root project.godot.
+```
+### HF-210 — интеграция проверенных interface fixes
+
+Статус: `DONE`; принято координатором; координатор/исполнитель `/root`; HF209 DONE; user explicitly approves main integration; CP `.local/checks/hf210/CP-HF-210.md`; exact write-set `.local/checks/hf210/write-set.txt`. Приёмка: approved11files + obsolete UI fixtures, build/domain/focused suites, main merge/push/readback. Баланс/каталог/save schema/cloud/source/ и ZIP removal вне scope.
+
+```text
+Task: HF-210
+Recommended status: REVIEW
+Changed: approved11 archive files selectively applied on integration/interface-fixes, keeping main orchestration/economy/schema/catalogue/cloud. Added tutorial reload-before-acknowledge + frozen-day-clock assertion. Updated button fixture for valid Atelier card, current affordability and authored Back Scale mode; colored premium card art is not subjected to an obsolete global grayscale assertion (controller grayscale tests remain). Progress fixture covers pack geometry/captions/hover/pause/keyboard/reload with current quota; removed retired hidden-action clicks and duplicated outdated campaign assertions, independently verified by campaign suite.
+Checks: root/isolated build PASS0warnings/errors; root domain204/204 PASS.10 focused rendered suites PASS (7HF209 acceptance suites + updated tutorial rerun, button-feedback, progress-toggle, campaign-balance; tutorial counted once). Final root candidate byte-equality for every runtime/test change PASS; diffcheck PASS; fetched origin/main unchanged before integration.
+Acceptance: UI fixes preserve canonical catalogue/save format/economy/fullscreen/story overlap; both old failing UI suites now pass; tutorial blocks sale/reroll and both timers across reload until acknowledgment. No extra art/doc EOL churn or archived plan copied. ZIP untouched/untracked.
+Read-set exception: scenes/main_menu.tscn, scripts/MainMenu.cs and domain DayUpgradeSession/Rules read to diagnose old test expectations; no edits there. Source/ not inspected.
+Risks/blocker: known unrelated general-runner layout fixture mismatch from HF206 remains; full suite not claimed PASS. No focused blocker.
+Final: integration/interface-fixes=815964f fast-forwarded to main and published; remote reference verified. Next: use canonical root project.godot; ZIP remains untouched outside tracked changes.
+```
+### HF-209 — review ChikagoShop_Interface_Fixes_FULL.zip
+
+Статус: `DONE` (review); принято координатором; координатор/исполнитель `/root`; HF208 DONE; CP `.local/checks/hf209/CP-HF-209.md`. Write-set plan и isolated review evidence; runtime/архив/публикация вне scope этого review. Exact read-set `.local/checks/hf209/manifest.json`:610same/17different/2new; source/ и binaries исключены. Приёмка: review функциональных diff, build/domain/focused checks и оценка сохранности последних исправлений.
+
+```text
+Task: HF-209
+Recommended status: REVIEW -> review accepted DONE
+Changed: plan + .local/checks/hf209/{CP,manifest,incoming,candidate,diffs,logs,REVIEW.txt}. Root runtime untouched; ZIP preserved.
+Checks: isolated build0warnings/errors, domain204/204, clean import retry PASS. Rendered7suites PASS: interface-fixes, tutorial, canonical-migration, buyer-arrival(+availability/patience), day-expiry, music-settings/fullscreen, dialogue-portraits/shared layout. Showcase/tutorial screenshots reviewed. Additional2legacy suites FAIL: button-feedback grayscale check rejects existing gold cash card; progress-toggle hardcodes quota250 rather than750. Detailed paths/evidence in REVIEW.txt.
+Acceptance: all functional changes inspected;11meaningful files (9existing+2new), no missing tracked files. Current balance/catalogue/schema/cloud retained; no focused functional blocker. Selective integration recommended with fixture maintenance, not wholesale replacement.
+Read-set exception: ProjectTest.Presentation.cs/Ui.cs/Helpers.cs, DayTransitionCard.cs and TradeScene.BuyerBonuses.cs for necessary failed-test/timer diagnosis; coordinator authorized diagnostic read, no root edits there.
+Risks/blocker: extra legacy test assumptions above; no all-suite PASS claim. No merge/push/archive removal requested explicitly in this turn or performed.
+Next: selective integration of reviewed UI changes, preserving canonical project and fixing obsolete test expectations.
+```
 ### HF-208 — скрыть нижний край персонажей за облачком диалога
 
 Статус: `DONE`; принято координатором; координатор/исполнитель `/root`; HF207 DONE; CP `.local/checks/hf208/CP-HF-208.md`. Write-set shared StoryDialogueLayout, composition test, plan/local evidence. Приёмка: спрайты немного опущены и перекрыты облачком; текст читаем; rendered720p/1080p, portraits/motion и build PASS; source/ вне scope.
