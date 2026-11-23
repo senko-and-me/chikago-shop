@@ -9,6 +9,11 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### POL-34 — сохранить и опубликовать polishing
+
+Статус: `DONE`; /root coordinator/executor; 2026-11-23; POL33DONE. CP: .local/checks/pol34-publish-polishing/CP-POL-34.md.
+Task POL-34; recommended REVIEW → accepted DONE. Changed: all approved POL33 integration committed as 62947ef and pushed with accumulated earlier polishing commits to origin/polishing; ls-remote confirmed62947ef equals local HEAD and clean status. main untouched. Scene additionally contained35 new null export overrides that broke poster resource paths and counter contact; original preserved in local trade_scene-before.tscn. Removed only null assignments, kept harmless BoundsSource editor ordering.
+Checks: git diff --check PASS; previous POL33 build/domain220 and8 rendered modes PASS; latest scene --counter-item-checks FAIL with null overrides (empty poster path, displaced contact), PASS exit0 after repair, only known certificate warning. Evidence .local/checks/pol34-publish-polishing/{scene-before,scene-before-errors,scene-fixed,scene-fixed-errors}.log. Read-set exception: new scene serialization diagnosed before publication, within user-authorized all-changes scope. Risks/blocker: none. Next: test published polishing; this publication record is committed/pushed separately. No main writes or exports.
 ### POL-33 — объединить меню и тени мастерских из архива
 
 Статус: `DONE`; /root coordinator/executor; 2026-11-23; POL32DONE. CP: .local/checks/pol33-archive-integration/CP-POL-33.md.
