@@ -11,7 +11,18 @@
 ## Текущий фронт
 ### HF-212 — публикация исправлений плаката, запуска и переходов
 
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; 2026-11-26; HF209–211 DONE; пользователь явно просит push. CP `.local/checks/hf212/CP-HF-212.md`. READY: зависимости и проверки выполнены, точный список13файлов/read-write-set/исключения в CP, пересечений с активными задачами нет. Публикация проверенных изменений через обычный commit/push main; локальные правки project/menu/theme/DayCycle/Embroidery и source/ вне scope. Приёмка: stagedmanifest/diffcheck, remote readback и сохранность пользовательских файлов.
+Статус: `DONE`; принято координатором `/root`; исполнитель `/root`; 2026-11-26; HF209–211 DONE; пользователь явно просит push. CP `.local/checks/hf212/CP-HF-212.md`. Опубликован `e66d30f` (13файлов): приоритет перемещения на плакате, обучение→пролог→свежая игра, чёрные переходы. Локальные правки project/menu/theme/DayCycle/Embroidery и source/ вне scope.
+
+```text
+Task: HF-212
+Recommended status: REVIEW -> accepted DONE
+Changed: e66d30fb2d31215911904c93ff4cfe6192a3e936 published to origin/main; exact13file manifest in CP. This follow-up records publication evidence only.
+Checks: precommit fetch divergence0/0; exact stagedmanifest and staged diffcheck PASS (cr-at-eol); HF209-211 runtime/test evidence unchanged; normal push PASS; ls-remote main=e66d30fb2d31215911904c93ff4cfe6192a3e936 matches local HEAD; all5external file SHA256 unchanged.
+Acceptance: all requested fixes published; unrelated/local edits preserved and excluded from commits.
+Read-set exception: git diff of5excluded files to confirm boundary; source/ not read.
+Risks/blocker: existing current-menu null music exports and minor fade-suite renderer exit diagnostics remain documented in HF210/211; neither introduced nor published by this push.
+Next: pull main on other machines.
+```
 
 ### HF-211 — чёрное затухание между сценами
 
