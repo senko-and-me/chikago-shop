@@ -5,6 +5,120 @@ using Godot;
 
 public partial class ProjectTest
 {
+    private async Task TestRevisionUi()
+    {
+        var original = Root.Size;
+        string locale = TranslationServer.GetLocale();
+        var game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
+        game.SavePath = "";
+        Root.AddChild(game);
+        game.SetProcess(false);
+        var camera = game.GetNode<WorldCamera>("Camera2D");
+        camera.SetProcess(false);
+        const string roomPath = "World/TradingRoom";
+        var room = game.GetNode<Node2D>(roomPath);
+        var item = room.GetNode<Node2D>("Item");
+        var sale = item.GetNode<Control>("TradePanel");
+        var widget = room.GetNode<BuyerWaitWidget>("BuyerWaitingThought");
+        var bubble = widget.GetNode<Control>("ThoughtBubble");
+        var settings = game.GetNode<PauseMenu>("PauseMenu");
+        var zoomUi = game.GetNode<ZoomResponsiveUi>("ZoomResponsiveUi");
+        try
+        {
+            item.Show();
+            sale.Show();
+            widget.SetState(false, 0, 15);
+            foreach (Vector2I viewport in new[] { new Vector2I(1280, 720), new Vector2I(1920, 1080) })
+            {
+                Root.Size = viewport;
+                await ToSignal(this, SignalName.ProcessFrame);
+                foreach (float scale in new[] { 0.4f, 0.72f, 1f })
+                {
+                    camera.Zoom = Vector2.One * scale;
+                    camera.Position = room.ToGlobal(new Vector2(800, 380));
+                    camera.ForceUpdateScroll();
+                    zoomUi.UpdateForZoom(scale);
+                    await ToSignal(this, SignalName.ProcessFrame);
+                    Rect2 offerBounds = ScreenBounds(sale), bubbleBounds = ScreenBounds(bubble);
+                    Check(Root.GetVisibleRect().Encloses(offerBounds) &&
+                        Root.GetVisibleRect().Encloses(bubbleBounds) && !offerBounds.Intersects(bubbleBounds),
+                        $"Trade elements must fit without overlap at {viewport}, zoom {scale}: {offerBounds}, {bubbleBounds}");
+                    Check(sale.ZIndex >= 125 && bubble.ZIndex > sale.ZIndex &&
+                        !sale.ZAsRelative && !bubble.ZAsRelative, "Both trade controls must draw above the room textures");
+                }
+                camera.Zoom = Vector2.One * 0.52f;
+                camera.ForceUpdateScroll();
+                zoomUi.UpdateForZoom(0.52f);
+                using (var frame = await CapturePresentation($"v131-sale-{viewport.X}")) { }
+
+                foreach (string language in new[] { "ru", "en" })
+                {
+                    TranslationServer.SetLocale(language);
+                    await ToSignal(this, SignalName.ProcessFrame);
+                    await ToSignal(this, SignalName.ProcessFrame);
+                    string Caption(string key) =>
+                        game.GetNode<Label>($"HUD/Root/ProgressPanel/Visual/{key}/Caption").Text;
+                    Check(Caption("Day") == (language == "ru" ? "День 1" : "Day 1") &&
+                        Caption("Quota").StartsWith(language == "ru" ? "Следующая квота:" : "Next quota:") &&
+                        Caption("Deadline") == (language == "ru" ? "До квоты: 7 дней" : "Quota due in 7 days"),
+                        "Cigarette captions must use valid Russian and English strings");
+                }
+                bool russianArtwork = viewport.X == 1280;
+                TranslationServer.SetLocale(russianArtwork ? "ru" : "en");
+                settings.Open();
+                settings.GetNode<Button>("Root/Overlay/Center/Panel/Content/Menu/SettingsButton")
+                    .EmitSignal(Button.SignalName.Pressed);
+                var row = settings.GetNode<FullscreenToggle>("Root/Overlay/Center/Panel/Content/Settings/FullscreenButton");
+                await ToSignal(this, SignalName.ProcessFrame);
+                await ToSignal(this, SignalName.ProcessFrame);
+                var material = (ShaderMaterial)row.Material;
+                float ratio = material.GetShaderParameter("artwork_width_ratio").AsSingle();
+                Check(ratio > 0 && ratio < 1 && Mathf.IsEqualApprox(ratio * row.Size.X, row.Size.Y * 4000 / 600),
+                    "Fullscreen artwork must retain an isotropic scale on the switch region");
+                Check(settings.GetNode<PanelContainer>("Root/Overlay/Center/Panel").GetThemeStylebox("panel")
+                    is StyleBoxTexture soft && soft.GetExpandMargin(Side.Bottom) > 0,
+                    "Settings must extend the painted backdrop past the last button");
+                row.SetProcess(false);
+                foreach (bool on in new[] { false, true })
+                {
+                    row.TextureNormal = russianArtwork
+                        ? (on ? row.RussianOn : row.RussianOff)
+                        : (on ? row.EnglishOn : row.EnglishOff);
+                    using var frame = await CapturePresentation($"v131-settings-{viewport.X}-{on}");
+                }
+                row.SetProcess(true);
+                settings.Close();
+
+                var notebook = game.GetNode<PulloutNotebook>("HUD/Root/PulloutNotebook");
+                Rect2 tabBounds = notebook.GetGlobalTransformWithCanvas() * notebook.HoverBounds;
+                Vector2 tab = new(tabBounds.Position.X + 17, tabBounds.GetCenter().Y);
+                Vector2 away = new(300, 650);
+                MoveButtonPointer(tab);
+                await ToSignal(this, SignalName.ProcessFrame);
+                MoveButtonPointer(away);
+                await ToSignal(CreateTimer(.95), SceneTreeTimer.SignalName.Timeout);
+                Check(!notebook.Expanded, "A quick pass over the tab must let the notebook retract");
+                MoveButtonPointer(tab);
+                await ToSignal(CreateTimer(.55), SceneTreeTimer.SignalName.Timeout);
+                Rect2 page = ScreenBounds(notebook.GetNode<Control>("Page"));
+                MoveButtonPointer(page.GetCenter());
+                await ToSignal(CreateTimer(.45), SceneTreeTimer.SignalName.Timeout);
+                Check(notebook.Expanded, "Moving onto the open page must keep the notebook readable");
+                MoveButtonPointer(away);
+                await ToSignal(CreateTimer(.65), SceneTreeTimer.SignalName.Timeout);
+                Check(!notebook.Expanded, "Leaving the page must close it at either resolution");
+            }
+        }
+        finally
+        {
+            settings.Close();
+            game.QueueFree();
+            Root.Size = original;
+            TranslationServer.SetLocale(locale);
+        }
+        await ToSignal(this, SignalName.ProcessFrame);
+    }
+
     private async Task TestInterfaceFixes()
     {
         const string save = "user://interface_fixes_test.json";
@@ -27,6 +141,7 @@ public partial class ProjectTest
                 Root.AddChild(game);
                 game.SetProcess(false);
                 await CheckInstrumentShowcases(game, size);
+                await CheckMapShadowDirections(game);
                 await CheckPulloutPanels(game);
                 await CheckPauseButtonStates(game);
                 game.QueueFree();
@@ -63,17 +178,86 @@ public partial class ProjectTest
                     $"{kinds[i]} must trim transparent margins only on the showcase (texture={icon.Texture}, items={string.Join(",", game.ShowcaseItems)})");
                 Vector2 baseFit = new Vector2(209, 115) / original.GetSize();
                 Vector2 actual = icon.Size / icon.Texture.GetSize();
-                Check(Mathf.IsEqualApprox(actual.X, actual.Y) &&
-                    Mathf.IsEqualApprox(actual.X / Mathf.Min(baseFit.X, baseFit.Y), 1.35f) &&
-                    icon.GetRect().GetCenter().IsEqualApprox(new Vector2(215.5f, 92.5f)),
-                    $"{kinds[i]} must be centered and exactly 35% larger than its previous visible art");
-                Check(ScreenBounds(slot).Encloses(ScreenBounds(icon)) && Root.GetVisibleRect().Encloses(ScreenBounds(icon)),
-                    $"{kinds[i]} must fit inside the stand and visible camera at {size}, close={close}");
+                Check(Mathf.IsEqualApprox(actual.X, actual.Y) && actual.X > Mathf.Min(baseFit.X, baseFit.Y) * 1.35f,
+                    $"{kinds[i]} must stay in proportion and use more glass space after tilting");
+                Vector2 up = Vector2.Up.Rotated(icon.Rotation);
+                Check(up.X > 0.7f && up.Y < -0.35f,
+                    $"{kinds[i]} must point to the upper right");
+                Rect2I region = source.GetUsedRect();
+                Rect2 glass = new(105, 26, 219, 130);
+                Vector2 min = new(float.PositiveInfinity, float.PositiveInfinity);
+                Vector2 max = new(float.NegativeInfinity, float.NegativeInfinity);
+                for (int y = 0; y < region.Size.Y; y++)
+                for (int x = 0; x < region.Size.X; x++)
+                {
+                    if (source.GetPixel(region.Position.X + x, region.Position.Y + y).A == 0) continue;
+                    Vector2 ink = icon.GetTransform() * (new Vector2(x + 0.5f, y + 0.5f) * actual);
+                    min = min.Min(ink);
+                    max = max.Max(ink);
+                }
+                var inkBounds = new Rect2(min, max - min);
+                Rect2 renderedInk = slot.GetGlobalTransformWithCanvas() * inkBounds;
+                Check(glass.Encloses(inkBounds) && Root.GetVisibleRect().Encloses(renderedInk) &&
+                    inkBounds.GetCenter().DistanceTo(glass.GetCenter()) < 2,
+                    $"{kinds[i]} ink must be centered inside the glass at {size}, close={close}");
             }
         }
         var hat = game.GetNode<TextureRect>("World/ShowroomLeft/Showcases/Slot1/Icon");
         Check(hat.Texture.ResourcePath == "res://art/items/hat.png" &&
             hat.GetRect().IsEqualApprox(new Rect2(111, 35, 209, 115)), "Other showcase art must keep its original sizing");
+    }
+
+    private async Task CheckMapShadowDirections(TradeScene game)
+    {
+        var clock = game.GetNode<TextureRect>("HUD/DayClock/Root/DayTimer/Clock");
+        var panel = game.GetNode<ProgressPanel>("HUD/Root/ProgressPanel");
+        var slots = game.GetNode<TextureRect>("HUD/InventoryUI/InventorySlotBackground");
+        var rightAndBottom = new[] { clock, panel.GetNode<TextureRect>("Visual/Back"),
+            panel.GetNode<TextureRect>("Visual/Pack/Front"), panel.GetNode<TextureRect>("Visual/Day"),
+            panel.GetNode<TextureRect>("Visual/Quota"), panel.GetNode<TextureRect>("Visual/Deadline") };
+        var header = game.GetNode<NinePatchRect>("World/Atelier/Header");
+        Check(!header.HasNode("DropShadow"), "Room titles must stay flat");
+        foreach (string name in new[] { "ScorePanel", "EnergyPanel" })
+        {
+            var hud = game.GetNode<PanelContainer>("HUD/Root/" + name);
+            CheckButtonShadow(hud);
+            var material = (ShaderMaterial)hud.GetNode<ButtonDropShadow>("DropShadow").Material;
+            float blur = material.GetShaderParameter("blur_radius").AsSingle();
+            Vector2 offset = material.GetShaderParameter("face_position").AsVector2();
+            Check(Mathf.IsEqualApprox(blur, 8.5f) && offset == new Vector2(-9.5f, 9.5f),
+                $"The {name} shadow must be slightly smaller and stay left/down");
+        }
+        CheckButtonShadow(game.GetNode<Button>("World/Atelier/GetItemButton"));
+        CheckButtonShadow(slots);
+        foreach (var owner in rightAndBottom)
+        {
+            CheckButtonShadow(owner);
+            var material = (ShaderMaterial)owner.GetNode<ButtonDropShadow>("DropShadow").Material;
+            float blur = material.GetShaderParameter("blur_radius").AsSingle();
+            Vector2 offset = material.GetShaderParameter("face_position").AsVector2();
+            Check(offset.X >= blur - (owner == clock ? 2 : 0) && offset.Y >= blur, $"{owner.Name} shadow must stay to the right and below");
+        }
+        var strip = (ShaderMaterial)slots.GetNode<ButtonDropShadow>("DropShadow").Material;
+        Vector2 stripOffset = strip.GetShaderParameter("face_position").AsVector2();
+        Check(stripOffset.X == 0 && stripOffset.Y >= strip.GetShaderParameter("blur_radius").AsSingle() &&
+            strip.GetShaderParameter("horizontal_spread").AsSingle() > 1.5f,
+            "The slot strip must have equal left/right shadow and a shadow below");
+        Check(slots.GetParent() != game.GetNode<InventoryUI>("HUD/InventoryUI").Scroller,
+            "Slot shadows must stay outside the scroll clip");
+        using (await CapturePresentation($"map-shadow-directions-{Root.Size.X}")) { }
+        var camera = game.GetNode<WorldCamera>("Camera2D");
+        foreach (string room in new[] { "Atelier", "MusicWorkshop" })
+        {
+            var button = game.GetNode<Button>($"World/{room}/GetItemButton");
+            camera.FocusOn(button.GetGlobalRect().GetCenter(), camera.CloseupSize, 0);
+            var shadow = button.GetNode<ButtonDropShadow>("DropShadow");
+            using var styled = await CapturePresentation($"craft-shadow-{room}-{Root.Size.X}");
+            shadow.Hide();
+            using var plain = await CapturePresentation();
+            shadow.Show();
+            Check(!SameButtonPixels(styled, plain, ScreenBounds(button).Grow(15)),
+                $"The {room} craft button must draw an actual shadow outside its face");
+        }
     }
 
     private async Task CheckPulloutPanels(TradeScene game)
@@ -103,9 +287,25 @@ public partial class ProjectTest
                 $"Pack retraction {i + 1} must return to exactly the initial visible bounds");
         }
 
+        var tradePanel = game.GetNode<Control>("World/TradingRoom/Item/TradePanel");
+        var zoomUi = game.GetNode<ZoomResponsiveUi>("ZoomResponsiveUi");
+        zoomUi.UpdateForZoom(1);
+        Vector2 pivot = new(tradePanel.Size.X / 2, tradePanel.Size.Y);
+        Vector2 bottom = tradePanel.GetTransform() * pivot;
+        Vector2 normalScale = tradePanel.Scale;
+        zoomUi.UpdateForZoom(0.4f);
+        Check(tradePanel.Scale.X > normalScale.X * 2 &&
+            (tradePanel.GetTransform() * pivot).IsEqualApprox(bottom),
+            "Sale panel must grow when zooming out and retain its bottom-center anchor");
+        zoomUi.UpdateForZoom(game.GetNode<WorldCamera>("Camera2D").Zoom.X);
+
         var notebook = game.GetNode<PulloutNotebook>("HUD/Root/PulloutNotebook");
         var page = notebook.GetNode<Control>("Page");
         var notes = page.GetNode<Control>("Notes");
+        CheckButtonShadow(page);
+        var paperShadow = (ShaderMaterial)page.GetNode<ButtonDropShadow>("DropShadow").Material;
+        Vector2 paperOffset = paperShadow.GetShaderParameter("face_position").AsVector2();
+        Check(paperOffset.X < 0 && paperOffset.Y > 0, "The moving notebook shadow must fall left and down");
         Rect2 tab = notebook.GetGlobalTransformWithCanvas() * notebook.HoverBounds;
         var farTab = new Vector2(tab.End.X - 2, tab.GetCenter().Y);
         MoveButtonPointer(farTab);
@@ -138,19 +338,22 @@ public partial class ProjectTest
         const string content = "PauseMenu/Root/Overlay/Center/Panel/Content/";
         var pause = game.GetNode<PauseMenu>("PauseMenu");
         pause.Open();
+        var panel = game.GetNode<PanelContainer>("PauseMenu/Root/Overlay/Center/Panel");
+        Check(!panel.HasNode("DropShadow"), "The pause frame must not have a map shadow");
         try
         {
             foreach (string section in new[] { "Menu", "Settings" })
             {
                 if (section == "Settings") await ClickControl(game, content + "Menu/SettingsButton");
                 MoveButtonPointer(new Vector2(2, 2));
-                using (await CapturePresentation()) { }
+                using (await CapturePresentation($"soft-shadow-pause-{section}-{Root.Size.X}")) { }
                 var buttons = game.GetNode<Control>(content + section).FindChildren("*", "BaseButton", true, false)
                     .OfType<BaseButton>().Where(button => button.IsVisibleInTree());
                 int checkedButtons = 0;
                 foreach (var button in buttons)
                 {
                     checkedButtons++;
+                    Check(!button.HasNode("DropShadow"), "Pause and settings buttons must be flat");
                     Rect2 bounds = ScreenBounds(button);
                     var focus = Root.GuiGetFocusOwner();
                     using var idle = await CapturePresentation();

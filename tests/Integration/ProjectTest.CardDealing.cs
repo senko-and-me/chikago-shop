@@ -95,8 +95,7 @@ public partial class ProjectTest
                         face.Size.Y > face.Size.X,
                         "Settled portrait cards must fit the viewport in both languages and sizes");
                     int cardCost = game.DayUpgrades.CostFor(upgrade);
-                    string expectedArt = cardCost >= 30 ? "res://art/ui/day_card_gold.png" :
-                        cardCost >= 20 ? "res://art/ui/day_card_silver.png" : "res://art/ui/card_face.png";
+                    const string expectedArt = "res://art/ui/card_face.png";
                     Check(face.GetThemeStylebox("panel") is StyleBoxTexture faceArt &&
                         faceArt.Texture.ResourcePath == expectedArt,
                         "Card artwork must match the configured price tier");
@@ -111,11 +110,10 @@ public partial class ProjectTest
                     var purchase = face.GetNode<Button>("Content/Choose");
                     foreach (string state in new[] { "normal", "hover", "pressed", "disabled" })
                         Check(purchase.GetThemeStylebox(state) is StyleBoxTexture paper &&
-                            paper.Texture.ResourcePath == (cardCost >= 30 ? "res://art/ui/card_buy_gold.png" :
-                                cardCost >= 20 ? "res://art/ui/card_buy_silver.png" : "res://art/ui/panel_small.png"),
+                            paper.Texture.ResourcePath == "res://art/ui/panel_small.png",
                             "Purchase states must retain the existing drawn paper border");
                     Check(purchase.GetThemeColor("font_color").R < 0.2f &&
-                        (cardCost >= 20 ? purchase.GetThemeColor("font_pressed_color").R < 0.2f : purchase.GetThemeColor("font_pressed_color").R > 0.9f),
+                        purchase.GetThemeColor("font_pressed_color").R > 0.9f,
                         "Purchase text must contrast with light paper and the dark pressed state");
                 }
                 await Capture("ready-" + language + "-" + size.X);
@@ -156,7 +154,7 @@ public partial class ProjectTest
                 card.Choose(DayUpgrade.Energy); card.Skip();
                 await WaitForDayCardAnimation(card);
                 Check(!card.IsOpen && !Paused && !game.DayUpgrades.Pending && game.CurrentDay == 2 &&
-                    game.Score == (buy ? 235 : 220) && game.DayUpgrades.Selected == (buy ? DayUpgrade.Cash : DayUpgrade.None),
+                    game.Score == (buy ? 270 : 220) && game.DayUpgrades.Selected == (buy ? DayUpgrade.Cash : DayUpgrade.None),
                     "Exactly one purchase or free skip must apply after exit and resume the new day");
                 Check(hud.Visible && clock.Visible && clock.Modulate == Colors.White && hud.Modulate == Colors.White && game.GetNode<Control>("HUD/InventoryUI").Visible &&
                     game.GetNode<Control>("World/Atelier/GetItemButton").Visible,
@@ -193,8 +191,23 @@ public partial class ProjectTest
             Check(active.IsOpen && game.DayUpgrades.Pending && game.Score == 220,
                 "Reload during exit must restore the uncommitted choice without a duplicate reward");
             await WaitForDayCardAnimation(active);
-            active.Skip();
+            game.Score = 0;
+            game.PersistProgress();
+            game.QueueFree();
+            await ToSignal(this, SignalName.ProcessFrame);
+            game = Create();
+            active = game.GetNode<DayTransitionCard>("DayTransitionCard");
             await WaitForDayCardAnimation(active);
+            var free = active.GetNode<Button>("Root/Center/Card/Content/Choices/Cash/Content/Choose");
+            Check(!free.Disabled && free.Text == GameLocalization.Text("Получить 50$"), "Cash must be available at zero balance");
+            active.Choose(DayUpgrade.Cash);
+            active.Choose(DayUpgrade.Cash);
+            await WaitForDayCardAnimation(active);
+            Check(game.Score == 50, "The free card must award the entire amount once");
+            game.QueueFree();
+            await ToSignal(this, SignalName.ProcessFrame);
+            game = Create();
+            Check(game.Score == 50 && !game.DayUpgrades.Pending, "Reloading must preserve the committed reward once");
             game.NewGame();
             game.EndDay(); game.EndDay(); game.EndDay();
             game.QueueFree(); // Cancel deferred layout and entrance callbacks too.

@@ -15,10 +15,11 @@ public partial class ProjectTest
         game.SetProcess(false);
         var camera = game.GetNode<WorldCamera>("Camera2D");
         camera.SetProcess(false);
-        game.Score = 1000;
+        game.Score = 2000;
         game.TryUnlockMusicWorkshop();
         try
         {
+            if (!game.DayStarted) game.EndDay();
             foreach (string language in new[] { "ru", "en", "ru", "en" })
             {
                 TranslationServer.SetLocale(language);
@@ -61,7 +62,7 @@ public partial class ProjectTest
             await ClickControl(game, "World/Atelier/GetItemButton");
             Check(game.GetNode<EmbroideryGame>("EmbroideryGame").IsOpen && game.Score == cash && game.EnergyRemaining == energy,
                 "A real click on the translated button must open the existing minigame without charging before activation");
-            await PressEscapeForTest();
+            await ClickControl(game, "EmbroideryGame/Surface/Cancel");
             Check(!game.CraftMiniGameOpen && !Paused, "The translated craft flow must still cancel normally");
         }
         finally

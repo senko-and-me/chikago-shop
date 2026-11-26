@@ -9,6 +9,7 @@ public partial class ButtonFeedbackController : Node
     public const string LocalFeedbackGroup = "button_feedback_local";
     public static ButtonFeedbackController Instance { get; private set; }
     public readonly record struct VisualFrame(Rect2 Bounds, Color Accent, float Strength, float Pressed, float Flash);
+    private const float MotionSeconds = .12f;
     private const float FlashSeconds = 0.18f;
     private readonly Dictionary<BaseButton, State> _states = new();
     private State _active;
@@ -22,6 +23,10 @@ public partial class ButtonFeedbackController : Node
     {
         public BaseButton Button;
         public bool Hovered, Held;
+        public Vector2 VisualScale = Vector2.One;
+        public Vector2 ScaleOrigin = Vector2.One;
+        public Vector2 ScaleTarget = Vector2.One;
+        public float MotionProgress = 1;
         public float Flash;
         public long Sequence;
         public Control.CursorShape OriginalCursor;
@@ -45,7 +50,7 @@ public partial class ButtonFeedbackController : Node
 
     private void OnNodeAdded(Node node)
     {
-        if (node is not BaseButton button || button.IsInGroup(LocalFeedbackGroup) || _states.ContainsKey(button)) return;
+        if (node is not BaseButton button || _states.ContainsKey(button)) return;
         var state = new State { Button = button, OriginalCursor = button.MouseDefaultCursorShape };
         state.Enter = () => { state.Hovered = true; state.Sequence = ++_sequence; };
         state.Exit = () => { state.Hovered = false; state.Held = false; };
@@ -87,6 +92,8 @@ public partial class ButtonFeedbackController : Node
         state.Button.ButtonUp -= state.Up;
         state.Button.Pressed -= state.Activate;
         state.Button.MouseDefaultCursorShape = state.OriginalCursor;
+        if (state.VisualScale != Vector2.One)
+            RenderingServer.CanvasItemSetTransform(state.Button.GetCanvasItem(), state.Button.GetTransform());
     }
 
     private static bool Interactive(BaseButton button) => GodotObject.IsInstanceValid(button) &&
@@ -110,10 +117,24 @@ public partial class ButtonFeedbackController : Node
         foreach (var state in _states.Values)
         {
             var button = state.Button;
-            button.MouseDefaultCursorShape = button.Disabled ? Control.CursorShape.Forbidden : Control.CursorShape.PointingHand;
-            if (!Interactive(button)) { state.Hovered = false; state.Held = false; state.Flash = 0; continue; }
+            bool local = button.IsInGroup(LocalFeedbackGroup);
+            if (!local)
+                button.MouseDefaultCursorShape = button.Disabled ? Control.CursorShape.Forbidden : Control.CursorShape.PointingHand;
+            if (!Interactive(button))
+            {
+                state.Hovered = false;
+                state.Held = false;
+                state.Flash = 0;
+                AnimateFace(state, Vector2.One, delta);
+                continue;
+            }
             // Reconcile hover after hide/show, re-enable, scrolling and modal transitions.
             state.Hovered = pointerControl == button || (pointerControl != null && button.IsAncestorOf(pointerControl));
+            if (HasFace(button))
+                AnimateFace(state, state.Held && button.IsPressed() ? new Vector2(.985f, .94f) :
+                    state.Hovered ? Vector2.One * 1.04f : Vector2.One, delta);
+            else AnimateFace(state, Vector2.One, delta);
+            if (local) continue;
             state.Flash = Mathf.Max(0, state.Flash - (float)delta);
             if (state.Flash > 0 && (flashing == null || state.Sequence > flashing.Sequence)) flashing = state;
             if (state.Hovered && (hovered == null || state.Sequence > hovered.Sequence)) hovered = state;
@@ -125,6 +146,31 @@ public partial class ButtonFeedbackController : Node
         _strength = Mathf.MoveToward(_strength, next != null ? 1 : 0, (float)delta * 12);
         if (_strength <= 0) _active = null;
     }
+
+    private static bool HasFace(BaseButton button) =>
+        button is not Button { Flat: true, Text: "", Icon: null } &&
+        button is not TextureButton { TextureNormal: null };
+
+    private static void AnimateFace(State state, Vector2 target, double delta)
+    {
+        if (target != state.ScaleTarget)
+        {
+            state.ScaleOrigin = state.VisualScale;
+            state.ScaleTarget = target;
+            state.MotionProgress = 0;
+        }
+        if (state.MotionProgress >= 1 && target == Vector2.One) return;
+        state.MotionProgress = Mathf.Min(1, state.MotionProgress + (float)delta / MotionSeconds);
+        state.VisualScale = state.ScaleOrigin.Lerp(target, Mathf.SmoothStep(0, 1, state.MotionProgress));
+        var button = state.Button;
+        Vector2 center = button.Size / 2;
+        Vector2 scale = state.VisualScale;
+        // Draw only. The Control transform and its input rectangle stay unchanged.
+        var draw = new Transform2D(new Vector2(scale.X, 0), new Vector2(0, scale.Y), center * (Vector2.One - scale));
+        RenderingServer.CanvasItemSetTransform(button.GetCanvasItem(), button.GetTransform() * draw);
+    }
+
+    internal Vector2 FaceScale(BaseButton button) => _states.TryGetValue(button, out var state) ? state.VisualScale : Vector2.One;
 
     public VisualFrame GetVisualFrame()
     {

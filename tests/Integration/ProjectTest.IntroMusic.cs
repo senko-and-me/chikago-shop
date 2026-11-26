@@ -186,8 +186,8 @@ public partial class ProjectTest
             Check(Math.Abs(thoughtful.VolumeLinear - introGain) < 0.0001 &&
                   director.ThoughtfulVolumeDb == director.IntroVolumeDb,
                 "Thoughtful music must use the same gain as the untouched main recording");
-            while (dialogue.Session.Index < 14) AdvanceMusicLine(dialogue);
-            Check(director.CurrentCue == "sinister" && dialogue.Session.Current.Text.StartsWith("Поверь, я и слышать не хочу") &&
+            while (dialogue.Session.Index < 15) AdvanceMusicLine(dialogue);
+            Check(director.CurrentCue == "sinister" && dialogue.Session.Current.Text.StartsWith("— Либо мы подписываем договор") &&
                   cues.SequenceEqual(new[] { "thoughtful", "sinister" }),
                 "The refusal speech must trigger sinister music exactly once, including paginated speeches");
             director._Process(director.CrossfadeSeconds);

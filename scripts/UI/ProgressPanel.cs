@@ -32,7 +32,11 @@ public partial class ProgressPanel : Control
         _content = GetNode<Control>("Content");
         _sticks = new[] { "Day", "Quota", "Deadline" }.Select(name => GetNode<TextureRect>("Visual/" + name)).ToArray();
         ClosedX = _sticks[0].Position.X;
-        var packBack = GetNode<Control>("Visual/Back");
+        var packBack = GetNode<TextureRect>("Visual/Back");
+        ButtonDropShadow.Attach(packBack, ButtonDropShadow.Direction.RightAndBottom);
+        ButtonDropShadow.Attach(GetNode<TextureRect>("Visual/Pack/Front"), ButtonDropShadow.Direction.RightAndBottom);
+        foreach (var stick in _sticks)
+            ButtonDropShadow.Attach(stick, ButtonDropShadow.Direction.RightAndBottom);
         // The scene positions the pack and its tips together in their resting pose.
         float exposedWidth = Mathf.Max(packBack.GetRect().End.X, _sticks.Max(stick => stick.GetRect().End.X));
         _closedHotspot = new Rect2(0, 0, exposedWidth, Size.Y);
@@ -83,7 +87,8 @@ public partial class ProgressPanel : Control
     {
         if (_captions == null) return;
         var config = EconomyConfigProvider.Load();
-        int deadline = _game.QuotaStage == 0 ? config.Quotas.Single(quota => quota.Id == "first").DeadlineDay : config.Days.TotalDays;
+        string quotaId = _game.QuotaStage == 0 ? "first" : "final";
+        int deadline = config.Quotas.Single(quota => quota.Id == quotaId).DeadlineDay;
         int days = Math.Max(0, deadline - _game.CurrentDay + 1);
         string day = GameLocalization.Format("День {0}", _game.CurrentDay);
         string quota = _game.Completed ? GameLocalization.Text("Все квоты выплачены") :
@@ -125,6 +130,14 @@ public partial class ProgressPanel : Control
             _slide.TweenProperty(_sticks[i], "position:x", expanded ? OpenX : ClosedX, SlideSeconds)
                 .SetDelay((expanded ? i : _sticks.Length - 1 - i) * StaggerSeconds);
         _slide.Chain().TweenCallback(Callable.From(() => { _slide = null; _content.Hide(); }));
+    }
+
+    internal Rect2 CigaretteBounds()
+    {
+        Rect2 bounds = TutorialSpotlight.TargetBounds(_sticks[0]);
+        for (int i = 1; i < _sticks.Length; i++)
+            bounds = bounds.Merge(TutorialSpotlight.TargetBounds(_sticks[i]));
+        return bounds;
     }
 
     public override void _ExitTree()

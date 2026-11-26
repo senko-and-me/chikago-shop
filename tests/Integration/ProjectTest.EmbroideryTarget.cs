@@ -23,6 +23,7 @@ public partial class ProjectTest
             {
                 Root.Size = size;
                 game.NewGame();
+                game.EndDay();
                 var craft = game.GetNode<EmbroideryGame>("EmbroideryGame");
                 craft.Open();
                 await ToSignal(this, SignalName.ProcessFrame);

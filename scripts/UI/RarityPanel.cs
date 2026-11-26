@@ -17,6 +17,8 @@ public partial class RarityPanel : Control
 	private Control _button = null!;
 	private Camera2D _camera = null!;
 	private Node _game = null!;
+	private FirstTradeTutorial _tutorial;
+	private int _normalLayer;
 	private GridContainer _values = null!;
 	private Control[] _hudControls;
 	public PanelContainer Popup => _panel;
@@ -38,6 +40,8 @@ public partial class RarityPanel : Control
 		_values = _panel.GetNode<GridContainer>("Values");
 		_button = GetParent().GetNode<Control>("GetItemButton");
 		_game = GetParent().GetParent().GetParent();
+		_tutorial = _game.GetNodeOrNull<FirstTradeTutorial>("FirstTradeTutorial");
+		_normalLayer = _layer.Layer;
 		_camera = _game.GetNode<Camera2D>("Camera2D");
 
 		string[] headings = ["Редкость", "Ср. цена", "Шанс", "Рероллы"];
@@ -126,6 +130,7 @@ public partial class RarityPanel : Control
 
 	public void UpdatePlacement()
 	{
+		_layer.Layer = _tutorial?.ContextTooltipLayer(_normalLayer, _panel) ?? _normalLayer;
 		// Screen-space placement keeps every column readable regardless of camera zoom.
 		Rect2 viewport = GetViewportRect().Grow(-12);
 		Vector2 size = _panel.GetCombinedMinimumSize();

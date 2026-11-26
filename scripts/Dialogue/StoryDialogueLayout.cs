@@ -9,6 +9,12 @@ internal static class StoryDialogueLayout
     public static readonly Color TextColor = new(0.93f, 0.91f, 0.88f);
     private static readonly Color SpeakerColor = new(0.88f, 0.82f, 0.72f);
 
+    public static string LineText(string key)
+    {
+        string text = GameLocalization.Text(key);
+        return text.StartsWith('—') ? text[1..].TrimStart() : text;
+    }
+
     public static void FrameShowroom(TextureRect background)
     {
         // Frame the room around the cast, with the doorway edges near the screen edge.

@@ -25,6 +25,7 @@ public partial class DialoguePlayer : Control
     private const double CharactersPerSecond = 48;
     private double _characters;
     private StoryPortraitController _portraits;
+    private StorySpeakerFocus _speakerFocus;
     private bool _closed;
     private Tween _portraitTransition;
     public bool IsRevealing => _text.VisibleCharacters >= 0;
@@ -34,6 +35,7 @@ public partial class DialoguePlayer : Control
         if (_portraitTransition?.IsValid() == true) _portraitTransition.Kill();
         if (IsPrologue) GetNode<PrologueCharacterMotion>("Characters").Stop();
         _portraits?.ShowSpeech(null, lineComplete: true);
+        _speakerFocus?.SetSpeaker(null);
         _closed = true;
         SetProcess(false);
     }
@@ -56,6 +58,8 @@ public partial class DialoguePlayer : Control
             StoryDialogueLayout.FrameShowroom(background);
             _portraits = new StoryPortraitController(left, StoryPortraitController.Castello,
                 right, StoryPortraitController.Frankie);
+            _speakerFocus = new StorySpeakerFocus(this, ("Кастелло", left), ("Френки", right),
+                ("Покупательница", GetNode<Control>("Characters/Customer")));
         }
         else
         {
@@ -65,7 +69,10 @@ public partial class DialoguePlayer : Control
             foreach (var portrait in characters.GetChildren())
                 ((CanvasItem)portrait).Hide();
             if (StoryPortrait != null)
+            {
                 StoryDialogueLayout.AddPortrait(characters, "Son", StoryPortrait, 0.68f);
+                _speakerFocus = new StorySpeakerFocus(this, ("Сын", characters.GetNode<Control>("Son")));
+            }
             _heading.Hide();
         }
         _speaker = GetNode<Label>("Panel/Content/Speaker");
@@ -111,7 +118,7 @@ public partial class DialoguePlayer : Control
             GetNode<PrologueCharacterMotion>("Characters").SyncLine(Session.Index, Session.Current.Speaker);
         }
         _portraits?.SetLine(Session.Current);
-        _localizedText = GameLocalization.Text(Session.Current.Text);
+        _localizedText = StoryDialogueLayout.LineText(Session.Current.Text);
         _pageStart = 0;
         DisplayPage();
     }
@@ -166,9 +173,14 @@ public partial class DialoguePlayer : Control
         else UpdateMouths();
     }
 
-    private void UpdateMouths() =>
+    private void UpdateMouths()
+    {
+        string speaker = Session.Current?.Speaker;
+        bool continues = _pageEnd < _localizedText.Length || !string.IsNullOrEmpty(Session.Next?.Speaker);
+        _speakerFocus?.SetSpeaker(IsRevealing || continues ? speaker : null);
         _portraits?.ShowSpeech(IsRevealing ? _characters / CharactersPerSecond : null,
             !IsRevealing && _pageEnd >= _localizedText.Length);
+    }
 
     private void Reveal()
     {

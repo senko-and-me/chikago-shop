@@ -33,11 +33,41 @@ public partial class ProjectTest
             SaveVersion = ProgressJson.CurrentVersion, Day = deadline, Score = score, DayStarted = true, EnergyRemaining = 3
         });
         DialoguePlayer Dialogue() => game.GetNode<DialoguePlayer>("QuotaDialogue/DialoguePlayer");
+        void CheckCigarettes(int day, int daysLeft, string russianUnit, int amount)
+        {
+            var cigarettes = game.GetNode<ProgressPanel>("HUD/Root/ProgressPanel");
+            foreach (string language in new[] { "ru", "en" })
+            {
+                TranslationServer.SetLocale(language);
+                cigarettes._Process(0);
+                string dayText = cigarettes.GetNode<Label>("Visual/Day/Caption").Text;
+                string quotaText = cigarettes.GetNode<Label>("Visual/Quota/Caption").Text;
+                string timeText = cigarettes.GetNode<Label>("Visual/Deadline/Caption").Text;
+                Check(dayText == (language == "ru" ? $"День {day}" : $"Day {day}") &&
+                    quotaText.Contains(amount.ToString()) &&
+                    timeText.Contains(language == "ru" ? $"{daysLeft} {russianUnit}" : $"{daysLeft} day"),
+                    $"Incorrect cigarettes at {language} day {day}: {dayText} / {quotaText} / {timeText}");
+            }
+        }
+        string originalLanguage = TranslationServer.GetLocale();
         try
         {
             int[] expectedPrices = [25, 45, 40, 70, 75, 115, 195, 115, 175, 295];
             Check(WorkshopItemCatalog.Items.Select(item => item.BasePrice).SequenceEqual(expectedPrices) && price == 1000,
                 "All catalogue items must use the new base prices and the music workshop must cost $1000");
+            int[] remaining = [7, 6, 5, 4, 3, 2, 1, 7, 6, 5, 4, 3, 2, 1];
+            string[] units = ["дней", "день", "дня", "дня", "дня", "дней", "дней", "дней"];
+            for (int i = 0; i < remaining.Length; i++)
+            {
+                int stage = i < deadline ? 0 : 1;
+                ProgressSaveStore.Save(save, new ProgressData
+                {
+                    SaveVersion = ProgressJson.CurrentVersion, Day = i + 1, QuotaStage = stage,
+                    Score = 4000, EnergyRemaining = 3
+                });
+                await Reload();
+                CheckCigarettes(i + 1, remaining[i], units[remaining[i]], stage == 0 ? 750 : 1500);
+            }
             SetLastDay(4000);
             await Reload();
             var notebook = game.GetNode<PulloutNotebook>("HUD/Root/PulloutNotebook");
@@ -66,6 +96,7 @@ public partial class ProjectTest
             Check(game.QuotaStage == 1 && game.MafiaNoticePending && !game.GetNode<TextureButton>(visitorPath).Visible,
                 "The visitor must wait until the existing successful quota scene ends");
             int cashAfterQuota = game.Score;
+            CheckCigarettes(8, 7, "дней", 1500);
             game.GetNode<MafiaQuotaNotice>("MafiaQuotaNotice").Close();
             Check(game.GetNode<TextureButton>(visitorPath).Visible && game.QuotaVisitPending && !game.DayStarted,
                 "The visitor must replace the regular customer before the next day");
@@ -111,11 +142,19 @@ public partial class ProjectTest
                 "Reload must retain the reward and the completed event");
             game.ReturnToCheckpoint();
             Check(!game.QuotaVisitPending && game.Score == cashAfterQuota + 1000, "Checkpoint must restore both the gift and the claimed flag");
+            CheckCigarettes(8, 7, "дней", 1500);
+            game.TryUnlockMusicWorkshop();
+            Check(game.MusicWorkshopUnlocked && game.Score == cashAfterQuota && game.EnergyRemaining == game.EnergyCapacity &&
+                !game.DayStarted && !game.GetNode<ModularCustomer>("World/TradingRoom/Customer").Visible,
+                "Buying with the gift must charge $1000 and grant energy without starting the day");
+            await Reload();
+            Check(game.MusicWorkshopUnlocked && !game.DayStarted && game.Score == cashAfterQuota &&
+                !game.GetNode<ModularCustomer>("World/TradingRoom/Customer").Visible,
+                "Reload must keep the workshop open and the store waiting for Start");
             game.EndDay();
             Check(game.GetNode<ModularCustomer>("World/TradingRoom/Customer").Visible, "Start must resume ordinary arrivals");
-            game.TryUnlockMusicWorkshop();
-            Check(game.MusicWorkshopUnlocked && game.Score == cashAfterQuota, "Buying the workshop must charge the configured $1000");
             game.NewGame();
+            CheckCigarettes(1, 7, "дней", 750);
             Check(ProgressSaveStore.Load(save, 3).QuotaVisit == QuotaVisitStage.Unavailable, "A new run must reset the visitor state");
 
             SetLastDay(0);
@@ -129,6 +168,7 @@ public partial class ProjectTest
         {
             game?.QueueFree();
             Paused = false;
+            TranslationServer.SetLocale(originalLanguage);
             if (FileAccess.FileExists(save)) DirAccess.RemoveAbsolute(save);
         }
         await ToSignal(this, SignalName.ProcessFrame);

@@ -60,15 +60,8 @@ public partial class ProjectTest
             CheckPose("smile_open", "serious");
             player._Process(0.8);
             using (await CapturePresentation("story-expression-mockery")) { }
-            player.Advance();
-            CheckPose("smile_closed", "serious"); // Waiting between the long line's pages.
-            while (player.Session.Index == 8)
-            {
-                if (player.IsRevealing) player.Advance();
-                var text = player.GetNode<RichTextLabel>("Panel/Content/Text");
-                if (text.Text.EndsWith("хочешь быть.")) break;
+            while (player.IsRevealing || !player.GetNode<RichTextLabel>("Panel/Content/Text").Text.EndsWith("главный дизайнер."))
                 player.Advance();
-            }
             CheckPose("serious_closed", "serious"); // The line is complete before advancing.
             GoTo(9);
             CheckPose("serious_closed", "serious");
@@ -85,11 +78,14 @@ public partial class ProjectTest
 
             TranslationServer.SetLocale("en");
             CheckPose("serious_closed", "angry_open");
+            await ToSignal(CreateTimer(.44), SceneTreeTimer.SignalName.Timeout);
             GoTo(12);
-            CheckPose("serious_open", "angry_closed");
-            GoTo(13);
             CheckPose("serious_closed", "angry_open");
-            GoTo(23);
+            await ToSignal(CreateTimer(.12), SceneTreeTimer.SignalName.Timeout);
+            Check(right.Scale.IsEqualApprox(Vector2.One * 1.06f), "Consecutive Frankie lines must not restart the focus pulse");
+            GoTo(13);
+            CheckPose("serious_open", "angry_closed");
+            GoTo(25);
             CheckPose("serious_closed", "angry_closed");
         }
         finally

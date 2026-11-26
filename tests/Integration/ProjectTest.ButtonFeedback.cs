@@ -1,3 +1,4 @@
+using System.Linq;
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -85,11 +86,10 @@ public partial class ProjectTest
                 if (language == "en")
                 {
                     float fittedWidth = back.StretchMode == TextureButton.StretchModeEnum.Scale
-                        ? control.Size.X
-                        : Mathf.Min(control.Size.X,
+                        ? control.Size.X : Mathf.Min(control.Size.X,
                             control.Size.Y * back.TextureNormal.GetWidth() / back.TextureNormal.GetHeight());
                     Check(frame.Bounds.Size.X <= fittedWidth + 1,
-                        "English Back feedback must fit the artwork with its authored stretch mode");
+                        "English Back feedback must fit the current image's actual aspect ratio");
                     float sideMargin = (control.Size.X - fittedWidth) / 2;
                     if (sideMargin > 4)
                     {
@@ -381,8 +381,9 @@ public partial class ProjectTest
             await SettleButtonFeedback();
             Check(Root.GuiGetFocusOwner() == null && controller.GetVisualFrame().Strength == 0,
                 "Opening day cards must not automatically focus or outline a purchase");
-            // Authored gold/silver card art is colored; grayscale feedback is checked in the isolated fixture.
-            using (await CaptureButtonFeedback("card-no-selection")) { }
+            Rect2[] cardArt = card.GetNode<Control>("Root/Center/Card/Content/Choices").GetChildren()
+                .OfType<PanelContainer>().Select(ScreenBounds).ToArray();
+            using (var image = await CaptureButtonFeedback("card-no-selection")) CheckFeedbackGray(image, cardArt);
             int choicesMade = 0;
             card.Chosen += choice => choicesMade++;
             Root.PushInput(new InputEventKey { Pressed = true, Keycode = Key.Right }, true);
@@ -393,7 +394,7 @@ public partial class ProjectTest
                 controller.GetVisualFrame().Bounds == ScreenBounds(focusedChoice),
                 "The first arrow must reveal keyboard focus while paused");
             Check(choicesMade == 0, "Starting keyboard navigation must not purchase an upgrade");
-            using (await CaptureButtonFeedback("card-focus")) { }
+            using (var image = await CaptureButtonFeedback("card-focus")) CheckFeedbackGray(image, cardArt);
             Root.PushInput(new InputEventKey { Pressed = true, Keycode = Key.Right }, true);
             Root.PushInput(new InputEventKey { Pressed = false, Keycode = Key.Right }, true);
             await SettleButtonFeedback();
@@ -422,13 +423,15 @@ public partial class ProjectTest
                 Root.PushInput(new InputEventKey { Pressed = false, Keycode = Key.Down }, true);
                 await SettleButtonFeedback();
                 var selected = Root.GuiGetFocusOwner() as BaseButton;
-                Check(selected != null && !selected.Disabled && (balance != 0 || selected.Name == "Skip"),
+                Check(selected != null && !selected.Disabled,
                     "Keyboard selection must skip disabled purchases and fall back to Skip");
                 const string choicePath = "Root/Center/Card/Content/Choices/";
                 BaseButton[] expected = balance == 0
-                    ? new BaseButton[] { card.GetNode<Button>("Root/Center/Card/Content/Skip") }
+                    ? new BaseButton[] { card.GetNode<Button>(choicePath + "Cash/Content/Choose"),
+                        card.GetNode<Button>("Root/Center/Card/Content/Skip") }
                     : balance == 20
-                        ? new BaseButton[] { card.GetNode<Button>(choicePath + "Energy/Content/Choose"),
+                        ? new BaseButton[] { card.GetNode<Button>(choicePath + "Cash/Content/Choose"),
+                            card.GetNode<Button>(choicePath + "Energy/Content/Choose"),
                             card.GetNode<Button>(choicePath + "Atelier/Content/Choose"),
                             card.GetNode<Button>("Root/Center/Card/Content/Skip") }
                         : new BaseButton[] { card.GetNode<Button>(choicePath + "Cash/Content/Choose"),
@@ -465,7 +468,7 @@ public partial class ProjectTest
                 controller.GetVisualFrame().Bounds == ScreenBounds(focusedAction),
                 "Crafting action feedback must remain active behind the covering-modal grayscale policy");
             using (var image = await CaptureButtonFeedback("minigame-focus")) CheckFeedbackGray(image);
-            miniGame._Input(new InputEventKey { Pressed = true, Keycode = Key.Escape });
+            miniGame.Close();
         }
         finally
         {

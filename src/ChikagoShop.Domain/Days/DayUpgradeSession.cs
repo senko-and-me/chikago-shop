@@ -7,6 +7,7 @@ public enum DayUpgrade { None, Cash, Energy, Time, Atelier, Music, AtelierPrice,
 // Legacy level fields remain readable for save compatibility but no longer affect gameplay.
 public sealed class DayUpgradeSession
 {
+    private bool _training;
     public bool Pending { get; private set; }
     public DayUpgrade Selected { get; private set; }
     public int Day { get; private set; } = 2;
@@ -16,15 +17,16 @@ public sealed class DayUpgradeSession
     public int AtelierPriceLevel => 0;
     public int MusicPriceLevel => 0;
     public DayUpgradeRules Rules { get; set; } = new();
-    public IReadOnlyList<DayUpgrade> Options => Rules.Options(Day, MusicUnlocked);
+    public IReadOnlyList<DayUpgrade> Options => Rules.Options(Day, MusicUnlocked, _training);
     public int CostFor(DayUpgrade upgrade) => Rules.Cost(upgrade);
     public int EnergyCapacity => EnergyCapacityFor(2);
     public int EnergyCapacityFor(int baseline) => baseline + (Selected == DayUpgrade.Energy ? 1 : 0);
     public double Duration => DaySession.DurationSeconds;
     public int CashReward => 50;
 
-    public void Offer(int day = 2, bool musicUnlocked = false)
+    public void Offer(int day = 2, bool musicUnlocked = false, bool training = false)
     {
+        _training = training;
         Day = Math.Max(2, day);
         MusicUnlocked = musicUnlocked;
         Pending = true;
@@ -33,6 +35,7 @@ public sealed class DayUpgradeSession
 
     public void Reset(bool preserveCategories = false)
     {
+        _training = false;
         Pending = false;
         Selected = DayUpgrade.None;
         // preserveCategories is intentionally ignored: category bonuses no longer stack.
@@ -40,7 +43,7 @@ public sealed class DayUpgradeSession
 
     public static int Cost(DayUpgrade upgrade) => upgrade switch
     {
-        DayUpgrade.Cash => 35,
+        DayUpgrade.Cash => 0,
         DayUpgrade.Energy => 10,
         DayUpgrade.Atelier => 15,
         DayUpgrade.Music => 25,
@@ -74,6 +77,7 @@ public sealed class DayUpgradeSession
     {
         Day = Math.Max(2, day);
         MusicUnlocked = musicUnlocked;
+        _training = false;
         // Permanent bonuses in legacy saves do not carry over to the new day-only system.
         Selected = Enum.IsDefined(selected) && selected != DayUpgrade.Time ? selected : DayUpgrade.None;
         if (!MusicUnlocked && (Selected is DayUpgrade.Music or DayUpgrade.MusicPrice)) Selected = DayUpgrade.None;

@@ -28,7 +28,7 @@ public static class DebugBalanceSettings
     }
     public static DayUpgradeRules CardRules => new()
     {
-        Costs = Cards.ToDictionary(card => card, card => (int)Number($"card.{card}.cost")),
+        Costs = Cards.Where(card => card != DayUpgrade.Cash).ToDictionary(card => card, card => (int)Number($"card.{card}.cost")),
         Weights = Cards.ToDictionary(card => card, card => (int)Number($"card.{card}.weight")),
         WeightedSelection = Number("cards.weighted") == 1,
         Seed = (int)Number("cards.seed")
@@ -154,6 +154,7 @@ public static class DebugBalanceSettings
     private static void RemoveRetiredOverrides(BalanceProfile profile)
     {
         profile.Numbers?.Remove("card.Time.cost");
+        profile.Numbers?.Remove("card.Cash.cost");
         profile.Numbers?.Remove("card.Time.weight");
         profile.Numbers?.Remove("buyer.min");
         profile.Numbers?.Remove("buyer.max");
@@ -246,8 +247,22 @@ public static class DebugBalanceSettings
         }
         foreach (var card in Cards)
         {
-            fields.Add(new($"card.{card}.cost", "Карты", CardName(card) + ": цена ($)", DayUpgradeSession.Cost(card)));
+            if (card != DayUpgrade.Cash) fields.Add(new($"card.{card}.cost", "Карты", CardName(card) + ": цена ($)", DayUpgradeSession.Cost(card)));
             fields.Add(new($"card.{card}.weight", "Карты", CardName(card) + ": вес выбора", 1, 0, 1000));
+        }
+        foreach (var item in WorkshopItemCatalog.BaselineItems.Where(item => item.WorkshopId == "music"))
+        {
+            fields.Add(new($"polish.{item.Kind}.radius", "Создание", item.Name + ": поправка радиуса полировки", item.Kind == "banjo" ? .97 : 1, .65, 1.55, .01));
+            double strength = item.Kind switch
+            {
+                "guitar" => .67,
+                "violin" => .63,
+                "banjo" => .64,
+                "tuba" => .82,
+                "drum" => 1.16,
+                _ => 1
+            };
+            fields.Add(new($"polish.{item.Kind}.strength", "Создание", item.Name + ": поправка силы полировки", strength, .4, 2.5, .01));
         }
         foreach (var item in WorkshopItemCatalog.BaselineItems)
             fields.Add(new($"item.{item.Kind}.price", "Предметы", item.Name + ": базовая цена ($)", item.BasePrice, 1, 100000));

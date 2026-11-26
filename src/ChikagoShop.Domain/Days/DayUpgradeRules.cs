@@ -13,16 +13,18 @@ public sealed class DayUpgradeRules
     public IReadOnlyDictionary<DayUpgrade, int> Weights { get; init; } = new Dictionary<DayUpgrade, int>();
     public bool WeightedSelection { get; init; }
     public int Seed { get; init; } = 1;
-    public int Cost(DayUpgrade upgrade) => Costs.TryGetValue(upgrade, out int cost) ? cost : DayUpgradeSession.Cost(upgrade);
+    public int Cost(DayUpgrade upgrade) => upgrade == DayUpgrade.Cash ? 0
+        : Costs.TryGetValue(upgrade, out int cost) ? cost : DayUpgradeSession.Cost(upgrade);
 
     // Fixed day/seed retains a pending hand on Continue; locked-room cards cannot appear.
-    public IReadOnlyList<DayUpgrade> Options(int day, bool musicUnlocked = false)
+    public IReadOnlyList<DayUpgrade> Options(int day, bool musicUnlocked = false, bool training = false)
     {
-        var eligible = Available.Where(card => musicUnlocked || card is not (DayUpgrade.Music or DayUpgrade.MusicPrice)).ToArray();
-        if (!WeightedSelection)
+        var eligible = Available.Where(card => (!training || card != DayUpgrade.Cash) &&
+            (musicUnlocked || card is not (DayUpgrade.Music or DayUpgrade.MusicPrice))).ToArray();
+        var pool = eligible.Where(card => Weight(card) > 0).ToList();
+        if (!WeightedSelection || training && pool.Count == 0)
             return Enumerable.Range(0, 3).Select(offset => eligible[(day - 2 + offset) % eligible.Length]).ToArray();
 
-        var pool = eligible.Where(card => Weight(card) > 0).ToList();
         var random = new Random(unchecked(Seed * 397 ^ day));
         var result = new List<DayUpgrade>();
         while (result.Count < 3 && pool.Count > 0)

@@ -4,15 +4,15 @@ using Godot;
 // Observes gameplay during practice and resets the practice run through the existing NewGame action on exit.
 public partial class FirstTradeTutorial : CanvasLayer
 {
-    public enum Step { Camera, Start, Craft, Select, Place, WaitBuyer, Offer, Summary, CameraZoom, RoomFocus, BuyerRequest }
-    private const string BuyerRequestMessage = "Каждый покупатель ищет определённый тип товара: одежду или музыкальный инструмент. Обратите внимание на облачко над покупателем — оно показывает, какой товар ему нужен";
+    public enum Step { Camera, Start, Craft, Select, Place, WaitBuyer, Offer, Summary, CameraZoom, RoomFocus, BuyerRequest, UpgradeChoice, Notebook, NotebookContents, EmbroideryStart, TimedSale, LateSale, MusicWorkshop, CardExplanation }
+    private const string BuyerRequestMessage = "Облачко показывает, что покупатель ищет одежду из ателье.";
+    private const string NotebookMessage = "Наведите курсор на блокнот справа, чтобы открыть его.";
     private const float PanGoal = 3000;
     private const int ZoomGoal = 16;
     private static readonly (string Title, string Body)[] SummaryPages =
     [
-        ("Дни и квоты", "Наведите мышь на пачку сигарет, чтобы узнать день, сумму и срок квоты. Магазин закрывается по таймеру или по щелчку на часах. Между днями можно купить одно улучшение или пропустить выбор."),
-        ("Музыкальная мастерская", "Открытие мастерской за деньги даёт новые витрины и больше энергии. Создание инструмента тратит деньги и энергию. Для полировки зажмите ЛКМ и протирайте инструмент туда-сюда."),
-        ("Пауза и сохранение", "Esc ставит игру на паузу. В меню можно изменить настройки, вернуться к чекпоинту или повторить обучение. Прогресс сохраняется автоматически. После обучения первый день начнётся заново.")
+        ("Дни и квоты", "Наведите мышь на пачку сигарет, чтобы узнать день, сумму и срок квоты."),
+        ("Пауза и сохранение", "Esc открывает паузу: там есть настройки, чекпоинт и повтор обучения. Игра сохраняется автоматически. После обучения первый день начнётся заново.")
     ];
     [Export] public double CameraTravelSeconds { get; set; } = 0.8;
     public Step CurrentStep { get; private set; }
@@ -30,14 +30,39 @@ public partial class FirstTradeTutorial : CanvasLayer
     private TradeScene _game;
     private Control _root;
     private PanelContainer _panel;
-    private Panel _highlight;
+    private TutorialSpotlight _spotlight;
+    private EmbroideryGame _embroidery;
+    private PauseMenu _pause;
+    private int _regularLayer;
     private Label _body;
     private Button _done;
+    private Button _skip;
+    private Control _salePanel;
+    private Control _actions;
+    private bool _musicLessonPending, _musicLessonDone, _cardLessonDone;
+    private int _musicPage, _cardPage;
+    private DayTransitionCard _card;
+    private ProgressPanel _pack;
     private bool _initialized;
     private int _acceptedAtStart;
     private bool _sawSale;
     private bool _buyerRequestRead;
-    public bool BlocksFirstOffer => IsActive && _cameraHandoffDone && !_sawSale && !_buyerRequestRead;
+    private bool _embroideryStarted;
+    private bool _offerInstructionRead;
+    private bool _upgradeLessonPending;
+    private int _upgradeLessonDay;
+    private int _offerPage;
+    private PulloutNotebook _notebook;
+    private double _packHoverSeconds;
+    private bool _notebookLessonDone;
+    public bool BlocksFirstOffer => IsActive && _cameraHandoffDone && !_sawSale &&
+        (!_buyerRequestRead || !_offerInstructionRead);
+    public bool DefersBuyerArrival => IsActive && !_game.TradeActive &&
+        (_sawSale || _game.Accepted >= _acceptedAtStart + 2 ||
+            !_buyerRequestRead && (!_cameraHandoffDone || !_game.ShowcaseItems.Any(item => item >= 0)));
+    internal bool HoldTrainingBuyer => IsActive && !_sawSale && _game.Accepted == _acceptedAtStart;
+    internal bool BlocksSaleActions => BlocksFirstOffer ||
+        (IsActive && !_sawSale && _game.Accepted == _acceptedAtStart + 1 && _game.BuyerWaitRemaining > 0);
     private int _lastAccepted;
     private WorldCamera _camera;
     private ProgressBar _cameraProgress;
@@ -61,8 +86,11 @@ public partial class FirstTradeTutorial : CanvasLayer
     {
         _game = GetParent<TradeScene>();
         _root = GetNode<Control>("Root");
+        _regularLayer = Layer;
+        _spotlight = new TutorialSpotlight { Name = "Spotlight" };
+        AddChild(_spotlight);
+        MoveChild(_spotlight, _root.GetIndex());
         _panel = GetNode<PanelContainer>("Root/Panel");
-        _highlight = GetNode<Panel>("Root/Highlight");
         _body = GetNode<Label>("Root/Panel/Content/Body");
         _done = GetNode<Button>("Root/Panel/Content/Actions/Done");
         _cameraProgress = GetNode<ProgressBar>("Root/Panel/Content/CameraProgress");
@@ -73,7 +101,10 @@ public partial class FirstTradeTutorial : CanvasLayer
         _camera.UserFocusedRoom += OnUserFocusedRoom;
         _camera.OverviewReset += OnOverviewReset;
         _confirmation = GetNode<Control>("Root/SkipConfirmation");
-        GetNode<Button>("Root/Panel/Content/Actions/Skip").Pressed += ShowSkipConfirmation;
+        _actions = _done.GetParent<Control>();
+        _skip = _root.GetNode<Button>("Skip");
+        _skip.Pressed += ShowSkipConfirmation;
+        _spotlight.SetAccessories(_panel, _skip, null);
         GetNode<Button>("Root/SkipConfirmation/Center/Panel/Content/Actions/Confirm").Pressed += ConfirmSkip;
         GetNode<Button>("Root/SkipConfirmation/Center/Panel/Content/Actions/Cancel").Pressed += CancelSkip;
         _game.NewGameStarted += OnNewGameStarted;
@@ -81,12 +112,34 @@ public partial class FirstTradeTutorial : CanvasLayer
         Callable.From(Initialize).CallDeferred();
     }
 
+    internal bool HasPendingUpgradeLesson()
+    {
+        if (_initialized) return _upgradeLessonPending;
+        if (!_game.LoadedSavedGame) return false;
+        string path = ProgressPath ?? (_game.SavePath + ".tutorial.cfg");
+        var config = new ConfigFile();
+        return !string.IsNullOrEmpty(path) && config.Load(path) == Error.Ok &&
+            !config.GetValue("tutorial", "finished", false).AsBool() &&
+            (config.GetValue("tutorial", "upgrade_lesson_pending", false).AsBool() ||
+                config.GetValue("tutorial", "upgrade_introduction_shown", false).AsBool());
+    }
+
     private void Initialize()
     {
         if (!IsInsideTree()) return;
+        _embroidery = _game.GetNode<EmbroideryGame>("EmbroideryGame");
+        _embroidery.Started += OnEmbroideryStarted;
+        _pause = _game.GetNode<PauseMenu>("PauseMenu");
+        _card = _game.GetNode<DayTransitionCard>("DayTransitionCard");
+        _pack = _game.GetNode<ProgressPanel>("HUD/Root/ProgressPanel");
+        _notebook = _game.GetNode<PulloutNotebook>("HUD/Root/PulloutNotebook");
+        _salePanel = _game.GetNode<Control>("World/TradingRoom/Item/TradePanel");
         ProgressPath ??= string.IsNullOrEmpty(_game.SavePath) ? "" : _game.SavePath + ".tutorial.cfg";
         var config = new ConfigFile();
         bool restored = _game.LoadedSavedGame && !string.IsNullOrEmpty(ProgressPath) && config.Load(ProgressPath) == Error.Ok;
+        _musicLessonPending = restored && config.GetValue("tutorial", "music_lesson_pending", false).AsBool();
+        _musicLessonDone = restored && config.GetValue("tutorial", "music_lesson_done", false).AsBool();
+        _cardLessonDone = restored && config.GetValue("tutorial", "card_lesson_done", false).AsBool();
         bool finished = restored && config.GetValue("tutorial", "finished", false).AsBool();
         CameraPanDone = restored && config.GetValue("tutorial", "camera_pan_done", false).AsBool();
         CameraZoomDone = restored && config.GetValue("tutorial", "camera_zoom_done", false).AsBool();
@@ -108,11 +161,29 @@ public partial class FirstTradeTutorial : CanvasLayer
             IsActive = true;
             _acceptedAtStart = restored ? config.GetValue("tutorial", "accepted_at_start", _game.Accepted).AsInt32() : _game.Accepted;
             _lastAccepted = _game.Accepted;
-            _sawSale = _game.Accepted > _acceptedAtStart;
+            _sawSale = _game.Accepted >= _acceptedAtStart + 2 ||
+                (restored && _game.Accepted > _acceptedAtStart &&
+                    !config.GetValue("tutorial", "two_sales", false).AsBool());
             _buyerRequestRead = restored && config.GetValue("tutorial", "buyer_request_read", false).AsBool();
+            _embroideryStarted = restored && config.GetValue("tutorial", "embroidery_started", false).AsBool();
+            _offerInstructionRead = restored && _buyerRequestRead && config.GetValue("tutorial", "offer_instruction_read", false).AsBool();
+            bool resetTrainingClock = !restored || config.GetValue("tutorial", "training_clock_duration", 0).AsDouble() != DayCycleController.TutorialDuration;
+            _game.SynchronizeTutorialClock(restart: resetTrainingClock);
             _game.RefreshTutorialTradeActions();
             if (_sawSale && restored)
                 _summaryPage = Mathf.Clamp(config.GetValue("tutorial", "summary_page", 0).AsInt32(), 0, SummaryPages.Length - 1);
+            _upgradeLessonPending = restored && _sawSale && _summaryPage == 0 &&
+                config.GetValue("tutorial", "upgrade_lesson_pending", false).AsBool();
+            _upgradeLessonPending |= restored && _sawSale && _summaryPage == 0 &&
+                config.GetValue("tutorial", "upgrade_introduction_shown", false).AsBool();
+            _upgradeLessonDay = restored ? config.GetValue("tutorial", "upgrade_lesson_day", _game.CurrentDay).AsInt32() : 0;
+            if (_upgradeLessonPending && _game.CurrentDay > _upgradeLessonDay)
+            {
+                _upgradeLessonPending = false;
+                _summaryPage = SummaryPages.Length - 1;
+            }
+            _offerPage = restored ? Mathf.Clamp(config.GetValue("tutorial", "offer_page", 0).AsInt32(), 0, 2) : 0;
+            _notebookLessonDone = restored && config.GetValue("tutorial", "notebook_lesson_done", false).AsBool();
             // Establish the run before its first day starts, so Continue can restore camera practice.
             _game.PersistProgress();
             Save(false);
@@ -136,7 +207,18 @@ public partial class FirstTradeTutorial : CanvasLayer
         _lastAccepted = _game.Accepted;
         _sawSale = false;
         _buyerRequestRead = false;
+        _embroideryStarted = false;
+        _offerInstructionRead = false;
+        _offerPage = 0;
+        _cardPage = 0;
+        _cardLessonDone = false;
         _summaryPage = 0;
+        _upgradeLessonPending = false;
+        _upgradeLessonDay = 0;
+        _packHoverSeconds = 0;
+        _notebookLessonDone = false;
+        _game.SynchronizeTutorialClock(restart: true);
+        _game.PersistProgress();
         _game.RefreshTutorialTradeActions();
         Save(false);
         Refresh();
@@ -144,16 +226,24 @@ public partial class FirstTradeTutorial : CanvasLayer
 
     private void OnNewGameStarted()
     {
-        if (!_finishing && _initialized && (IsActive || !string.IsNullOrEmpty(ProgressPath))) Restart();
+        if (_finishing || !_initialized) return;
+        _musicLessonPending = _musicLessonDone = _cardLessonDone = false;
+        _musicPage = _cardPage = 0;
+        if (IsActive || !string.IsNullOrEmpty(ProgressPath)) Restart();
     }
 
     private void ShowSkipConfirmation()
     {
-        if (!IsActive || IsSkipConfirmationOpen || GetTree().Paused) return;
+        if ((!IsActive && CurrentStep != Step.MusicWorkshop) || IsSkipConfirmationOpen ||
+            (GetTree().Paused && CurrentStep != Step.EmbroideryStart)) return;
+        bool music = CurrentStep == Step.MusicWorkshop;
+        _confirmation.GetNode<Label>("Center/Panel/Content/Message").Text = music
+            ? "Подсказки мастерской будут закрыты. Игра продолжится с текущего места."
+            : "Первый день начнётся заново со стартовыми деньгами и энергией. Обучение можно повторить в паузе.";
         StopCamera();
         _camera.NavigationLocked = true;
         _confirmation.Show();
-        _ownsConfirmationPause = true;
+        _ownsConfirmationPause = !GetTree().Paused;
         GetTree().Paused = true;
         GetNode<Button>("Root/SkipConfirmation/Center/Panel/Content/Actions/Cancel").GrabFocus();
         Refresh();
@@ -170,19 +260,59 @@ public partial class FirstTradeTutorial : CanvasLayer
     {
         if (!IsSkipConfirmationOpen) return;
         CloseConfirmation();
-        Refresh();
+        if (CurrentStep != Step.MusicWorkshop || !TrySupplementalLesson()) Refresh();
     }
 
     private void ConfirmSkip()
     {
         if (!IsSkipConfirmationOpen) return;
         CloseConfirmation();
+        if (CurrentStep == Step.MusicWorkshop)
+        {
+            CompleteMusicLesson();
+            return;
+        }
+        if (_embroidery.IsReadyToStart) _embroidery.Close();
         Finish();
     }
 
     private void AdvanceInstruction()
     {
-        if (!IsActive || !IsShowing || GetTree().Paused) return;
+        if (!IsShowing || IsSkipConfirmationOpen) return;
+        if (CurrentStep == Step.CardExplanation && !_cardLessonDone)
+        {
+            if (++_cardPage >= 2)
+            {
+                _cardLessonDone = true;
+                _card.SetInstructionLocked(false);
+                Save(!IsActive);
+                _root.Hide();
+                _spotlight.SetTarget(null);
+            }
+            return;
+        }
+        if (CurrentStep == Step.MusicWorkshop)
+        {
+            if (++_musicPage >= 4) CompleteMusicLesson();
+            return;
+        }
+        if (!IsActive || GetTree().Paused) return;
+        if (CurrentStep == Step.Offer && !_offerInstructionRead)
+        {
+            _offerInstructionRead = ++_offerPage >= 3;
+            _game.RefreshTutorialTradeActions();
+            Save(false);
+            Refresh();
+            return;
+        }
+        if (CurrentStep == Step.NotebookContents && _notebook.Expanded)
+        {
+            _notebook.HoldOpenForLesson = false;
+            _notebookLessonDone = true;
+            Save(false);
+            Refresh();
+            return;
+        }
         if (CurrentStep == Step.BuyerRequest)
         {
             _buyerRequestRead = true;
@@ -191,7 +321,7 @@ public partial class FirstTradeTutorial : CanvasLayer
             Refresh();
             return;
         }
-        if (CurrentStep != Step.Summary || !_sawSale) return;
+        if (CurrentStep != Step.Summary || !_sawSale || _summaryPage == 0) return;
         if (_summaryPage == SummaryPages.Length - 1)
         {
             Finish();
@@ -212,12 +342,15 @@ public partial class FirstTradeTutorial : CanvasLayer
 
     private void Finish()
     {
+        _notebook.HoldOpenForLesson = false;
         if (!IsActive || _finishing) return;
         _finishing = true;
+        _musicLessonPending = false;
         StopCamera();
         IsActive = false;
         _root.Hide();
         Target = null;
+        _spotlight.SetTarget(null);
         _camera.NavigationLocked = false;
         // Reuse the game's reset; suppress its tutorial replay notification for this one reset.
         // Preserve the view so the reset ends with a smooth flight rather than a camera jump.
@@ -235,6 +368,10 @@ public partial class FirstTradeTutorial : CanvasLayer
         if (string.IsNullOrEmpty(ProgressPath)) return;
         var config = new ConfigFile();
         config.SetValue("tutorial", "finished", finished);
+        config.SetValue("tutorial", "two_sales", true);
+        config.SetValue("tutorial", "music_lesson_pending", _musicLessonPending);
+        config.SetValue("tutorial", "music_lesson_done", _musicLessonDone);
+        config.SetValue("tutorial", "card_lesson_done", _cardLessonDone);
         config.SetValue("tutorial", "accepted_at_start", _acceptedAtStart);
         config.SetValue("tutorial", "camera_pan_done", CameraPanDone);
         config.SetValue("tutorial", "camera_zoom_done", CameraZoomDone);
@@ -244,7 +381,14 @@ public partial class FirstTradeTutorial : CanvasLayer
         config.SetValue("tutorial", "camera_zoom_steps", _zoomSteps);
         config.SetValue("tutorial", "camera_zoom_started", _cameraZoomStarted);
         config.SetValue("tutorial", "summary_page", _summaryPage);
+        config.SetValue("tutorial", "upgrade_lesson_pending", _upgradeLessonPending);
+        config.SetValue("tutorial", "upgrade_lesson_day", _upgradeLessonDay);
+        config.SetValue("tutorial", "offer_page", _offerPage);
+        config.SetValue("tutorial", "notebook_lesson_done", _notebookLessonDone);
         config.SetValue("tutorial", "buyer_request_read", _buyerRequestRead);
+        config.SetValue("tutorial", "embroidery_started", _embroideryStarted);
+        config.SetValue("tutorial", "offer_instruction_read", _offerInstructionRead);
+        config.SetValue("tutorial", "training_clock_duration", DayCycleController.TutorialDuration);
         Error error = config.Save(ProgressPath);
         if (error != Error.Ok) GD.PushWarning($"Tutorial progress could not be saved: {error}");
         _progressDirty = false;
@@ -253,7 +397,13 @@ public partial class FirstTradeTutorial : CanvasLayer
 
     public override void _Process(double delta)
     {
-        if (!_initialized || !IsActive) return;
+        if (!_initialized) return;
+        if (!IsSkipConfirmationOpen && TrySupplementalLesson()) return;
+        if (!IsActive)
+        {
+            if (IsSkipConfirmationOpen) Refresh();
+            return;
+        }
         if (_progressDirty && (_progressSaveElapsed += delta) >= 0.25) Save(false);
         if (CameraPanDone && !_cameraZoomStarted && IsShowing && !GetTree().Paused && !IsSkipConfirmationOpen &&
             !_game.CraftMiniGameOpen && !_game.DayTransitionOpen && !_game.Failed && !_game.Completed &&
@@ -278,10 +428,68 @@ public partial class FirstTradeTutorial : CanvasLayer
             _acceptedAtStart = _game.Accepted;
             _sawSale = false;
             _summaryPage = 0;
+            _upgradeLessonPending = false;
+            _upgradeLessonDay = 0;
+            _packHoverSeconds = 0;
+            _notebookLessonDone = false;
             Save(false);
         }
         _lastAccepted = _game.Accepted;
-        _sawSale |= _game.Accepted > _acceptedAtStart;
+        _sawSale |= _game.Accepted >= _acceptedAtStart + 2;
+        Refresh();
+        if (_upgradeLessonPending)
+        {
+            OpenUpgradeLesson();
+            return;
+        }
+        if (CurrentStep == Step.Summary && _summaryPage == 0 && IsShowing && !GetTree().Paused)
+        {
+            var pack = _game.GetNode<ProgressPanel>("HUD/Root/ProgressPanel");
+            if (pack.HoveringHotspot && pack.Expanded && !pack.IsAnimating)
+            {
+                _packHoverSeconds += delta;
+                if (_packHoverSeconds >= 1)
+                {
+                    _upgradeLessonDay = _game.CurrentDay;
+                    _upgradeLessonPending = true;
+                    Save(false);
+                    OpenUpgradeLesson();
+                }
+            }
+            else _packHoverSeconds = 0;
+        }
+        else _packHoverSeconds = 0;
+    }
+
+    private void OpenUpgradeLesson()
+    {
+        if (GetTree().Paused || _game.DayTransitionOpen) return;
+        if (_game.OpenTutorialUpgradeChoice(CompleteUpgradeLesson))
+        {
+            _card.SetInstructionLocked(!_cardLessonDone);
+            CurrentStep = Step.UpgradeChoice;
+            Refresh();
+        }
+    }
+
+    private void CompleteUpgradeLesson()
+    {
+        if (!IsActive) return;
+        _upgradeLessonPending = false;
+        _upgradeLessonDay = 0;
+        _packHoverSeconds = 0;
+        _summaryPage = SummaryPages.Length - 1;
+        _notebookLessonDone = false;
+        Save(false);
+        _game.PersistProgress();
+        Refresh();
+    }
+
+    private void OnEmbroideryStarted()
+    {
+        if (!IsActive || _embroideryStarted) return;
+        _embroideryStarted = true;
+        Save(false);
         Refresh();
     }
 
@@ -289,18 +497,34 @@ public partial class FirstTradeTutorial : CanvasLayer
     {
         if (IsSkipConfirmationOpen)
         {
+            _notebook.HoldOpenForLesson = false;
+            _spotlight.SetAccessories(null, null, null);
             _root.Show();
             _panel.Hide();
-            _highlight.Hide();
+            _skip.Hide();
+            _spotlight.SetTarget(null);
             return;
         }
         _panel.Show();
+        if (_cameraHandoffDone && !_embroideryStarted && _embroidery.IsReadyToStart && !_pause.IsOpen)
+        {
+            Layer = _embroidery.Layer + 2;
+            _root.Show();
+            SetStep(Step.EmbroideryStart, "Нажмите «Начать», чтобы приступить к вышивке", _embroidery.StartButton);
+            Layout();
+            return;
+        }
         if (GetTree().Paused || _game.CraftMiniGameOpen || _game.DayTransitionOpen || _game.Failed || _game.Completed)
         {
+            _notebook.HoldOpenForLesson = false;
+            _spotlight.SetAccessories(null, null, null);
             _root.Hide();
+            Target = null;
+            _spotlight.SetTarget(null);
             StopCamera(cancelOverview: !_game.DayTransitionOpen);
             return;
         }
+        Layer = _regularLayer;
         Vector2 size = GetViewport().GetVisibleRect().Size;
         if (_viewportSize != size) { StopCamera(); _viewportSize = size; }
         _root.Show();
@@ -315,25 +539,33 @@ public partial class FirstTradeTutorial : CanvasLayer
             else SetStep(Step.RoomFocus,
                 "Дважды нажмите ЛКМ по комнате, чтобы приблизить её и расположить по центру экрана.", null);
         }
+        else if (_sawSale && _summaryPage == 1 && !_notebookLessonDone)
+            SetStep(_notebook.Expanded ? Step.NotebookContents : Step.Notebook,
+                _notebook.Expanded ? "В блокноте отображаются текущие задания, активные улучшения и негативные эффекты." : NotebookMessage, _notebook.GetNode<Control>("Page"));
         else if (_sawSale) SetStep(Step.Summary, SummaryPages[_summaryPage].Body,
             _summaryPage == 0 ? _game.GetNode<Control>("HUD/Root/ProgressToggleButton") : null);
         else if (_game.TradeActive && !_buyerRequestRead) SetStep(Step.BuyerRequest, BuyerRequestMessage,
             _game.GetNode<Control>("World/TradingRoom/BuyerWaitingThought/ThoughtBubble"));
-        else if (_game.TradeActive) SetStep(Step.Offer,
-            "«✓» продаёт товар. «×» или F тратит попытку и меняет покупателя и цену. Красная полоска отсчитывает 10 секунд. Таймер не сбрасывается, а цена может упасть. Скорость продажи и качество товара дают надбавки.",
-            _game.GetNode<Control>("World/TradingRoom/Item/TradePanel"));
+        else if (_game.TradeActive && !_offerInstructionRead) ShowOfferLesson();
+        else if (_game.TradeActive && HoldTrainingBuyer) SetStep(Step.TimedSale,
+            "Продайте товар до истечения времени, чтобы получить надбавку за скорость.",
+            _game.GetNode<Control>("World/TradingRoom/BuyerWaitingThought/ThoughtBubble"));
+        else if (_game.TradeActive) SetStep(Step.LateSale,
+            _game.BuyerWaitRemaining > 0 ? "Дождитесь конца отсчёта." :
+            "Даже после истечения времени товар можно продать, но без надбавки за скорость.",
+            _game.GetNode<Control>("World/TradingRoom/BuyerWaitingThought/ThoughtBubble"));
         else if (_game.DayClosed) SetStep(Step.Start,
             "Время вышло. В паузе можно начать с чекпоинта и попробовать снова или пропустить обучение.", null);
         else if (!_game.DayStarted) SetStep(Step.Start,
             "Нажмите «Начать» на часах, чтобы открыть магазин. Часы показывают, сколько времени осталось до закрытия.",
             _game.GetNode<Control>("HUD/DayClock/Root/DayTimer/StartButton"));
         else if (_game.ShowcaseItems.Any(item => item >= 0)) SetStep(Step.WaitBuyer,
-            "Покупатель приходит сразу после открытия магазина или продажи. Когда он появляется, красная полоска отсчитывает 10 секунд для надбавки за скорость.",
+            "Красная полоска над покупателем показывает, сколько времени осталось для надбавки за скорость.",
             _game.GetNode<Control>("World/ShowroomLeft/Showcases/Slot1"));
         else if (_game.StoredItems.Length > 0)
         {
             if (_game.SelectedInventoryIndex < 0) SetStep(Step.Select,
-                "Выберите предмет в инвентаре внизу. Наведите мышь, чтобы узнать его цену, редкость и качество.",
+                "Наведите курсор на предмет, чтобы узнать его цену, редкость и качество. Нажмите на него, чтобы выбрать.",
                 _game.GetNode<InventoryUI>("HUD/InventoryUI").Container.GetChild<Control>(0));
             else SetStep(Step.Place,
                 "Нажмите на свободную витрину слева или перетащите туда предмет.",
@@ -342,37 +574,57 @@ public partial class FirstTradeTutorial : CanvasLayer
         else if (_game.EnergyRemaining <= 0) SetStep(Step.Start,
             "Энергия закончилась. Она восстанавливается на следующий день. В паузе можно начать с чекпоинта и попробовать снова.", null);
         else SetStep(Step.Craft,
-            "Нажмите «Создать предметы» в ателье. Запуск вышивки тратит деньги и энергию. Нажимайте на светящиеся точки. Значок «?» показывает шансы редкости.",
+            "Нажмите „Создать предметы“. Для создания нужны деньги и 1 энергия. Значок „?“ показывает шансы редкости.",
             _game.GetNode<Control>("World/Atelier/GetItemButton"));
         Layout();
+    }
+
+    private void ShowOfferLesson()
+    {
+        const string content = "World/TradingRoom/Item/TradePanel/Content/";
+        var (message, target) = _offerPage switch
+        {
+            0 => ("Нажмите „✓“, чтобы продать товар.", "Buttons/AcceptButton"),
+            1 => ("Нажмите „×“, чтобы сменить покупателя и цену. Это тратит попытку, а таймер не сбрасывается. Цена может как вырасти, так и упасть.", "Buttons/DeclineButton"),
+            _ => ("Чем выше качество товара, тем больше надбавка к его стоимости.", "OfferLabel")
+        };
+        SetStep(Step.Offer, message, _game.GetNode<Control>(content + target));
     }
 
     private void SetStep(Step step, string message, Control target)
     {
         bool cameraStep = step is Step.Camera or Step.CameraZoom or Step.RoomFocus;
+        bool keepChosenRoom = step == Step.Start && _cameraHandoffDone && !_game.DayClosed;
         bool continuingPractice = _appliedCameraStep == Step.Camera && cameraStep;
         CurrentStep = step;
-        _camera.NavigationLocked = !cameraStep;
+        _camera.NavigationLocked = !cameraStep && !keepChosenRoom;
         _body.Text = message;
         Target = target;
-        _done.Visible = step is Step.Summary or Step.BuyerRequest;
-        _done.Text = step == Step.BuyerRequest || _summaryPage < SummaryPages.Length - 1 ? "Далее" : "Понятно";
+        _panel.Show();
+        _done.Visible = step == Step.Summary && _summaryPage > 0 || step is Step.BuyerRequest or Step.NotebookContents ||
+            step == Step.Offer && !_offerInstructionRead;
+
+        _actions.Visible = _done.Visible;
+        _done.Text = step is Step.BuyerRequest or Step.Offer or Step.NotebookContents || _summaryPage < SummaryPages.Length - 1 ? "Далее" : "Понятно";
         _title.Text = step switch
         {
             Step.Camera => "Передвижение камеры",
             Step.CameraZoom => "Масштабирование",
             Step.RoomFocus => "Приближение комнаты",
             Step.BuyerRequest => "Запрос покупателя",
+            Step.EmbroideryStart => "Вышивка",
+            Step.Notebook or Step.NotebookContents => "Блокнот",
             Step.Summary => SummaryPages[_summaryPage].Title,
             _ => "Первая продажа"
         };
         _cameraProgress.Visible = cameraStep && step != Step.RoomFocus;
         _cameraProgress.Value = step == Step.Camera ? CameraPanProgress : CameraZoomProgress;
-        Step cameraCheckpoint = cameraStep ? Step.Camera : step == Step.BuyerRequest ? Step.Offer : step;
-        if (_appliedCameraStep != cameraCheckpoint && !_game.DayTransitionOpen)
+        Step cameraCheckpoint = cameraStep ? Step.Camera : step is Step.BuyerRequest or Step.TimedSale or Step.LateSale ? Step.Offer :
+            step is Step.Notebook or Step.NotebookContents ? Step.Summary : step;
+        if (step != Step.EmbroideryStart && _appliedCameraStep != cameraCheckpoint && !_game.DayTransitionOpen)
         {
             // Restoring completed practice must not replay its entry flight before handing off.
-            if (!IsCameraCompletionPending && !continuingPractice)
+            if (!IsCameraCompletionPending && !continuingPractice && !keepChosenRoom)
             {
                 string checkpoint = "CameraCheckpoints/" + cameraCheckpoint;
                 GetNode<TutorialCameraCheckpoint>(checkpoint).MoveCamera(_game, _camera, CameraTravelSeconds);
@@ -428,6 +680,7 @@ public partial class FirstTradeTutorial : CanvasLayer
         if (IsActive && _progressDirty) Save(false);
         CloseConfirmation();
         if (GodotObject.IsInstanceValid(_game)) _game.NewGameStarted -= OnNewGameStarted;
+        if (GodotObject.IsInstanceValid(_embroidery)) _embroidery.Started -= OnEmbroideryStarted;
         if (!GodotObject.IsInstanceValid(_camera)) return;
         _camera.NavigationLocked = false;
         _camera.UserPanned -= OnUserPanned;
@@ -437,20 +690,106 @@ public partial class FirstTradeTutorial : CanvasLayer
         StopCamera();
     }
 
+    internal int ContextTooltipLayer(int normalLayer, Control tooltip)
+    {
+        _spotlight?.TrackTooltip(tooltip);
+        return IsShowing && !GetTree().Paused && !IsSkipConfirmationOpen && Layer == _regularLayer
+            ? Layer + 1 : normalLayer;
+    }
+
+    internal void OnMusicWorkshopUnlocked()
+    {
+        if (!_initialized || _musicLessonDone) return;
+        _musicLessonPending = true;
+        Save(!IsActive);
+    }
+
+    private void CompleteMusicLesson()
+    {
+        _musicLessonPending = false;
+        _musicLessonDone = true;
+        _camera.NavigationLocked = false;
+        Save(!IsActive);
+        _root.Hide();
+        _spotlight.SetTarget(null);
+    }
+
+    private bool TrySupplementalLesson()
+    {
+        if (string.IsNullOrEmpty(ProgressPath)) return false;
+        if (IsActive && _upgradeLessonPending && !_cardLessonDone && _card.IsOpen && !_card.IsAnimating)
+        {
+            _card.SetInstructionLocked(true);
+            ShowSupplemental(Step.CardExplanation, "Улучшения между днями",
+                _cardPage == 0
+                    ? "В конце дня можно выбрать одно улучшение или пропустить выбор. Некоторые улучшения стоят денег."
+                    : "Улучшения действуют в течение следующего дня. Денежные награды выдаются сразу.",
+                _card.GetNode<Control>("Root/Center/Card/Content/Choices"), _card.Layer + 1);
+            return true;
+        }
+
+        if (IsActive || !_musicLessonPending || _musicLessonDone || !_game.MusicWorkshopUnlocked) return false;
+        if (GetTree().Paused || _game.CraftMiniGameOpen || _game.DayTransitionOpen || _game.Failed || _game.Completed)
+        {
+            _root.Hide();
+            _spotlight.SetTarget(null);
+            return true;
+        }
+
+        string message = _musicPage switch
+        {
+            0 => "Мастерская даёт больше энергии и новые витрины. Создайте инструмент за деньги и 1 энергию.",
+            1 => "В полировке удерживайте ЛКМ и водите тряпочкой по инструменту.",
+            2 => "Положите инструмент на свободную витрину. Покупатели придут после открытия магазина.",
+            _ => "Сверяйтесь с облачком покупателя. Надбавка за скорость доступна 10–20 секунд для одежды и 15–25 секунд для инструментов."
+        };
+        Control focus = _musicPage switch
+        {
+            0 => _game.GetNode<Control>("World/MusicWorkshop/GetItemButton"),
+            1 => null,
+            2 => _game.GetNode<Control>("World/Showroom/Showcases/Slot4"),
+            _ => _game.GetNode<Control>("World/TradingRoom/BuyerWaitingThought/ThoughtBubble")
+        };
+        ShowSupplemental(Step.MusicWorkshop, "Музыкальная мастерская", message, focus, _regularLayer);
+        return true;
+    }
+
+    private void ShowSupplemental(Step step, string title, string message, Control target, int layer)
+    {
+        CurrentStep = step;
+        if (step == Step.MusicWorkshop) _camera.NavigationLocked = false;
+        Layer = layer;
+        _root.Show();
+        _panel.Show();
+        _title.Text = title;
+        _body.Text = message;
+        _cameraProgress.Hide();
+        _actions.Show();
+        _done.Show();
+        _done.Text = "Далее";
+        Target = target;
+        Layout();
+    }
+
     private void Layout()
     {
         Rect2 screen = GetViewport().GetVisibleRect();
         float width = Mathf.Min(420, screen.Size.X - 24);
         _panel.Size = new Vector2(width, 0);
         _panel.Position = new Vector2((screen.Size.X - width) / 2, 14);
-        _highlight.Hide();
-        if (Target == null || !Target.IsVisibleInTree()) return;
-        Rect2 target = Target.GetGlobalTransformWithCanvas() * new Rect2(Vector2.Zero, Target.Size);
+        _skip.Visible = CurrentStep != Step.CardExplanation;
+        bool packOpen = CurrentStep == Step.Summary && _summaryPage == 0 && _pack.Expanded;
+        System.Func<Rect2> bounds = packOpen ? _pack.CigaretteBounds : null;
+        _notebook.HoldOpenForLesson = IsActive && CurrentStep == Step.NotebookContents;
+        Control sale = CurrentStep is Step.TimedSale or Step.LateSale ? _salePanel : null;
+        _spotlight.SetAccessories(_panel, _skip, sale);
+        _spotlight.SetTarget(Target, bounds);
+        if (!GodotObject.IsInstanceValid(Target) || !Target.IsVisibleInTree()) return;
+        Rect2 target = bounds?.Invoke() ?? TutorialSpotlight.TargetBounds(Target);
+        if (sale?.IsVisibleInTree() == true)
+            target = target.Merge(TutorialSpotlight.TargetBounds(sale));
         Rect2 visible = target.Grow(6).Intersection(screen.Grow(-4));
         if (!visible.HasArea()) return;
-        _highlight.Position = visible.Position;
-        _highlight.Size = visible.Size;
-        _highlight.Show();
         // Keep the hint away from the very control the player is asked to click.
         if (new Rect2(_panel.Position, _panel.Size).Intersects(visible))
             _panel.Position = new Vector2((screen.Size.X - width) / 2,

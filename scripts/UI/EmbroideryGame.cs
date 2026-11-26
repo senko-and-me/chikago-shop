@@ -17,6 +17,9 @@ public partial class EmbroideryGame : CanvasLayer
 	private Input.MouseModeEnum _previousCursorMode = Input.MouseModeEnum.Visible;
 	private bool _polishingCursorHidden;
 	public bool IsOpen => _surface != null && _surface.Visible;
+    internal bool IsReadyToStart => IsOpen && ActiveSession.State == EmbroideryState.Ready;
+    internal Button StartButton => _action;
+    internal event Action Started;
 	private EmbroiderySurface _surface = null!;
 	private Label _title = null!, _hint = null!, _quality = null!;
 	private Label _qualityHeading = null!;
@@ -27,11 +30,16 @@ public partial class EmbroideryGame : CanvasLayer
 	private readonly Action _acquire;
 	private bool _ownsPause;
 	private bool? _primaryAction;
+    private Texture2D _paperButton = null!, _inkButton = null!;
+    private StyleBoxTexture _focusFrame = null!;
 	public int? PreparedItemIndex { get; private set; }
 	private string _preparedInstrument;
 	private bool _preparedItemClaimed;
 	private bool _qualityRecorded;
 	private TradeScene _game = null!;
+    private PauseMenu _pause = null!;
+    private FirstTradeTutorial _tutorial = null!;
+    private bool Covered => _pause.IsOpen || _tutorial.IsSkipConfirmationOpen;
 
 	public EmbroideryGame(Action acquire, bool polishing = false)
 	{
@@ -45,6 +53,8 @@ public partial class EmbroideryGame : CanvasLayer
 		Layer = 110;
 		ProcessMode = ProcessModeEnum.Always;
 		_game = GetParent<TradeScene>();
+        _pause = _game.GetNode<PauseMenu>("PauseMenu");
+        _tutorial = _game.GetNode<FirstTradeTutorial>("FirstTradeTutorial");
 		_game.NewGameStarted += ResetPreparedItem;
 
 		_surface = new EmbroiderySurface
@@ -55,6 +65,13 @@ public partial class EmbroideryGame : CanvasLayer
 		};
 		AddChild(_surface);
 		_surface.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        _surface.Theme = GD.Load<Theme>("res://themes/game_theme.tres");
+        _paperButton = GD.Load<Texture2D>("res://art/ui/panel_small.png");
+        _inkButton = LoadArtwork("res://art/ui/panel_inverted.png");
+        _focusFrame = CreateArtworkFrame();
+        _focusFrame.ModulateColor = new Color("727272");
+        foreach (var side in new[] { Side.Left, Side.Top, Side.Right, Side.Bottom })
+            _focusFrame.SetExpandMargin(side, 2);
 
 		if (IsPolishing)
 		{
@@ -81,19 +98,7 @@ public partial class EmbroideryGame : CanvasLayer
 				Name = "Stat" + statNames[i],
 				MouseFilter = Control.MouseFilterEnum.Ignore
 			};
-			card.AddThemeStyleboxOverride("panel", new StyleBoxFlat
-			{
-				BgColor = Colors.White,
-				BorderColor = Colors.Black,
-				BorderWidthLeft = 1,
-				BorderWidthRight = 1,
-				BorderWidthTop = 1,
-				BorderWidthBottom = 1,
-				CornerRadiusTopLeft = 7,
-				CornerRadiusTopRight = 7,
-				CornerRadiusBottomLeft = 7,
-				CornerRadiusBottomRight = 7
-			});
+            card.AddThemeStyleboxOverride("panel", new StyleBoxTexture { Texture = _paperButton });
 			_surface.AddChild(card);
 			_statCards[i] = card;
 
@@ -136,27 +141,7 @@ public partial class EmbroideryGame : CanvasLayer
 		_surface.AddChild(_action);
 		_surface.AddChild(_cancel);
 
-		foreach (var button in new[] { _action, _cancel })
-		{
-			button.AddThemeFontSizeOverride("font_size", 20);
-			foreach (string state in new[] { "normal", "hover", "pressed", "hover_pressed", "focus", "disabled" })
-			{
-				var style = new StyleBoxFlat
-				{
-					BgColor = state is "pressed" or "hover_pressed" ? new Color("c4c4c4") :
-						state == "hover" ? new Color("dedede") : new Color("eeeeee"),
-					BorderColor = Colors.Black,
-					BorderWidthLeft = 1, BorderWidthRight = 1, BorderWidthTop = 1, BorderWidthBottom = 1,
-					CornerRadiusTopLeft = 6, CornerRadiusTopRight = 6,
-					CornerRadiusBottomLeft = 6, CornerRadiusBottomRight = 6,
-					DrawCenter = state != "focus"
-				};
-				button.AddThemeStyleboxOverride(state, style);
-			}
-			foreach (string color in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color", "font_disabled_color" })
-				button.AddThemeColorOverride(color, Colors.Black);
-			button.AddThemeConstantOverride("outline_size", 0);
-		}
+        StyleButton(_cancel, primary: false);
 
 		_action.Pressed += Activate;
 		_cancel.Pressed += Close;
@@ -246,7 +231,7 @@ public partial class EmbroideryGame : CanvasLayer
 
     public void Activate()
     {
-        if (!IsOpen)
+        if (!IsOpen || Covered)
             return;
 
         if (ActiveSession.State == EmbroideryState.Ready)
@@ -260,6 +245,7 @@ public partial class EmbroideryGame : CanvasLayer
             ActiveSession.Start();
             _acquire();
             _preparedItemClaimed = true;
+            Started?.Invoke();
         }
         else if (ActiveSession.State == EmbroideryState.Finished)
         {
@@ -272,7 +258,7 @@ public partial class EmbroideryGame : CanvasLayer
 
     public void FinishForTesting(bool successful)
     {
-        if (!OS.IsDebugBuild() || !IsOpen || ActiveSession.State == EmbroideryState.Finished) return;
+        if (!OS.IsDebugBuild() || !IsOpen || Covered || ActiveSession.State == EmbroideryState.Finished) return;
         if (ActiveSession.State == EmbroideryState.Ready) Activate();
         if (!IsOpen) return;
         ActiveSession.FinishForTesting(successful);
@@ -280,22 +266,32 @@ public partial class EmbroideryGame : CanvasLayer
         Refresh();
     }
 
-    private void Close()
+    internal void Close()
     {
-        if (!IsOpen)
-            return;
+        if (!IsOpen || ActiveSession.State == EmbroideryState.Playing || Covered) return;
+        Dismiss();
+    }
 
-        if (ActiveSession.State == EmbroideryState.Playing)
-            return;
-
+    internal void Dismiss()
+    {
+        if (!IsOpen) return;
         _surface.Hide();
         RestoreMouseCursor();
 
-        if (_ownsPause)
+        if (_ownsPause && !_pause.IsOpen)
             GetTree().Paused = false;
 
         _ownsPause = false;
-        GetParent<TradeScene>().RefreshDayPresentation();
+        if (_game.DayClosed) _game.SynchronizeDayState();
+        else _game.RefreshDayPresentation();
+    }
+
+    internal void SuspendPolishingInput()
+    {
+        if (!IsPolishing || !IsOpen) return;
+        _polishingSurface.EndPointer();
+        _polishingCursor.Hide();
+        Input.MouseMode = Input.MouseModeEnum.Visible;
     }
 
     private void RestoreMouseCursor()
@@ -333,30 +329,16 @@ public partial class EmbroideryGame : CanvasLayer
         _qualityRecorded = false;
     }
 
-    public override void _Input(InputEvent @event)
-    {
-        if (!IsOpen)
-            return;
-
-        if (@event is InputEventKey
-            { Pressed: true, Echo: false, Keycode: Key.Escape })
-        {
-            if (ActiveSession.State == EmbroideryState.Ready)
-                Close();
-
-            GetViewport().SetInputAsHandled();
-        }
-    }
-
     public override void _Process(double delta)
     {
         if (!IsOpen)
             return;
 
-        var game = GetParent<TradeScene>();
-        game.TickCraftDay(delta);
+        if (Covered) return;
 
-        if (game.DayClosed && ActiveSession.State == EmbroideryState.Ready)
+        _game.TickCraftDay(delta);
+
+        if (_game.DayClosed && ActiveSession.State == EmbroideryState.Ready)
         {
             Close();
             return;
@@ -398,11 +380,10 @@ public partial class EmbroideryGame : CanvasLayer
             GameLocalization.Text(IsPolishing ? "ОЧИЩЕНО" : "СТЕЖКИ");
         _statHeadings[2].Text = GameLocalization.Text("ПРОМАХИ");
 
-        _hint.Text = ready || playing
-            ? GameLocalization.Text(IsPolishing
-                ? "Зажми и протирай туда-сюда"
-                : "Нажимай на светящиеся точки")
-            : "";
+        string instruction = IsPolishing && (ready || playing) ? "Зажми и протирай туда-сюда" :
+            !IsPolishing && _tutorial.IsActive && playing ? "Нажимайте на подсвечивающиеся точки по очереди." :
+            !IsPolishing && playing ? "Нажимай на светящиеся точки" : "";
+        _hint.Text = GameLocalization.Text(instruction);
 
         _quality.Text = $"{ActiveSession.Quality}%";
         _action.Text = GameLocalization.Text(ready ? "Начать" : "Забрать");
@@ -413,10 +394,10 @@ public partial class EmbroideryGame : CanvasLayer
         Rect2 panel = _surface.PanelRect;
         _qualityHeading.Text = GameLocalization.Text("КАЧЕСТВО");
         Place(_title, new Rect2(panel.Position + new Vector2(24, 24),
-            new Vector2(panel.Size.X - 380, 60)));
-        float statsX = panel.End.X - 348;
+            new Vector2(panel.Size.X - 410, 60)));
+        float statsX = panel.End.X - 364;
         for (int i = 0; i < _statCards.Length; i++)
-            Place(_statCards[i], new Rect2(new Vector2(statsX + i * 116, panel.Position.Y + 24),
+            Place(_statCards[i], new Rect2(new Vector2(statsX + i * 116, panel.Position.Y + 30),
                 new Vector2(104, 60)));
 
         Rect2 track = _surface.QualityTrackRect;
@@ -426,9 +407,10 @@ public partial class EmbroideryGame : CanvasLayer
             new Vector2(88, 30)));
         Place(_hint, new Rect2(new Vector2(panel.Position.X + 24, panel.End.Y - (playing ? 67 : 82)),
             new Vector2(panel.Size.X - 48, playing ? 40 : 24)));
-        Place(_action, new Rect2(new Vector2(panel.GetCenter().X - 150, panel.End.Y - 54),
+        float buttonY = panel.End.Y - (ready ? (IsPolishing ? 54 : 65) : 78);
+        Place(_action, new Rect2(new Vector2(panel.GetCenter().X - 150, buttonY),
             new Vector2(144, 40)));
-        Place(_cancel, new Rect2(new Vector2(panel.GetCenter().X + 6, panel.End.Y - 54),
+        Place(_cancel, new Rect2(new Vector2(panel.GetCenter().X + 6, buttonY),
             new Vector2(144, 40)));
         if (!ready)
             _action.Position = new Vector2(panel.GetCenter().X - 72, _action.Position.Y);
@@ -443,6 +425,25 @@ public partial class EmbroideryGame : CanvasLayer
         _surface.QueueRedraw();
     }
 
+    private static AtlasTexture LoadArtwork(string path)
+    {
+        var texture = GD.Load<Texture2D>(path);
+        using var image = texture.GetImage();
+        return new AtlasTexture { Atlas = texture, Region = image.GetUsedRect(), FilterClip = true };
+    }
+
+    internal static StyleBoxTexture CreateArtworkFrame()
+    {
+        Texture2D texture = GD.Load<Texture2D>("res://art/ui/camera_frame.png");
+        using var image = texture.GetImage();
+        using var cropped = image.GetRegion(image.GetUsedRect());
+        cropped.Resize(200, 200, Image.Interpolation.Lanczos);
+        var frame = new StyleBoxTexture { Texture = ImageTexture.CreateFromImage(cropped), DrawCenter = false };
+        foreach (var side in new[] { Side.Left, Side.Top, Side.Right, Side.Bottom })
+            frame.SetTextureMargin(side, 16);
+        return frame;
+    }
+
     private static void Place(Control control, Rect2 rect)
     {
         control.Position = rect.Position;
@@ -453,20 +454,28 @@ public partial class EmbroideryGame : CanvasLayer
     {
         if (_primaryAction == primary) return;
         _primaryAction = primary;
-        foreach (string state in new[] { "normal", "hover", "pressed", "hover_pressed", "focus", "disabled" })
-        {
-            var style = (StyleBoxFlat)_action.GetThemeStylebox(state);
-            style.BgColor = primary
-                ? state is "pressed" or "hover_pressed" ? new Color("404040") :
-                    state == "hover" ? new Color("282828") : Colors.Black
-                : state is "pressed" or "hover_pressed" ? new Color("c4c4c4") :
-                    state == "hover" ? new Color("dedede") : new Color("eeeeee");
-            style.BorderColor = primary && state == "focus" ? new Color("777777") : Colors.Black;
-            style.BorderWidthLeft = style.BorderWidthRight = style.BorderWidthTop = style.BorderWidthBottom = primary ? 2 : 1;
-        }
-        foreach (string color in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color", "font_disabled_color" })
-            _action.AddThemeColorOverride(color, primary ? Colors.White : Colors.Black);
+        StyleButton(_action, primary);
     }
+
+    private void StyleButton(Button button, bool primary)
+    {
+        Texture2D face = primary ? _inkButton : _paperButton;
+        foreach (var (state, tint) in new[] { ("normal", 1f), ("hover", 0.88f), ("pressed", 0.72f),
+            ("hover_pressed", 0.72f), ("disabled", 0.60f) })
+        {
+            button.AddThemeStyleboxOverride(state, new StyleBoxTexture
+            {
+                Texture = face, ModulateColor = new Color(tint, tint, tint)
+            });
+        }
+        button.AddThemeStyleboxOverride("focus", _focusFrame);
+        foreach (string color in new[] { "font_color", "font_hover_color", "font_pressed_color",
+            "font_hover_pressed_color", "font_focus_color", "font_disabled_color" })
+            button.AddThemeColorOverride(color, primary ? Colors.White : Colors.Black);
+        button.AddThemeFontSizeOverride("font_size", 20);
+        button.AddThemeConstantOverride("outline_size", 0);
+    }
+
 }
 
 public partial class EmbroiderySurface : Control
@@ -474,9 +483,21 @@ public partial class EmbroiderySurface : Control
     private Texture2D _rankEmpty;
     private Texture2D _rankFilled;
     private Texture2D _hoop;
+    private Texture2D _stitch;
+    private static readonly Rect2 StitchSegment = new(886, 403, 76, 174);
+    private static readonly Rect2 StitchPoint = new(886, 318, 76, 68);
+    private const float StitchWidth = 4;
+    private const float StitchLength = 9;
+    private const float StitchSpacing = 12;
+    private const float PointSize = 6;
+    private Texture2D _panel;
+    private StyleBoxTexture _fabricFrame;
 
     public override void _Ready()
     {
+        _panel = GD.Load<Texture2D>("res://art/ui/panel_large.png");
+        _stitch = GD.Load<Texture2D>("res://art/minigames/embroidery_stitch.png");
+        _fabricFrame = EmbroideryGame.CreateArtworkFrame();
         const string emptyPath = "res://art/minigames/rank_empty.png";
         const string filledPath = "res://art/minigames/rank_full.png";
         const string hoopPath = "res://art/minigames/embroidery_hoop.png";
@@ -490,20 +511,6 @@ public partial class EmbroiderySurface : Control
         if (ResourceLoader.Exists(hoopPath))
             _hoop = GD.Load<Texture2D>(hoopPath);
     }
-
-    private readonly StyleBoxFlat _panelStyle = new()
-    {
-        BgColor = new Color("f5f5f5"),
-        BorderColor = Colors.Black,
-        BorderWidthLeft = 1,
-        BorderWidthRight = 1,
-        BorderWidthTop = 1,
-        BorderWidthBottom = 1,
-        CornerRadiusTopLeft = 12,
-        CornerRadiusTopRight = 12,
-        CornerRadiusBottomLeft = 12,
-        CornerRadiusBottomRight = 12
-    };
 
     private Vector2 _missPoint;
     private ulong _missAt;
@@ -579,11 +586,11 @@ public partial class EmbroiderySurface : Control
         DrawRect(new Rect2(Vector2.Zero, Size),
             new Color(0.025f, 0.025f, 0.025f, 0.9f));
 
-        DrawStyleBox(_panelStyle, PanelRect);
+        DrawTextureRect(_panel, PanelRect, false);
 
         Rect2 fabric = FabricRect;
-        DrawRect(fabric.Grow(7), new Color("595959"));
         DrawRect(fabric, new Color("c0c0c0"));
+        DrawStyleBox(_fabricFrame, fabric.Grow(7));
 
         for (float x = fabric.Position.X; x < fabric.End.X; x += 6)
         {
@@ -620,28 +627,29 @@ public partial class EmbroiderySurface : Control
 
             for (int i = 1; i < session.Stitches; i++)
             {
-                DrawLine(
-                    ScreenPoint(i - 1) - GlobalPosition,
-                    ScreenPoint(i) - GlobalPosition,
-                    new Color("282828"),
-                    6,
-                    true);
-
-                DrawLine(
-                    ScreenPoint(i - 1) - GlobalPosition,
-                    ScreenPoint(i) - GlobalPosition,
-                    new Color("555555"),
-                    3,
-                    true);
+                Vector2 from = ScreenPoint(i - 1) - GlobalPosition;
+                Vector2 segment = ScreenPoint(i) - GlobalPosition - from;
+                float length = segment.Length();
+                DrawSetTransform(from, segment.Angle() - Mathf.Pi / 2);
+                int count = Mathf.Max(0, Mathf.FloorToInt((length - PointSize - StitchLength) / StitchSpacing) + 1);
+                float offset = (length - (count - 1) * StitchSpacing - StitchLength) / 2;
+                for (int tile = 0; tile < count; tile++)
+                    DrawTextureRectRegion(_stitch,
+                        new Rect2(-StitchWidth / 2, offset + tile * StitchSpacing, StitchWidth, StitchLength),
+                        StitchSegment);
+                DrawSetTransform(Vector2.Zero);
             }
 
             for (int i = 0; i < session.Points.Count; i++)
             {
                 Vector2 point = ScreenPoint(i) - GlobalPosition;
-                DrawCircle(
-                    point,
-                    4,
-                    new Color(i < session.Stitches ? "484848" : "808080"));
+                if (i < session.Stitches)
+                {
+                    Vector2 size = StitchPoint.Size * (PointSize / StitchPoint.Size.X);
+                    DrawTextureRectRegion(_stitch, new Rect2(point - size / 2, size), StitchPoint);
+                }
+                else
+                    DrawCircle(point, 4, new Color("808080"));
             }
 
             // Draw the target last so nearby points and stitches cannot cover it.

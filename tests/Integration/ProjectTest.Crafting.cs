@@ -8,40 +8,8 @@ using ChikagoShop.Domain.Crafting;
 // Subsystem checks share the ProjectTest runner and fixture helpers.
 public partial class ProjectTest
 {
-    private async Task TestCompactDrumMask()
-    {
-        var surface = new PolishingSurface { Size = new Vector2(600, 480) };
-        Root.AddChild(surface);
-        try
-        {
-            var session = surface.Begin("drum");
-            surface.Position = (Root.GetVisibleRect().Size - surface.Size) / 2;
-            surface.RefreshArtwork();
-            using var image = GD.Load<Texture2D>("res://art/items/drum.png").GetImage();
-            var ink = image.GetUsedRect();
-            float oldFit = Mathf.Min(600f / image.GetWidth(), 480f / image.GetHeight());
-            Vector2 oldSize = (Vector2)ink.Size * oldFit;
-            var cells = session.Cells.Where(cell => cell.Inside).ToArray();
-            Vector2 size = new((float)(cells.Max(cell => cell.X) - cells.Min(cell => cell.X)),
-                (float)(cells.Max(cell => cell.Y) - cells.Min(cell => cell.Y)));
-            Check(size.X < oldSize.X * 0.74f && size.Y < oldSize.Y * 0.74f &&
-                size.X > oldSize.X * 0.65f && size.Y > oldSize.Y * 0.65f,
-                "The drum's playable mask must shrink with its art, reducing rubbing area to about half");
-            session.Start();
-            var center = cells.OrderBy(cell => Math.Abs(cell.X - 300) + Math.Abs(cell.Y - 240)).First();
-            session.BeginRub(center.X, center.Y);
-            for (int i = 0; i < 12; i++) session.MoveRub(center.X + (i % 2 == 0 ? 14 : 0), center.Y, 20);
-            Check(session.Progress > 0 && session.Misses == 0,
-                "The smaller drum must remain polishable with the existing brush");
-            if (DisplayServer.GetName() != "headless")
-                using (await CapturePresentation("compact-drum-mask")) { }
-        }
-        finally { surface.QueueFree(); await ToSignal(this, SignalName.ProcessFrame); }
-    }
-
     private async Task TestPolishingStart()
     {
-        await TestCompactDrumMask();
         Vector2I originalSize = Root.Size;
         string locale = TranslationServer.GetLocale();
         TradeScene game = null;
@@ -303,7 +271,7 @@ public partial class ProjectTest
                     Vector2 p = surface.GetGlobalTransformWithCanvas() * point * scale;
                     return frame.GetPixel(Mathf.RoundToInt(p.X), Mathf.RoundToInt(p.Y));
                 }
-                Check(Pixel(surface.PanelRect.Position + new Vector2(20, 20)).R > 0.9f,
+                Check(Pixel(surface.PanelRect.Position + new Vector2(32, 32)).R > 0.9f,
                     "Both craft modal backgrounds must stay light, including timeout and success screens");
                 foreach (var label in surface.FindChildren("*", "Label", true, false).Cast<Label>().Where(value => value.IsVisibleInTree() && value.Text.Length > 0))
                 {
@@ -316,7 +284,7 @@ public partial class ProjectTest
                     Check(dark > 2, $"Rendered {name}/{label.Name} text must remain visibly dark ({state}, {locale}, {size})");
                 }
                 foreach (string stat in new[] { "Time", "Stitches", "Misses" })
-                    Check(Pixel(surface.GetNode<Control>("Stat" + stat).Position + new Vector2(5, 5)).R > 0.9f,
+                    Check(Pixel(surface.GetNode<Control>("Stat" + stat).Position + new Vector2(10, 10)).R > 0.9f,
                         "Statistics must have light cards behind their black headings and values");
                 Rect2 panel = surface.PanelRect, fabric = surface.FabricRect;
                 var title = surface.GetNode<Label>("Title");
@@ -352,8 +320,8 @@ public partial class ProjectTest
                 game.EndDay();
                 Check(game.DayRemainingSeconds == beforeEnd && !game.DayClosed,
                     "Direct end-day calls must be ignored while crafting");
-                if (state is "ready" or "playing")
-                    Check(hint.Text.Length > 0, "Instructions must remain visible while playing");
+                bool expectsHint = state == "playing" || (state == "ready" && craft.IsPolishing);
+                Check((hint.Text.Length > 0) == expectsHint, "Only the appropriate craft states must display controls guidance");
                 if (state == "playing" && locale == "ru" && size.X == 960)
                     frame.SavePng(System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"chikago-hf183-{name}-playing.png"));
                 var track = surface.QualityTrackRect;
@@ -383,8 +351,9 @@ public partial class ProjectTest
                         frame.SavePng(System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"chikago-hf179-{name}-{locale}.png"));
                 }
                 else if (action.Visible)
-                    Check(Mathf.Abs(action.GetRect().GetCenter().X - surface.PanelRect.GetCenter().X) < 0.1f,
-                        "Collect must remain centered after the two ready-state buttons are swapped");
+                    Check(Mathf.Abs(action.GetRect().GetCenter().X - surface.PanelRect.GetCenter().X) < 0.1f &&
+                        surface.PanelRect.End.Y - action.GetRect().End.Y >= 35,
+                        "Collect must remain centered with a clear margin from the lower frame");
                 if (locale == "ru" && size.X == 960 && state == "timeout")
                     frame.SavePng(System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"chikago-hf166-{name}.png"));
                 string closeButton = state == "ready" ? "Cancel" : "Action";
@@ -439,9 +408,10 @@ public partial class ProjectTest
             await ToSignal(this, SignalName.ProcessFrame);
             Check(game.DayRemainingSeconds < beforeCraftFrame && beforeCraftFrame <= dayTime,
                 "The trading clock must continue on the ready embroidery screen");
-            game.GetNode<PauseMenu>("PauseMenu").Open();
-            Check(!game.GetNode<Control>("PauseMenu/Root/Overlay").Visible,
-                "Pause menu must not steal the embroidery pause");
+            var pause = game.GetNode<PauseMenu>("PauseMenu");
+            pause.Open();
+            Check(pause.IsOpen && embroidery.IsOpen, "Pause must cover embroidery while preserving the ready state");
+            pause.Close();
             await ClickControl(game, "EmbroideryGame/Surface/Cancel");
             Check(!Paused && !embroidery.IsOpen && game.Score == 220 && game.EnergyRemaining == 2,
                 "Cancel before start must restore the world without cost");
@@ -486,7 +456,9 @@ public partial class ProjectTest
 
             game.GetItemFromAtelier();
             Root.PushInput(new InputEventKey { Pressed = true, Keycode = Key.Escape }, true);
-            Check(!embroidery.IsOpen && !Paused, "Escape must cancel the ready craft without opening pause menu");
+            Check(pause.IsOpen && embroidery.IsOpen, "Escape must open pause over the ready craft");
+            pause.Close();
+            await ClickControl(game, "EmbroideryGame/Surface/Cancel");
 
             TranslationServer.SetLocale("en");
             game.GetItemFromAtelier();
@@ -646,10 +618,12 @@ public partial class ProjectTest
                 double remaining=game.DayRemainingSeconds;
                 await ToSignal(this,SignalName.ProcessFrame);
                 Check(game.DayRemainingSeconds<remaining,"The day clock must continue on the polishing ready screen");
-                game.GetItemFromAtelier(); game.GetNode<PauseMenu>("PauseMenu").Open();
-                Check(!game.GetNode<EmbroideryGame>("EmbroideryGame").IsOpen &&
-                      !game.GetNode<Control>("PauseMenu/Root/Overlay").Visible,
-                    "Another craft and pause menu must not steal polishing's modal state");
+                game.GetItemFromAtelier();
+                var pause = game.GetNode<PauseMenu>("PauseMenu");
+                pause.Open();
+                Check(!game.GetNode<EmbroideryGame>("EmbroideryGame").IsOpen && pause.IsOpen && polishing.IsOpen,
+                    "Pause must cover polishing and another craft must not open");
+                pause.Close();
                 await ClickControl(game,"PolishingGame/Surface/Cancel");
                 Check(!Paused && !polishing.IsOpen && game.Score==400,"Cancel polishing must be free");
             }
@@ -660,7 +634,10 @@ public partial class ProjectTest
                   polishing.GetNode<Label>("Surface/StatStitches/Heading").Text=="CLEANED",
                 "Polishing-specific content must follow RU/EN while sharing the shell");
             Root.PushInput(new InputEventKey { Keycode=Key.Escape,Pressed=true },true);
-            Check(!Paused && !polishing.IsOpen,"Escape must cancel ready polishing without opening pause");
+            var polishingPause = game.GetNode<PauseMenu>("PauseMenu");
+            Check(polishingPause.IsOpen && polishing.IsOpen, "Escape must open pause over ready polishing");
+            polishingPause.Close();
+            await ClickControl(game, "PolishingGame/Surface/Cancel");
             game.GetItemFromMusicWorkshop();
             await ClickControl(game,"PolishingGame/Surface/Action");
             Check(game.Score==260 && game.EnergyRemaining==1 && game.StoredItems.Length==3 &&

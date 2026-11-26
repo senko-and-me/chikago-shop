@@ -24,6 +24,7 @@ public partial class MafiaQuotaNotice : CanvasLayer
     private Button _mainMenu = null!;
     private Dictionary<string, DialogueLine> _noticeLines = null!;
     private StoryPortraitController _portraits = null!;
+    private StorySpeakerFocus _speakerFocus = null!;
     private double _speechTime;
     private Tween _fade = null!;
     private bool _ownsPause;
@@ -80,8 +81,11 @@ public partial class MafiaQuotaNotice : CanvasLayer
         StoryDialogueLayout.AddPortrait(characters, "Frankie",
             GD.Load<Texture2D>("res://art/dialogue/frankie.png"), 0.7475f, top: 0.245f, bottom: 0.785f);
 
-        _portraits = new StoryPortraitController(characters.GetNode<TextureRect>("Castello"), StoryPortraitController.Castello,
-            characters.GetNode<TextureRect>("Frankie"), StoryPortraitController.Frankie);
+        var castello = characters.GetNode<TextureRect>("Castello");
+        var frankie = characters.GetNode<TextureRect>("Frankie");
+        _portraits = new StoryPortraitController(castello, StoryPortraitController.Castello,
+            frankie, StoryPortraitController.Frankie);
+        _speakerFocus = new StorySpeakerFocus(this, ("Кастелло", castello), ("Френки", frankie));
         SetProcess(false);
 
         _heading = new Label { Name = "Heading" };
@@ -173,11 +177,12 @@ public partial class MafiaQuotaNotice : CanvasLayer
         string notice = !succeeded ? "defeat" : final ? "victory" : "firstQuota";
         DialogueLine line = _noticeLines[notice];
         _speaker.Text = GameLocalization.Text(line.Speaker);
-        _message.Text = GameLocalization.Text(line.Text);
+        _message.Text = StoryDialogueLayout.LineText(line.Text);
         _portraits.SetLine(line);
         _speechTime = 0;
         _message.VisibleCharacters = 0;
         _portraits.ShowSpeech(0);
+        _speakerFocus.SetSpeaker(line.Speaker);
         SetProcess(true);
         _continue.Text = english ? "Continue" : "Продолжить";
         _checkpoint.Text = english ? "From checkpoint" : "С чекпоинта";
@@ -207,6 +212,7 @@ public partial class MafiaQuotaNotice : CanvasLayer
         {
             _message.VisibleCharacters = -1;
             _portraits.ShowSpeech(null, lineComplete: true);
+            _speakerFocus.SetSpeaker(null);
             SetProcess(false);
         }
     }
@@ -220,6 +226,7 @@ public partial class MafiaQuotaNotice : CanvasLayer
         if (_fade?.IsValid() == true) _fade.Kill();
         SetProcess(false);
         _portraits.ShowSpeech(null);
+        _speakerFocus.SetSpeaker(null);
         _root.Hide();
         if (_ownsPause) GetTree().Paused = false;
         _ownsPause = false;

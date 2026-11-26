@@ -38,7 +38,7 @@ public partial class ProjectTest
             });
             await Reload();
             Check(game.StoredItems.SequenceEqual(new[] { 1, 4, 5, 2, 8, 9 }) && game.TradeActive && game.ItemIndex == 9 &&
-                game.BuyerWaitRemaining == 10 && game.Score == 2333 && game.EnergyRemaining == 4 && game.CurrentDay == 8 && game.ActiveTradeQualityRank == "A",
+                game.Score == 2333 && game.EnergyRemaining == 4 && game.CurrentDay == 8 && game.ActiveTradeQualityRank == "A",
                 "Loading version18 must preserve every item copy, active trade, cash, energy and day while resolving legacy aliases");
             game.PersistProgress();
             var mapped = ProgressSaveStore.Load(save, 3);

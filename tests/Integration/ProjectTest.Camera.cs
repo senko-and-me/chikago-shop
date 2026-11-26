@@ -230,16 +230,21 @@ public partial class ProjectTest
             Check(rarity.Popup.IsVisibleInTree() && Root.GetVisibleRect().Encloses(ScreenBounds(rarity.Popup)),
                 "Rarity popup placement must work after removing the pause-button obstacle");
             rarity.Hide();
+            if (!game.DayStarted) game.EndDay();
             var crafting = game.GetNode<EmbroideryGame>("EmbroideryGame");
             crafting.Open();
             Check(crafting.IsOpen, "Crafting fixture must open");
             await PressEscapeForTest();
-            Check(!crafting.IsOpen && !Paused && !overlay.Visible,
-                "Escape cancelling crafting must not also open pause");
+            Check(crafting.IsOpen && Paused && overlay.Visible, "Escape must pause without cancelling craft");
+            await PressEscapeForTest();
+            Check(crafting.IsOpen && Paused && !overlay.Visible, "Escape must return to the same craft screen");
+            crafting.Close();
             game.DayUpgrades.Offer(2);
             var card = game.GetNode<DayTransitionCard>("DayTransitionCard");
             card.Open(1, 2, game.DayUpgrades.Options, game.Score);
+            await WaitForDayCardAnimation(card);
             await PressEscapeForTest();
+            await WaitForDayCardAnimation(card);
             Check(!card.IsOpen && !Paused && !overlay.Visible,
                 "Escape skipping day cards must not also open pause");
         }

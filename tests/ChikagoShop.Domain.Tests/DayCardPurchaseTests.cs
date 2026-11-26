@@ -5,7 +5,7 @@ namespace ChikagoShop.Domain.Tests;
 
 public sealed class DayCardPurchaseTests
 {
-    [TestCase(DayUpgrade.Cash, 2, false, 35)]
+    [TestCase(DayUpgrade.Cash, 2, false, 0)]
     [TestCase(DayUpgrade.Energy, 2, false, 10)]
     [TestCase(DayUpgrade.Atelier, 3, false, 15)]
     [TestCase(DayUpgrade.Music, 4, true, 25)]

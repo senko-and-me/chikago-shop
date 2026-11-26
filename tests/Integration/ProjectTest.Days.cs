@@ -82,7 +82,7 @@ public partial class ProjectTest
                 Check(!game.GetNode<Button>(actions + "AcceptButton").Disabled,
                     "The last offer remains sellable after time expires");
                 int payout = ChikagoShop.Domain.Trading.BuyerPatienceRules.TotalPayout(offer,
-                    game.BuyerWaitRemaining, TradeScene.SpeedBonus(game.BuyerWaitRemaining),
+                    game.BuyerWaitRemaining, TradeScene.SpeedBonus(game.BuyerWaitRemaining, game.BuyerWaitInitial),
                     TradeScene.QualityBonus(game.ActiveTradeQualityRank));
                 game.AcceptTrade();
                 game.AcceptTrade();

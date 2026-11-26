@@ -49,13 +49,12 @@ public partial class ProjectTest
                     Check(actual.DistanceTo(expected) < 0.1f,
                         $"{sprite.Name}: the visible bottom edge must touch the cashier countertop, actual={actual}, expected={expected}");
                     float expectedScale = Math.Min(232f / ink.Size.X, 224f / ink.Size.Y);
-                    float reduction = sprite.Name.ToString() switch
+                    expectedScale *= sprite.Name.ToString() switch
                     {
                         "hat" or "vest" or "gloves" => 0.75f,
                         "drum" => 0.65f,
                         _ => 1f
                     };
-                    expectedScale *= reduction;
                     bool fitted = Mathf.IsEqualApprox(sprite.Scale.X, expectedScale) && sprite.Scale.X == sprite.Scale.Y;
                     Check(fitted && panel.Position == panelPosition,
                         "Counter alignment must preserve authored scales, fit new art and keep the independent trade panel position");
@@ -405,7 +404,7 @@ public partial class ProjectTest
 		Check(game.GetNode<PanelContainer>("World/TradingRoom/Item/TradePanel").Visible &&
 		      !game.GetNode<Button>("World/TradingRoom/Item/TradePanel/Content/Buttons/AcceptButton").Disabled,
 		    "An item with no rerolls must keep only the active sale controls available");
-        int acceptedOffer = game.OfferedPrice + TradeScene.SpeedBonus(game.BuyerWaitRemaining) +
+        int acceptedOffer = game.OfferedPrice + TradeScene.SpeedBonus(game.BuyerWaitRemaining, game.BuyerWaitInitial) +
             TradeScene.QualityBonus(game.ActiveTradeQualityRank);
         int scoreBeforeSale = game.Score;
         game.AcceptTrade();

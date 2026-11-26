@@ -41,65 +41,72 @@ public partial class ProjectTest
             game._Process(20);
             Check(!customer.Visible && arrivals == 0, "Before Start there must be no customer");
             game.EndDay();
-            Check(customer.Visible && !game.TradeActive && arrivals == 1 && game.BuyerWaitRemaining == 10,
+            Check(customer.Visible && !game.TradeActive && arrivals == 1 && game.BuyerWaitRemaining == game.BuyerWaitInitial,
                 "Start must bring exactly one customer even with empty displays");
-            Check(game.GetNode<DayAnnouncementOverlay>("DayAnnouncements").IsShowing &&
-                !game.HasNode("DayAnnouncements/BuyerArrival"), "Only the existing day announcement should show at Start");
+            Check(!game.GetNode<DayAnnouncementOverlay>("DayAnnouncements").IsShowing &&
+                !game.HasNode("DayAnnouncements/BuyerArrival"), "Start must not display an announcement");
 
-            foreach (var band in new[] { (0d, 0), (0.01d, 1), (2d, 1), (2.01d, 2), (4d, 2),
-                (4.01d, 3), (6d, 3), (6.01d, 4), (8d, 4), (8.01d, 5), (10d, 5), (21d, 5) })
+            foreach (var band in new[] { (0d, 0), (0.01d, 1), (4d, 1), (4.01d, 2), (8d, 2),
+                (8.01d, 3), (12d, 3), (12.01d, 4), (16d, 4), (16.01d, 5), (20d, 5), (21d, 5) })
                 Check(TradeScene.SpeedBonus(band.Item1) == band.Item2, $"Unexpected reward at {band.Item1} seconds");
 
             await CheckMusicUnlockPanel(game, rendered);
             var bar = game.GetNode<ProgressBar>(barPath);
-            game._Process(5);
-            Check(arrivals == 1 && bar.Value == 5 && bar.MaxValue == 10 && bar.Size == new Vector2(73, 15),
-                "The original short bar must be half-filled after five seconds, with the same customer");
+            double initial = game.BuyerWaitInitial;
+            double half = initial / 2;
+            Check(initial is >= 10 and <= 20, "The clothes customer must roll 10–20 seconds before the workshop unlocks");
+            game._Process(half);
+            Check(arrivals == 1 && bar.Value == half && bar.MaxValue == initial && bar.Size == new Vector2(73, 15),
+                "The original short bar must be half-filled at the midpoint of this buyer's clock");
             var pause = game.GetNode<PauseMenu>("PauseMenu");
             pause.Open();
             game._Process(5);
-            Check(Paused && game.BuyerWaitRemaining == 5 && bar.Value == 5, "Pause must freeze the red bar");
+            Check(Paused && game.BuyerWaitRemaining == half && bar.Value == half, "Pause must freeze the red bar");
             pause.Close();
             game.GetItemFromMusicWorkshop();
             var polish = game.GetNode<EmbroideryGame>("PolishingGame");
             Check(polish.IsOpen && Paused, "The real polishing modal must open after buying the workshop");
+            polish.SetProcess(false);
             polish._Process(1);
             game._Process(5);
-            Check(game.BuyerWaitRemaining == 5 && bar.Value == 5, "Crafting must freeze the customer timer");
-            await PressEscapeForTest();
-            Check(!polish.IsOpen && !Paused, "Escape must return from the crafting modal");
+            Check(game.BuyerWaitRemaining == half && bar.Value == half, "Crafting must hold the customer timer");
+            await ClickControl(game, "PolishingGame/Surface/Cancel");
+            Check(!polish.IsOpen && !Paused, "Back must leave the crafting modal");
 
             game.PersistProgress();
             await Reload();
             customer = game.GetNode<ModularCustomer>(customerPath);
-            Check(customer.Visible && game.BuyerWaitRemaining == 5, "Reload must restore a waiting customer and the remaining time");
-            CraftAtelier(game);
+            Check(customer.Visible && game.BuyerWaitInitial == initial && game.BuyerWaitRemaining == half, "Reload must restore a waiting customer and the remaining time");
+            game.GetItemFromAtelier();
+            var embroidery = game.GetNode<EmbroideryGame>("EmbroideryGame");
+            embroidery.FinishForTesting(true);
+            embroidery.Activate();
             game.SelectInventoryItem(0);
             game.PlaceItemInShowcase(0);
             game._Process(0);
-            Check(game.TradeActive && game.BuyerWaitRemaining == 5, "Serving starts a deal with the existing timer");
+            Check(game.TradeActive && game.BuyerWaitInitial == initial && game.BuyerWaitRemaining == half, "Serving starts a deal with the existing timer");
             var offerLabel = game.GetNode<Label>("World/TradingRoom/Item/TradePanel/Content/OfferLabel");
             int price = game.OfferedPrice;
             int bonus = TradeScene.QualityBonus(game.ActiveTradeQualityRank);
-            Check(offerLabel.Text == GameLocalization.Format("Получим: {0}$", price + bonus + 3),
+            Check(offerLabel.Text == GameLocalization.Format("Получим: {0}$", price + bonus + TradeScene.SpeedBonus(half, initial)),
                 "The live offer must include the current speed band and the item quality");
-            game._Process(1);
-            Check(offerLabel.Text == GameLocalization.Format("Получим: {0}$", price + bonus + 2),
+            game._Process(half - 1);
+            Check(offerLabel.Text == GameLocalization.Format("Получим: {0}$", price + bonus + 1),
                 "Crossing a time band must update the live total");
             game.RerollsRemaining = 3;
             game.RerollCustomer();
-            Check(game.BuyerWaitRemaining == 4 && game.RerollsRemaining == 2 &&
-                offerLabel.Text == GameLocalization.Format("Получим: {0}$", game.OfferedPrice + bonus + 2),
+            Check(game.BuyerWaitRemaining == 1 && game.RerollsRemaining == 2 &&
+                offerLabel.Text == GameLocalization.Format("Получим: {0}$", game.OfferedPrice + bonus + 1),
                 "Reroll must update the offer and preserve remaining time");
             await Reload();
-            Check(game.TradeActive && game.BuyerWaitRemaining == 4, "Reloading an active deal must preserve the exact time");
-            game._Process(3.75);
+            Check(game.TradeActive && game.BuyerWaitRemaining == 1, "Reloading an active deal must preserve the exact time");
+            game._Process(0.75);
             bar = game.GetNode<ProgressBar>(barPath);
-            Check(bar.Value == 9.75 && TradeScene.SpeedBonus(game.BuyerWaitRemaining) == 1,
-                "The customer earns the last dollar immediately before the end of the ten-second window");
+            Check(bar.Value == initial - 0.25 && TradeScene.SpeedBonus(game.BuyerWaitRemaining, initial) == 1,
+                "The customer earns the last dollar immediately before the end of the individual window");
             game._Process(0.25);
-            Check(game.BuyerWaitRemaining == 0 && bar.Value == 10 && TradeScene.SpeedBonus(game.BuyerWaitRemaining) == 0,
-                "At ten seconds the bar must be full and the speed bonus zero");
+            Check(game.BuyerWaitRemaining == 0 && bar.Value == initial && TradeScene.SpeedBonus(game.BuyerWaitRemaining, initial) == 0,
+                "At expiration the bar must be full and the speed bonus zero");
 
             Check(game.Percentage == -50, "Expired buyer must offer -50% of normal price");
             int payout = game.Score + game.OfferedPrice;
@@ -110,7 +117,7 @@ public partial class ProjectTest
             game._Process(0);
             game._Process(0);
             Check(game.GetNode<ModularCustomer>(customerPath).Visible && !game.TradeActive &&
-                game.BuyerWaitRemaining == 10 && arrivals == 1, "The next idle frame must bring one new buyer at full time");
+                game.BuyerWaitRemaining == game.BuyerWaitInitial && arrivals == 1, "The next idle frame must bring one new buyer at full time");
             game.EndDay();
             game._Process(0);
             Check(Paused && game.DayTransitionOpen && arrivals == 1, "The day-card transition must prevent buyers");
@@ -122,7 +129,7 @@ public partial class ProjectTest
             using (var legacy = FileAccess.Open(save, FileAccess.ModeFlags.Write))
                 legacy.StoreString("""{"save_version":16,"day_started":true,"score":250,"energy_remaining":3,"buyer_countdown":8,"stored_items":[0,1,4,10,11]}""");
             await Reload();
-            Check(game.GetNode<ModularCustomer>(customerPath).Visible && game.BuyerWaitRemaining == 10,
+            Check(game.GetNode<ModularCustomer>(customerPath).Visible && game.BuyerWaitRemaining == game.BuyerWaitInitial,
                 "A retired arrival delay in a legacy save must not prevent immediate arrival");
             await CheckAtelierArtwork(game);
             using (var legacy = FileAccess.Open(save, FileAccess.ModeFlags.Write))

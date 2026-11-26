@@ -16,6 +16,20 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--timed-trades-shadows-checks"))
+            {
+                await TestTimedTradesAndShadows();
+                GD.Print("TIMED_TRADES_SHADOWS_PASS: ranges, craft, pause, persistence, reroll, sale, rollback and button layers");
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--v131-revision-checks"))
+            {
+                await TestRevisionUi();
+                GD.Print("V131_REVISION_CHECKS_PASS: localized cigarettes, sale and bubble, pause artwork at 720p and 1080p");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--interface-fixes-checks"))
             {
                 await TestInterfaceFixes();
@@ -75,7 +89,7 @@ public partial class ProjectTest : SceneTree
             if (OS.GetCmdlineUserArgs().Contains("--buyer-arrival-checks"))
             {
                 await TestBuyerArrival();
-                GD.Print("BUYER_ARRIVAL_CHECKS_PASS: immediate buyers, 10-second wait, tips, modal pause, saves, unlock panel and atelier art");
+                GD.Print("BUYER_ARRIVAL_CHECKS_PASS: immediate buyers, 20-second wait, tips, modal pause, saves, unlock panel and atelier art");
                 Quit();
                 return;
             }
@@ -97,6 +111,13 @@ public partial class ProjectTest : SceneTree
             {
                 await TestEnergyBulbs();
                 GD.Print("ENERGY_BULBS_CHECKS_PASS: remaining, depleted, unlocked/upgraded capacity, localized tooltips, pause and three window sizes");
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--polishing-balance-checks"))
+            {
+                TestPolishingBalance();
+                GD.Print("POLISHING_BALANCE_CHECKS_PASS");
                 Quit();
                 return;
             }
@@ -200,6 +221,7 @@ public partial class ProjectTest : SceneTree
             if (OS.GetCmdlineUserArgs().Contains("--tutorial-checks"))
             {
                 await TestFirstTradeTutorial();
+                await TestWorkshopTutorial();
                 GD.Print("TUTORIAL_CHECKS_PASS: camera practice/flights, first sale, real clicks, highlights, pause, localization, skip, replay and reload");
                 Quit();
                 return;
@@ -282,7 +304,7 @@ public partial class ProjectTest : SceneTree
             if (OS.GetCmdlineUserArgs().Contains("--day-announcement-checks"))
             {
                 await TestDayAnnouncements();
-                GD.Print("DAY_ANNOUNCEMENT_CHECKS_PASS: lifecycle, smooth fade, midpoint, restore, localization and input");
+                GD.Print("DAY_ANNOUNCEMENT_CHECKS_PASS: silent start/halfway/closure, normal day flow and retained gift fade");
                 Quit();
                 return;
             }
@@ -310,7 +332,7 @@ public partial class ProjectTest : SceneTree
             if (OS.GetCmdlineUserArgs().Contains("--progress-toggle-checks"))
             {
                 await TestCollapsibleProgress();
-                GD.Print("PROGRESS_TOGGLE_CHECKS_PASS: cigarette pack hover, animation, live quotas, keyboard and reload");
+                GD.Print("PROGRESS_TOGGLE_CHECKS_PASS: cigarette pack hover, animation, live quotas, keyboard and recovery");
                 Quit();
                 return;
             }

@@ -21,6 +21,8 @@ public sealed class DialogueSession
     public bool IsComplete => Index == Count;
     public DialogueLine? Current => IsComplete ? null : _lines[Index];
 
+    public DialogueLine? Next => Index + 1 < Count ? _lines[Index + 1] : null;
+
     private DialogueSession(DialogueLine[] lines) => _lines = lines;
 
     public static DialogueSession FromJson(string json)

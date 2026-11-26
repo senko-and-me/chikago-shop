@@ -613,7 +613,7 @@ texture = ExtResource("12_cashier")
 centered = false
 
 [node name="ShowPoster" type="Node2D" parent="World/TradingRoom"]
-position = Vector2(496, 392)
+position = Vector2(480, 392)
 script = ExtResource("35_poster_hotspot")
 
 [node name="PosterSprite" type="Sprite2D" parent="World/TradingRoom/ShowPoster"]

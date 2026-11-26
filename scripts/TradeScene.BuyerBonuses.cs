@@ -15,6 +15,7 @@ public partial class TradeScene
     private readonly string[] _checkpointShowcaseGrades = new string[ShowcaseCapacity];
     private string _activeTradeGrade = "D";
     private double _buyerWaitRemaining = BuyerWaitDuration;
+    private double _buyerWaitInitial = BuyerWaitDuration;
     private int _pendingCraftStorageIndex = -1;
     private int _lastShownSpeedBonus = -1;
     private double _buyerWaitAutosave;
@@ -22,6 +23,7 @@ public partial class TradeScene
     private bool _waitingBuyerMusic;
     private BuyerWaitWidget _buyerWaitWidget = null!;
 
+    public double BuyerWaitInitial => _buyerWaitInitial;
     public double BuyerWaitRemaining => _buyerWaitRemaining;
     public string ActiveTradeQualityRank => _activeTradeGrade;
 
@@ -34,7 +36,8 @@ public partial class TradeScene
     public static int QualityBonus(string rank) => ChikagoShop.Domain.Economy.RunRewardRules.QualityBonus(rank);
 
     // Five equal time bands, with no speed tip at zero.
-    public static int SpeedBonus(double seconds) => ChikagoShop.Domain.Economy.RunRewardRules.SpeedBonus(seconds);
+    public static int SpeedBonus(double seconds, double initialSeconds = BuyerWaitDuration) =>
+        ChikagoShop.Domain.Economy.RunRewardRules.SpeedBonus(seconds, initialSeconds);
 
     public void FinalizeLatestCraftQuality(string rank)
     {
@@ -61,26 +64,28 @@ public partial class TradeScene
 
     private void ResetBuyerWait()
     {
-        _buyerWaitRemaining = BuyerWaitDuration;
+        var range = ChikagoShop.Domain.Economy.RunRewardRules.BuyerWaitRange(_waitingBuyerMusic);
+        _buyerWaitInitial = _rng.RandiRange(range.Minimum, range.Maximum);
+        _buyerWaitRemaining = _buyerWaitInitial;
         _buyerWaitAutosave = 0;
         _lastShownSpeedBonus = -1;
     }
 
     private void TickBuyerWait(double delta)
     {
-        if ((!TradeActive && !_waitingBuyer) || GetTree().Paused || _dayCycle.Session.IsClosed)
+        if ((!TradeActive && !_waitingBuyer) || _dayCycle.Session.IsClosed)
             return;
 
         // The timer belongs to the customer and follows them into the offer.
         bool wasExpired = BuyerPatienceRules.IsExpired(_buyerWaitRemaining);
-        _buyerWaitRemaining = Math.Max(0, _buyerWaitRemaining - delta);
+        _buyerWaitRemaining = Math.Max(TradeActive && _tutorial.HoldTrainingBuyer ? 1 : 0, _buyerWaitRemaining - delta);
         bool justExpired = !wasExpired && BuyerPatienceRules.IsExpired(_buyerWaitRemaining);
         if (_buyerWaitWidget != null)
             _buyerWaitWidget.SetState(_waitingBuyer ? _waitingBuyerMusic :
-                Items[ItemIndex].WorkshopId == "music", _buyerWaitRemaining);
+                Items[ItemIndex].WorkshopId == "music", _buyerWaitRemaining, _buyerWaitInitial);
         if (TradeActive)
         {
-            int speedNow = SpeedBonus(_buyerWaitRemaining);
+            int speedNow = SpeedBonus(_buyerWaitRemaining, _buyerWaitInitial);
             if (justExpired) RefreshOffer();
             else if (_lastShownSpeedBonus != speedNow) RefreshTotalOfferDisplay();
         }
@@ -116,7 +121,7 @@ public partial class TradeScene
         _customer.Visible = true;
         _world.ItemVisible = false;
         _tradePanel.Visible = false;
-        _buyerWaitWidget.SetState(_waitingBuyerMusic, _buyerWaitRemaining);
+        _buyerWaitWidget.SetState(_waitingBuyerMusic, _buyerWaitRemaining, _buyerWaitInitial);
     }
 
     private void HideWaitingBuyer()
@@ -144,8 +149,18 @@ public partial class TradeScene
         _activeTradeGrade = NormalizeRank(_showcaseGrades[_activeShowcaseIndex]);
         _showcaseItems[_activeShowcaseIndex] = -1;
         _showcaseGrades[_activeShowcaseIndex] = "D";
-        RefreshShowcases();
         StartBuyerOffer();
+        return true;
+    }
+
+    private bool DeferTutorialBuyerArrival()
+    {
+        if (_tutorial?.DefersBuyerArrival != true) return false;
+        if (_waitingBuyer)
+        {
+            HideWaitingBuyer();
+            SaveProgress();
+        }
         return true;
     }
 
@@ -164,24 +179,24 @@ public partial class TradeScene
     {
         _buyerWaitRemaining = BuyerPatienceRules.RemainingAfterDayClosure(_buyerWaitRemaining, DayClosed);
         if (TradeActive && DayClosed)
-            _buyerWaitWidget?.SetState(Items[ItemIndex].WorkshopId == "music", _buyerWaitRemaining);
+            _buyerWaitWidget?.SetState(Items[ItemIndex].WorkshopId == "music", _buyerWaitRemaining, _buyerWaitInitial);
     }
 
     private void RefreshClosedBuyerOffer()
     {
-        if (TradeActive && DayClosed) RefreshOffer();
+        if (TradeActive && DayClosed && !CraftMiniGameOpen) RefreshOffer();
     }
 
     private bool CanRerollCurrentBuyer => BuyerPatienceRules.CanReroll(
         TradeActive, DayClosed, RerollsRemaining, _buyerWaitRemaining);
 
     private int CurrentBuyerPayout => BuyerPatienceRules.TotalPayout(
-        OfferedPrice, _buyerWaitRemaining, SpeedBonus(_buyerWaitRemaining), QualityBonus(_activeTradeGrade));
+        OfferedPrice, _buyerWaitRemaining, SpeedBonus(_buyerWaitRemaining, _buyerWaitInitial), QualityBonus(_activeTradeGrade));
 
     private void RefreshTotalOfferDisplay()
     {
         if (!TradeActive || ItemIndex < 0) return;
-        int speed = SpeedBonus(_buyerWaitRemaining);
+        int speed = SpeedBonus(_buyerWaitRemaining, _buyerWaitInitial);
         int grade = BuyerPatienceRules.IsExpired(_buyerWaitRemaining) ? 0 : QualityBonus(_activeTradeGrade);
         _lastShownSpeedBonus = speed;
         _offerLabel.Text = GameLocalization.Format("Получим: {0}$", CurrentBuyerPayout);

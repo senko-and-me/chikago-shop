@@ -6,7 +6,7 @@ public partial class PrologueCharacterMotion : Control
     [Export(PropertyHint.Range, "0.2,2,0.05")] public double ArrivalDuration { get; set; } = 0.7;
     [Export(PropertyHint.Range, "0.2,2,0.05")] public double DepartureDuration { get; set; } = 0.6;
     private TextureRect _mafia, _customer;
-    private Vector2 _mafiaOffsets, _customerOffsets;
+    private float _mafiaLeft, _customerLeft;
     private Tween _arrival, _departure;
     private int _firstMafiaLine = -1;
     private bool _entranceStarted;
@@ -19,8 +19,8 @@ public partial class PrologueCharacterMotion : Control
     {
         _mafia = GetNode<TextureRect>("Castello");
         _customer = GetNode<TextureRect>("Customer");
-        _mafiaOffsets = new Vector2(_mafia.OffsetLeft, _mafia.OffsetRight);
-        _customerOffsets = new Vector2(_customer.OffsetLeft, _customer.OffsetRight);
+        _mafiaLeft = _mafia.OffsetLeft;
+        _customerLeft = _customer.OffsetLeft;
         _mafia.Hide();
         Resized += Apply;
         Apply();
@@ -38,7 +38,7 @@ public partial class PrologueCharacterMotion : Control
                 0f, 1f, ArrivalDuration).SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
             _arrival.TweenCallback(Callable.From(() => _arrival = null));
         }
-        if (_firstMafiaLine < 0 && speaker == "Кастелло") _firstMafiaLine = index;
+        if (_firstMafiaLine < 0 && speaker == "РљР°СЃС‚РµР»Р»Рѕ") _firstMafiaLine = index;
         // She remains for his offer to pay, then leaves as Frankie turns to him.
         if (_firstMafiaLine >= 0 && index > _firstMafiaLine && !_departed)
         {
@@ -53,14 +53,13 @@ public partial class PrologueCharacterMotion : Control
     private void Apply()
     {
         if (_mafia == null) return;
-        Place(_mafia, _mafiaOffsets, (ArrivalProgress - 1) * Size.X * 0.14f, ArrivalProgress);
-        Place(_customer, _customerOffsets, -DepartureProgress * Size.X * 0.20f, 1 - DepartureProgress);
+        Place(_mafia, _mafiaLeft, (ArrivalProgress - 1) * Size.X * 0.14f, ArrivalProgress);
+        Place(_customer, _customerLeft, -DepartureProgress * Size.X * 0.20f, 1 - DepartureProgress);
     }
 
-    private static void Place(TextureRect portrait, Vector2 offsets, float shift, float alpha)
+    private void Place(TextureRect portrait, float left, float shift, float alpha)
     {
-        portrait.OffsetLeft = offsets.X + shift;
-        portrait.OffsetRight = offsets.Y + shift;
+        portrait.Position = new Vector2(portrait.AnchorLeft * Size.X + left + shift, portrait.Position.Y);
         Color color = portrait.Modulate;
         color.A = alpha * alpha * (3 - 2 * alpha);
         portrait.Modulate = color;

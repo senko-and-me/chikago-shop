@@ -5,10 +5,15 @@ public partial class ItemInfoPopup : PanelContainer
 {
     private Label _label = null!;
     private SlotUI _slot;
+    internal FirstTradeTutorial Tutorial { get; set; }
+    private CanvasLayer _layer;
+    private int _normalLayer;
     public string ItemText => _label.Text;
 
     public override void _Ready()
     {
+        _layer = GetParent<CanvasLayer>();
+        _normalLayer = _layer.Layer;
         MouseFilter = MouseFilterEnum.Ignore;
         var style = new StyleBoxFlat
         {
@@ -61,6 +66,7 @@ public partial class ItemInfoPopup : PanelContainer
     public void Refresh()
     {
         if (_slot == null) return;
+        _layer.Layer = Tutorial?.ContextTooltipLayer(_normalLayer, this) ?? _normalLayer;
         if (_label.Text != _slot.ItemInfo) _label.Text = _slot.ItemInfo;
         Vector2 minimum = GetCombinedMinimumSize();
         if (Size != minimum) Size = minimum;

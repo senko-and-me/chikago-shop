@@ -48,6 +48,14 @@ public sealed class DaySession {
     return true;
   }
 
+  // A practice clock refills without ever entering the closed-day state.
+  public bool TickRepeating(double delta) {
+    if (IsClosed || !double.IsFinite(delta) || delta <= 0) return false;
+    bool refill = delta >= RemainingSeconds;
+    RemainingSeconds = refill ? Duration : RemainingSeconds - delta;
+    return refill;
+  }
+
   public EndDayAction RequestEnd(bool tradeActive) {
     if (!IsClosed) {
       Close();

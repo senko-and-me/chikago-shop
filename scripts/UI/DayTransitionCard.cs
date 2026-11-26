@@ -18,6 +18,7 @@ public partial class DayTransitionCard : CanvasLayer
     private DayCardDealAnimator _animation = null!;
     private DayCardSceneTransition _sceneTransition = null!;
     private Label _title = null!;
+    private const float CardHeight = 460;
     private enum Phase { Closed, Framing, Dealing, Choosing, Leaving }
     private Phase _phase;
     private int _generation;
@@ -29,6 +30,14 @@ public partial class DayTransitionCard : CanvasLayer
     private Button _skip = null!;
     private int _balance;
     private bool _ownsPause;
+    private bool _instructionLocked;
+
+    internal void SetInstructionLocked(bool locked)
+    {
+        if (_instructionLocked == locked) return;
+        _instructionLocked = locked;
+        if (_phase == Phase.Choosing) LockActions(locked);
+    }
     public bool IsOpen => _root?.Visible ?? false;
     private int Cost(DayUpgrade upgrade) => (GetParent() as TradeScene)?.DayUpgrades.CostFor(upgrade)
         ?? DebugBalanceSettings.CardRules.Cost(upgrade);
@@ -56,65 +65,17 @@ public partial class DayTransitionCard : CanvasLayer
         panel.Name = upgrade.ToString();
         parent.AddChild(panel);
         _cards.Add(panel);
-        // Preserve this build's textured card layout and its purchase button artwork.
-        // Each card receives its own style so mixed rarities never recolor each other.
-        if (panel.GetThemeStylebox("panel") is StyleBoxTexture sharedFace)
-        {
-            var face = (StyleBoxTexture)sharedFace.Duplicate(true);
-            face.Texture = FaceTextureFor(Cost(upgrade));
-            panel.AddThemeStyleboxOverride("panel", face);
-        }
         panel.GetNode<Label>("Content/Amount").Text = amount;
         panel.GetNode<Label>("Content/Title").Text = title;
         panel.GetNode<Label>("Content/Description").Text = description;
         panel.GetNode<Label>("Content/Duration").Text = duration;
         int cost = Cost(upgrade);
         var button = panel.GetNode<Button>("Content/Choose");
-        button.Text = GameLocalization.Format("Купить за {0}$", cost);
-        if (cost >= 30) StylePremiumButton(button, true);
-        else if (cost >= 20) StylePremiumButton(button, false);
+        button.Text = upgrade == DayUpgrade.Cash ? GameLocalization.Text("Получить 50$")
+            : GameLocalization.Format("Купить за {0}$", cost);
         button.Disabled = _balance < cost;
         button.Pressed += () => Choose(upgrade);
         return button;
-    }
-
-    private static void StylePremiumButton(Button button, bool gold)
-    {
-        // Use the real hand-painted frames, not a tinted copy of panel_small.png.
-        // They were converted to horizontal nine-slice artwork, preserving corners.
-        string texturePath = gold
-            ? "res://art/ui/card_buy_gold.png"
-            : "res://art/ui/card_buy_silver.png";
-        Texture2D texture = GD.Load<Texture2D>(texturePath);
-        foreach (var (name, tint) in new (string, string)[]
-        {
-            ("normal", "FFFFFF"), ("hover", "FFFFFF"),
-            ("pressed", "C9C9C9"), ("disabled", "AAAAAA")
-        })
-        {
-            if (button.GetThemeStylebox(name) is not StyleBoxTexture original) continue;
-            var style = (StyleBoxTexture)original.Duplicate(true);
-            style.Texture = texture;
-            style.ModulateColor = new Color(tint);
-            button.AddThemeStyleboxOverride(name, style);
-        }
-        Color ink = new Color(gold ? "21180C" : "202329");
-        foreach (string name in new[]
-        {
-            "font_color", "font_hover_color", "font_pressed_color",
-            "font_focus_color", "font_disabled_color"
-        })
-            button.AddThemeColorOverride(name, ink);
-    }
-
-    private static Texture2D FaceTextureFor(int cost)
-    {
-        string path = cost >= 30
-            ? "res://art/ui/day_card_gold.png"
-            : cost >= 20
-                ? "res://art/ui/day_card_silver.png"
-                : "res://art/ui/card_face.png";
-        return GD.Load<Texture2D>(path);
     }
 
     private void Layout()
@@ -126,9 +87,9 @@ public partial class DayTransitionCard : CanvasLayer
         _route.AddThemeFontSizeOverride("font_size", (int)(22 * _layoutScale));
         _title.AddThemeFontSizeOverride("font_size", (int)(30 * _layoutScale));
         _skip.CustomMinimumSize = new Vector2(252 * _layoutScale, 45 * _layoutScale);
-        _choices.CustomMinimumSize = new Vector2(0, 460 * _layoutScale);
+        _choices.CustomMinimumSize = new Vector2(0, CardHeight * _layoutScale);
         _deck.Size = new Vector2(100, 144) * _layoutScale;
-        _deck.Position = new Vector2(8 * _layoutScale, _root.Size.Y - _deck.Size.Y - 28);
+        _deck.Position = new Vector2(_deck.Position.X, _root.Size.Y - _deck.Size.Y - 28);
         foreach (var card in _cards)
         {
             var content = card.GetNode<VBoxContainer>("Content");
@@ -154,10 +115,16 @@ public partial class DayTransitionCard : CanvasLayer
         for (int i = 0; i < _cards.Count; i++)
         {
             var card = _cards[i];
-            card.CustomMinimumSize = new Vector2(width, 460 * _layoutScale);
+            card.CustomMinimumSize = new Vector2(width, CardHeight * _layoutScale);
             card.Size = card.CustomMinimumSize;
             card.Position = new Vector2(start + i * (width + gap), 0);
             card.PivotOffset = card.Size / 2;
+        }
+        if (_cards.Count > 0)
+        {
+            Vector2 firstCard = _root.GetGlobalTransformWithCanvas().AffineInverse() *
+                (_choices.GetGlobalTransformWithCanvas() * new Vector2(start, 0));
+            _deck.Position = new Vector2(Mathf.Max(0, (firstCard.X - _deck.Size.X) / 2), _deck.Position.Y);
         }
     }
 
@@ -221,7 +188,7 @@ public partial class DayTransitionCard : CanvasLayer
         {
             var button = upgrade switch
             {
-                DayUpgrade.Cash => AddChoice(_choices, upgrade, "Оборотные средства", "+50$", "Получить 50$ при выборе перед новым днём.", "СРАЗУ"),
+                DayUpgrade.Cash => AddChoice(_choices, upgrade, "Оборотные средства", "+50$", "Получить 50$ перед новым днём", "СРАЗУ"),
                 DayUpgrade.Energy => AddChoice(_choices, upgrade, "Второе дыхание", "+1", "Добавить 1 энергию к следующему дню.", "ЭНЕРГИЯ · НА ОДИН ДЕНЬ"),
                 DayUpgrade.Atelier => AddChoice(_choices, upgrade, "Мастерство портного", "↑", "Повысить шанс редкой одежды на следующий день.", "ОДЕЖДА · НА ОДИН ДЕНЬ"),
                 DayUpgrade.Music => AddChoice(_choices, upgrade, "Мастерство мастера", "↑", "Повысить шанс редких инструментов на следующий день.", "ИНСТРУМЕНТЫ · НА ОДИН ДЕНЬ"),
@@ -249,13 +216,13 @@ public partial class DayTransitionCard : CanvasLayer
 
     public void Choose(DayUpgrade upgrade)
     {
-        if (_phase != Phase.Choosing || !Options.Contains(upgrade) || _balance < Cost(upgrade)) return;
+        if (_phase != Phase.Choosing || _instructionLocked || !Options.Contains(upgrade) || _balance < Cost(upgrade)) return;
         Leave(_cards[Options.ToList().IndexOf(upgrade)], () => Chosen?.Invoke(upgrade));
     }
 
     public void Skip()
     {
-        if (_phase == Phase.Choosing) Leave(null, () => Skipped?.Invoke());
+        if (_phase == Phase.Choosing && !_instructionLocked) Leave(null, () => Skipped?.Invoke());
     }
 
     private void Leave(PanelContainer selected, Action action)
@@ -279,6 +246,7 @@ public partial class DayTransitionCard : CanvasLayer
         _animation.Cancel();
         _sceneTransition.Restore();
         _phase = Phase.Closed;
+        _instructionLocked = false;
         _root.Hide();
         if (_ownsPause) GetTree().Paused = false;
         _ownsPause = false;
@@ -286,7 +254,7 @@ public partial class DayTransitionCard : CanvasLayer
 
     public override void _Input(InputEvent @event)
     {
-        if (!IsOpen || @event is not InputEventKey { Pressed: true } key) return;
+        if (!IsOpen || _instructionLocked || @event is not InputEventKey { Pressed: true } key) return;
         if (_phase != Phase.Choosing)
         {
             GetViewport().SetInputAsHandled();
