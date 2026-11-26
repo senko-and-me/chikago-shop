@@ -16,6 +16,20 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--scene-transition-checks"))
+            {
+                await TestSceneTransitions();
+                GD.Print("SCENE_TRANSITION_CHECKS_PASS: black boundary, resize, input, pause, replacement, menu, failure and cancellation");
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--poster-navigation-checks"))
+            {
+                await TestPosterNavigation();
+                GD.Print("POSTER_NAVIGATION_CHECKS_PASS: click release, drag, return drag, pause and close");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--timed-trades-shadows-checks"))
             {
                 await TestTimedTradesAndShadows();
@@ -414,7 +428,7 @@ public partial class ProjectTest : SceneTree
             if (OS.GetCmdlineUserArgs().Contains("--intro-transition-checks"))
             {
                 await TestIntroTransition();
-                GD.Print("INTRO_TRANSITION_SMOKE_PASS: finish, skip, null fallback and continue reached TradeScene");
+                GD.Print("INTRO_TRANSITION_SMOKE_PASS: training finish/skip, prologue finish/skip, fresh game, fallback and Continue");
                 Quit();
                 return;
             }

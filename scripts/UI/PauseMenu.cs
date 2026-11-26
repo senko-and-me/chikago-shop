@@ -74,18 +74,7 @@ public partial class PauseMenu : CanvasLayer
 			Close();
 		});
 		AddButton(_menu, "TutorialButton", "Повторить обучение", ReplayTutorial);
-		AddButton(_menu, "MainMenuButton", "В главное меню", () =>
-		{
-			var tree = GetTree();
-			_ownsPause = false;
-			tree.Paused = false;
-			var error = tree.ChangeSceneToFile("res://scenes/main_menu.tscn");
-			if (error != Error.Ok)
-			{
-				Open();
-				GD.PushError($"Не удалось открыть главное меню: {error}");
-			}
-		});
+		AddButton(_menu, "MainMenuButton", "В главное меню", ReturnToMainMenu);
 
 		_settings = new VBoxContainer { Name = "Settings", Visible = false };
 		_settings.AddThemeConstantOverride("separation", 14);
@@ -251,6 +240,26 @@ public partial class PauseMenu : CanvasLayer
 		return button;
 	}
 
+	private async void ReturnToMainMenu()
+	{
+		var tree = GetTree();
+		if (SceneTransition.IsActive(tree)) return;
+		_ownsPause = false;
+		tree.Paused = false;
+		Error error = Error.Ok;
+		bool changed = await SceneTransition.Run(this, () =>
+		{
+			error = tree.ChangeSceneToFile("res://scenes/main_menu.tscn");
+			return System.Threading.Tasks.Task.FromResult(error == Error.Ok);
+		});
+		if (!changed && GodotObject.IsInstanceValid(this) && IsInsideTree())
+		{
+			_overlay.Hide();
+			Open();
+			if (error != Error.Ok) GD.PushError($"Не удалось открыть главное меню: {error}");
+		}
+	}
+
 	public void Open()
 	{
         var game = GetParent<TradeScene>();
@@ -304,6 +313,11 @@ public partial class PauseMenu : CanvasLayer
 
 	public override void _Input(InputEvent @event)
 	{
+		if (SceneTransition.IsActive(GetTree()))
+		{
+			GetViewport().SetInputAsHandled();
+			return;
+		}
 		if (@event is not InputEventKey { Pressed: true, Echo: false, Keycode: Key.Escape }) return;
         var game = GetParent<TradeScene>();
         if (game.DayTransitionOpen || game.GetNode<FirstTradeTutorial>("FirstTradeTutorial").IsSkipConfirmationOpen) return;

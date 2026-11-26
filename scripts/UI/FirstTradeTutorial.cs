@@ -19,6 +19,9 @@ public partial class FirstTradeTutorial : CanvasLayer
     public bool IsActive { get; private set; }
     public bool IsShowing => _root?.Visible == true;
     public string ProgressPath { get; set; }
+    public bool SkipOnInitialize { get; set; }
+    public bool ProloguePending { get; set; }
+    public event System.Action Finished;
     public Control Target { get; private set; }
     public bool CameraPanDone { get; private set; }
     public bool CameraZoomDone { get; private set; }
@@ -140,7 +143,7 @@ public partial class FirstTradeTutorial : CanvasLayer
         _musicLessonPending = restored && config.GetValue("tutorial", "music_lesson_pending", false).AsBool();
         _musicLessonDone = restored && config.GetValue("tutorial", "music_lesson_done", false).AsBool();
         _cardLessonDone = restored && config.GetValue("tutorial", "card_lesson_done", false).AsBool();
-        bool finished = restored && config.GetValue("tutorial", "finished", false).AsBool();
+        bool finished = SkipOnInitialize || restored && config.GetValue("tutorial", "finished", false).AsBool();
         CameraPanDone = restored && config.GetValue("tutorial", "camera_pan_done", false).AsBool();
         CameraZoomDone = restored && config.GetValue("tutorial", "camera_zoom_done", false).AsBool();
         float storedPan = restored ? config.GetValue("tutorial", "camera_pan_distance", 0f).AsSingle() : 0;
@@ -155,6 +158,11 @@ public partial class FirstTradeTutorial : CanvasLayer
         RoomFocusDone = restored && config.GetValue("tutorial", "room_focus_done", _cameraHandoffDone).AsBool();
         _cameraHandoffDone &= RoomFocusDone;
         _initialized = true;
+        if (SkipOnInitialize)
+        {
+            Save(true);
+            _game.PersistProgress();
+        }
         // Empty SavePath is a transient scene preview/test; explicit Restart still works there.
         if (!finished && !string.IsNullOrEmpty(ProgressPath) && (restored || _game.CurrentDay == 1))
         {
@@ -361,6 +369,7 @@ public partial class FirstTradeTutorial : CanvasLayer
         _camera.Zoom = zoom;
         Save(true);
         _camera.ReturnToOverview(CameraTravelSeconds);
+        Finished?.Invoke();
     }
 
     private void Save(bool finished)
@@ -368,6 +377,7 @@ public partial class FirstTradeTutorial : CanvasLayer
         if (string.IsNullOrEmpty(ProgressPath)) return;
         var config = new ConfigFile();
         config.SetValue("tutorial", "finished", finished);
+        config.SetValue("tutorial", "prologue_pending", ProloguePending);
         config.SetValue("tutorial", "two_sales", true);
         config.SetValue("tutorial", "music_lesson_pending", _musicLessonPending);
         config.SetValue("tutorial", "music_lesson_done", _musicLessonDone);

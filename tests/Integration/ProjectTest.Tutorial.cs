@@ -818,8 +818,11 @@ public partial class ProjectTest
                 "The last page must cover pause and persistence");
             TranslationServer.SetLocale("ru");
             await Frame();
+            int completionEvents = 0;
+            tutorial.Finished += () => completionEvents++;
             await ClickControl(game, summaryButton);
             Check(!tutorial.IsActive && !tutorial.IsShowing, "Acknowledging the summary must complete onboarding");
+            Check(completionEvents == 1, "Natural tutorial completion must notify the startup sequence exactly once");
             CheckFreshRun();
             Check(game.GetNode<WorldCamera>("Camera2D").IsReturningToOverview, "Completing onboarding must fly back to the initial overview");
             await CameraSettled();

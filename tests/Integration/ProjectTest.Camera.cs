@@ -7,6 +7,110 @@ using ChikagoShop.Domain.Days;
 // Subsystem checks share the ProjectTest runner and fixture helpers.
 public partial class ProjectTest
 {
+    private async Task TestPosterNavigation()
+    {
+        // Exercise real viewport dispatch and Area2D picking with the authored poster.
+        var authored = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate();
+        var poster = authored.GetNode<TradingRoomPosterHotspot>("World/TradingRoom/ShowPoster");
+        poster.GetParent().RemoveChild(poster);
+        authored.Free();
+        var scene = new Node2D();
+        var bounds = new Sprite2D
+        {
+            Texture = GD.Load<Texture2D>("res://art/rooms/room_layout.jpg"),
+            Centered = false, Scale = Vector2.One * 4
+        };
+        scene.AddChild(bounds);
+        poster.Position = bounds.GetRect().Size * bounds.Scale / 2 - new Vector2(55.5f, 83);
+        scene.AddChild(poster);
+        var camera = new WorldCamera { BoundsSource = bounds };
+        scene.AddChild(camera);
+        Root.AddChild(scene);
+        camera.SetProcess(false);
+        camera.Zoom = Vector2.One * 0.7f;
+        camera.ClampToBounds();
+        camera.ForceUpdateScroll();
+        var overlay = poster.GetNode<Control>("PosterOverlay/Root");
+        async Task Pick()
+        {
+            await ToSignal(this, SignalName.PhysicsFrame);
+            await ToSignal(this, SignalName.PhysicsFrame);
+            await ToSignal(this, SignalName.ProcessFrame);
+        }
+        void Move(Vector2 point, Vector2 relative, MouseButtonMask mask = 0) =>
+            Root.PushInput(new InputEventMouseMotion { Position = point, GlobalPosition = point,
+                Relative = relative, ButtonMask = mask }, true);
+        void Left(Vector2 point, bool pressed) => Root.PushInput(new InputEventMouseButton
+        {
+            Position = point, GlobalPosition = point, ButtonIndex = MouseButton.Left,
+            Pressed = pressed, ButtonMask = pressed ? MouseButtonMask.Left : 0
+        }, true);
+        Vector2 PosterPoint() => poster.GetGlobalTransformWithCanvas() * new Vector2(55.5f, 83);
+        try
+        {
+            await Pick();
+            foreach (bool returnToStart in new[] { false, true })
+            {
+                Vector2 point = PosterPoint();
+                Move(point, Vector2.Zero);
+                await Pick();
+                Vector2 before = camera.Position;
+                Left(point, true);
+                await Pick();
+                Check(!overlay.Visible && !Paused, "Pressing the poster must leave LMB camera navigation available");
+                Vector2 offset = new(40, 20);
+                Move(point + offset, offset, MouseButtonMask.Left);
+                await Pick();
+                Check(camera.Position.DistanceTo(before) > 1 && !overlay.Visible && !Paused,
+                    "Dragging from the poster must move the real camera without opening or pausing");
+                if (returnToStart)
+                {
+                    Move(point, -offset, MouseButtonMask.Left);
+                    await Pick();
+                }
+                Left(returnToStart ? point : point + offset, false);
+                await Pick();
+                Check(!overlay.Visible && !Paused, "Releasing a drag must not open the poster, even after returning to the press point");
+            }
+            Vector2 click = PosterPoint();
+            Move(click, Vector2.Zero);
+            await Pick();
+            Left(click, true);
+            await Pick();
+            Left(click + new Vector2(100, 0), false);
+            await Pick();
+            Check(!overlay.Visible && !Paused, "A distant release must cancel the click even without a motion event");
+            Left(click, false);
+            await Pick();
+            Check(!overlay.Visible && !Paused, "Releasing over the poster without a press must not open it");
+            Left(click, true);
+            await Pick();
+            Paused = true;
+            await Pick();
+            Paused = false;
+            Left(click, false);
+            await Pick();
+            Check(!overlay.Visible && !Paused, "Pause must cancel a pending poster click");
+
+            Left(click, true);
+            await Pick();
+            Check(!overlay.Visible && !Paused, "A simple press must wait for release");
+            Move(click + new Vector2(2, 0), new Vector2(2, 0), MouseButtonMask.Left);
+            Left(click + new Vector2(2, 0), false);
+            await Pick();
+            Check(overlay.Visible && Paused, "A simple LMB click must open and pause on release");
+            Root.PushInput(new InputEventKey { Keycode = Key.Escape, Pressed = true }, true);
+            await ToSignal(CreateTimer(0.25, true), SceneTreeTimer.SignalName.Timeout);
+            Check(!overlay.Visible && !Paused, "Escape must still close the poster and resume navigation");
+        }
+        finally
+        {
+            Paused = false;
+            scene.QueueFree();
+            await ToSignal(this, SignalName.ProcessFrame);
+        }
+    }
+
     private async Task TestRoomTitles()
     {
         Vector2I originalSize = Root.Size;

@@ -9,6 +9,55 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### HF-212 — публикация исправлений плаката, запуска и переходов
+
+Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; 2026-11-26; HF209–211 DONE; пользователь явно просит push. CP `.local/checks/hf212/CP-HF-212.md`. READY: зависимости и проверки выполнены, точный список13файлов/read-write-set/исключения в CP, пересечений с активными задачами нет. Публикация проверенных изменений через обычный commit/push main; локальные правки project/menu/theme/DayCycle/Embroidery и source/ вне scope. Приёмка: stagedmanifest/diffcheck, remote readback и сохранность пользовательских файлов.
+
+### HF-211 — чёрное затухание между сценами
+
+Статус: `DONE`; принято координатором `/root` по scoped acceptance; исполнитель `/root`; 2026-11-26; HF-210 DONE. CP `.local/checks/hf211/CP-HF-211.md`. Переходы меню/обучение/пролог/игра/возврат в меню через чёрный экран; ввод заблокирован до конца появления, исходящая симуляция приостановлена до смены содержимого. Сцены, source/, TradeScene.cs и пользовательские правки вне scope.
+
+```text
+Task: HF-211
+Recommended status: REVIEW -> accepted DONE
+Changed: new root-owned SceneTransition CanvasLayer1000 with sine fade-out0.22s/fade-in0.25s and full-viewport black cover. Content changes only at alpha1; root overlay survives ChangeSceneToNode. Outgoing scene pauses through fade-out/black, destination initializes in its normal pause state and retains modal pause ownership. Input is blocked throughout, including always-processing PauseMenu and MainMenu skip polling. Wired menu->training, training->prologue, prologue->game, Continue, prologue cancel->menu and pause->menu; audio and visual fade run together. Cancellation/failed changes release locks. Updated GAMEPLAY.md and focused tests.
+Checks: build PASS0warnings/errors; isolated rendered --scene-transition-checks functional PASS (intermediate alpha, black pixels center/corners at1280/960, frozen outgoing timer, duplicate/input rejection, replacement survival, incoming Escape lock, pause->menu, failure, destination modal pause, owner cancellation). Full --intro-transition-checks PASS; --intro-music-checks PASS with initial-menu snapshot; --intro-latency-checks PASS, first gameplay frame0.819s/0.840s including visual fade. Scoped diffcheck PASS (cr-at-eol). Five external/user files SHA256 unchanged.
+Acceptance: requested black transitions implemented throughout startup and return-to-menu, without changing startup order or fresh-run reset. Modal pause is preserved; no stuck black cover or late transition after cancellation.
+Read-set exception: reuse/copy of HF210 local isolated scene snapshot and runtime junctions for test packaging; no source/ access.
+Risks/blocker: dedicated rendered fade suite exits0 with PASS but D3D12 reports1TextureStorage RID/2Texture RIDs at engine shutdown; other3focused suites stderr empty. Functional acceptance passes; no claim of a diagnostic-free renderer exit. Known external main_menu null music exports from HF210 remain untouched; isolated music test uses initial menu scene. No commit/push.
+Next: user smoke-test fades in the editor.
+```
+
+### HF-210 — обучение перед прологом, затем обычная игра с нуля
+
+Статус: `DONE`; принято координатором `/root` по scoped acceptance; исполнитель `/root`; 2026-11-26; HF-209 DONE. CP `.local/checks/hf210/CP-HF-210.md`. Новое требование: Главное меню → Новая игра → обучение/подтверждённый skip → пролог → обычная свежая партия без повторного обучения. Continue сохраняет текущую партию. Write-set: MainMenu.cs, FirstTradeTutorial.cs, Menu/Tutorial/IntroMusic tests и entrypoint, GAMEPLAY.md, plan/local evidence. TradeScene.cs, source/, сцены и пользовательские правки вне scope.
+
+```text
+Task: HF-210
+Recommended status: REVIEW -> accepted DONE (startup flow)
+Changed: MainMenu owns the training scene until FirstTradeTutorial.Finished, then removes it and begins prologue. Prologue finish/skip enters a fresh configured scene via ChangeSceneToNode with initial tutorial suppressed. Tutorial cfg adds prologue_pending; Continue restores unfinished practice or pending prologue, while ordinary and older saves retain their previous behavior. Pause-menu replay has no startup subscriber and stays local. Queued deletion cancels asynchronous transitions. Updated focused startup/music fixtures, natural-completion event check and GAMEPLAY.md.
+Checks: build PASS 0warnings/errors; isolated rendered startup matrix PASS (fresh training, repeat-input guard, confirmed skip, restored final-page real completion, prologue finish/skip/cancel/resume, override/fallback, reset resources and stock, ordinary Continue). Full rendered tutorial suite PASS including actual two sales, completion notification, skip/replay/reload. Original-menu scene snapshot: startup/music/latency PASS; skip-to-first-game-frame 0.524s cold / 0.511s after reading. Post-training prologue screenshot reviewed. Scoped git -c core.whitespace=cr-at-eol diff --check PASS. Three pre-existing dirty file hashes unchanged.
+Acceptance: requested order implemented; practice state does not leak into ordinary day1; tutorial does not repeat after prologue. Player userdata untouched by startup tests (isolated ChikagoShopStartupSmoke* directories).
+Read-set exception: local Godot API XML; diagnostic script CurrentScene search; opaque scenes copy into local fixture. Initial override-only isolation was rejected by the test guard before writes; direct isolated project settings used afterward. source/ never read.
+Risks/blocker: during work external/editor edits appeared in scenes/main_menu.tscn and themes/game_theme.tres. Current main_menu serializes MusicDirector properties/streams as null; music contract FAIL on this current scene, PASS on initial HEAD scene with identical changed code. Both external files preserved; no all-current-worktree music PASS claim. Existing project.godot/DayCycleController.cs/EmbroideryGame.cs SHA256 preserved. No commit/push.
+Next: user verify new startup sequence; repair external null music overrides separately if desired.
+```
+
+### HF-209 — приоритет перемещения ЛКМ над открытием плаката
+
+Статус: `DONE`; принято координатором `/root`; исполнитель `/root`; 2026-11-26; HF-208 DONE. CP: `.local/checks/hf209/CP-HF-209.md`. Write-set: TradingRoomPosterHotspot.cs, ProjectTest.Camera.cs, ProjectTest.cs (focused entrypoint), plan/local evidence. Приёмка: обычный клик открывает плакат при отпускании, перетаскивание ЛКМ перемещает камеру без открытия/паузы. source/, сцены и пользовательские изменения вне scope.
+
+```text
+Task: HF-209
+Recommended status: REVIEW -> accepted DONE
+Changed: poster records LMB press without opening or consuming it; release opens only within 8 screen pixels. Moving past threshold permanently cancels the click, including a return to start. Pause/focus loss/navigation lock cancel pending clicks. Added real viewport + authored Area2D + standalone camera regression.
+Checks: dotnet build ChikagoShop.csproj PASS (0 warnings/errors); --poster-navigation-checks FAIL before fix, PASS after (press, drag, return drag, distant/no-press release, pause, click jitter, open/close); rendered --camera-limits-checks PASS (bounds, zoom, resize, GUI isolation, pause). git -c core.whitespace=cr-at-eol diff --check PASS (existing tests are tracked CRLF). Evidence .local/checks/hf209/*.log.
+Acceptance: LMB drag starting on poster moves camera; poster stays closed and game runs. Ordinary click opens on release; Escape closes/resumes.
+Read-set exception: diagnostic input search/RarityPanel/docs before assignment; ProjectTest.CameraLimits.cs and first26 lines of ProjectTest.Presentation.cs to diagnose screenshot wait in headless mode. Initial headless camera suite stopped because CapturePresentation requires rendered FramePostDraw; rerun rendered PASS. No source/ access.
+Risks/blocker: none for scoped acceptance; pre-existing user edits in project.godot, DayCycleController.cs and EmbroideryGame.cs preserved. No commit/push.
+Next: user smoke-test LMB dragging from cashier poster.
+```
+
 ### HF-208 — скрыть нижний край персонажей за облачком диалога
 
 Статус: `DONE`; принято координатором; координатор/исполнитель `/root`; HF207 DONE; CP `.local/checks/hf208/CP-HF-208.md`. Write-set shared StoryDialogueLayout, composition test, plan/local evidence. Приёмка: спрайты немного опущены и перекрыты облачком; текст читаем; rendered720p/1080p, portraits/motion и build PASS; source/ вне scope.

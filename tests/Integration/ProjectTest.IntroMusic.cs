@@ -128,8 +128,8 @@ public partial class ProjectTest
         }
         void Begin(MainMenu menu)
         {
-            menu.OnPlayPressed();
-            menu.GetNode<TextureButton>("MainMenuContainer/Menu/NewGameButton").EmitSignal(BaseButton.SignalName.Pressed);
+            // This suite isolates the prologue music; startup order is exercised by Menu checks.
+            menu.StartIntroDialogue();
         }
         async Task ClearScene()
         {
@@ -207,8 +207,7 @@ public partial class ProjectTest
             director._Process(director.ExitFadeSeconds / 2);
             Check(CurrentScene == menu && sinister.VolumeLinear > 0, "Gameplay must not open halfway through fade-out");
             director._Process(director.ExitFadeSeconds / 2);
-            await ToSignal(this, SignalName.ProcessFrame);
-            await ToSignal(this, SignalName.ProcessFrame);
+            await WaitForSceneFade();
             Check(CurrentScene.Name == "IntroMusicGameplay" && !GodotObject.IsInstanceValid(director),
                 "Natural completion must start gameplay only after all voices stop");
             await ClearScene();
@@ -238,8 +237,7 @@ public partial class ProjectTest
                 director._Process(director.SkipFadeSeconds / 2);
                 Check(CurrentScene == menu && !director.IsSilent, "The first half of a fast fade must still be smooth");
                 director._Process(director.SkipFadeSeconds / 2);
-                await ToSignal(this, SignalName.ProcessFrame);
-                await ToSignal(this, SignalName.ProcessFrame);
+                await WaitForSceneFade();
                 Check(CurrentScene.Name == "IntroMusicGameplay", "Skip must enter gameplay once after the fade");
                 await ClearScene();
             }
@@ -249,6 +247,7 @@ public partial class ProjectTest
             await ToSignal(this, SignalName.ProcessFrame);
             director.ApplyIntroCue("thoughtful"); director._Process(0.4);
             menu.ActiveDialogue._Input(new InputEventKey { Pressed = true, Keycode = Key.Escape });
+            await WaitForSceneFade();
             director._Process(1);
             Check(menu.ActiveDialogue == null && director.CurrentCue == "menu" &&
                   menu.FindChildren("*", "AudioStreamPlayer", true, false).Cast<AudioStreamPlayer>().Count(p => p.Playing) == 1,
@@ -259,6 +258,7 @@ public partial class ProjectTest
             Begin(menu);
             menu.GetNode<TextureButton>("IntroSkipLayer/SkipButton").EmitSignal(BaseButton.SignalName.Pressed);
             await ClearScene();
+            await WaitForSceneFade();
             Check(CurrentScene == null, "Removing a menu during fade-out must cancel its pending transition");
         }
         finally { await ClearScene(); }
