@@ -172,11 +172,10 @@ public partial class ProjectTest
 		var atelierPriceHint = atelierButton.GetNode<PanelContainer>("PriceHint");
 		var musicPriceHint = musicButton.GetNode<PanelContainer>("PriceHint");
 		Check(!atelierPriceHint.Visible && !musicPriceHint.Visible &&
-		      atelierPriceHint.GetNode<Label>("Label").Text.Contains("90$") &&
-		      musicPriceHint.GetNode<Label>("Label").Text.Contains("140$") &&
-		      game.GetNode<Label>("World/Atelier/HintLabel").Text.Contains("90$") &&
-		      game.GetNode<Label>("World/MusicWorkshop/HintLabel").Text.Contains("140$"),
-		    "Each workshop must show its spin price in the room header and prepare a custom hover price tag");
+		      atelierPriceHint.GetNode<Label>("Label").Text.Contains($"{WorkshopItemCatalog.CraftCost("atelier")}$") &&
+		      musicPriceHint.GetNode<Label>("Label").Text.Contains($"{WorkshopItemCatalog.CraftCost("music")}$") &&
+		      !game.HasNode("World/Atelier/HintLabel") && !game.HasNode("World/MusicWorkshop/HintLabel"),
+		    "Each workshop must prepare its configured hover price without obsolete room descriptions");
         atelierButton.EmitSignal(Control.SignalName.MouseEntered);
         Check(atelierPriceHint.Visible && !atelierRarityPanel.Visible,
 		    "Hovering the main create area must show only the custom price tag");

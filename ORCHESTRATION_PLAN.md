@@ -9,6 +9,55 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### HF-216 — публикация переходов, оформления сцен и перемещения по шторке
+
+Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; 2026-11-26; HF213–215 DONE. Пользователь просит push. CP `.local/checks/hf215/CP-HF-216.md`. Публикуются только завершённые исправления HF213–215; восемь несвязанных пользовательских файлов сохраняются локально.
+
+### HF-215 — перемещение ЛКМ по закрытым шторкам
+
+Статус: `DONE`; принято координатором `/root`; исполнитель `/root`; 2026-11-26; HF214 DONE. CP `.local/checks/hf215/CP-HF-215.md`. Обе шторки передают жест перемещения камере, сохраняя кнопку покупки и ограничения навигации.
+
+```text
+Task: HF-215
+Recommended status: REVIEW -> accepted DONE
+Changed: WorldCamera forwards LMB presses on Stop/Pass locked-room covers into drag or double-click focus; purchase buttons retain GUI ownership. RoomCurtains regression adds real viewport press/motion/release on both curtains, pause/lock rejection, unchanged money/curtain state, actual purchase click.
+Checks: build PASS0warnings/errors; regression RED on original WorldCamera (Showroom cover consumes press), GREEN after fix; isolated rendered room-curtain/room-focus/camera-limits PASS, exit0; scoped diffcheck PASS(cr-at-eol).
+Acceptance: dragging from a locked curtain moves camera; release stops it; button purchase works without camera drag; six-room double-click focus and GUI/pause/navigation guards retained.
+Read-set exception: helper assertion/pointer lookup for diagnostics, no source/ access. Existing HF214 isolated scene fixture reused.
+Risks/blocker: curtain suite reports1TextureStorage/2Texture RID renderer shutdown diagnostic, functional checks PASS; focus/camera stderr empty. No scoped blocker; previous/user changes preserved; no commit/push.
+Next: user smoke-test LMB drag on the curtain in game.
+```
+
+### HF-214 — постоянное оформление комнат хранится в сценах
+
+Статус: `DONE`; принято координатором `/root`; исполнитель `/root`; 2026-11-26; HF-213 DONE. CP `.local/checks/hf214/CP-HF-214.md`. Устаревшие описания удалены, постоянная геометрия/стили перенесены в сцены, пользовательское «МАСТЕРСКАЯ» сохранено, аудит других дублей записан в GAMEPLAY.md. TradeScene.cs только удаление UI-ссылок/статических записей, новая доменная логика/source/ и несвязанные пользовательские изменения вне scope.
+
+```text
+Task: HF-214
+Recommended status: REVIEW -> accepted DONE
+Changed: trade_scene removes4obsolete description nodes; authors compact RU/EN-fitting header geometry and title centering; retains user's МАСТЕРСКАЯ and adds WORKSHOP translation; fixes single-item hover-price previews25/50 and authors trade-panel layer125. Unlock-panel paper/button styles and title are scene-owned Theme Overrides; removed Ready style builder/texture exports. Showcase glass tint0.58 baked into slot scene. Removed obsolete hidden-label/static tint assignments and array from TradeScene (no new logic). ZoomResponsiveUi keeps zoom visibility/compensation, preserves authored hidden headers, no longer rewrites static title rectangles or sale layer. Updated related fixtures and audit documentation.
+Checks: build PASS0warnings/errors; isolated rendered room-title, buyer-arrival(including patience/unlock panel), craft-localization, camera-limits, campaign-balance suites PASS, stderr empty. Room-title regression covers exact authored geometry/text across RU/EN/3sizes, absent subtitle nodes, custom title position/text, explicit hidden plate, custom card styles/glass tint/sale layer, initial price previews. Atelier RU and Workshop EN screenshots reviewed. Scoped diffcheck PASS(cr-at-eol);8external file SHA256 unchanged;95unrelated authored trade-scene node blocks byte-identical to task-start snapshot.
+Acceptance: room editor preview reflects permanent runtime presentation; runtime refresh does not undo these designer edits; new room name preserved. Dynamic data/zoom states retained.
+Read-set exception: bounded script/test searches to trace obsolete nodes; InterfaceFixes header assertion read to preserve flat titles. Font metrics read only from explicitly listed art/fonts/game.ttf via local diagnostic. No source/ access.
+Risks/blocker: no scoped blockers. Audit also identifies constructor-generated clock, MainMenu choice/skip and PauseMenu tree for a separate UI-structure migration; no claim of an entire UI rewrite. Existing external menu/music/editor edits and previous HF213 changes preserved. No commit/push.
+Next: user edit room labels/layout and unlock card styles directly in scenes.
+```
+
+### HF-213 — одинаковый ритм переходов как из меню в обучение
+
+Статус: `DONE`; принято координатором `/root` по scoped acceptance; исполнитель `/root`; 2026-11-26; HF-212 DONE. CP `.local/checks/hf213/CP-HF-213.md`. Общий профиль первого перехода сохраняется; музыкальное затухание полного/пропущенного пролога синхронизировано с ним, чтобы убрать отдельную долгую паузу на чёрном экране. Сцены, source/, TradeScene.cs и пользовательские правки вне scope.
+
+```text
+Task: HF-213
+Recommended status: REVIEW -> accepted DONE
+Changed: MainMenu requests prologue exit audio fade using shared SceneTransition.FadeOutSeconds (0.22s) for natural finish and skip. IntroMusicDirector accepts an explicit duration without mutating Inspector defaults. Shared sine0.22s out/0.25s in unchanged. Updated regression and full/skip timing coverage, GAMEPLAY.md.
+Checks: build PASS0warnings/errors; music regression RED before fix (natural exit still audible after shared fade window), GREEN after; isolated rendered music/startup/latency/fade functional suites PASS. Latency skip0.821/0.855s, natural finish0.772/0.805s, no1.5s black hold. Scoped diffcheck(cr-at-eol) and5external file SHA256 PASS.
+Acceptance: existing scene handoffs now follow the first transition's common visual/audio rhythm; startup/reset/pause/input/cancel checks preserved.
+Read-set exception: local HF211 isolated fixture reused with initial-menu snapshot because known external null audio exports are out of scope. No source/ access.
+Risks/blocker: same renderer TextureStorage/Texture RID shutdown diagnostic in dedicated fade suite as HF211; functional PASS, remaining suites stderr empty. Current external menu null music overrides untouched. No commit/push.
+Next: user preview transition rhythm.
+```
+
 ### HF-212 — публикация исправлений плаката, запуска и переходов
 
 Статус: `DONE`; принято координатором `/root`; исполнитель `/root`; 2026-11-26; HF209–211 DONE; пользователь явно просит push. CP `.local/checks/hf212/CP-HF-212.md`. Опубликован `e66d30f` (13файлов): приоритет перемещения на плакате, обучение→пролог→свежая игра, чёрные переходы. Локальные правки project/menu/theme/DayCycle/Embroidery и source/ вне scope.

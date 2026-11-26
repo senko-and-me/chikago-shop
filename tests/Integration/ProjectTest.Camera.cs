@@ -117,14 +117,43 @@ public partial class ProjectTest
         string originalLocale = TranslationServer.GetLocale();
         var game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
         game.SavePath = "";
+        Check(game.GetNode<Label>("World/MusicWorkshop/NameLabel").Text == "МАСТЕРСКАЯ",
+            "The designer's new second-room name must be stored in the scene");
+        foreach (var workshop in EconomyConfigProvider.Load().Workshops)
+        {
+            string room = workshop.Id == "atelier" ? "Atelier" : "MusicWorkshop";
+            string preview = game.GetNode<Label>($"World/{room}/GetItemButton/PriceHint/Label").Text;
+            Check(preview == $"1 предмет  •  {workshop.SpinCost}$ + 1 энергия",
+                "The authored price preview must match the default single-item economy before Ready");
+        }
+        var tradePanel = game.GetNode<Control>("World/TradingRoom/Item/TradePanel");
+        Check(tradePanel.ZIndex == 125 && !tradePanel.ZAsRelative, "The trade panel's initial drawing layer must be authored in the scene");
+        tradePanel.ZIndex = 127;
+        var unlockPanel = game.GetNode<MusicWorkshopUnlockPanel>("World/MusicWorkshop/LockedOverlay/UnlockPanel");
+        var authoredPaper = (StyleBoxTexture)unlockPanel.GetThemeStylebox("panel").Duplicate();
+        authoredPaper.ContentMarginLeft = 47;
+        unlockPanel.AddThemeStyleboxOverride("panel", authoredPaper);
+        var authoredButton = (StyleBoxTexture)unlockPanel.GetNode<Button>("Content/UnlockButton").GetThemeStylebox("normal").Duplicate();
+        authoredButton.ModulateColor = new Color(0.81f, 0.82f, 0.83f);
+        unlockPanel.GetNode<Button>("Content/UnlockButton").AddThemeStyleboxOverride("normal", authoredButton);
+        var glass = game.GetNode<Node2D>("World/ShowroomLeft/Showcases").GetChild(0).GetNode<ColorRect>("Glass");
+        var authoredGlass = new Color(0.2f, 0.3f, 0.4f, 0.5f);
+        glass.Color = authoredGlass;
+        game.GetNode<Control>("World/ShowroomLeft/ShowroomHeader").Hide();
+        var customTitle = game.GetNode<Label>("World/ShowroomLeft/ShowroomLabel");
+        customTitle.Text = "ПОЛКИ";
+        customTitle.Position += new Vector2(7, 3);
         var entries = new[] { "Atelier", "MusicWorkshop", "ShowroomLeft", "Showroom" }.Select(room =>
         {
             var node = game.GetNode("World/" + room);
             var plate = node.GetNodeOrNull<Control>("Header") ?? node.GetNode<Control>("ShowroomHeader");
             var title = node.GetNodeOrNull<Label>("NameLabel") ?? node.GetNode<Label>("ShowroomLabel");
-            var subtitle = node.GetNodeOrNull<Control>("HintLabel") ?? node.GetNode<Control>("ShowroomHint");
-            return (Room: room, Plate: plate, Title: title, Subtitle: subtitle,
-                Width: plate.Size.X * plate.Scale.X, Center: plate.Position + plate.Size * plate.Scale / 2);
+            Check(!node.HasNode("HintLabel") && !node.HasNode("ShowroomHint"),
+                "Obsolete room descriptions must be absent from the authored scene, not hidden at runtime");
+            return (Room: room, Plate: plate, Title: title, Text: title.Text,
+                PlateVisible: plate.Visible,
+                PlatePosition: plate.Position, PlateSize: plate.Size, PlateScale: plate.Scale,
+                TitlePosition: title.Position, TitleSize: title.Size, TitleScale: title.Scale);
         }).ToArray();
         Root.AddChild(game);
         game.SetProcess(false);
@@ -146,8 +175,8 @@ public partial class ProjectTest
                 await Frame();
                 camera.ResetToOverview();
                 await Frame();
-                Check(entries.All(entry => !entry.Plate.Visible && !entry.Title.Visible && !entry.Subtitle.Visible),
-                    "The real maximum overview must hide all room headings, plates and subtitles in every viewport");
+                Check(entries.All(entry => !entry.Plate.Visible && !entry.Title.Visible),
+                    "The real maximum overview must hide authored room headings and plates in every viewport");
                 if (size.X == 1280 && language == "ru") using (await CapturePresentation("room-titles-overview")) { }
                 camera.Zoom = Vector2.One * camera.OverviewZoom * 1.2f;
                 ui.UpdateForZoom(camera.Zoom.X);
@@ -155,7 +184,7 @@ public partial class ProjectTest
                     "Titles must stay hidden through twenty percent zoom above overview");
                 camera.Zoom = Vector2.One * camera.OverviewZoom * 1.4f;
                 ui.UpdateForZoom(camera.Zoom.X);
-                Check(entries.All(entry => entry.Title.Visible && entry.Title.Modulate.A > 0 && entry.Title.Modulate.A < 1 && !entry.Subtitle.Visible),
+                Check(entries.All(entry => entry.Title.Visible && entry.Title.Modulate.A > 0 && entry.Title.Modulate.A < 1),
                     "Only titles and plates must smoothly fade in between the relative zoom thresholds");
                 foreach (var entry in entries)
                 {
@@ -168,16 +197,21 @@ public partial class ProjectTest
                     Rect2 titleRect = entry.Title.GetTransform() * new Rect2(Vector2.Zero, entry.Title.Size);
                     float textWidth = entry.Title.GetThemeFont("font").GetStringSize(entry.Title.Tr(entry.Title.Text),
                         fontSize: entry.Title.GetThemeFontSize("font_size")).X;
-                    Check(entry.Title.Visible && Mathf.IsEqualApprox(entry.Title.Modulate.A, 1) && !entry.Subtitle.Visible &&
-                        plateRect.Size.X <= entry.Width * 0.66f && plateRect.Size.Y <= 161 &&
-                        plateRect.GetCenter().DistanceTo(entry.Center) < 0.1f && plateRect.Encloses(titleRect) && textWidth <= entry.Title.Size.X,
-                        $"The compact {entry.Room} plate must retain its center and fit its {language} title without a subtitle at {size}");
+                    Check(entry.Title.Visible && Mathf.IsEqualApprox(entry.Title.Modulate.A, 1) &&
+                        entry.Plate.Visible == entry.PlateVisible &&
+                        entry.Plate.Position == entry.PlatePosition && entry.Plate.Size == entry.PlateSize && entry.Plate.Scale == entry.PlateScale &&
+                        entry.Title.Position == entry.TitlePosition && entry.Title.Size == entry.TitleSize && entry.Title.Scale == entry.TitleScale &&
+                        entry.Title.Text == entry.Text && plateRect.Encloses(titleRect) && textWidth <= entry.Title.Size.X,
+                        $"The authored {entry.Room} geometry and name must survive startup, zoom, {language} and {size}");
                     if (size.X == 1280)
                         using (await CapturePresentation($"room-title-{entry.Room}-{language}")) { }
                 }
                 game.RefreshDayPresentation();
                 await Frame();
-                Check(entries.All(entry => !entry.Subtitle.Visible), "Game state refresh must not reveal removed subtitles");
+                Check(ReferenceEquals(unlockPanel.GetThemeStylebox("panel"), authoredPaper) &&
+                    ReferenceEquals(unlockPanel.UnlockButton.GetThemeStylebox("normal"), authoredButton) && glass.Color == authoredGlass &&
+                    tradePanel.ZIndex == 127,
+                    "Startup and game/locale refresh must preserve designer-authored paper, button styles and glass tint");
             }
         }
         finally
@@ -188,7 +222,7 @@ public partial class ProjectTest
             TranslationServer.SetLocale(originalLocale);
             await Frame();
         }
-        GD.Print("ROOM_TITLE_CHECKS_PASS: compact centered titles, no subtitles, overview/fade/closeup, RU/EN and three viewports");
+        GD.Print("ROOM_TITLE_CHECKS_PASS: authored titles/geometry/styles/tint, no description nodes, zoom, RU/EN and three viewports");
     }
 
     private async Task TestRoomDoubleClickFocus()

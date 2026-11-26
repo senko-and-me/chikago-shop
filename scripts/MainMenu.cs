@@ -670,7 +670,7 @@ public partial class MainMenu : Control
 		_endingIntro = true;
 		_skipLayer.Hide();
 		ActiveDialogue?.StopInteraction();
-		await EnterGame(true, Music.FadeToSilence(skipped));
+		await EnterGame(true, Music.FadeToSilence(skipped, SceneTransition.FadeOutSeconds));
 		if (GodotObject.IsInstanceValid(this)) _endingIntro = false;
 	}
 

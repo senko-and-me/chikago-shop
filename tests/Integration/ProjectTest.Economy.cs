@@ -171,7 +171,7 @@ public partial class ProjectTest
                         game.NewGame(); game.Score = 1000; game.TryUnlockMusicWorkshop();
                         Check(game.DayRemainingSeconds == 90, "Unlocking music must not change the ninety-second baseline");
                     }
-                    Check(game.GetNode<Label>($"World/{room}/HintLabel").Text.Contains(cost.ToString()) &&
+                    Check(!game.HasNode($"World/{room}/HintLabel") &&
                           game.GetNode<Label>($"World/{room}/GetItemButton/PriceHint/Label").Text.Contains(cost.ToString()),
                         "RU/EN crafting labels must show the configured single-item cost");
                     game.Score = cost - 1; game.RefreshItemButtons();

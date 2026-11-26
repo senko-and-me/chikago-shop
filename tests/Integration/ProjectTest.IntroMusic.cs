@@ -204,9 +204,10 @@ public partial class ProjectTest
             director._Process(3);
             while (!dialogue.Session.IsComplete) AdvanceMusicLine(dialogue);
             Check(CurrentScene == menu && !director.IsSilent, "Natural dialogue end must wait for the final music fade");
-            director._Process(director.ExitFadeSeconds / 2);
+            director._Process(SceneTransition.FadeOutSeconds / 2);
             Check(CurrentScene == menu && sinister.VolumeLinear > 0, "Gameplay must not open halfway through fade-out");
-            director._Process(director.ExitFadeSeconds / 2);
+            director._Process(SceneTransition.FadeOutSeconds / 2);
+            Check(director.IsSilent, "Natural prologue exit must finish audio within the shared visual fade-out, without an extra black hold");
             await WaitForSceneFade();
             Check(CurrentScene.Name == "IntroMusicGameplay" && !GodotObject.IsInstanceValid(director),
                 "Natural completion must start gameplay only after all voices stop");
@@ -234,9 +235,10 @@ public partial class ProjectTest
                 Check(gains.SequenceEqual(menu.FindChildren("*", "AudioStreamPlayer", true, false)
                     .Cast<AudioStreamPlayer>().Select(player => player.VolumeLinear)),
                     "Skip must ramp from current gains without abruptly cutting or resetting a crossfade");
-                director._Process(director.SkipFadeSeconds / 2);
+                director._Process(SceneTransition.FadeOutSeconds / 2);
                 Check(CurrentScene == menu && !director.IsSilent, "The first half of a fast fade must still be smooth");
-                director._Process(director.SkipFadeSeconds / 2);
+                director._Process(SceneTransition.FadeOutSeconds / 2);
+                Check(director.IsSilent, "Skipped prologue must use the same audio/visual fade window as natural completion");
                 await WaitForSceneFade();
                 Check(CurrentScene.Name == "IntroMusicGameplay", "Skip must enter gameplay once after the fade");
                 await ClearScene();

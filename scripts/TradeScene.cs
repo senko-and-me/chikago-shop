@@ -63,7 +63,6 @@ public partial class TradeScene : Node2D
 	private readonly Control[] _rarityHotspots = new Control[2];
 	private readonly Control[] _priceHints = new Control[2];
 	private readonly Button[] _showcaseSlots = new Button[ShowcaseCapacity];
-	private readonly ColorRect[] _showcaseGlass = new ColorRect[ShowcaseCapacity];
 	private readonly TextureRect[] _showcaseIcons = new TextureRect[ShowcaseCapacity];
 	private FirstTradeTutorial _tutorial;
 	private readonly TextureRect[] _showcaseShadows = new TextureRect[ShowcaseCapacity];
@@ -73,7 +72,6 @@ public partial class TradeScene : Node2D
 	private static readonly Rect2 InstrumentDisplayArea = new(107, 28, 215, 126);
 	private readonly Label[] _showcaseLabels = new Label[ShowcaseCapacity];
 
-	private Label _extraShowroomHint = null!;
 	private RoomCurtainPresentation _rightShowroomOverlay = null!;
 	private InventoryUI _inventoryUI = null!;
 
@@ -283,8 +281,6 @@ public partial class TradeScene : Node2D
 		{
 			int slotIndex = i;
 			_showcaseSlots[i] = GetNode<Button>(showcasePaths[i]);
-			_showcaseGlass[i] =
-				_showcaseSlots[i].GetNode<ColorRect>("Glass");
 			_showcaseIcons[i] =
 				_showcaseSlots[i].GetNode<TextureRect>("Icon");
 			_showcaseIconBounds[i] = _showcaseIcons[i].GetRect();
@@ -304,8 +300,6 @@ public partial class TradeScene : Node2D
 				() => OnShowcasePressed(slotIndex);
 		}
 
-		_extraShowroomHint = GetNode<Label>(
-			"World/Showroom/ShowroomHint");
 
 		BindExtraShowroomOverlay();
 
@@ -466,22 +460,12 @@ public partial class TradeScene : Node2D
 	{
 		bool english = GameLocalization.Language == "en";
 
-		Label atelierHint = GetNode<Label>(
-			"World/Atelier/HintLabel");
-
-		Label musicHint = GetNode<Label>(
-			"World/MusicWorkshop/HintLabel");
-
 		Label atelierPrice = GetNode<Label>(
 			"World/Atelier/GetItemButton/PriceHint/Label");
 
 		Label musicPrice = GetNode<Label>(
 			"World/MusicWorkshop/GetItemButton/PriceHint/Label");
 
-		atelierHint.AutoTranslateMode =
-			Node.AutoTranslateModeEnum.Disabled;
-		musicHint.AutoTranslateMode =
-			Node.AutoTranslateModeEnum.Disabled;
 		atelierPrice.AutoTranslateMode =
 			Node.AutoTranslateModeEnum.Disabled;
 		musicPrice.AutoTranslateMode =
@@ -491,14 +475,6 @@ public partial class TradeScene : Node2D
 			Node.AutoTranslateModeEnum.Disabled;
 		_musicGetItemButton.AutoTranslateMode =
 			Node.AutoTranslateModeEnum.Disabled;
-
-		atelierHint.Text = english
-			? $"Clothing  •  ${AtelierSpinCost} + 1 energy per item"
-			: $"Одежда  •  {AtelierSpinCost}$ + 1 энергия за предмет";
-
-		musicHint.Text = english
-			? $"Instruments  •  ${MusicSpinCost} + 1 energy per item"
-			: $"Инструменты  •  {MusicSpinCost}$ + 1 энергия за предмет";
 
 		atelierPrice.Text = english
 			? $"{ItemsPerSpin} {(ItemsPerSpin == 1 ? "item" : "items")}  •  ${AtelierSpinCost} + 1 energy"
@@ -771,9 +747,6 @@ public partial class TradeScene : Node2D
 					? "СВОБОДНО"
 					: GetItemName(itemIndex).ToUpperInvariant();
 
-			_showcaseGlass[i].Color =
-				new Color(0.870918f, 0.870918f, 0.870918f, 0.58f);
-
 			_showcaseSlots[i].Disabled =
 				locked ||
 				Failed ||
@@ -788,14 +761,6 @@ public partial class TradeScene : Node2D
 		}
 
 		_rightShowroomOverlay.SetLocked(!MusicWorkshopUnlocked);
-
-		_extraShowroomHint.Text = !MusicWorkshopUnlocked
-			? GameLocalization.Language == "en"
-				? "Unlock the music shop to use these displays"
-				: "Откройте музыкальный магазин, чтобы пользоваться витринами"
-			: GameLocalization.Language == "en"
-				? "Select an inventory item and an empty display"
-				: "Выберите предмет в инвентаре и свободную витрину";
 	}
 
 	private void SetShowcaseArt(TextureRect icon, Rect2 bounds, int itemIndex, bool tiltInstruments = false)

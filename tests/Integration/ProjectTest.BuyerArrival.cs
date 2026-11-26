@@ -162,14 +162,14 @@ public partial class ProjectTest
         game.GetNode<DayAnnouncementOverlay>("DayAnnouncements").Dismiss();
         game.Score = price - 1;
         game.RefreshDayPresentation();
-        Check(button.Disabled && button.Text == $"Открыть за {price}$" && title.Tr(title.Text) == "Музыкальная мастерская",
+        Check(button.Disabled && button.Text == $"Открыть за {price}$" && title.Tr(title.Text) == "МАСТЕРСКАЯ",
             "Insufficient funds must disable a readable, correctly priced Russian button");
         TranslationServer.SetLocale("en");
-        Check(button.Text == $"Unlock for ${price}" && title.Tr(title.Text) == "Music workshop",
+        Check(button.Text == $"Unlock for ${price}" && title.Tr(title.Text) == "WORKSHOP",
             "The title and configured price must update live in English");
-        Check(button.GetThemeStylebox("normal") is StyleBoxTexture normal && normal.Texture == panel.ButtonTexture &&
+        Check(button.GetThemeStylebox("normal") is StyleBoxTexture normal && normal.Texture.ResourcePath == "res://art/ui/panel_small.png" &&
             button.GetThemeStylebox("hover") is StyleBoxTexture hover && hover.ModulateColor.R > normal.ModulateColor.R &&
-            panel.GetThemeStylebox("panel") is StyleBoxTexture paper && paper.Texture == panel.PanelTexture,
+            panel.GetThemeStylebox("panel") is StyleBoxTexture paper && paper.Texture.ResourcePath == "res://art/ui/panel_large.png",
             "The separate artwork slots must be used for the panel and for hover feedback");
 
         var camera = game.GetNode<WorldCamera>("Camera2D");

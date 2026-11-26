@@ -137,6 +137,7 @@ public partial class ProjectTest
     {
         Check(OS.GetUserDataDir().Contains("ChikagoShopStartupSmoke"), "Latency checks require isolated player saves");
         var scene = GD.Load<PackedScene>("res://scenes/main_menu.tscn");
+        foreach (bool skip in new[] { true, false })
         foreach (double readingSeconds in new[] { 0.0, 0.8 })
         {
             var menu = scene.Instantiate<MainMenu>();
@@ -152,7 +153,14 @@ public partial class ProjectTest
             if (readingSeconds > 0)
                 Check(menu.IsGameScenePrepared, "Reading the intro must prepare the game before Skip");
             ulong began = Time.GetTicksMsec();
-            await ClickControl(menu, "IntroSkipLayer/SkipButton");
+            if (skip) await ClickControl(menu, "IntroSkipLayer/SkipButton");
+            else
+            {
+                var dialogue = menu.ActiveDialogue;
+                int advances = 0;
+                while (!dialogue.Session.IsComplete && advances++ < 512) dialogue.Advance();
+                Check(dialogue.Session.IsComplete, "Natural prologue completion must reach its finish event");
+            }
             // Repeated input during loading/fade must not create another run.
             if (GodotObject.IsInstanceValid(menu) && menu.IsInsideTree()) menu.OnPlayPressed();
             while (CurrentScene is not TradeScene)
@@ -164,9 +172,9 @@ public partial class ProjectTest
             Check(CurrentScene is TradeScene && !Paused, "Measured skip must enter the actual game");
             await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
             double elapsed = (Time.GetTicksMsec() - began) / 1000.0;
-            GD.Print($"INTRO_SKIP_LATENCY reading={readingSeconds:F1}s click-to-first-game-frame={elapsed:F3}s");
+            GD.Print($"INTRO_SKIP_LATENCY skip={skip} reading={readingSeconds:F1}s transition-to-playable-frame={elapsed:F3}s");
             Check(elapsed < (readingSeconds > 0 ? 1.5 : 3.5),
-                "Prepared Skip must avoid the old mandatory 1.5-second wait; cold loading must also stay bounded");
+                "Both finish and skip must use the shared short transition without the old1.5-second black hold");
             var game = (TradeScene)CurrentScene;
             Check(game.CurrentDay == 1 && !game.DayStarted && game.Score == game.StartingMoney,
                 "A fast transition still creates exactly one fresh, unstarted day");
