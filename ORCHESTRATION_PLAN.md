@@ -11,7 +11,18 @@
 ## Текущий фронт
 ### HF-216 — публикация переходов, оформления сцен и перемещения по шторке
 
-Статус: `IN_PROGRESS`; координатор/исполнитель `/root`; 2026-11-26; HF213–215 DONE. Пользователь просит push. CP `.local/checks/hf215/CP-HF-216.md`. Публикуются только завершённые исправления HF213–215; восемь несвязанных пользовательских файлов сохраняются локально.
+Статус: `DONE`; принято координатором `/root`; исполнитель `/root`; 2026-11-26; HF213–215 DONE. Пользователь просит push. CP `.local/checks/hf215/CP-HF-216.md`. Опубликован `80e8419`: завершённые исправления HF213–215; восемь несвязанных пользовательских файлов сохранены локально.
+
+```text
+Task: HF-216
+Recommended status: REVIEW -> accepted DONE
+Changed: 80e84191c59bfa491ac8ef6231db4590f9859f93, exact19-file HF213–215 manifest published to origin/main; this follow-up records evidence.
+Checks: fetch divergence0/0; exact staged manifest and staged diffcheck PASS(cr-at-eol); existing HF213–215 build/runtime evidence retained; normal push PASS; ls-remote main matches HEAD80e8419. All8external SHA256 match HF214 baseline.
+Acceptance: completed changes available on server, external modifications excluded and preserved.
+Read-set exception: external hash manifest only; no source/ access.
+Risks/blocker: no publication blockers; existing menu null audio exports and renderer shutdown diagnostic remain documented in previous handoffs.
+Next: pull main on other machines.
+```
 
 ### HF-215 — перемещение ЛКМ по закрытым шторкам
 
