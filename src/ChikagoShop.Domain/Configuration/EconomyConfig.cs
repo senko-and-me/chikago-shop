@@ -7,6 +7,11 @@ public sealed class EconomyConfig
     public int StartingMoney { get; init; }
     public DayConfig Days { get; init; } = new();
     public List<WorkshopConfig> Workshops { get; init; } = [];
+    public Dictionary<string, int> CraftCosts { get; init; } = new()
+    {
+        ["hat"] = 20, ["vest"] = 30, ["gloves"] = 55, ["matteo_hat"] = 80, ["lorgnette"] = 135,
+        ["guitar"] = 30, ["drum"] = 50, ["banjo"] = 80, ["violin"] = 125, ["tuba"] = 205
+    };
     public List<RarityConfig> Rarities { get; init; } = [];
     public List<OfferRangeConfig> OfferRanges { get; init; } = [];
     public List<QuotaConfig> Quotas { get; init; } = [];
@@ -15,6 +20,7 @@ public sealed class EconomyConfig
 public sealed class DayConfig
 {
     public int DurationSeconds { get; init; } = (int)ChikagoShop.Domain.Days.DaySession.DurationSeconds;
+    // Retained solely for old configuration/save readers; production has no energy budget.
     public int EnergyBeforeMusicUnlock { get; init; } = 3;
     public int EnergyAfterMusicUnlock { get; init; } = 6;
     public int ItemsPerCraft { get; init; } = 1;

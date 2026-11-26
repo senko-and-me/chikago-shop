@@ -165,7 +165,7 @@ public sealed class DayCycleController
 	public void Tick(double delta)
 	{
 		bool crafting = _game.CraftMiniGameOpen;
-		if (!Started || Upgrades.Pending || (_game.GetTree().Paused && !crafting) || _game.Failed || _game.Completed) return;
+		if (!Started || Upgrades.Pending || (_game.GetTree().Paused && !_game.CraftClockRunning) || _game.Failed || _game.Completed) return;
 		// Expiry closes trading immediately, then advances once the current interaction is finished.
 		// Manual closure follows the same transition; never put cards over a craft window.
 		if (_advanceWhenClosed && Session.IsClosed && !_game.TradeActive && !crafting)
@@ -276,7 +276,7 @@ public sealed class DayCycleController
 			return;
 		}
 		if (Upgrades.Pending && !Session.IsClosed && _game.CurrentDay >= 2 && _game.CurrentDay <= TotalDays &&
-            !_game.GetNode<FirstTradeTutorial>("FirstTradeTutorial").HasPendingUpgradeLesson())
+			!_game.GetNode<FirstTradeTutorial>("FirstTradeTutorial").HasPendingUpgradeLesson())
 			_card.Open(_game.CurrentDay - 1, _game.CurrentDay, Upgrades.Options, _game.Score);
 	}
 
@@ -302,7 +302,6 @@ public sealed class DayCycleController
 		switch (upgrade)
 		{
 			case DayUpgrade.Cash: _game.Score += Upgrades.CashReward; break;
-			case DayUpgrade.Energy: _game.EnergyRemaining++; break;
 		}
 		if (FinishTutorialUpgradeChoice()) return;
 		RefreshTimer();

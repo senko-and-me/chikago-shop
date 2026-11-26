@@ -25,7 +25,6 @@
 [ext_resource type="PackedScene" path="res://scenes/UI/FirstTradeTutorial.tscn" id="30_tutorial"]
 [ext_resource type="PackedScene" path="res://scenes/UI/CraftButton.tscn" id="31_craft_button"]
 [ext_resource type="PackedScene" path="res://scenes/UI/CigaretteProgress.tscn" id="32_cigarette_progress"]
-[ext_resource type="PackedScene" uid="uid://wged5cxnn4t5" path="res://scenes/UI/EnergyPanel.tscn" id="33_energy_panel"]
 [ext_resource type="Script" uid="uid://dc8nesm1ehm43" path="res://scripts/Presentation/RoomCurtainPresentation.cs" id="34_curtain"]
 [ext_resource type="PackedScene" path="res://scenes/UI/PulloutNotebook.tscn" id="34_notebook"]
 [ext_resource type="Script" uid="uid://bb6netwd3fjho" path="res://scripts/Presentation/TradingRoomPosterHotspot.cs" id="35_poster_hotspot"]
@@ -190,7 +189,7 @@ theme_override_styles/panel = SubResource("HudSmallPanelStyle")
 layout_mode = 2
 theme_override_colors/font_color = Color(0.196274, 0.196274, 0.196274, 1)
 theme_override_font_sizes/font_size = 24
-text = "1 предмет  •  25$ + 1 энергия"
+text = "Выбор предмета  •  от 20$"
 horizontal_alignment = 1
 vertical_alignment = 1
 
@@ -283,7 +282,7 @@ theme_override_styles/panel = SubResource("HudSmallPanelStyle")
 layout_mode = 2
 theme_override_colors/font_color = Color(0.196274, 0.196274, 0.196274, 1)
 theme_override_font_sizes/font_size = 24
-text = "1 предмет  •  50$ + 1 энергия"
+text = "Выбор предмета  •  от 30$"
 horizontal_alignment = 1
 vertical_alignment = 1
 
@@ -566,9 +565,9 @@ visible = false
 position = Vector2(676, 651)
 
 [node name="TradePanel" type="PanelContainer" parent="World/TradingRoom/Item" unique_id=703097951]
+visible = false
 z_index = 125
 z_as_relative = false
-visible = false
 custom_minimum_size = Vector2(320, 200)
 offset_left = -137.0
 offset_top = -416.0
@@ -763,6 +762,7 @@ centered = false
 
 [node name="TimeOfDayDay" type="Sprite2D" parent="World" unique_id=1385586684]
 z_index = -9
+position = Vector2(31, 42)
 scale = Vector2(1.2631578, 1.2631578)
 texture = ExtResource("background_2_31fg5")
 centered = false
@@ -808,9 +808,6 @@ theme_override_font_sizes/font_size = 22
 text = "Счёт: 220$"
 horizontal_alignment = 1
 vertical_alignment = 1
-
-[node name="EnergyPanel" parent="HUD/Root" unique_id=822799908 instance=ExtResource("33_energy_panel")]
-layout_mode = 1
 
 [node name="ProgressPanel" type="Control" parent="HUD/Root" unique_id=1016591818]
 anchors_preset = 0

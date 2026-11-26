@@ -138,7 +138,7 @@ public partial class ProjectTest
             Check(game.DayStarted, "Reload of a running day must not reapply the waiting-day gate");
             game.GetItemFromAtelier();
             Check(game.CraftMiniGameOpen, "Crafting must open normally after Start");
-            await ClickControl(game, "EmbroideryGame/Surface/Cancel");
+            await ClickControl(game, "CraftCatalog/Root/Center/Panel/Margin/Content/Back");
             AdvanceDayForTest(game);
             Check(!game.DayStarted, "The next day must require Start again");
             game.GetItemFromAtelier();

@@ -60,9 +60,15 @@ public partial class ProjectTest
             TranslationServer.SetLocale("en");
             int cash = game.Score, energy = game.EnergyRemaining;
             await ClickControl(game, "World/Atelier/GetItemButton");
-            Check(game.GetNode<EmbroideryGame>("EmbroideryGame").IsOpen && game.Score == cash && game.EnergyRemaining == energy,
-                "A real click on the translated button must open the existing minigame without charging before activation");
-            await ClickControl(game, "EmbroideryGame/Surface/Cancel");
+            Check(game.Crafting.IsCatalogOpen && game.Score == cash && game.EnergyRemaining == energy,
+                "A real click on the translated button must open the catalog without charging");
+            await ClickControl(game, game.GetPathTo(game.Crafting.Catalog.ItemButton("hat")).ToString());
+            Check(game.GetNode<EmbroideryGame>("EmbroideryGame").IsOpen && game.Score == cash,
+                "Choosing a translated card must prepare its minigame for free");
+            await ClickControl(game, "EmbroideryGame/Surface/Panel/Buttons/Cancel");
+            Check(game.Crafting.IsCatalogOpen && game.Score == cash && game.EnergyRemaining == energy,
+                "Cancelling preparation must return to the catalog without charge");
+            await ClickControl(game, "CraftCatalog/Root/Center/Panel/Margin/Content/Back");
             Check(!game.CraftMiniGameOpen && !Paused, "The translated craft flow must still cancel normally");
         }
         finally
@@ -364,7 +370,7 @@ public partial class ProjectTest
             Check(miniGame.IsOpen && PolishingSurface.InstrumentKinds.Contains(surface.InstrumentKind), "Opening polishing must select one of the five instruments");
             int cashBefore = game.Score, energyBefore = game.EnergyRemaining;
             miniGame.Activate();
-            Check(game.Score == cashBefore - WorkshopItemCatalog.CraftCost("music") && game.EnergyRemaining == energyBefore - 1,
+            Check(game.Score == cashBefore - WorkshopItemCatalog.CraftCost("music") && game.EnergyRemaining == energyBefore,
                 "The new item presentation must retain the existing craft payment");
             await ToSignal(this, SignalName.ProcessFrame);
             await ToSignal(this, SignalName.ProcessFrame);

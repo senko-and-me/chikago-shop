@@ -5,15 +5,17 @@ namespace ChikagoShop.Domain.Tests;
 
 public sealed class BuyerAvailabilityRulesTests
 {
-    [TestCase(0, false, false, false)]
-    [TestCase(-1, false, false, false)]
-    [TestCase(1, false, false, true)]
-    [TestCase(3, false, false, true)]
-    [TestCase(0, true, false, true)]
-    [TestCase(0, false, true, true)]
-    [TestCase(0, true, true, true)]
-    [TestCase(1, true, false, true)]
-    [TestCase(1, false, true, true)]
-    public void WaitingRequiresRemainingProductionEnergyOrUnsoldStock(int energy, bool stored, bool displayed, bool expected) =>
-        Assert.That(BuyerAvailabilityRules.CanWait(energy, stored, displayed), Is.EqualTo(expected));
+    [TestCase(false, true)]
+    [TestCase(true, false)]
+    public void WaitingOnlyDependsOnDayBeingOpen(bool dayClosed, bool expected) =>
+        Assert.That(BuyerAvailabilityRules.CanWait(dayClosed), Is.EqualTo(expected));
+
+    [Test]
+    public void LegacyEnergyAndStockValuesNeverGateWaiting()
+    {
+        foreach (int energy in new[] { -1, 0, 1, 3 })
+        foreach (bool stored in new[] { false, true })
+        foreach (bool displayed in new[] { false, true })
+            Assert.That(BuyerAvailabilityRules.CanWait(energy, stored, displayed), Is.True);
+    }
 }

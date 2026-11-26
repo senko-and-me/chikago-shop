@@ -64,7 +64,7 @@ public partial class ProjectTest
 
             game.NewGame(); game.EndDay();
             var craft = game.GetNode<EmbroideryGame>("EmbroideryGame");
-            craft.Open(); craft.Activate(); craft.SetProcess(false);
+            craft.Open(); game.Crafting.Select("hat"); craft.Activate(); craft.SetProcess(false);
             craft._Process(game.DayRemainingSeconds + 0.01);
             Check(game.DayClosed && game.CurrentDay == 1 && craft.IsOpen && Paused,
                 "Expiry inside crafting must wait until the minigame closes");

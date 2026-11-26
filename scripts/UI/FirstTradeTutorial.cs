@@ -4,7 +4,7 @@ using Godot;
 // Observes gameplay during practice and resets the practice run through the existing NewGame action on exit.
 public partial class FirstTradeTutorial : CanvasLayer
 {
-    public enum Step { Camera, Start, Craft, Select, Place, WaitBuyer, Offer, Summary, CameraZoom, RoomFocus, BuyerRequest, UpgradeChoice, Notebook, NotebookContents, EmbroideryStart, TimedSale, LateSale, MusicWorkshop, CardExplanation }
+    public enum Step { Camera, Start, Craft, Select, Place, WaitBuyer, Offer, Summary, CameraZoom, RoomFocus, BuyerRequest, UpgradeChoice, Notebook, NotebookContents, EmbroideryStart, TimedSale, LateSale, MusicWorkshop, CardExplanation, CraftSelection }
     private const string BuyerRequestMessage = "Облачко показывает, что покупатель ищет одежду из ателье.";
     private const string NotebookMessage = "Наведите курсор на блокнот справа, чтобы открыть его.";
     private const float PanGoal = 3000;
@@ -247,7 +247,7 @@ public partial class FirstTradeTutorial : CanvasLayer
         bool music = CurrentStep == Step.MusicWorkshop;
         _confirmation.GetNode<Label>("Center/Panel/Content/Message").Text = music
             ? "Подсказки мастерской будут закрыты. Игра продолжится с текущего места."
-            : "Первый день начнётся заново со стартовыми деньгами и энергией. Обучение можно повторить в паузе.";
+            : "Первый день начнётся заново со стартовыми деньгами. Обучение можно повторить в паузе.";
         StopCamera();
         _camera.NavigationLocked = true;
         _confirmation.Show();
@@ -516,6 +516,16 @@ public partial class FirstTradeTutorial : CanvasLayer
             return;
         }
         _panel.Show();
+        if (_cameraHandoffDone && !_embroideryStarted && _game.Crafting.IsCatalogOpen &&
+            _game.Crafting.Catalog.Workshop == "atelier" && !_pause.IsOpen)
+        {
+            Layer = _game.Crafting.Catalog.Layer + 2;
+            _root.Show();
+            SetStep(Step.CraftSelection, "Выберите шляпку в каталоге ателье. Цена указана на карточке.",
+                _game.Crafting.Catalog.ItemButton("hat"));
+            Layout();
+            return;
+        }
         if (_cameraHandoffDone && !_embroideryStarted && _embroidery.IsReadyToStart && !_pause.IsOpen)
         {
             Layer = _embroidery.Layer + 2;
@@ -581,10 +591,8 @@ public partial class FirstTradeTutorial : CanvasLayer
                 "Нажмите на свободную витрину слева или перетащите туда предмет.",
                 _game.GetNode<Control>("World/ShowroomLeft/Showcases/Slot1"));
         }
-        else if (_game.EnergyRemaining <= 0) SetStep(Step.Start,
-            "Энергия закончилась. Она восстанавливается на следующий день. В паузе можно начать с чекпоинта и попробовать снова.", null);
         else SetStep(Step.Craft,
-            "Нажмите „Создать предметы“. Для создания нужны деньги и 1 энергия. Значок „?“ показывает шансы редкости.",
+            "Нажмите „Создать предметы“, чтобы выбрать предмет в каталоге. Для создания нужны деньги.",
             _game.GetNode<Control>("World/Atelier/GetItemButton"));
         Layout();
     }
@@ -623,6 +631,7 @@ public partial class FirstTradeTutorial : CanvasLayer
             Step.RoomFocus => "Приближение комнаты",
             Step.BuyerRequest => "Запрос покупателя",
             Step.EmbroideryStart => "Вышивка",
+            Step.CraftSelection => "Выбор предмета",
             Step.Notebook or Step.NotebookContents => "Блокнот",
             Step.Summary => SummaryPages[_summaryPage].Title,
             _ => "Первая продажа"
@@ -631,7 +640,7 @@ public partial class FirstTradeTutorial : CanvasLayer
         _cameraProgress.Value = step == Step.Camera ? CameraPanProgress : CameraZoomProgress;
         Step cameraCheckpoint = cameraStep ? Step.Camera : step is Step.BuyerRequest or Step.TimedSale or Step.LateSale ? Step.Offer :
             step is Step.Notebook or Step.NotebookContents ? Step.Summary : step;
-        if (step != Step.EmbroideryStart && _appliedCameraStep != cameraCheckpoint && !_game.DayTransitionOpen)
+        if (step is not (Step.EmbroideryStart or Step.CraftSelection) && _appliedCameraStep != cameraCheckpoint && !_game.DayTransitionOpen)
         {
             // Restoring completed practice must not replay its entry flight before handing off.
             if (!IsCameraCompletionPending && !continuingPractice && !keepChosenRoom)
@@ -748,7 +757,7 @@ public partial class FirstTradeTutorial : CanvasLayer
 
         string message = _musicPage switch
         {
-            0 => "Мастерская даёт больше энергии и новые витрины. Создайте инструмент за деньги и 1 энергию.",
+            0 => "Мастерская открывает новые инструменты и витрины. Выберите инструмент в каталоге: его цена указана на карточке.",
             1 => "В полировке удерживайте ЛКМ и водите тряпочкой по инструменту.",
             2 => "Положите инструмент на свободную витрину. Покупатели придут после открытия магазина.",
             _ => "Сверяйтесь с облачком покупателя. Надбавка за скорость доступна 10–20 секунд для одежды и 15–25 секунд для инструментов."

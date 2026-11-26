@@ -8,8 +8,6 @@ public sealed class EconomyConfigTests
 {
     [TestCase("duration_seconds", 0)]
     [TestCase("items_per_craft", 3)]
-    [TestCase("energy_before_music_unlock", 0)]
-    [TestCase("energy_after_music_unlock", 1)]
     public void InvalidLiveDayRulesAreRejected(string property, int value)
     {
         JsonObject json = ReadConfig();
@@ -18,6 +16,15 @@ public sealed class EconomyConfigTests
     }
     private static string ConfigPath => Path.Combine(
         TestContext.CurrentContext.TestDirectory, "config", "economy.v1.json");
+
+    [Test]
+    public void RetiredEnergyFieldsDoNotConstrainLiveDayRules()
+    {
+        JsonObject json = ReadConfig();
+        json["days"]!["energy_before_music_unlock"] = 0;
+        json["days"]!["energy_after_music_unlock"] = 0;
+        Assert.DoesNotThrow(() => EconomyConfigLoader.Load(json.ToJsonString()));
+    }
 
     [Test]
     public void CanonicalConfigLoads()

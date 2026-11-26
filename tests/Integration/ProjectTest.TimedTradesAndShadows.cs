@@ -127,30 +127,31 @@ public partial class ProjectTest
                 var craft = game.GetNode<EmbroideryGame>(music ? "PolishingGame" : "EmbroideryGame");
                 craft.SetProcess(false);
                 craft.Open();
+                Check(game.Crafting.Select(music ? "guitar" : "hat"), "Select a concrete item before preparing craft");
                 Check(craft.IsOpen && Paused, "The pre-start crafting menu must be open");
                 double dayTime = game.DayRemainingSeconds;
                 craft._Process(1);
                 game._Process(1);
                 double elapsed = bar.Value;
-                Check(game.BuyerWaitRemaining == time && game.DayRemainingSeconds == dayTime - 1,
-                    "Only the day clock must tick on the ready screen");
+                Check(game.BuyerWaitRemaining == time && game.DayRemainingSeconds == dayTime,
+                    "Preparation must freeze both day and buyer clocks");
                 craft.Activate();
                 double craftTime = craft.ActiveSession.RemainingSeconds;
                 await PressEscapeForTest();
                 Check(pause.IsOpen, "Escape during craft must open the pause menu");
                 craft._Process(2);
                 game._Process(2);
-                Check(game.DayRemainingSeconds == dayTime - 1 && craft.ActiveSession.RemainingSeconds == craftTime &&
+                Check(game.DayRemainingSeconds == dayTime && craft.ActiveSession.RemainingSeconds == craftTime &&
                     game.BuyerWaitRemaining == time && bar.Value == elapsed, "Esc pause must freeze all three timers");
                 pause.Close();
                 craft._Process(2);
                 game._Process(2);
-                Check(game.BuyerWaitRemaining == time && game.DayRemainingSeconds == dayTime - 3 &&
+                Check(game.BuyerWaitRemaining == time && game.DayRemainingSeconds == dayTime - 2 &&
                     craft.ActiveSession.RemainingSeconds == craftTime - 2 && bar.Value == elapsed,
                     "Playing either minigame must tick only the day and craft clocks");
                 craft.FinishForTesting(true);
                 craft._Process(1);
-                Check(game.DayRemainingSeconds == dayTime - 4 && game.BuyerWaitRemaining == time && bar.Value == elapsed,
+                Check(game.DayRemainingSeconds == dayTime - 2 && game.BuyerWaitRemaining == time && bar.Value == elapsed,
                     "The result screen must also keep the buyer clock frozen");
                 craft.Activate();
                 Check(!craft.IsOpen && !Paused && game.BuyerWaitRemaining == time,
@@ -206,7 +207,7 @@ public partial class ProjectTest
                 pause.Close();
 
                 var card = game.GetNode<DayTransitionCard>("DayTransitionCard");
-                card.Open(1, 2, new[] { DayUpgrade.Cash, DayUpgrade.Energy, DayUpgrade.Atelier }, 2000);
+                card.Open(1, 2, new[] { DayUpgrade.Cash, DayUpgrade.AtelierPrice, DayUpgrade.Atelier }, 2000);
                 await WaitForDayCardAnimation(card);
                 foreach (var purchase in card.FindChildren("Choose", "Button", true, false).OfType<Button>())
                 {
@@ -234,8 +235,10 @@ public partial class ProjectTest
                 foreach (string name in new[] { "NewGameButton", "ContinueButton", "ChoiceBackButton" })
                     CheckButtonShadow(menu.GetNode<TextureButton>("MainMenuContainer/Menu/" + name));
                 using (await CapturePresentation($"choice-button-shadows-{size.X}")) { }
-                await ClickControl(menu, "MainMenuContainer/Menu/NewGameButton");
+                // Preview this decoration independently: New Game now enters training before prologue.
+                menu.GetNode<CanvasLayer>("IntroSkipLayer").Visible = true;
                 var skip = menu.GetNode<TextureButton>("IntroSkipLayer/SkipButton");
+                skip.Show();
                 CheckButtonShadow(skip);
                 await ToSignal(this, SignalName.ProcessFrame);
                 await ToSignal(this, SignalName.ProcessFrame);

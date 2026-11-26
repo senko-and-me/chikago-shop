@@ -123,7 +123,7 @@ public partial class ProjectTest
         {
             string room = workshop.Id == "atelier" ? "Atelier" : "MusicWorkshop";
             string preview = game.GetNode<Label>($"World/{room}/GetItemButton/PriceHint/Label").Text;
-            Check(preview == $"1 предмет  •  {workshop.SpinCost}$ + 1 энергия",
+            Check(preview == $"Выбор предмета  •  от {WorkshopItemCatalog.CraftCost(workshop.Id)}$",
                 "The authored price preview must match the default single-item economy before Ready");
         }
         var tradePanel = game.GetNode<Control>("World/TradingRoom/Item/TradePanel");

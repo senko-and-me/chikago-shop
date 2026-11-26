@@ -9,6 +9,123 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### SC-220 — удаление механики энергии
+
+Пользователь отменил энергию; SC219 DONE. План: убрать ограничения/расход крафта, энергетическую панель, бонус открытия мастерской и карту энергии, подсказки и debug-поля. Старые поля сохранений/числовые enum сохраняются как инертная совместимость; деньги и время дня остаются ограничениями, цены/квоты не меняются.
+
+| Задача | Статус | Исполнитель | CP |
+| --- | --- | --- | --- |
+| ENERGY-DOMAIN | DONE | domain agent | .local/checks/sc220/CP-ENERGY-DOMAIN.md |
+| ENERGY-UI | DONE | UI agent | .local/checks/sc220/CP-ENERGY-UI.md |
+| ENERGY-TEST | DONE | test agent | .local/checks/sc220/CP-ENERGY-TEST.md |
+| ENERGY-ROOT | DONE | /root | .local/checks/sc220/CP-ENERGY-ROOT.md |
+
+CP готовы, write-set непересекаются; root единственный владелец trade_scene.tscn/плана. Ветка feature/selective-crafting; source/, несвязанные правки и публикация вне scope.
+
+SC220 gate `OPEN → PASSED`, принято координатором /root 26.11.2026 после handoff и интеграции.
+
+```text
+Task: SC-220 / ENERGY-ROOT (accepted DOMAIN/UI/TEST handoffs)
+Recommended status: REVIEW -> accepted DONE
+Changed: energy removed from craft gate/debit, HUD scene, room hints, catalog, training, notebook, day reward, debug settings and balance tooling. Retired Energy card excluded from offers/purchases/restored selection; training fallback returns two unique eligible cards. Buyers wait independently of legacy energy/stock until day closes. Old enum IDs and save fields retained inert; money, prices, quotas, time and inventory schema unchanged. Legacy debug overrides discarded. Domain/config and GUI regression cases updated; new energy-removal suite.
+Checks: build PASS zero warnings/errors. Full domain215:213PASS,2knownFAIL (same Cash-edited-cost and v13wire-list failures reproduced in SC218 clean HEAD baseline). Focused energy domain32PASS. Eleven rendered isolated suites PASS exit0/stderr empty: energy-removal, selective-crafting, tutorial, craft-session, craft-localization, room-title, debug-hotkey, day-start-gate, day-expiry, timed-trades-shadows, campaign-balance. Scoped diffcheck PASS; protected5external files SHA256 unchanged. Evidence .local/checks/sc220/, domain-results/sc220.trx; reviewed1280catalog screenshot with money-only prices and no energy HUD.
+Acceptance: old v18zero-energy save playable; seven paid crafts without energy consumption/cap; all10selected items, quality/save D/duplicates, free cancel, money/day/room gates, pause, expiry and campaign pass. Old purchased Energy becomes None; no energy UI/cost copy RU/EN. Conservative time-based budget funds both quotas with/without music. Training completes with retired card absent. Earlier user/feature changes preserved.
+Read-set exception: coordinator bounded search of runtime energy consumers, affected test/config and clean-baseline failure evidence; root CP expanded to BalanceProfileTests/EconomyConfigTests because affected selection probability/energy validator assertions required updating. No source access.
+Risks/blocker: no scoped blockers. Two pre-existing domain failures remain; entire historical integration runner not claimed green. Unreferenced historical energy presentation assets/utilities retained, no live energy consumers. No commit/push.
+Next: user playtest energy-free crafting in feature/selective-crafting.
+```
+
+### SC-219 — оформление каталога предметов
+
+Статус: `DONE`; принято координатором `/root`; исполнитель `/root`; 2026-11-26; SC218 DONE. CP `.local/checks/sc219/CP-SC-219.md`. Компактное окно, облегчённые карточки, выравнивание и контрастные состояния кнопок.
+
+```text
+Task: SC-219
+Recommended status: REVIEW -> accepted DONE
+Changed: CraftCatalog and Card scenes author centered paper window, restrained1px borders, larger144px artwork, fixed name rows, muted rarity, clear price, aligned dark choices, outlined Back and distinct hover/focus/disabled styles. Empty reason rows hidden; meaningful disabled reasons retained. CraftCatalog fits window height to actual grid content within authored bounds and resets scroll on opening. Presentation-only changes; item/economy/save behavior retained.
+Checks: build PASS0warnings/errors; rendered selective-crafting and full tutorial suites PASS exit0, stderr empty. New assertions cover compact window/outer margins, no large lower void, full visibility of single row, aligned choices, contrasting enabled/disabled styling and meaningful unavailable reasons. All10 real selections/polish/stitch/debit/save checks retained. RU/EN both rooms960/1280 and disabled screenshots reviewed; scoped diffcheck PASS.6external user file SHA256 unchanged.
+Acceptance: cleaner compact catalog, readable hierarchy, consistent card/button geometry and functional selection/return/tutorial spotlight. Scene-owned visual properties remain editable. Evidence .local/checks/sc219/, including catalog-atelier-after.png/catalog-music-after.png.
+Read-set exception: rendered screenshots in system temp read/copied from existing test helper; no source/ or bitmap asset edits.
+Risks/blocker: none scoped. Existing SC218/user changes retained; no commit/push.
+Next: user preview updated catalog in game.
+```
+
+### SC-218 — выбор предмета и две миниигры крафта
+
+SC01 решения `PASSED` 2026-11-26: пользователь утвердил каталог5+5, две общие сцены, пять фиксированных узоров, полировку выбранного инструмента; цены70% с округлением5$,1энергия, фиксированная редкость, качествоS–D; D сохраняется на старте, улучшения дают+20%времени на день. Предыдущие предложения HF217 заменены этими решениями.
+
+| Задача | Статус | Исполнитель | CP / write-set |
+| --- | --- | --- | --- |
+| SC-DOMAIN | DONE | domain agent | .local/checks/sc218/CP-SC-DOMAIN.md;2domain files+2tests |
+| SC-UI | DONE | minigame UI agent | .local/checks/sc218/CP-SC-UI.md;EmbroideryGame,splitSurface,2newscenes |
+| SC-ROOT | DONE | /root | .local/checks/sc218/CP-SC-ROOT.md;catalog/coordinator/explicit craft extraction/integration/tests/docs |
+| SC-TEST | DONE | test agent | .local/checks/sc218/CP-SC-TEST.md;new ProjectTest.SelectiveCrafting.cs only |
+| SC-BALANCE | DONE | domain agent | SC-ROOT CP expansion;new SelectiveCraftBalanceTests.cs only |
+| SC-LEGACY | DONE | minigame UI agent | SC-UI CP extension;ProjectTest.Crafting.cs only transferred from root |
+
+Принято координатором `/root` 2026-11-26 после handoff исполнителей и интеграционной проверки. Ворота SC218 `OPEN → PASSED` по scoped acceptance: выбранный крафт, две сценовые миниигры, обучение, совместимость сохранений, баланс. Все зависимости — утверждённый SC01; write-set не пересекались, после handoff интеграционные исправления принадлежат root. Ветка feature/selective-crafting; source/ и несвязанные локальные изменения сохранены; commit/push не выполнялись. Новый dependency-satisfied фронт не назначен: утверждённый пользовательский план выполнен полностью.
+
+```text
+Task: SC-218 / SC-ROOT (coordinator acceptance of SC-DOMAIN/UI/TEST/BALANCE/LEGACY)
+Recommended status: REVIEW -> accepted DONE
+Changed: catalog5+5 with scene-authored cards and disabled reasons; Kind-based selection, exact-item CraftCoordinator with one debit/energy, immediately saved D and per-copy result update; no roll can replace chosen item. Explicitly extracted acquisition adapter into TradeScene.Crafting; TradeScene.cs only wiring/removed old acquisition/UI availability seams. Five deterministic silhouette patterns; common scene-authored embroidery/polishing shells, selected instrument artwork/mask. Prices config20/30/55/80/135 and30/50/80/125/205, per-item F10 editing; retired random-craft settings filtered from legacy debug profiles. Day upgrades +20% time using preserved enum IDs/costs. Catalog/ready/result pause day; playing advances it; pause freezes both. Updated tutorial catalog spotlight, notebook/cards/rarity-price help, RU/EN, fixture tests and GAMEPLAY.
+Checks: build PASS0warnings/errors. Full domain218 tests:216PASS,2FAIL; both failures reproduced identically from clean HEAD0724734 archive (BalanceProfile edited Cash cost; ProgressMigration exact wire list missing buyer_wait_initial). Focused domain pattern/duration/budget tests PASS35. Rendered isolated selective-crafting, tutorial, craft-contrast, craft-session, polishing-start, polishing-reward, day-start-gate, day-expiry, timed-trades-shadows, campaign-balance, craft-localization, room-title, debug-hotkey suites PASS exit0, final stderr empty. Scoped diffcheck PASS(cr-at-eol). Reviewed RU/EN catalog/ready screenshots960/1280 and contrast image. External6file SHA256 unchanged; DayCycle task-start user edits preserved exactly except single authorized clock predicate.
+Acceptance: real clicks select/produce all10items; five complete distinct stitch patterns and actual rubbing on five instruments; free back, one charge/energy, no early/duplicate quality commit; identical copies retain distinct S/D across reload; unpaid and paid state, blocked funds/energy/day/room, pause/catalog/checkpoint/language changes and expiry tested. Historical v13/v18 inventory and grades preserved; saved category upgrade now12s. Deterministic conservative budget pays both quotas with atelier only and optional music unlock, without extra sale bonuses; not a full customer simulation.
+Read-set exception: bounded discovery of craft/schema/helper files; Resources localized-button test added to root write-set; exact panel_inverted/panel_small/camera_frame textures inspected for alpha bounds, no asset edits/source access. Root integration fixes after UI handoff include authored geometry preservation, cropped ink atlas and separated footer; stale timed-shadow fixture now previews skip decoration independently of tutorial-first startup.
+Risks/blocker: no scoped blockers. Two pre-existing domain failures remain documented with clean-baseline TRX evidence; no claim that the entire historical integration runner passes. Existing external menu null music overrides untouched. Runtime EmbroideryGame user pointer behavior retained (112px cloth, shown only playing); original snapshot kept. No commit/push.
+Next: user playtest catalog and item-specific patterns in feature/selective-crafting.
+```
+
+### HF-217 — ветка и план выборочного крафта
+
+Статус: `DONE`; принято координатором `/root`; исполнитель `/root`; 2026-11-26; HF216 DONE. CP `.local/checks/hf217/CP-HF-217.md`. От `main` (`0724734`) создана и выбрана локальная ветка `feature/selective-crafting`. Текущая задача — подготовка плана; реализация ниже ещё не начата.
+
+```text
+Task: HF-217
+Recommended status: REVIEW -> accepted DONE
+Changed: local feature/selective-crafting branch from main0724734; implementation outline and DRAFT task graph below.
+Checks: branch/base readback PASS; all8pre-existing dirty files SHA256 unchanged; scoped diffcheck PASS. Runtime unchanged, no runtime test required.
+Acceptance: isolated branch selected, chosen-item flow/per-item architecture and tentative10mechanics documented with balance decisions and staged acceptance.
+Read-set exception: bounded crafting filename/search diagnostics before CP; no source/ access.
+Risks/blocker: design/balance questions recorded for SC01; no branch/planning blocker. No commit/push.
+Next: SC01 rules and minigame design before implementation.
+```
+
+Требования пользователя: игрок выбирает любой конкретный предмет для изготовления; у каждого предмета своя миниигра. Предварительный поток: кнопка крафта в комнате → каталог её предметов → выбор предмета → правила и стоимость → запуск соответствующей миниигры → выбранный предмет с полученным качеством в инвентаре. Каталог показывает название, изображение, стоимость, энергию и причину недоступности. Доступ к музыкальным предметам предварительно сохраняет существующее открытие мастерской.
+
+Текущее основание: WorkshopItemCatalog содержит10предметов и стабильные индексы; сейчас предмет определяется случайным Roll, а EmbroideryGame объединяет вышивку и полировку. Уже есть ICraftSession для состояния/ранга. При выборе предмета случайный Roll не должен подменять выбранный Kind; качество зависит от результата миниигры. Исторические индексы предметов сохраняем для совместимости инвентаря и сохранений.
+
+Предлагаемая архитектура: отдельный координатор крафта хранит выбранный предмет и жизненный цикл попытки; реестр связывает стабильный Kind с определением миниигры (сцена, сессия, параметры, правила). Общий хост отвечает за вход/выход, паузу, таймер, результат и единственную выдачу награды. Каждая игра получает собственную сцену и контроллер; интерфейс и постоянная разметка хранятся в .tscn. ICraftSession адаптируем только там, где текущего контракта недостаточно. TradeScene остаётся местом подключения; новая доменная логика туда не добавляется. Извлечение существующего списания/выдачи требует отдельного явно указанного write-set.
+
+Правила транзакции для реализации: выбор и просмотр бесплатны; подтверждение старта проверяет день, доступ к комнате, деньги, энергию и отсутствие другой активной попытки; списание выполняется ровно один раз. Результат относится к выбранному предмету, повторное подтверждение не создаёт дубликат. Отмена до старта бесплатна. Поведение прерывания после старта, провала и загрузки фиксируется до реализации транзакции; нельзя допустить бесплатные повторные попытки или потерю оплаты без определённого результата. Текущий отсчёт игрового дня во время активного крафта сохраняем до отдельного решения.
+
+Предварительные идеи отдельных игр (механики ещё не утверждены):
+
+| Предмет | Возможная миниигра |
+| --- | --- |
+| Шляпка | Сформировать поля по контуру |
+| Жилетка | Соединить детали выкройки швами |
+| Перчатки | Выполнить точный шов вокруг пальцев |
+| Шляпа Маттео | Закрепить ленту и украшение в нужных местах |
+| Лорнет | Собрать оправу и совместить линзы |
+| Гитара | Настроить струны по высоте звука с визуальной подсказкой |
+| Барабан | Натянуть мембрану, уравняв зоны натяжения |
+| Банджо | Повторить ритмический рисунок |
+| Скрипка | Вести смычок, удерживая направление и давление |
+| Туба | Собрать трубки и клапаны по схеме |
+
+Порядок работ; нижние задачи имеют статус `DRAFT`, не `READY`: перед каждой создаются CP, точные read/write-set, наблюдаемая приёмка и команды проверок. Ветка для всех этапов — `feature/selective-crafting`.
+
+| Этап | Зависимости | Результат и приёмка |
+| --- | --- | --- |
+| SC-01: правила и дизайн | HF217 | Утверждены стоимость/редкость, доступность,10механик, отмена/провал/загрузка; нет неоднозначного списания |
+| SC-02: выбранный предмет и транзакция | SC-01 | Выбор фиксирует Kind, ресурсы списываются один раз, выдача не дублируется; доменные тесты |
+| SC-03: каталог и общий хост | SC-02 | Сцена выбора, реестр/хост, сначала один вертикальный срез; реальный клик выдаёт именно выбранный предмет, отмена бесплатна |
+| SC-04: отдельные игры | SC-03 | По одной задаче/CP на предмет; уникальная механика, сцена, качество и тесты; все10Kind покрыты реестром |
+| SC-05: интеграция и баланс | SC-04 | Обучение, локализация, улучшения и редкость согласованы; проверены пауза/конец дня/сохранение, оба цеха и отсутствие случайной подмены |
+
+Решения перед SC-02: выбор любого предмета отменяет прежний смысл вероятностей редкости, поэтому нужно определить роль редкости и улучшений на шанс выпадения; стоимость оставить общей для комнаты или назначить по предметам; «любой предмет» доступен сразу в открытой комнате или требует рецепта. Предлагаемый старт для обсуждения: в открытой комнате доступны все её предметы; редкость остаётся свойством предмета, качество определяется навыком; цены задаются данными по предмету. Точные цены и замена бонусов вероятности — отдельная балансировка, а не неявное изменение при подключении UI.
+
 ### HF-216 — публикация переходов, оформления сцен и перемещения по шторке
 
 Статус: `DONE`; принято координатором `/root`; исполнитель `/root`; 2026-11-26; HF213–215 DONE. Пользователь просит push. CP `.local/checks/hf215/CP-HF-216.md`. Опубликован `80e8419`: завершённые исправления HF213–215; восемь несвязанных пользовательских файлов сохранены локально.

@@ -2,10 +2,10 @@ namespace ChikagoShop.Domain.Days;
 
 public sealed class DayUpgradeRules
 {
-    // Keep the legacy Time enum value for old saves, but never offer that card.
+    // Keep retired Energy and Time enum values for old saves, but never offer those cards.
     private static readonly DayUpgrade[] Available =
     [
-        DayUpgrade.Cash, DayUpgrade.Energy, DayUpgrade.Atelier,
+        DayUpgrade.Cash, DayUpgrade.Atelier,
         DayUpgrade.Music, DayUpgrade.AtelierPrice, DayUpgrade.MusicPrice
     ];
 
@@ -23,7 +23,8 @@ public sealed class DayUpgradeRules
             (musicUnlocked || card is not (DayUpgrade.Music or DayUpgrade.MusicPrice))).ToArray();
         var pool = eligible.Where(card => Weight(card) > 0).ToList();
         if (!WeightedSelection || training && pool.Count == 0)
-            return Enumerable.Range(0, 3).Select(offset => eligible[(day - 2 + offset) % eligible.Length]).ToArray();
+            return Enumerable.Range(0, Math.Min(3, eligible.Length))
+                .Select(offset => eligible[((Math.Max(2, day) - 2) % eligible.Length + offset) % eligible.Length]).ToArray();
 
         var random = new Random(unchecked(Seed * 397 ^ day));
         var result = new List<DayUpgrade>();

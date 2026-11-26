@@ -26,19 +26,19 @@ public partial class ProjectTest
                 Root.AddChild(game); game.SetProcess(false);
                 game.EndDay(); game.Score = 10000; game.TryUnlockMusicWorkshop();
                 var craft = game.GetNode<EmbroideryGame>("PolishingGame");
-                game.GetItemFromMusicWorkshop();
+                game.GetItemFromMusicWorkshop(); SelectLegacyCraft(game, "guitar");
                 Check(craft.IsOpen, "Unlocked room must open polishing");
                 await ToSignal(this, SignalName.ProcessFrame);
                 var cloth = craft.GetNode<Sprite2D>("Surface/PolishingCursor");
                 Check(Input.MouseMode == Input.MouseModeEnum.Visible && !cloth.Visible,
                     "Ready buttons need the native pointer: the centered cloth must not hide their click hotspot");
-                await ClickControl(game, "PolishingGame/Surface/Cancel");
+                await CancelLegacyCraft(game, "PolishingGame");
                 Check(!craft.IsOpen && !Paused && Input.MouseMode == Input.MouseModeEnum.Visible,
                     "Cancel must restore the pointer and leave the preview reusable");
-                game.GetItemFromMusicWorkshop();
+                game.GetItemFromMusicWorkshop(); SelectLegacyCraft(game, "guitar");
                 await ToSignal(this, SignalName.ProcessFrame);
                 int money = game.Score, energy = game.EnergyRemaining;
-                var button = craft.GetNode<Button>("Surface/Action");
+                var button = craft.GetNode<Button>("Surface/Panel/Buttons/Action");
                 Vector2 point = button.GetGlobalTransformWithCanvas() * (button.Size / 2);
                 Root.PushInput(new InputEventMouseMotion { Position = point, GlobalPosition = point }, true);
                 await ToSignal(this, SignalName.ProcessFrame);
@@ -52,10 +52,10 @@ public partial class ProjectTest
                     $"Normal held mouse click must start music mini-game ({size}, {language})");
                 Check(Input.MouseMode == Input.MouseModeEnum.Hidden && cloth.Visible,
                     "Playing must switch from the UI pointer to the polishing cloth");
-                Check(game.StoredItems.Length == EconomyConfigProvider.Load().Days.ItemsPerCraft,
+                Check(game.StoredItems.Length == 1,
                     "Start must grant the paid batch exactly once");
-                Check(game.Score == money - WorkshopItemCatalog.CraftCost("music") && game.EnergyRemaining == energy - 1,
-                    "Start must charge its price and one energy exactly once");
+                Check(game.Score == money - WorkshopItemCatalog.ItemCraftCost(craft.PreparedItemIndex.Value) && game.EnergyRemaining == energy,
+                    "Start must charge its price once without changing the legacy energy counter");
                 var board = craft.GetNode<PolishingSurface>("Surface/Polishing");
                 var cell = craft.Polishing.Cells.First(value => value.Inside && craft.Polishing.Inside(value.X + 14, value.Y));
                 Vector2 left = board.LogicalToScreen(new Vector2((float)cell.X, (float)cell.Y));
@@ -76,7 +76,7 @@ public partial class ProjectTest
                 craft.FinishForTesting(true);
                 Check(Input.MouseMode == Input.MouseModeEnum.Visible && !cloth.Visible,
                     "Collect must immediately restore the native pointer even before the next frame");
-                await ClickControl(game, "PolishingGame/Surface/Action");
+                await ClickControl(game, "PolishingGame/Surface/Panel/Buttons/Action");
                 Check(!craft.IsOpen && !Paused, "Collect must close polishing and restore gameplay");
                 game.QueueFree(); game = null;
                 await ToSignal(this, SignalName.ProcessFrame);
@@ -97,130 +97,67 @@ public partial class ProjectTest
         var scene = GD.Load<PackedScene>("res://scenes/trade_scene.tscn");
         var game = scene.Instantiate<TradeScene>();
         game.SavePath = "";
-        Root.AddChild(game);
-        game.SetProcess(false);
-        await ToSignal(this, SignalName.ProcessFrame);
+        game.GetNode<FirstTradeTutorial>("FirstTradeTutorial").ProgressPath = "";
+        Root.AddChild(game); game.SetProcess(false);
         const string savePath = "user://polishing_reward_test.json";
         try
         {
             var craft = game.GetNode<EmbroideryGame>("PolishingGame");
             craft.SetProcess(false);
             var board = craft.GetNode<PolishingSurface>("Surface/Polishing");
-            int[] music = WorkshopItemCatalog.Items.Select((item, index) => (item, index))
-                .Where(entry => entry.index < WorkshopItemCatalog.ActiveItemCount && entry.item.WorkshopId == "music").Select(entry => entry.index).ToArray();
-            foreach (int level in new[] { 0, 3 })
-            {
-                var upgrades = new DayUpgradeSession();
-                upgrades.Restore(false, DayUpgrade.None, musicLevel: level);
-                int total = WorkshopItemCatalog.TotalWeight("music", upgrades);
-                var counts = Enumerable.Range(0, total).Select(ticket => WorkshopItemCatalog.PreparePolishing(ticket, upgrades))
-                    .GroupBy(prepared => WorkshopItemCatalog.Items[prepared.ItemIndex].RarityId)
-                    .ToDictionary(group => group.Key, group => group.Count());
-                var rarities = EconomyConfigProvider.Load().Rarities;
-                int weights = rarities.Sum(rarity => WorkshopItemCatalog.RarityWeight("music", rarity.Id, upgrades));
-                foreach (var rarity in rarities)
-                    Check((counts.TryGetValue(rarity.Id, out int amount) ? amount : 0) * weights ==
-                        total * WorkshopItemCatalog.RarityWeight("music", rarity.Id, upgrades),
-                        "Preparing the visible reward must preserve exact rarity probabilities, including music upgrades");
-            }
             int iteration = 0;
             foreach (int level in new[] { 0, 3 })
-            foreach (int expected in music)
+            foreach (var entry in WorkshopItemCatalog.Items.Select((item, index) => (item, index))
+                .Where(entry => entry.item.WorkshopId == "music"))
             {
-                game.NewGame();
-                Check(!craft.PreparedItemIndex.HasValue, "A new run must clear the previous paid polishing selection");
-                game.EndDay();
-                game.Score = 10000;
-                game.TryUnlockMusicWorkshop();
+                game.NewGame(); game.EndDay(); game.Score = 10000; game.TryUnlockMusicWorkshop();
                 game.DayUpgrades.Restore(false, DayUpgrade.None, musicLevel: level);
-                int total = WorkshopItemCatalog.TotalWeight("music", game.DayUpgrades);
-                ulong seed = 1;
-                for (; seed < 100000; seed++)
-                {
-                    GD.Seed(seed);
-                    int ticket = GD.RandRange(0, total - 1);
-                    if (WorkshopItemCatalog.Roll("music", ticket, game.DayUpgrades) == expected) break;
-                }
-                Check(seed < 100000, "Every music rarity and instrument must remain reachable with existing weighted rolls");
-                GD.Seed(seed);
-                craft.Open();
-                string expectedArt = System.IO.Path.GetFileNameWithoutExtension(WorkshopItemCatalog.Items[expected].ArtPath);
-                Check(craft.IsOpen && craft.PreparedItemIndex == expected && board.InstrumentKind == expectedArt,
-                    $"Weighted item {expected} must display its actual art, including legacy catalog kinds");
+                Check(!craft.PreparedItemIndex.HasValue, "New game must clear the prior selection");
+                game.GetItemFromMusicWorkshop();
+                Check(game.Crafting.Select(entry.item.Kind), "Each music item must be selectable regardless of its rarity");
+                Check(craft.IsOpen && craft.PreparedItemIndex == entry.index && board.InstrumentKind == entry.item.Kind,
+                    "The selected item must determine the preview artwork and playable mask");
                 int money = game.Score, energy = game.EnergyRemaining, count = game.StoredItems.Length;
-                await ClickControl(game, "PolishingGame/Surface/Cancel");
-                Check(!craft.IsOpen && !Paused && game.Score == money && game.EnergyRemaining == energy && game.StoredItems.Length == count,
-                    "Cancelling an unstarted polishing preview must remain free");
-                GD.Seed(seed + 1000);
-                craft.Open();
-                Check(craft.PreparedItemIndex == expected && board.InstrumentKind == expectedArt,
-                    "Free cancellation must not reroll the preview into a rarer paid reward");
-                await ClickControl(game, "PolishingGame/Surface/Action");
-                int batch = EconomyConfigProvider.Load().Days.ItemsPerCraft;
-                Check(game.Score == money - WorkshopItemCatalog.CraftCost("music") && game.EnergyRemaining == energy - 1 &&
-                    game.StoredItems.Length == count + batch && game.StoredItems.Skip(count).All(index => index == expected),
-                    "Starting must charge the configured cost and energy once and grant exactly the displayed instrument for the configured batch");
+                await CancelLegacyCraft(game, "PolishingGame");
+                Check(game.Score == money && game.EnergyRemaining == energy && game.StoredItems.Length == count,
+                    "Cancelling an unstarted selected preview must remain free");
+                GD.Seed((ulong)++iteration);
+                game.GetItemFromMusicWorkshop();
+                Check(game.Crafting.Select(entry.item.Kind) && craft.PreparedItemIndex == entry.index,
+                    "Random generator changes must never substitute the selected instrument");
+                int cost = WorkshopItemCatalog.ItemCraftCost(entry.index);
+                await ClickControl(game, "PolishingGame/Surface/Panel/Buttons/Action");
+                Check(game.Score == money - cost && game.EnergyRemaining == energy &&
+                    game.StoredItems.Length == count + 1 && game.StoredItems[count] == entry.index,
+                    "Start must debit the selected price and grant precisely one displayed instrument");
                 craft.Activate();
-                Check(game.Score == money - WorkshopItemCatalog.CraftCost("music") && game.StoredItems.Length == count + batch,
-                    "Repeated start while playing must not pay or grant twice");
-                bool success = iteration++ % 2 == 0;
-                if (success) craft.FinishForTesting(true);
+                Check(game.Score == money - cost && game.StoredItems.Length == count + 1,
+                    "Duplicate start must not pay or grant twice");
+                if (iteration % 2 == 0) craft.FinishForTesting(true);
                 else craft._Process(craft.ActiveSession.RemainingSeconds + .1);
-                int quality = craft.ActiveSession.Quality;
                 Check(craft.ActiveSession.State == EmbroideryState.Finished &&
-                    craft.GetNode<Label>("Surface/Quality").Text == $"{quality}%" &&
-                    game.StoredItems.Skip(count).All(index => index == expected),
-                    "Success and timeout must preserve the polished item and report the session quality");
-                await ClickControl(game, "PolishingGame/Surface/Action");
+                    craft.GetNode<Label>("Surface/Panel/Quality").Text == $"{craft.ActiveSession.Quality}%" &&
+                    game.StoredItems[count] == entry.index, "Success and timeout must preserve the exact chosen item");
+                await ClickControl(game, "PolishingGame/Surface/Panel/Buttons/Action");
                 craft.Activate();
-                Check(!craft.IsOpen && !Paused && game.StoredItems.Length == count + batch &&
-                    game.Score == money - WorkshopItemCatalog.CraftCost("music") && game.EnergyRemaining == energy - 1,
-                    "Collect and repeated activation after close must not change the paid batch or resources");
+                Check(!craft.IsOpen && !Paused && game.StoredItems.Length == count + 1 && game.Score == money - cost,
+                    "Collect and activation after close must be idempotent");
             }
-
-            craft.Open();
-            int unpaid = craft.PreparedItemIndex.Value;
-            await ClickControl(game, "PolishingGame/Surface/Cancel");
-            game.NewGame();
-            Check(!craft.PreparedItemIndex.HasValue, "A new run must also clear an unpaid cancelled polishing preview");
-            game.EndDay();
-            game.Score = 10000;
-            game.TryUnlockMusicWorkshop();
-            int nextTotal = WorkshopItemCatalog.TotalWeight("music", game.DayUpgrades);
-            ulong nextSeed = 1;
-            int nextExpected;
-            do
-            {
-                GD.Seed(nextSeed++);
-                nextExpected = WorkshopItemCatalog.Roll("music", GD.RandRange(0, nextTotal - 1), game.DayUpgrades);
-            } while (nextExpected == unpaid);
-            GD.Seed(nextSeed - 1);
-            craft.Open();
-            Check(craft.PreparedItemIndex == nextExpected &&
-                board.InstrumentKind == System.IO.Path.GetFileNameWithoutExtension(WorkshopItemCatalog.Items[nextExpected].ArtPath),
-                "The new run must prepare its own weighted item instead of reusing the old unpaid preview");
-            craft.FinishForTesting(true);
-            await ClickControl(game, "PolishingGame/Surface/Action");
-            Check(game.StoredItems.All(index => index == nextExpected), "The reset preview must remain the exact paid reward");
-
-            game.SavePath = savePath;
-            game.PersistProgress();
+            game.SavePath = savePath; game.PersistProgress();
             int[] saved = game.StoredItems;
             int savedMoney = game.Score, savedEnergy = game.EnergyRemaining;
-            game.QueueFree();
-            await ToSignal(this, SignalName.ProcessFrame);
-            game = scene.Instantiate<TradeScene>();
-            game.SavePath = savePath;
-            Root.AddChild(game);
-            game.SetProcess(false);
+            game.QueueFree(); await ToSignal(this, SignalName.ProcessFrame);
+            game = scene.Instantiate<TradeScene>(); game.SavePath = savePath;
+            game.GetNode<FirstTradeTutorial>("FirstTradeTutorial").ProgressPath = "";
+            Root.AddChild(game); game.SetProcess(false);
             await ToSignal(this, SignalName.ProcessFrame);
             Check(game.StoredItems.SequenceEqual(saved) && game.Score == savedMoney && game.EnergyRemaining == savedEnergy &&
-                !game.CraftMiniGameOpen && !Paused, "Reload must preserve the exact polished item without duplicating its batch");
+                !game.CraftMiniGameOpen && !game.Crafting.IsCatalogOpen && !Paused,
+                "Reload must preserve selected goods without reopening or duplicating an attempt");
         }
         finally
         {
-            Paused = false;
-            GD.Randomize();
+            Paused = false; GD.Randomize();
             if (GodotObject.IsInstanceValid(game)) game.QueueFree();
             if (FileAccess.FileExists(savePath)) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(savePath));
             await ToSignal(this, SignalName.ProcessFrame);
@@ -249,7 +186,7 @@ public partial class ProjectTest
                 game.Score = 10000;
                 if (name == "PolishingGame") game.TryUnlockMusicWorkshop();
                 var craft = game.GetNode<EmbroideryGame>(name);
-                craft.Open();
+                craft.Open(); SelectLegacyCraft(game, craft.IsPolishing ? "guitar" : "hat");
                 craft.SetProcess(false);
                 if (state != "ready") craft.Activate();
                 if (state == "timeout")
@@ -284,27 +221,27 @@ public partial class ProjectTest
                     Check(dark > 2, $"Rendered {name}/{label.Name} text must remain visibly dark ({state}, {locale}, {size})");
                 }
                 foreach (string stat in new[] { "Time", "Stitches", "Misses" })
-                    Check(Pixel(surface.GetNode<Control>("Stat" + stat).Position + new Vector2(10, 10)).R > 0.9f,
+                    Check(Pixel(CraftBounds(surface, surface.GetNode<Control>("Panel/Stat" + stat)).Position + new Vector2(10, 10)).R > 0.9f,
                         "Statistics must have light cards behind their black headings and values");
                 Rect2 panel = surface.PanelRect, fabric = surface.FabricRect;
-                var title = surface.GetNode<Label>("Title");
-                var firstStat = surface.GetNode<Control>("StatTime");
-                var lastStat = surface.GetNode<Control>("StatMisses");
-                var hint = surface.GetNode<Label>("Hint");
-                Check(title.GetRect().End.X + 8 <= firstStat.Position.X &&
-                    lastStat.GetRect().End.X + 8 <= panel.End.X &&
-                    firstStat.GetRect().End.Y + 20 <= fabric.Position.Y,
+                var title = surface.GetNode<Label>("Panel/Title");
+                var firstStat = surface.GetNode<Control>("Panel/StatTime");
+                var lastStat = surface.GetNode<Control>("Panel/StatMisses");
+                var hint = surface.GetNode<Label>("Panel/Hint");
+                Check(CraftBounds(surface, title).End.X + 8 <= CraftBounds(surface, firstStat).Position.X &&
+                    CraftBounds(surface, lastStat).End.X + 8 <= panel.End.X &&
+                    CraftBounds(surface, firstStat).End.Y + 20 <= fabric.Position.Y,
                     "Title and three statistics must share a separated header above the workspace");
-                Check(panel.Encloses(fabric.Grow(7)) && fabric.End.Y + 7 <= hint.Position.Y &&
+                Check(panel.Encloses(fabric.Grow(7)) && fabric.End.Y + 7 <= CraftBounds(surface, hint).Position.Y &&
                     surface.QualityTrackRect.Position.X >= fabric.End.X + 16 &&
-                    surface.GetNode<Label>("Quality").GetRect().End.Y <= fabric.End.Y + 1,
+                    CraftBounds(surface, surface.GetNode<Label>("Panel/Quality")).End.Y <= fabric.End.Y + 1,
                     "Workspace, quality sidebar and footer must stay separated inside the modal");
                 var clockLayer = game.GetNode<CanvasLayer>("HUD/DayClock");
                 var clockAction = game.GetNode<Button>("HUD/DayClock/Root/ClockActionButton");
                 var clock = game.GetNode<Label>("HUD/DayClock/Root/DayTimer");
                 Check(!surface.HasNode("DayTimer") && !surface.HasNode("DayHeading") &&
                     clockLayer.Layer > craft.Layer && clock.IsVisibleInTree() && clockAction.Disabled &&
-                    surface.GetNode<Control>("StatTime").Visible,
+                    surface.GetNode<Control>("Panel/StatTime").Visible,
                     "One shared clock must render above the craft modal, with input disabled and craft time preserved");
                 int visibleClock = 0;
                 Rect2 clockBounds = ScreenBounds(clock);
@@ -333,26 +270,26 @@ public partial class ProjectTest
                         $"The quality meter must distinguish black fill from its light empty part ({name}, {state}, quality={craft.ActiveSession.Quality})");
                 }
                 foreach (string buttonName in new[] { "Action", "Cancel" })
-                foreach (string color in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color", "font_disabled_color" })
-                    Check(surface.GetNode<Button>(buttonName).GetThemeColor(color) ==
-                        (state == "ready" && buttonName == "Action" ? Colors.White : Colors.Black),
-                        "Start must have white text on dark fill; secondary and collect buttons keep black text");
-                var action = surface.GetNode<Button>("Action");
-                var cancel = surface.GetNode<Button>("Cancel");
+                foreach (string color in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_focus_color" })
+                    Check(surface.GetNode<Button>("Panel/Buttons/" + buttonName).GetThemeColor(color) ==
+                        (buttonName == "Action" ? Colors.White : Colors.Black),
+                        "Primary actions must have white text on dark fill and Back must retain black text");
+                var action = surface.GetNode<Button>("Panel/Buttons/Action");
+                var cancel = surface.GetNode<Button>("Panel/Buttons/Cancel");
                 if (state == "ready")
                 {
-                    Check(action.GetRect().End.X < cancel.Position.X && action.HasFocus() &&
-                        surface.PanelRect.Encloses(action.GetRect()) && surface.PanelRect.Encloses(cancel.GetRect()),
+                    Check(CraftBounds(surface, action).End.X < CraftBounds(surface, cancel).Position.X && action.HasFocus() &&
+                        surface.PanelRect.Encloses(CraftBounds(surface, action)) && surface.PanelRect.Encloses(CraftBounds(surface, cancel)),
                         "Start must be left of Back, initially focused, with both buttons inside the modal");
-                    Check(Pixel(action.Position + new Vector2(10, 10)).R < 0.35f &&
-                        Pixel(cancel.Position + new Vector2(10, 10)).R > 0.8f,
+                    Check(Pixel(CraftBounds(surface, action).Position + new Vector2(10, 10)).R < 0.35f &&
+                        Pixel(CraftBounds(surface, cancel).Position + new Vector2(10, 10)).R > 0.8f,
                         "The rendered Start button must remain clearly darker than Back through the grayscale shader");
                     if (size.X == 960)
                         frame.SavePng(System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"chikago-hf179-{name}-{locale}.png"));
                 }
                 else if (action.Visible)
-                    Check(Mathf.Abs(action.GetRect().GetCenter().X - surface.PanelRect.GetCenter().X) < 0.1f &&
-                        surface.PanelRect.End.Y - action.GetRect().End.Y >= 35,
+                    Check(Mathf.Abs(CraftBounds(surface, action).GetCenter().X - surface.PanelRect.GetCenter().X) < 0.1f &&
+                        surface.PanelRect.End.Y - CraftBounds(surface, action).End.Y >= 20,
                         "Collect must remain centered with a clear margin from the lower frame");
                 if (locale == "ru" && size.X == 960 && state == "timeout")
                     frame.SavePng(System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"chikago-hf166-{name}.png"));
@@ -361,10 +298,10 @@ public partial class ProjectTest
                 {
                     int money = game.Score, energy = game.EnergyRemaining, count = game.StoredItems.Length;
                     Rect2 beforeStart = surface.FabricRect;
-                    await ClickControl(game, name + "/Surface/Action");
+                    await ClickControl(game, name + "/Surface/Panel/Buttons/Action");
                     Check(surface.FabricRect == beforeStart, "Starting must keep the workspace and hit targets in place");
                     Check(craft.ActiveSession.State == EmbroideryState.Playing && !action.Visible && !cancel.Visible &&
-                        game.Score < money && game.EnergyRemaining == energy - 1 && game.StoredItems.Length == count + 1,
+                        game.Score < money && game.EnergyRemaining == energy && game.StoredItems.Length == count + 1,
                         "The highlighted left Start must begin the real game, charge once and hide both buttons");
                     craft.FinishForTesting(false);
                     closeButton = "Action";
@@ -373,7 +310,8 @@ public partial class ProjectTest
                 Check(craft.IsOpen && !game.DayClosed, "Visible shared clock must not close the day through a real click during craft");
                 int items = game.StoredItems.Length;
                 if (state == "playing") craft.FinishForTesting(false);
-                await ClickControl(game, name + "/Surface/" + closeButton);
+                if (closeButton == "Cancel") await CancelLegacyCraft(game, name);
+                else await ClickControl(game, name + "/Surface/Panel/Buttons/" + closeButton);
                 Check(clockLayer.Layer < 100 && !clockAction.Disabled, "Closing craft must restore ordinary clock layer and input");
                 Check(!craft.IsOpen && !Paused && game.StoredItems.Length == items,
                     "Restyled cancel/collect controls must close the minigame without duplicating items");
@@ -393,196 +331,137 @@ public partial class ProjectTest
     {
         var game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
         game.SavePath = "";
-        Root.AddChild(game);
+        game.GetNode<FirstTradeTutorial>("FirstTradeTutorial").ProgressPath = "";
+        Root.AddChild(game); game.SetProcess(false);
         await ToSignal(this, SignalName.ProcessFrame);
         Vector2I originalSize = Root.Size;
         string originalLocale = TranslationServer.GetLocale();
         try
         {
             var embroidery = game.GetNode<EmbroideryGame>("EmbroideryGame");
-            double dayTime = game.DayRemainingSeconds;
+            embroidery.SetProcess(false);
+            if (!game.DayStarted) game.EndDay();
+            int initialMoney = game.Score, initialEnergy = game.EnergyRemaining;
             await ClickControl(game, "World/Atelier/GetItemButton");
-            Check(embroidery.IsOpen && Paused && game.StoredItems.Length == 0 && game.Score == 220,
-                "Atelier click must open embroidery without granting items or charging before confirmation");
-            double beforeCraftFrame = game.DayRemainingSeconds;
-            await ToSignal(this, SignalName.ProcessFrame);
-            Check(game.DayRemainingSeconds < beforeCraftFrame && beforeCraftFrame <= dayTime,
-                "The trading clock must continue on the ready embroidery screen");
+            Check(game.Crafting.IsCatalogOpen && !embroidery.IsOpen && Paused,
+                "The real atelier button must open the catalog before preparation");
+            SelectLegacyCraft(game, "hat");
+            double readyTime = game.DayRemainingSeconds;
+            game._Process(1); embroidery._Process(1);
+            Check(game.DayRemainingSeconds == readyTime && embroidery.Session.RemainingSeconds == 10 &&
+                game.StoredItems.Length == 0 && game.Score == initialMoney,
+                "Catalog and unstarted preparation must freeze the day and remain free");
             var pause = game.GetNode<PauseMenu>("PauseMenu");
             pause.Open();
-            Check(pause.IsOpen && embroidery.IsOpen, "Pause must cover embroidery while preserving the ready state");
+            Check(pause.IsOpen && embroidery.IsOpen, "Pause must cover embroidery and preserve its preparation");
             pause.Close();
-            await ClickControl(game, "EmbroideryGame/Surface/Cancel");
-            Check(!Paused && !embroidery.IsOpen && game.Score == 220 && game.EnergyRemaining == 2,
-                "Cancel before start must restore the world without cost");
-
+            await CancelLegacyCraft(game, "EmbroideryGame");
+            Check(!Paused && game.Score == initialMoney && game.EnergyRemaining == initialEnergy,
+                "Cancelling preparation and catalog must return to the world without a charge");
             foreach (Vector2I size in new[] { new Vector2I(1280,720), new Vector2I(960,540) })
             {
                 Root.Size = size;
-                game.GetItemFromAtelier();
+                game.GetItemFromAtelier(); SelectLegacyCraft(game, "hat");
                 await ToSignal(this, SignalName.ProcessFrame);
                 var surface = embroidery.GetNode<EmbroiderySurface>("Surface");
-                Check(new Rect2(Vector2.Zero, Root.GetVisibleRect().Size).Encloses(surface.PanelRect),
-                    "Embroidery panel must fit the viewport independently of camera zoom");
-                Check(surface.PanelRect.Encloses(surface.QualityTrackRect.Grow(3)) &&
-                      surface.QualityTrackRect.Size.Y == surface.FabricRect.Size.Y,
-                    "The framed quality scale must span the fabric height and fit the panel");
+                Rect2 panel = surface.PanelRect;
+                Check(new Rect2(Vector2.Zero, Root.GetVisibleRect().Size).Encloses(panel) &&
+                    panel.Encloses(surface.QualityTrackRect.Grow(3)), "Workspace and quality meter must fit the viewport");
                 foreach (string stat in new[] { "Time", "Stitches", "Misses" })
                 {
-                    var card = surface.GetNode<Control>("Stat" + stat);
-                    Check(surface.PanelRect.Encloses(card.GetRect()) && card.GetRect().End.Y < surface.FabricRect.Position.Y,
-                        "Stat cards must fit above the embroidery fabric");
+                    var card = surface.GetNode<Control>("Panel/Stat" + stat);
+                    Rect2 bounds = new(card.GlobalPosition - surface.GlobalPosition, card.Size);
+                    Check(panel.Encloses(bounds) && bounds.End.Y < surface.FabricRect.Position.Y,
+                        "Stat cards must fit above the fabric");
                 }
-                Check(surface.GetNode<Label>("StatTime/Value").Text == "10.0" &&
-                      surface.GetNode<Label>("StatStitches/Value").Text == "0 / " + embroidery.Session.Points.Count &&
-                      surface.GetNode<Label>("StatMisses/Value").Text == "0",
-                    "Ready stat cards must show full time, current pattern length and zero misses");
-                for (int i = 0; i < 5; i++)
-                {
-                    var label = surface.GetNode<Label>("Rank" + "SABCD"[i]);
-                    Check(label.Text == "SABCD"[i].ToString() && surface.PanelRect.Encloses(label.GetRect()) &&
-                          label.GetRect().End.X < surface.QualityTrackRect.Position.X &&
-                          Mathf.IsEqualApprox(label.GetRect().GetCenter().Y,
-                              surface.QualityTrackRect.Position.Y + surface.QualityTrackRect.Size.Y * (i + 0.5f) / 5),
-                        "Ranks S–D must align to the five sections to the left of the scale");
-                }
-                Check(surface.GetNode<Label>("RankS").GetThemeColor("font_color") == new Color("ffe0a0"),
-                    "The initial S rank must be highlighted in warm gold");
-                foreach (string button in new[] { "Action", "Cancel" })
-                    Check(surface.PanelRect.Encloses(surface.GetNode<Control>(button).GetRect()),
-                        "Embroidery buttons must fit the panel");
-                await ClickControl(game, "EmbroideryGame/Surface/Cancel");
+                Check(surface.GetNode<Label>("Panel/StatTime/Value").Text == "10.0" &&
+                    surface.GetNode<Label>("Panel/StatStitches/Value").Text == "0 / " + embroidery.Session.Points.Count &&
+                    surface.GetNode<Label>("Panel/StatMisses/Value").Text == "0", "Prepared statistics must match the chosen pattern");
+                await CancelLegacyCraft(game, "EmbroideryGame");
             }
-
-            game.GetItemFromAtelier();
-            Root.PushInput(new InputEventKey { Pressed = true, Keycode = Key.Escape }, true);
-            Check(pause.IsOpen && embroidery.IsOpen, "Escape must open pause over the ready craft");
-            pause.Close();
-            await ClickControl(game, "EmbroideryGame/Surface/Cancel");
-
             TranslationServer.SetLocale("en");
-            game.GetItemFromAtelier();
+            game.GetItemFromAtelier(); SelectLegacyCraft(game, "hat");
             await ToSignal(this, SignalName.ProcessFrame);
-            Check(embroidery.GetNode<Label>("Surface/Title").Text == "Embroidery" &&
-                  embroidery.GetNode<Button>("Surface/Action").Text == "Start",
-                "Embroidery text must follow the chosen language");
-            Check(embroidery.GetNode<Label>("Surface/StatTime/Heading").Text == "TIME" &&
-                  embroidery.GetNode<Label>("Surface/StatStitches/Heading").Text == "STITCHES" &&
-                  embroidery.GetNode<Label>("Surface/StatMisses/Heading").Text == "MISSES",
-                "Stat card headings must follow the chosen language");
-            await ClickControl(game, "EmbroideryGame/Surface/Action");
+            Check(embroidery.GetNode<Label>("Surface/Panel/Title").Text.StartsWith("Embroidery:") &&
+                embroidery.StartButton.Text == "Start" &&
+                embroidery.GetNode<Label>("Surface/Panel/StatTime/Heading").Text == "TIME", "Preparation must localize action and selected title");
+            await ClickControl(game, "EmbroideryGame/Surface/Panel/Buttons/Action");
+            int cost = WorkshopItemCatalog.ItemCraftCost(WorkshopItemCatalog.IndexOf("hat"));
+            embroidery.Activate();
+            Check(game.Score == initialMoney - cost && game.StoredItems.Length == 1 && game.EnergyRemaining == initialEnergy,
+                "Start and duplicate activation must debit only one selected item");
             var board = embroidery.GetNode<EmbroiderySurface>("Surface");
             var camera = game.GetNode<WorldCamera>("Camera2D");
-            Vector2 cameraPosition = camera.Position;
-            Vector2 cameraZoom = camera.Zoom;
+            Vector2 cameraPosition = camera.Position, cameraZoom = camera.Zoom;
             Vector2 badPoint = board.FabricRect.Position + Vector2.One * 2;
             PushEmbroideryClick(badPoint);
             Check(embroidery.Session.Misses == 1, "A real click outside the target must count a miss");
             Root.PushInput(new InputEventMouseButton { Position = badPoint, ButtonIndex = MouseButton.WheelUp, Pressed = true }, true);
-            Check(camera.Zoom == cameraZoom && camera.Position == cameraPosition,
-                "The camera must ignore wheel and craft clicks while embroidery owns pause");
+            Check(camera.Zoom == cameraZoom && camera.Position == cameraPosition, "Craft input must not pan or zoom the world");
             int count = embroidery.Session.Points.Count;
-            for (int i=0;i<count;i++)
+            for (int i = 0; i < count; i++)
             {
                 Vector2 point = board.ScreenPoint(i);
                 if (i == 0)
                 {
                     Root.PushInput(new InputEventScreenTouch { Position = point, Index = 0, Pressed = true }, true);
                     Root.PushInput(new InputEventScreenTouch { Position = point, Index = 0, Pressed = false }, true);
+                    await ToSignal(this, SignalName.ProcessFrame);
                 }
                 else PushEmbroideryClick(point);
             }
+            embroidery._Process(0);
+            Check(embroidery.Session.Complete && embroidery.Session.Stitches == count && embroidery.Session.Misses == 1 &&
+                board.GetNode<Label>("Panel/StatStitches/Value").Text == $"{count} / {count}" &&
+                board.GetNode<Label>("Panel/Quality").Text == embroidery.Session.Quality + "%",
+                "Mouse and touch must complete the ordered selected pattern and update quality");
             await ToSignal(this, SignalName.ProcessFrame);
-            Check(embroidery.Session.Complete && embroidery.Session.Stitches == count &&
-                  embroidery.Session.Misses == 1 && game.StoredItems.Length == 3 && game.Score == 130,
-                "Mouse and touch must stitch the ordered pattern, with the purchase committed at start");
-            Check(board.GetNode<Label>("StatStitches/Value").Text == $"{count} / {count}" &&
-                  board.GetNode<Label>("StatMisses/Value").Text == "1" &&
-                  board.GetNode<Label>("StatTime/Value").Text == FormattableString.Invariant($"{embroidery.Session.RemainingSeconds:0.0}"),
-                "Stat cards must reflect actual elapsed time, completed stitches and misses");
-            Check(board.GetNode<Label>("Rank" + embroidery.Session.Rank).GetThemeColor("font_color") == new Color("ffe0a0") &&
-                  board.GetNode<Label>("RankS").GetThemeColor("font_color") == new Color("a99b83") &&
-                  board.GetNode<Label>("Quality").Text == embroidery.Session.Quality + "%",
-                "The active rank must follow quality, with only the percentage below the scale");
-            await ClickControl(game, "EmbroideryGame/Surface/Action");
+            // Actual collect clicks are covered before synthetic touch in TestPolishingStart/Reward.
             embroidery.Activate();
-            Check(!Paused && !embroidery.IsOpen && game.StoredItems.Length == 3 && game.Score == 130 && game.EnergyRemaining == 1,
-                "Collect must keep the paid clothing batch without duplicating it and unpause");
-            CraftAtelier(game);
-            Check(game.StoredItems.Length == 6 && game.Score == 40 && game.EnergyRemaining == 0,
-                "Timeout must settle the same paid batch with a lower assessment");
-            game.GetItemFromAtelier();
-            Check(!embroidery.IsOpen && !Paused, "Unavailable crafting must never open or pause");
-            game.NewGame();
-            game.SetProcess(false);
-            embroidery.SetProcess(false);
-            game.GetItemFromAtelier();
-            double readyTime = game.DayRemainingSeconds;
-            game._Process(1);
-            Check(game.DayRemainingSeconds == readyTime, "The paused world must not double-tick the craft clock");
+            Check(!Paused && !embroidery.IsOpen && game.StoredItems.Length == 1,
+                "Collect must resume without duplicating the item after mouse/touch stitching");
+            game.NewGame(); game.EndDay();
+            game.GetItemFromAtelier(); SelectLegacyCraft(game, "hat");
+            readyTime = game.DayRemainingSeconds;
             embroidery._Process(1);
-            Check(game.DayRemainingSeconds == readyTime - 1 && embroidery.Session.RemainingSeconds == 10,
-                "Waiting to start must spend day time without spending embroidery time");
+            Check(game.DayRemainingSeconds == readyTime, "Preparation must freeze the day");
+            embroidery.Activate(); embroidery._Process(2);
+            Check(game.DayRemainingSeconds == readyTime - 2 && embroidery.Session.RemainingSeconds == 8,
+                "Active play must advance both clocks equally");
+            pause.Open(); double pausedTime = game.DayRemainingSeconds; embroidery._Process(1);
+            Check(game.DayRemainingSeconds == pausedTime && embroidery.Session.RemainingSeconds == 8, "Pause must freeze both craft clocks");
+            pause.Close(); embroidery._Process(8);
+            double resultTime = game.DayRemainingSeconds; embroidery._Process(1);
+            Check(game.DayRemainingSeconds == resultTime && embroidery.Session.RemainingSeconds == 0,
+                "Result viewing must stop the active attempt clock");
             embroidery.Activate();
-            embroidery.Activate();
-            Check(game.Score == 130 && game.EnergyRemaining == 1 && game.StoredItems.Length == 3,
-                "Starting must commit the paid batch only once");
-            embroidery._Process(2);
-            Check(game.DayRemainingSeconds == readyTime - 3 && embroidery.Session.RemainingSeconds == 8,
-                "Playing must advance both clocks by the same delta");
-            embroidery._Process(8);
-            double resultTime = game.DayRemainingSeconds;
-            embroidery._Process(1);
-            Check(game.DayRemainingSeconds == resultTime - 1 && embroidery.Session.RemainingSeconds == 0,
-                "Viewing the finished result must continue to spend day time");
-            embroidery.Activate();
-
-            game.NewGame();
-            game._Process(119.5);
-            game.GetItemFromAtelier();
-            embroidery._Process(0.5);
-            Check(game.DayClosed && !embroidery.IsOpen && !Paused && game.StoredItems.Length == 0 && game.Score == 220,
-                "Expiry on the ready screen must cancel the unstarted craft without charging");
-
-            game.NewGame();
-            game._Process(119.5);
-            game.GetItemFromAtelier();
-            embroidery.Activate();
-            embroidery._Process(0.5);
-            Check(game.DayClosed && embroidery.IsOpen && Paused && game.EnergyRemaining == 0 &&
-                  game.StoredItems.Length == 3 && game.Score == 130 &&
-                  game.GetNode<Label>("HUD/DayClock/Root/DayTimer").Text == "00",
-                "Expiry during a started craft must close the day and retain the paid batch");
-            embroidery._Process(10);
-            embroidery.Activate();
-            embroidery.Activate();
-            Check(!Paused && !embroidery.IsOpen && game.StoredItems.Length == 3 && game.Score == 130 && game.DayClosed,
-                "Finishing after expiry must neither lose nor duplicate the paid batch");
-            game.GetItemFromAtelier();
-            Check(!embroidery.IsOpen, "A closed day must reject another embroidery session");
-            game.EndDay();
-            Check(!game.DayClosed && game.DayRemainingSeconds == 120 && game.EnergyRemaining == 2,
-                "After finishing the craft, the next day must start with two minutes");
-            game.NewGame();
-            game.GetItemFromAtelier();
-            game.QueueFree();
-            await ToSignal(this, SignalName.ProcessFrame);
-            Check(!Paused, "Removing a crafting scene must release its pause");
+            game.NewGame(); game.EndDay(); game._Process(Math.Max(0, game.DayRemainingSeconds - .5));
+            game.GetItemFromAtelier(); SelectLegacyCraft(game, "hat");
+            embroidery._Process(.5);
+            Check(!game.DayClosed && embroidery.IsOpen, "Preparation must freeze even near day expiry");
+            embroidery.Activate(); embroidery._Process(.5);
+            Check(game.DayClosed && embroidery.IsOpen && game.StoredItems.Length == 1,
+                "Expiry during paid play must retain the exact paid item");
+            embroidery._Process(10); embroidery.Activate(); embroidery.Activate();
+            Check(!Paused && !embroidery.IsOpen && game.StoredItems.Length == 1 && game.DayClosed,
+                "Late collect must neither lose nor duplicate the item");
+            game.NewGame(); game.EndDay(); game.GetItemFromAtelier(); SelectLegacyCraft(game, "hat");
+            game.QueueFree(); await ToSignal(this, SignalName.ProcessFrame);
+            Check(!Paused, "Removing preparation must release its pause");
         }
         finally
         {
-            Root.Size = originalSize;
-            TranslationServer.SetLocale(originalLocale);
+            Paused = false; Root.Size = originalSize; TranslationServer.SetLocale(originalLocale);
             if (GodotObject.IsInstanceValid(game)) game.QueueFree();
+            await ToSignal(this, SignalName.ProcessFrame);
         }
-        await ToSignal(this, SignalName.ProcessFrame);
-        GD.Print("Embroidery GUI, payment, timeout, localization and pause checks passed");
     }
 
     private async Task TestPolishing()
     {
         var scene=GD.Load<PackedScene>("res://scenes/trade_scene.tscn");
         TradeScene game=scene.Instantiate<TradeScene>(); game.SavePath="";
+        game.GetNode<FirstTradeTutorial>("FirstTradeTutorial").ProgressPath = "";
         Root.AddChild(game);
         await ToSignal(this,SignalName.ProcessFrame);
         Vector2I originalSize=Root.Size;
@@ -591,9 +470,11 @@ public partial class ProjectTest
         try
         {
             var polishing=game.GetNode<EmbroideryGame>("PolishingGame");
-            game.GetItemFromMusicWorkshop();
+            if (!game.DayStarted) game.EndDay();
+            game.GetItemFromMusicWorkshop(); SelectLegacyCraft(game, "guitar");
             Check(!polishing.IsOpen && !Paused,"Locked music workshop must not open polishing");
-            game.Score=500; game.TryUnlockMusicWorkshop();
+            game.Score=2000; game.TryUnlockMusicWorkshop();
+            int initialEnergy = game.EnergyRemaining;
             foreach(string kind in PolishingSurface.InstrumentKinds)
             {
                 var model=game.GetNode<PolishingSurface>("PolishingGame/Surface/Polishing").Begin(kind);
@@ -604,47 +485,48 @@ public partial class ProjectTest
             {
                 Root.Size=size;
                 await ClickControl(game,"World/MusicWorkshop/GetItemButton");
-                Check(polishing.IsOpen && Paused && game.Score==400 && game.StoredItems.Length==0,
+                SelectLegacyCraft(game, "guitar");
+                Check(polishing.IsOpen && Paused && game.Score==1000 && game.StoredItems.Length==0,
                     "The real music create button must open the shared craft shell without payment yet");
                 var surface=polishing.GetNode<EmbroiderySurface>("Surface");
                 var board=surface.GetNode<PolishingSurface>("Polishing");
                 Check(surface.FabricRect==board.GetRect() && surface.PanelRect.Encloses(surface.QualityTrackRect.Grow(3)) &&
                       board.GetRect().Size.X>board.GetRect().Size.Y,
                     "Polishing must occupy the existing fabric workspace with the same quality scale and layout");
-                Check(surface.GetNode<Label>("StatStitches/Value").Text=="0%" &&
-                      surface.GetNode<Label>("StatMisses/Value").Text=="0" &&
-                      surface.GetNode<Label>("StatTime/Value").Text=="10.0",
+                Check(surface.GetNode<Label>("Panel/StatStitches/Value").Text=="0%" &&
+                      surface.GetNode<Label>("Panel/StatMisses/Value").Text=="0" &&
+                      surface.GetNode<Label>("Panel/StatTime/Value").Text=="10.0",
                     "Shared cards must show polishing progress, misses and ten seconds");
                 double remaining=game.DayRemainingSeconds;
                 await ToSignal(this,SignalName.ProcessFrame);
-                Check(game.DayRemainingSeconds<remaining,"The day clock must continue on the polishing ready screen");
-                game.GetItemFromAtelier();
+                Check(game.DayRemainingSeconds==remaining,"The day clock must freeze on the polishing ready screen");
+                game.GetItemFromAtelier(); SelectLegacyCraft(game, "hat");
                 var pause = game.GetNode<PauseMenu>("PauseMenu");
                 pause.Open();
                 Check(!game.GetNode<EmbroideryGame>("EmbroideryGame").IsOpen && pause.IsOpen && polishing.IsOpen,
                     "Pause must cover polishing and another craft must not open");
                 pause.Close();
-                await ClickControl(game,"PolishingGame/Surface/Cancel");
-                Check(!Paused && !polishing.IsOpen && game.Score==400,"Cancel polishing must be free");
+                await CancelLegacyCraft(game, "PolishingGame");
+                Check(!Paused && !polishing.IsOpen && game.Score==1000,"Cancel polishing must be free");
             }
             TranslationServer.SetLocale("en");
-            game.GetItemFromMusicWorkshop();
+            game.GetItemFromMusicWorkshop(); SelectLegacyCraft(game, "guitar");
             await ToSignal(this,SignalName.ProcessFrame);
-            Check(polishing.GetNode<Label>("Surface/Title").Text=="Polishing" &&
-                  polishing.GetNode<Label>("Surface/StatStitches/Heading").Text=="CLEANED",
+            Check(polishing.GetNode<Label>("Surface/Panel/Title").Text.StartsWith("Polishing:") &&
+                  polishing.GetNode<Label>("Surface/Panel/StatStitches/Heading").Text=="CLEANED",
                 "Polishing-specific content must follow RU/EN while sharing the shell");
             Root.PushInput(new InputEventKey { Keycode=Key.Escape,Pressed=true },true);
             var polishingPause = game.GetNode<PauseMenu>("PauseMenu");
             Check(polishingPause.IsOpen && polishing.IsOpen, "Escape must open pause over ready polishing");
             polishingPause.Close();
-            await ClickControl(game, "PolishingGame/Surface/Cancel");
-            game.GetItemFromMusicWorkshop();
-            await ClickControl(game,"PolishingGame/Surface/Action");
-            Check(game.Score==260 && game.EnergyRemaining==1 && game.StoredItems.Length==3 &&
+            await CancelLegacyCraft(game, "PolishingGame");
+            game.GetItemFromMusicWorkshop(); SelectLegacyCraft(game, "guitar");
+            await ClickControl(game,"PolishingGame/Surface/Panel/Buttons/Action");
+            Check(game.Score==970 && game.EnergyRemaining==initialEnergy && game.StoredItems.Length==1 &&
                   game.StoredItems.All(index=>WorkshopItemCatalog.Items[index].WorkshopId=="music"),
-                "Polishing start must commit exactly three music items for 140 dollars and one energy");
+                $"Polishing start must commit exactly the selected music item for 30 dollars without energy (score={game.Score}, energy={game.EnergyRemaining}, count={game.StoredItems.Length}, state={polishing.ActiveSession.State})");
             polishing.Activate();
-            Check(game.Score==260 && game.StoredItems.Length==3,"Duplicate start must not buy another batch");
+            Check(game.Score==970 && game.StoredItems.Length==1,"Duplicate start must not buy another batch");
             var workspace=polishing.GetNode<PolishingSurface>("Surface/Polishing");
             var target=polishing.Polishing.Cells.First(cell=>cell.Inside && polishing.Polishing.Inside(cell.X+14,cell.Y));
             Vector2 left=workspace.LogicalToScreen(new Vector2((float)target.X,(float)target.Y));
@@ -668,8 +550,8 @@ public partial class ProjectTest
             Root.PushInput(new InputEventScreenTouch { Position=left,Index=0,Pressed=false },true);
             Check(polishing.Polishing.Progress>progress,"Touch dragging must also polish without synthetic mouse duplication");
             polishing._Process(0);
-            Check(polishing.GetNode<Label>("Surface/StatMisses/Value").Text=="1" &&
-                  polishing.GetNode<Label>("Surface/StatStitches/Value").Text==$"{Math.Round(polishing.Polishing.Progress*100)}%",
+            Check(polishing.GetNode<Label>("Surface/Panel/StatMisses/Value").Text=="1" &&
+                  polishing.GetNode<Label>("Surface/Panel/StatStitches/Value").Text==$"{Math.Round(polishing.Polishing.Progress*100)}%",
                 "The shared stat cards must update from the polishing session");
             if(OS.GetCmdlineUserArgs().Contains("--polishing-preview"))
             {
@@ -681,30 +563,32 @@ public partial class ProjectTest
             polishing._Process(10);
             Check(polishing.ActiveSession.State==ChikagoShop.Domain.Crafting.EmbroideryState.Finished &&
                   game.DayRemainingSeconds==beforeTimeout-10,"Both clocks must advance through polishing timeout");
-            await ClickControl(game,"PolishingGame/Surface/Action");
-            Check(!Paused && !polishing.IsOpen && game.Score==260 && game.StoredItems.Length==3,
+            await ClickControl(game,"PolishingGame/Surface/Panel/Buttons/Action");
+            Check(!Paused && !polishing.IsOpen && game.Score==970 && game.StoredItems.Length==1,
                 "Collect after polishing must resume the world without duplicating payment or goods");
 
             game.SetProcess(false); polishing.SetProcess(false);
-            game.NewGame(); game.Score=500; game.TryUnlockMusicWorkshop();
-            game._Process(119.5); game.GetItemFromMusicWorkshop(); polishing._Process(.5);
-            Check(game.DayClosed && !polishing.IsOpen && !Paused && game.Score==400,
-                "Expiry before starting polishing must cancel without cost");
-            game.NewGame(); game.Score=500; game.TryUnlockMusicWorkshop();
-            game._Process(119.5); game.GetItemFromMusicWorkshop(); polishing.Activate(); polishing._Process(.5);
-            Check(game.DayClosed && polishing.IsOpen && game.StoredItems.Length==3 && game.Score==260,
+            game.NewGame(); game.EndDay(); game.Score=2000; game.TryUnlockMusicWorkshop();
+            game._Process(Math.Max(0, game.DayRemainingSeconds - .5)); game.GetItemFromMusicWorkshop(); SelectLegacyCraft(game, "guitar"); polishing._Process(.5);
+            Check(!game.DayClosed && polishing.IsOpen && Paused && game.Score==1000,
+                "Preparation near expiry must remain free and freeze the day");
+            await CancelLegacyCraft(game, "PolishingGame");
+            game.NewGame(); game.EndDay(); game.Score=2000; game.TryUnlockMusicWorkshop();
+            game._Process(Math.Max(0, game.DayRemainingSeconds - .5)); game.GetItemFromMusicWorkshop(); SelectLegacyCraft(game, "guitar"); polishing.Activate(); polishing._Process(.5);
+            Check(game.DayClosed && polishing.IsOpen && game.StoredItems.Length==1 && game.Score==970,
                 "A started polishing craft must retain its batch when the day expires");
             polishing._Process(10); polishing.Activate(); polishing.Activate();
-            Check(!Paused && game.Score==260 && game.StoredItems.Length==3,"Late collect must remain idempotent");
+            Check(!Paused && game.Score==970 && game.StoredItems.Length==1,"Late collect must remain idempotent");
 
-            game.NewGame(); game.Score=500; game.TryUnlockMusicWorkshop(); game.SavePath=path;
-            game.GetItemFromMusicWorkshop(); polishing.Activate();
+            game.NewGame(); game.EndDay(); game.Score=2000; game.TryUnlockMusicWorkshop(); game.SavePath=path;
+            game.GetItemFromMusicWorkshop(); SelectLegacyCraft(game, "guitar"); polishing.Activate();
             int[] items=game.StoredItems;
             game.QueueFree(); await ToSignal(this,SignalName.ProcessFrame);
             Check(!Paused,"Leaving a started polishing scene must release its modal pause");
-            game=scene.Instantiate<TradeScene>(); game.SavePath=path; Root.AddChild(game); game.SetProcess(false);
+            game=scene.Instantiate<TradeScene>(); game.SavePath=path; game.GetNode<FirstTradeTutorial>("FirstTradeTutorial").ProgressPath = "";
+        Root.AddChild(game); game.SetProcess(false);
             await ToSignal(this,SignalName.ProcessFrame);
-            Check(game.Score==260 && game.EnergyRemaining==1 && game.StoredItems.SequenceEqual(items) &&
+            Check(game.Score==970 && game.EnergyRemaining==initialEnergy && game.StoredItems.SequenceEqual(items) &&
                   !game.CraftMiniGameOpen && !Paused,"Reload must keep the paid music batch without reopening or duplicating the craft");
         }
         finally
@@ -715,6 +599,21 @@ public partial class ProjectTest
         }
         await ToSignal(this,SignalName.ProcessFrame);
         GD.Print("Polishing shared shell, mouse/touch strokes, costs, clocks, expiry and reload checks passed");
+    }
+
+    private static Rect2 CraftBounds(Control surface, Control child) =>
+        new(surface.GetGlobalTransform().AffineInverse() * child.GlobalPosition, child.Size);
+
+    private static void SelectLegacyCraft(TradeScene game, string kind)
+    {
+        if (game.Crafting.IsCatalogOpen) game.Crafting.Select(kind);
+    }
+
+    private async Task CancelLegacyCraft(TradeScene game, string name)
+    {
+        await ClickControl(game, name + "/Surface/Panel/Buttons/Cancel");
+        Check(game.Crafting.IsCatalogOpen && Paused, "Back from unpaid preparation must return to the paused catalog");
+        game.Crafting.Catalog.Close();
     }
 
     private void PushEmbroideryClick(Vector2 point)
@@ -729,32 +628,34 @@ public partial class ProjectTest
     private static void CraftMusic(TradeScene game)
     {
         if (!game.DayStarted) game.EndDay();
-        game.GetItemFromMusicWorkshop();
+        game.GetItemFromMusicWorkshop(); SelectLegacyCraft(game, "guitar");
         FinishMusic(game);
     }
 
     private static void FinishMusic(TradeScene game)
     {
         var polishing = game.GetNode<EmbroideryGame>("PolishingGame");
+        SelectLegacyCraft(game, "guitar");
         if (!polishing.IsOpen) return;
         polishing.Activate();
-        polishing._Process(10);
+        polishing._Process(polishing.ActiveSession.RemainingSeconds + .01);
         polishing.Activate();
     }
 
     private static void CraftAtelier(TradeScene game)
     {
         if (!game.DayStarted) game.EndDay();
-        game.GetItemFromAtelier();
+        game.GetItemFromAtelier(); SelectLegacyCraft(game, "hat");
         FinishEmbroidery(game);
     }
 
     private static void FinishEmbroidery(TradeScene game)
     {
         var embroidery = game.GetNode<EmbroideryGame>("EmbroideryGame");
+        SelectLegacyCraft(game, "hat");
         if (!embroidery.IsOpen) return;
         embroidery.Activate();
-        embroidery._Process(10);
+        embroidery._Process(embroidery.ActiveSession.RemainingSeconds + .01);
         embroidery.Activate();
     }
 }

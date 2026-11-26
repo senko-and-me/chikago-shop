@@ -378,13 +378,18 @@ public partial class ProjectTest
             Check(!rarity.Popup.IsVisibleInTree(), "The rarity popup must still close on pointer exit");
             await ClickControl(game, "World/Atelier/GetItemButton");
             await Frame();
+            Step(FirstTradeTutorial.Step.CraftSelection);
+            Check(game.Crafting.IsCatalogOpen && tutorial.Target == game.Crafting.Catalog.ItemButton("hat") &&
+                tutorial.Layer > game.Crafting.Catalog.Layer, "Tutorial must highlight the hat in the actual catalog");
+            await ClickControl(game, game.GetPathTo(game.Crafting.Catalog.ItemButton("hat")).ToString());
+            await Frame();
             Step(FirstTradeTutorial.Step.EmbroideryStart);
             var embroidery = game.GetNode<EmbroideryGame>("EmbroideryGame");
             var spotlight = tutorial.GetNode<TutorialSpotlight>("Spotlight");
             Check(game.CraftMiniGameOpen && tutorial.Target == embroidery.StartButton &&
                 tutorial.Layer > embroidery.Layer && spotlight.MouseFilter == Control.MouseFilterEnum.Ignore,
                 "The ready lesson must highlight only the actual Start button above the modal");
-            Check(embroidery.GetNode<Label>("Surface/Hint").Text.Length == 0,
+            Check(embroidery.GetNode<Label>("Surface/Panel/Hint").Text.Length == 0,
                 "The regular ready screen must not repeat the tutorial instruction");
             TranslationServer.SetLocale("en");
             await Frame();
@@ -405,9 +410,9 @@ public partial class ProjectTest
                     Mathf.IsEqualApprox(darkness, 0.50f), "The visible spotlight must settle over Start at both resolutions");
             }
             Root.Size = new Vector2I(1280, 720);
-            await ClickControl(game, "EmbroideryGame/Surface/Action");
+            await ClickControl(game, "EmbroideryGame/Surface/Panel/Buttons/Action");
             await Frame();
-            var craftHint = embroidery.GetNode<Label>("Surface/Hint");
+            var craftHint = embroidery.GetNode<Label>("Surface/Panel/Hint");
             Check(!tutorial.IsShowing && craftHint.Text == GameLocalization.Text("Нажимайте на подсвечивающиеся точки по очереди."),
                 "Clicking Start must finish the spotlight lesson and reveal the stitch instruction");
             var sewingSurface = embroidery.GetNode<EmbroiderySurface>("Surface");
@@ -422,7 +427,7 @@ public partial class ProjectTest
             embroidery.FinishForTesting(true);
             Check(string.IsNullOrEmpty(craftHint.Text),
                 "The craft result must only show the Collect button");
-            await ClickControl(game, "EmbroideryGame/Surface/Action");
+            await ClickControl(game, "EmbroideryGame/Surface/Panel/Buttons/Action");
             await Frame();
             Step(FirstTradeTutorial.Step.Select);
             await CheckCameraLocked();
@@ -920,8 +925,8 @@ public partial class ProjectTest
             game.GetItemFromAtelier();
             FinishEmbroidery(game);
             await Frame();
-            Check(game.DayStarted && game.Score < game.StartingMoney && game.StoredItems.Length > 0 &&
-                game.EnergyRemaining < game.EnergyCapacity, "Skip must be tested after real paid practice has changed the run");
+            Check(game.DayStarted && game.Score < game.StartingMoney && game.StoredItems.Length > 0,
+                "Skip must be tested after real paid practice has changed the run");
             int scoreBeforeCancel = game.Score;
             await ClickControl(game, "FirstTradeTutorial/" + skipPath);
             await ClickControl(game, "FirstTradeTutorial/Root/SkipConfirmation/Center/Panel/Content/Actions/Cancel");

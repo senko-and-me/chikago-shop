@@ -1,0 +1,293 @@
+[gd_scene load_steps=13 format=3]
+
+[ext_resource type="Script" path="res://scripts/UI/EmbroideryGame.cs" id="1_game"]
+[ext_resource type="Script" path="res://scripts/UI/EmbroiderySurface.cs" id="2_surface"]
+[ext_resource type="Script" path="res://scripts/UI/PolishingSurface.cs" id="3_polish"]
+[ext_resource type="Theme" path="res://themes/game_theme.tres" id="4_theme"]
+[ext_resource type="Texture2D" path="res://art/ui/panel_small.png" id="5_paper"]
+[ext_resource type="Texture2D" path="res://art/ui/panel_inverted.png" id="6_ink"]
+[ext_resource type="Texture2D" path="res://art/minigames/polishing_cloth.png" id="7_cloth"]
+
+[sub_resource type="StyleBoxTexture" id="Paper"]
+texture = ExtResource("5_paper")
+
+[sub_resource type="AtlasTexture" id="InkCrop"]
+atlas = ExtResource("6_ink")
+region = Rect2(400, 400, 1249, 1249)
+filter_clip = true
+
+[sub_resource type="StyleBoxTexture" id="Ink"]
+texture = SubResource("InkCrop")
+
+[sub_resource type="StyleBoxTexture" id="InkHover"]
+texture = SubResource("InkCrop")
+modulate_color = Color(0.88, 0.88, 0.88, 1)
+
+[sub_resource type="StyleBoxTexture" id="InkPressed"]
+texture = SubResource("InkCrop")
+modulate_color = Color(0.72, 0.72, 0.72, 1)
+
+[node name="EmbroideryGame" type="CanvasLayer"]
+process_mode = 3
+layer = 110
+script = ExtResource("1_game")
+
+[node name="Surface" type="Control" parent="."]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("4_theme")
+script = ExtResource("2_surface")
+
+[node name="Polishing" type="Control" parent="Surface"]
+visible = false
+clip_contents = true
+layout_mode = 0
+script = ExtResource("3_polish")
+
+[node name="Panel" type="Control" parent="Surface"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -450.0
+offset_top = -300.0
+offset_right = 450.0
+offset_bottom = 300.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Title" type="Label" parent="Surface/Panel"]
+layout_mode = 0
+anchor_right = 1.0
+offset_left = 24.0
+offset_top = 24.0
+offset_right = -410.0
+offset_bottom = 84.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 0
+theme_override_font_sizes/font_size = 28
+text = "Вышивка"
+autowrap_mode = 3
+vertical_alignment = 1
+
+[node name="StatTime" type="Panel" parent="Surface/Panel"]
+layout_mode = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -364.0
+offset_top = 30.0
+offset_right = -260.0
+offset_bottom = 90.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Paper")
+
+[node name="Heading" type="Label" parent="Surface/Panel/StatTime"]
+layout_mode = 0
+offset_left = 14.0
+offset_top = 7.0
+offset_right = 90.0
+offset_bottom = 25.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 0
+theme_override_font_sizes/font_size = 14
+text = "ВРЕМЯ"
+vertical_alignment = 1
+
+[node name="Value" type="Label" parent="Surface/Panel/StatTime"]
+layout_mode = 0
+offset_left = 14.0
+offset_top = 25.0
+offset_right = 90.0
+offset_bottom = 53.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 0
+theme_override_font_sizes/font_size = 22
+text = "0"
+vertical_alignment = 1
+
+[node name="StatStitches" type="Panel" parent="Surface/Panel"]
+layout_mode = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -248.0
+offset_top = 30.0
+offset_right = -144.0
+offset_bottom = 90.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Paper")
+
+[node name="Heading" type="Label" parent="Surface/Panel/StatStitches"]
+layout_mode = 0
+offset_left = 14.0
+offset_top = 7.0
+offset_right = 90.0
+offset_bottom = 25.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 0
+theme_override_font_sizes/font_size = 14
+text = "СТЕЖКИ"
+vertical_alignment = 1
+
+[node name="Value" type="Label" parent="Surface/Panel/StatStitches"]
+layout_mode = 0
+offset_left = 14.0
+offset_top = 25.0
+offset_right = 90.0
+offset_bottom = 53.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 0
+theme_override_font_sizes/font_size = 22
+text = "0"
+vertical_alignment = 1
+
+[node name="StatMisses" type="Panel" parent="Surface/Panel"]
+layout_mode = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -132.0
+offset_top = 30.0
+offset_right = -28.0
+offset_bottom = 90.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Paper")
+
+[node name="Heading" type="Label" parent="Surface/Panel/StatMisses"]
+layout_mode = 0
+offset_left = 14.0
+offset_top = 7.0
+offset_right = 90.0
+offset_bottom = 25.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 0
+theme_override_font_sizes/font_size = 14
+text = "ПРОМАХИ"
+vertical_alignment = 1
+
+[node name="Value" type="Label" parent="Surface/Panel/StatMisses"]
+layout_mode = 0
+offset_left = 14.0
+offset_top = 25.0
+offset_right = 90.0
+offset_bottom = 53.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 0
+theme_override_font_sizes/font_size = 22
+text = "0"
+vertical_alignment = 1
+
+[node name="QualityHeading" type="Label" parent="Surface/Panel"]
+layout_mode = 0
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -104.0
+offset_top = 112.0
+offset_right = -16.0
+offset_bottom = 132.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 0
+theme_override_font_sizes/font_size = 14
+text = "КАЧЕСТВО"
+vertical_alignment = 1
+horizontal_alignment = 1
+
+[node name="Quality" type="Label" parent="Surface/Panel"]
+layout_mode = 0
+anchor_left = 1.0
+anchor_right = 1.0
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = -104.0
+offset_top = -120.0
+offset_right = -16.0
+offset_bottom = -90.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 0
+theme_override_font_sizes/font_size = 25
+text = "0%"
+vertical_alignment = 1
+horizontal_alignment = 1
+
+[node name="Hint" type="Label" parent="Surface/Panel"]
+layout_mode = 0
+anchor_top = 1.0
+anchor_bottom = 1.0
+anchor_right = 1.0
+offset_left = 24.0
+offset_top = -82.0
+offset_right = -24.0
+offset_bottom = -62.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 0
+theme_override_font_sizes/font_size = 16
+text = ""
+vertical_alignment = 1
+horizontal_alignment = 1
+
+[node name="Buttons" type="HBoxContainer" parent="Surface/Panel"]
+layout_mode = 1
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -150.0
+offset_top = -60.0
+offset_right = 150.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="Action" type="Button" parent="Surface/Panel/Buttons"]
+custom_minimum_size = Vector2(144, 40)
+layout_mode = 2
+mouse_default_cursor_shape = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_focus_color = Color(1, 1, 1, 1)
+theme_override_constants/outline_size = 0
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("Ink")
+theme_override_styles/hover = SubResource("InkHover")
+theme_override_styles/pressed = SubResource("InkPressed")
+text = "Начать"
+
+[node name="Cancel" type="Button" parent="Surface/Panel/Buttons"]
+custom_minimum_size = Vector2(144, 40)
+layout_mode = 2
+mouse_default_cursor_shape = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_colors/font_hover_color = Color(0, 0, 0, 1)
+theme_override_colors/font_pressed_color = Color(0, 0, 0, 1)
+theme_override_colors/font_focus_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 0
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("Paper")
+theme_override_styles/hover = SubResource("Paper")
+theme_override_styles/pressed = SubResource("Paper")
+text = "Назад"
+
+[node name="PolishingCursor" type="Sprite2D" parent="Surface"]
+visible = false
+z_index = 100
+texture = ExtResource("7_cloth")

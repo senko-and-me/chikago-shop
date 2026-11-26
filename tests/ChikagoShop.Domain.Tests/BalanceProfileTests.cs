@@ -65,6 +65,7 @@ public sealed class BalanceProfileTests
         var many = new DayUpgradeRules { WeightedSelection = true, Seed = 71 };
         Assert.AreEqual(many.Options(3), new DayUpgradeRules { WeightedSelection = true, Seed = 71 }.Options(3));
         Assert.AreEqual(3, many.Options(3).Distinct().Count());
+        CollectionAssert.DoesNotContain(many.Options(3), DayUpgrade.Energy);
     }
 
     [Test]
@@ -74,7 +75,7 @@ public sealed class BalanceProfileTests
         {
             WeightedSelection = true, Seed = seed,
             Weights = new Dictionary<DayUpgrade, int> { [DayUpgrade.Cash] = weight }
-        }.Options(2)[0] == DayUpgrade.Cash);
+        }.Options(2, musicUnlocked: true)[0] == DayUpgrade.Cash);
         Assert.IsTrue(Count(100) > Count(1) * 3);
     }
 

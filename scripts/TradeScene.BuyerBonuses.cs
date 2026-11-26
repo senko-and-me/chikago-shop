@@ -164,8 +164,7 @@ public partial class TradeScene
         return true;
     }
 
-    private bool CanSupplyWaitingBuyer() => BuyerAvailabilityRules.CanWait(
-        EnergyRemaining, _storedItems.Count > 0, Array.Exists(_showcaseItems, index => index >= 0));
+    private bool CanSupplyWaitingBuyer() => BuyerAvailabilityRules.CanWait(DayClosed);
 
     private bool DismissBuyerWithoutSupply()
     {

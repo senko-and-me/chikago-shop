@@ -186,9 +186,8 @@ public partial class PulloutNotebook : Control
         _buffsTitle.Text = english ? "DAY BUFFS" : "БАФФЫ ДНЯ";
         string activeBuff = selected switch
         {
-            DayUpgrade.Energy => english ? "+1 energy today" : "+1 энергия сегодня",
-            DayUpgrade.Atelier => english ? "Rare clothing chance ↑" : "Шанс редкой одежды ↑",
-            DayUpgrade.Music => english ? "Rare instruments chance ↑" : "Шанс редких инструментов ↑",
+            DayUpgrade.Atelier => english ? "Embroidery time +20%" : "Время вышивки +20%",
+            DayUpgrade.Music => english ? "Polishing time +20%" : "Время полировки +20%",
             DayUpgrade.AtelierPrice => english ? "+20% clothing prices" : "+20% к цене одежды",
             DayUpgrade.MusicPrice => english ? "+20% instrument prices" : "+20% к цене инструментов",
             // Cash is received immediately, not a lasting day buff.

@@ -34,7 +34,6 @@ public partial class TradeScene : Node2D
 	private static int AtelierSpinCost => WorkshopItemCatalog.CraftCost("atelier");
 	private static int MusicSpinCost => WorkshopItemCatalog.CraftCost("music");
 	private static int MusicUnlockCost => Economy.Workshops.Single(entry => entry.Id == "music").UnlockCost;
-	private static int ItemsPerSpin => Economy.Days.ItemsPerCraft;
 
 	private static IReadOnlyList<CraftItem> Items =>
 		WorkshopItemCatalog.Items;
@@ -49,7 +48,6 @@ public partial class TradeScene : Node2D
 	private Button _declineButton = null!;
 	private Label _scoreLabel = null!;
 	private Label _dayLabel = null!;
-	private Label _energyLabel = null!;
 	private Label _quotaLabel = null!;
 	private Label _deadlineLabel = null!;
 	private Label _statusLabel = null!;
@@ -98,6 +96,7 @@ public partial class TradeScene : Node2D
 
 	public int SelectedInventoryIndex { get; set; } = -1;
 	public bool CraftMiniGameOpen =>
+		(Crafting?.IsCatalogOpen ?? false) ||
 		(_embroidery?.IsOpen ?? false) ||
 		(_polishing?.IsOpen ?? false);
 
@@ -153,6 +152,7 @@ public partial class TradeScene : Node2D
 	public int InventorySlotCapacity =>
 		MusicWorkshopUnlocked ? 6 : 3;
 
+	// Legacy save data only. Energy no longer gates or pays for gameplay actions.
 	public int EnergyRemaining
 	{
 		get => Mathf.Clamp(
@@ -215,8 +215,6 @@ public partial class TradeScene : Node2D
 		_dayLabel = GetNode<Label>(
 			"HUD/Root/ProgressPanel/Content/DayLabel");
 
-		_energyLabel = GetNode<Label>(
-			"HUD/Root/EnergyPanel/EnergyLabel");
 
 		_quotaLabel = GetNode<Label>(
 			"HUD/Root/ProgressPanel/Content/QuotaLabel");
@@ -318,7 +316,7 @@ public partial class TradeScene : Node2D
 		ButtonDropShadow.Attach(_acceptButton);
 		ButtonDropShadow.Attach(_declineButton);
 		ButtonDropShadow.Attach(_musicUnlockPanel.UnlockButton, solidFace: true);
-		foreach (string name in new[] { "ScorePanel", "EnergyPanel" })
+		foreach (string name in new[] { "ScorePanel" })
 			ButtonDropShadow.Attach(GetNode<PanelContainer>("HUD/Root/" + name), ButtonDropShadow.Direction.LeftAndBottom, blurScale: 0.85f);
 
 		for (int i = 0; i < _rarityHotspots.Length; i++)
@@ -365,16 +363,11 @@ public partial class TradeScene : Node2D
 		_dayCycle = new DayCycleController(this);
 		InitializeQuotaVisit();
 
-		_embroidery = new EmbroideryGame(
-			() => AcquireItem("atelier", AtelierSpinCost));
-
+		_embroidery = GD.Load<PackedScene>("res://scenes/UI/EmbroideryGame.tscn").Instantiate<EmbroideryGame>();
 		AddChild(_embroidery);
-
-		_polishing = new EmbroideryGame(
-			() => AcquireItem("music", MusicSpinCost, _polishing.PreparedItemIndex),
-			polishing: true);
-
+		_polishing = GD.Load<PackedScene>("res://scenes/UI/PolishingGame.tscn").Instantiate<EmbroideryGame>();
 		AddChild(_polishing);
+		Crafting = new CraftCoordinator(this);
 		DebugHotkeysController.Attach(this, _dayCycle);
 
 		bool restored = LoadProgress();
@@ -477,12 +470,12 @@ public partial class TradeScene : Node2D
 			Node.AutoTranslateModeEnum.Disabled;
 
 		atelierPrice.Text = english
-			? $"{ItemsPerSpin} {(ItemsPerSpin == 1 ? "item" : "items")}  •  ${AtelierSpinCost} + 1 energy"
-			: $"{ItemsPerSpin} предмет  •  {AtelierSpinCost}$ + 1 энергия";
+			? $"Choose item  •  from ${AtelierSpinCost}"
+			: $"Выбор предмета  •  от {AtelierSpinCost}$";
 
 		musicPrice.Text = english
-			? $"{ItemsPerSpin} {(ItemsPerSpin == 1 ? "item" : "items")}  •  ${MusicSpinCost} + 1 energy"
-			: $"{ItemsPerSpin} предмет  •  {MusicSpinCost}$ + 1 энергия";
+			? $"Choose item  •  from ${MusicSpinCost}"
+			: $"Выбор предмета  •  от {MusicSpinCost}$";
 
 		CraftButtonPresentation.Apply(_atelierGetItemButton, english);
 		CraftButtonPresentation.Apply(_musicGetItemButton, english);
@@ -522,7 +515,7 @@ public partial class TradeScene : Node2D
 	public void GetItemFromAtelier()
 	{
 		if (!RequireStartedDay()) return;
-		_embroidery.Open();
+		Crafting.OpenCatalog("atelier");
 	}
 
 	public void GetItemFromMusicWorkshop()
@@ -531,7 +524,7 @@ public partial class TradeScene : Node2D
 		if (!MusicWorkshopUnlocked)
 			return;
 
-		_polishing.Open();
+		Crafting.OpenCatalog("music");
 	}
 
 	public void TryUnlockMusicWorkshop()
@@ -543,14 +536,10 @@ public partial class TradeScene : Node2D
 			Score < MusicUnlockCost)
 			return;
 
-		int availableEnergy = EnergyRemaining;
 
 		Score -= MusicUnlockCost;
 		MusicWorkshopUnlocked = true;
 
-		EnergyRemaining = availableEnergy +
-			EnergyAfterMusicUnlock -
-			EnergyBeforeMusicUnlock;
 
 		_dayCycle.SynchronizeRoomDuration();
 		RecalculateInvisibleHand();
@@ -563,47 +552,6 @@ public partial class TradeScene : Node2D
 		RefreshProgress();
 		RefreshItemButtons();
 		_tutorial.OnMusicWorkshopUnlocked();
-		SaveProgress();
-	}
-
-	private void AcquireItem(string workshop, int cost, int? preparedItemIndex = null)
-	{
-		if (!RequireStartedDay()) return;
-		if (Failed ||
-			Completed ||
-			EnergyRemaining <= 0 ||
-			Score < cost)
-			return;
-
-		RecalculateInvisibleHand();
-		int hiddenShift = CraftRarityShift(workshop, _invisibleHand);
-		Score -= cost;
-		EnergyRemaining--;
-
-		for (int itemNumber = 0;
-			 itemNumber < ItemsPerSpin;
-			 itemNumber++)
-		{
-			int index = preparedItemIndex ?? WorkshopItemCatalog.Roll(
-				workshop,
-				_rng.RandiRange(
-					0,
-					WorkshopItemCatalog.TotalWeight(workshop, DayUpgrades, hiddenShift) - 1),
-				DayUpgrades, hiddenShift);
-
-			_storedItems.Add(index);
-			_storedGrades.Add("D");
-			_pendingCraftStorageIndex = _storedGrades.Count - 1;
-
-			GD.Print(
-				$"{workshop}: получен предмет {Items[index].Name} (индекс {index}).");
-		}
-
-		LogStoredItems();
-		RefreshScore();
-		RefreshProgress();
-		RefreshItemButtons();
-		_inventoryUI.UpdateUI(_storedItems);
 		SaveProgress();
 	}
 
@@ -699,16 +647,12 @@ public partial class TradeScene : Node2D
 	{
 		_atelierGetItemButton.Disabled =
 			Failed ||
-			Completed ||
-			EnergyRemaining <= 0 ||
-			Score < AtelierSpinCost;
+			Completed;
 
 		_musicGetItemButton.Disabled =
 			!MusicWorkshopUnlocked ||
 			Failed ||
-			Completed ||
-			EnergyRemaining <= 0 ||
-			Score < MusicSpinCost;
+			Completed;
 
 		_musicLockedOverlay.SetLocked(!MusicWorkshopUnlocked);
 
@@ -980,9 +924,6 @@ public partial class TradeScene : Node2D
 			"День: {0} / {1}",
 			CurrentDay, FinalDay);
 
-		_energyLabel.Text = GameLocalization.Format(
-			"Энергия: {0} / {1}",
-			EnergyRemaining, EnergyCapacity);
 
 		if (Completed)
 		{

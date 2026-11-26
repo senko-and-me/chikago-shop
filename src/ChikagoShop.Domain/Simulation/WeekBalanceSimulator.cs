@@ -69,7 +69,6 @@ public static class WeekBalanceSimulator
                 // Delay the investment until the second day and retain money to craft.
                 if (profile.Produce && profile.UnlockMusic && !unlocked && day >= 2 && cash >= music.UnlockCost + music.SpinCost + 25)
                 { cash -= music.UnlockCost; unlocked = true; }
-                int energy = upgrades.EnergyCapacityFor(unlocked ? config.Days.EnergyAfterMusicUnlock : config.Days.EnergyBeforeMusicUnlock);
                 double remaining = config.Days.DurationSeconds + (unlocked ? 30 : 0);
                 double duration = remaining;
                 void Observe(double stock = 0)
@@ -80,11 +79,11 @@ public static class WeekBalanceSimulator
                         quota.DeadlineDay, 1 - remaining / duration, quota.Amount, profile.HiddenBalance);
                 }
                 Observe();
-                while (profile.Produce && energy > 0)
+                while (profile.Produce && remaining > 0)
                 {
                     var workshop = unlocked && cash >= music.SpinCost ? music : atelier;
                     double cycle = profile.CycleSeconds;
-                    if (cash < workshop.SpinCost || remaining < cycle) break;
+                    if (!double.IsFinite(cycle) || cycle <= 0 || cash < workshop.SpinCost || remaining < cycle) break;
                     Observe();
                     var weights = config.Rarities.ToDictionary(rarity => rarity.Id,
                         rarity => upgrades.Weight(workshop.Id, rarity.Id, rarity.Weight, commonWeight));
@@ -92,7 +91,6 @@ public static class WeekBalanceSimulator
                     var table = new WeightedItemTable(config.Rarities.Select((rarity, index) => (index, weights[rarity.Id])));
                     remaining -= cycle;
                     cash -= workshop.SpinCost;
-                    energy--;
                     items++;
                     var rarity = config.Rarities[table.Select(rng.Next(table.TotalWeight))];
                     int basePrice = upgrades.Price(workshop.Id, rarity.BasePrices[workshop.Id]);
