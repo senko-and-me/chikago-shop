@@ -47,16 +47,11 @@ public static class ProgressMigration
         _ => index
     };
 
-    public static int Energy(int version, int savedEnergy, int capacity, bool musicUnlocked) =>
-        version < 6 ? capacity : version < 12
-            ? Math.Clamp(capacity - Math.Max(0, (musicUnlocked ? 2 : 1) - savedEnergy), 0, capacity)
-            : savedEnergy;
-
     public static int CustomerIndex(ProgressData data) =>
         data.SaveVersion < 3 && data.CustomerIndex == 1 ? 3 : data.CustomerIndex;
 
     public static int Rerolls(ProgressData data, int itemLimit) =>
         data.SaveVersion < 2 && data.ItemIndex >= 0
-            ? (itemLimit >= 0 ? itemLimit : Math.Clamp(data.RerollsRemaining, 0, 3))
-            : Math.Clamp(data.RerollsRemaining, 0, 3);
+            ? (itemLimit >= 0 ? itemLimit : Math.Max(0, data.RerollsRemaining))
+            : Math.Max(0, data.RerollsRemaining);
 }

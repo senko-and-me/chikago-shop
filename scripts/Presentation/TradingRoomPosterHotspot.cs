@@ -19,9 +19,6 @@ public partial class TradingRoomPosterHotspot : Node2D
     private bool _hovered;
     private bool _open;
     private bool _ownsPause;
-    private const float ClickDistance = 8f; // Screen pixels, independent of camera zoom.
-    private bool _clickPending;
-    private Vector2 _pressPosition;
 
     public override void _Ready()
     {
@@ -101,20 +98,11 @@ public partial class TradingRoomPosterHotspot : Node2D
 
     private void OnHitAreaInput(Node viewport, InputEvent inputEvent, long shapeIndex)
     {
-        if (!_open && CanClickPoster() && inputEvent is InputEventMouseButton
-            { Pressed: true, ButtonIndex: MouseButton.Left, DoubleClick: false } mouseButton)
+        if (inputEvent is InputEventMouseButton mouseButton && mouseButton.Pressed && mouseButton.ButtonIndex == MouseButton.Left)
         {
-            // Leave the press available to world navigation. Only a completed click opens.
-            _pressPosition = mouseButton.Position;
-            _clickPending = true;
+            OpenPoster();
+            GetViewport().SetInputAsHandled();
         }
-    }
-
-    private bool CanClickPoster()
-    {
-        var camera = GetViewport().GetCamera2D() as WorldCamera;
-        return !GetTree().Paused && (camera == null ||
-            (!camera.NavigationLocked && !camera.IsFocusing && !camera.IsReturningToOverview));
     }
 
     private void OnOverlayGuiInput(InputEvent inputEvent)
@@ -128,23 +116,6 @@ public partial class TradingRoomPosterHotspot : Node2D
 
     public override void _Input(InputEvent inputEvent)
     {
-        if (_clickPending)
-        {
-            if (!CanClickPoster()) _clickPending = false;
-            else if (inputEvent is InputEventMouseMotion motion &&
-                ((motion.ButtonMask & MouseButtonMask.Left) == 0 ||
-                 motion.Position.DistanceTo(_pressPosition) > ClickDistance))
-                _clickPending = false;
-            else if (inputEvent is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: false } release)
-            {
-                _clickPending = false;
-                if (release.Position.DistanceTo(_pressPosition) <= ClickDistance)
-                {
-                    OpenPoster();
-                    GetViewport().SetInputAsHandled();
-                }
-            }
-        }
         if (!_open)
             return;
         if (inputEvent is InputEventKey key && key.Pressed && !key.Echo && key.Keycode == Key.Escape)
@@ -156,17 +127,10 @@ public partial class TradingRoomPosterHotspot : Node2D
 
     public override void _Process(double delta)
     {
-        if (_clickPending && !CanClickPoster()) _clickPending = false;
         Vector2 targetScale = _hovered && !_open ? new Vector2(HoverScale, HoverScale) : Vector2.One;
         _posterSprite.Scale = _posterSprite.Scale.Lerp(targetScale, (float)(delta * 10.0));
         Color targetColor = _hovered && !_open ? new Color(1.10f, 1.05f, 0.96f, 1.0f) : Colors.White;
         _posterSprite.SelfModulate = _posterSprite.SelfModulate.Lerp(targetColor, (float)(delta * 12.0));
-    }
-
-    public override void _Notification(int what)
-    {
-        if (what == NotificationPaused || what == NotificationWMWindowFocusOut)
-            _clickPending = false;
     }
 
     private void OpenPoster()

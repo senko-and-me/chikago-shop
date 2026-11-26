@@ -31,10 +31,6 @@ public sealed class DaySession {
     IsClosed = false;
   }
 
-  public int AvailableEnergy(int storedEnergy) {
-    return IsClosed ? 0 : storedEnergy;
-  }
-
   public bool Tick(double delta) {
     if (IsClosed || !double.IsFinite(delta) || delta <= 0)
       return false;

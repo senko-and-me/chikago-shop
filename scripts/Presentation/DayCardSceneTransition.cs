@@ -30,9 +30,8 @@ public sealed class DayCardSceneTransition(Node owner)
         WorldUi(game.GetNode("World"));
         foreach (Node child in game.GetNode("HUD").GetChildren())
             if (child is CanvasItem item) Remember(item);
+        if (game is TradeScene trade) Remember(trade.ShowcasePopup);
         Remember(game.GetNode<Control>("HUD/DayClock/Root"));
-        Remember(game.GetNode<InventoryUI>("HUD/InventoryUI").ItemPopup);
-        Remember(game.GetNode<Control>("DayAnnouncements/Root"));
         _camera.ReturnToOverview(CameraDuration);
         _sequence = owner.CreateTween().SetPauseMode(Tween.TweenPauseMode.Process);
         _sequence.TweenInterval(CameraDuration);

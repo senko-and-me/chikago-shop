@@ -7,7 +7,7 @@ public sealed class EconomyConfig
     public int StartingMoney { get; init; }
     public DayConfig Days { get; init; } = new();
     public List<WorkshopConfig> Workshops { get; init; } = [];
-    public List<RarityConfig> Rarities { get; init; } = [];
+    public List<ItemConfig> Items { get; init; } = [];
     public List<OfferRangeConfig> OfferRanges { get; init; } = [];
     public List<QuotaConfig> Quotas { get; init; } = [];
 }
@@ -15,9 +15,6 @@ public sealed class EconomyConfig
 public sealed class DayConfig
 {
     public int DurationSeconds { get; init; } = (int)ChikagoShop.Domain.Days.DaySession.DurationSeconds;
-    public int EnergyBeforeMusicUnlock { get; init; } = 3;
-    public int EnergyAfterMusicUnlock { get; init; } = 6;
-    public int ItemsPerCraft { get; init; } = 1;
     public int TotalDays { get; init; }
     public int TutorialDay { get; init; }
 }
@@ -26,16 +23,14 @@ public sealed class WorkshopConfig
 {
     public string Id { get; init; } = string.Empty;
     public int SpinCost { get; init; }
-    public int UnlockCost { get; init; }
 }
 
-public sealed class RarityConfig
+public sealed class ItemConfig
 {
     public string Id { get; init; } = string.Empty;
-    public string Name { get; init; } = string.Empty;
-    public int Weight { get; init; }
+    public string Workshop { get; init; } = string.Empty;
+    public int BasePrice { get; init; }
     public int Rerolls { get; init; }
-    public Dictionary<string, int> BasePrices { get; init; } = [];
 }
 
 public sealed class OfferRangeConfig

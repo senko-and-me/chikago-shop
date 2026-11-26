@@ -73,20 +73,16 @@ public partial class WorldCamera : Camera2D
     {
         _viewport = GetViewport();
         _viewport.SizeChanged += OnViewportSizeChanged;
-        // Closed-room backgrounds retain navigation; purchase buttons consume their own GUI input.
+        // Closed-room covers consume GUI input; their background can still focus the room.
         foreach (Node room in BoundsSource.GetParent().GetChildren())
         {
             var cover = room.GetNodeOrNull<Control>("LockedOverlay");
-            if (cover == null || cover.MouseFilter == Control.MouseFilterEnum.Ignore) continue;
+            if (cover == null || cover.MouseFilter != Control.MouseFilterEnum.Stop) continue;
             Control.GuiInputEventHandler handler = input =>
             {
                 if (GetTree().Paused || IsReturningToOverview || IsFocusing || NavigationLocked) return;
-                if (input is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true } click)
-                {
-                    if (!(click.DoubleClick && TryFocusRoom(cover.GetGlobalTransformWithCanvas() * click.Position)))
-                        _dragging = true;
-                    cover.AcceptEvent();
-                }
+                if (input is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true, DoubleClick: true } click &&
+                    TryFocusRoom(cover.GetGlobalTransformWithCanvas() * click.Position)) cover.AcceptEvent();
             };
             cover.GuiInput += handler;
             _roomCoverHandlers.Add((cover, handler));

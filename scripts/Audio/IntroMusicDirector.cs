@@ -109,11 +109,11 @@ public partial class IntroMusicDirector : Node
         }
     }
 
-    public Task<bool> FadeToSilence(bool skipped = false, double? duration = null)
+    public Task<bool> FadeToSilence(bool skipped = false)
     {
         if (_silence != null) return _silence.Task;
         CurrentCue = "silence";
-        foreach (var voice in _voices) Ramp(voice, 0, duration ?? (skipped ? SkipFadeSeconds : ExitFadeSeconds));
+        foreach (var voice in _voices) Ramp(voice, 0, skipped ? SkipFadeSeconds : ExitFadeSeconds);
         _silence = new TaskCompletionSource<bool>();
         if (IsSilent) CompleteSilence();
         return _silence?.Task ?? Task.FromResult(true);

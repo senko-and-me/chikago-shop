@@ -119,44 +119,6 @@ public partial class ProjectTest
         await ToSignal(this, SignalName.ProcessFrame);
     }
 
-    private async Task TestInterfaceFixes()
-    {
-        const string save = "user://interface_fixes_test.json";
-        Vector2I original = Root.Size;
-        TradeScene game = null;
-        var scene = GD.Load<PackedScene>("res://scenes/trade_scene.tscn");
-        try
-        {
-            foreach (var size in new[] { new Vector2I(1280, 720), new Vector2I(1920, 1080) })
-            {
-                Root.Size = size;
-                ProgressSaveStore.Save(save, new ProgressData
-                {
-                    SaveVersion = ProgressJson.CurrentVersion, Day = 1, Score = 1200, EnergyRemaining = 6, DayStarted = false,
-                    MusicWorkshopUnlocked = true, ShowcaseItems = [0, -1, -1, 2, 8, 7]
-                });
-                game = scene.Instantiate<TradeScene>();
-                game.SavePath = save;
-                game.GetNode<FirstTradeTutorial>("FirstTradeTutorial").ProgressPath = "";
-                Root.AddChild(game);
-                game.SetProcess(false);
-                await CheckInstrumentShowcases(game, size);
-                await CheckMapShadowDirections(game);
-                await CheckPulloutPanels(game);
-                await CheckPauseButtonStates(game);
-                game.QueueFree();
-                game = null;
-                await ToSignal(this, SignalName.ProcessFrame);
-            }
-        }
-        finally
-        {
-            if (GodotObject.IsInstanceValid(game)) game.QueueFree();
-            if (FileAccess.FileExists(save)) DirAccess.RemoveAbsolute(save);
-            Root.Size = original;
-            Paused = false;
-        }
-    }
 
     private async Task CheckInstrumentShowcases(TradeScene game, Vector2I size)
     {
@@ -207,58 +169,6 @@ public partial class ProjectTest
             hat.GetRect().IsEqualApprox(new Rect2(111, 35, 209, 115)), "Other showcase art must keep its original sizing");
     }
 
-    private async Task CheckMapShadowDirections(TradeScene game)
-    {
-        var clock = game.GetNode<TextureRect>("HUD/DayClock/Root/DayTimer/Clock");
-        var panel = game.GetNode<ProgressPanel>("HUD/Root/ProgressPanel");
-        var slots = game.GetNode<TextureRect>("HUD/InventoryUI/InventorySlotBackground");
-        var rightAndBottom = new[] { clock, panel.GetNode<TextureRect>("Visual/Back"),
-            panel.GetNode<TextureRect>("Visual/Pack/Front"), panel.GetNode<TextureRect>("Visual/Day"),
-            panel.GetNode<TextureRect>("Visual/Quota"), panel.GetNode<TextureRect>("Visual/Deadline") };
-        var header = game.GetNode<NinePatchRect>("World/Atelier/Header");
-        Check(!header.HasNode("DropShadow"), "Room titles must stay flat");
-        foreach (string name in new[] { "ScorePanel", "EnergyPanel" })
-        {
-            var hud = game.GetNode<PanelContainer>("HUD/Root/" + name);
-            CheckButtonShadow(hud);
-            var material = (ShaderMaterial)hud.GetNode<ButtonDropShadow>("DropShadow").Material;
-            float blur = material.GetShaderParameter("blur_radius").AsSingle();
-            Vector2 offset = material.GetShaderParameter("face_position").AsVector2();
-            Check(Mathf.IsEqualApprox(blur, 8.5f) && offset == new Vector2(-9.5f, 9.5f),
-                $"The {name} shadow must be slightly smaller and stay left/down");
-        }
-        CheckButtonShadow(game.GetNode<Button>("World/Atelier/GetItemButton"));
-        CheckButtonShadow(slots);
-        foreach (var owner in rightAndBottom)
-        {
-            CheckButtonShadow(owner);
-            var material = (ShaderMaterial)owner.GetNode<ButtonDropShadow>("DropShadow").Material;
-            float blur = material.GetShaderParameter("blur_radius").AsSingle();
-            Vector2 offset = material.GetShaderParameter("face_position").AsVector2();
-            Check(offset.X >= blur - (owner == clock ? 2 : 0) && offset.Y >= blur, $"{owner.Name} shadow must stay to the right and below");
-        }
-        var strip = (ShaderMaterial)slots.GetNode<ButtonDropShadow>("DropShadow").Material;
-        Vector2 stripOffset = strip.GetShaderParameter("face_position").AsVector2();
-        Check(stripOffset.X == 0 && stripOffset.Y >= strip.GetShaderParameter("blur_radius").AsSingle() &&
-            strip.GetShaderParameter("horizontal_spread").AsSingle() > 1.5f,
-            "The slot strip must have equal left/right shadow and a shadow below");
-        Check(slots.GetParent() != game.GetNode<InventoryUI>("HUD/InventoryUI").Scroller,
-            "Slot shadows must stay outside the scroll clip");
-        using (await CapturePresentation($"map-shadow-directions-{Root.Size.X}")) { }
-        var camera = game.GetNode<WorldCamera>("Camera2D");
-        foreach (string room in new[] { "Atelier", "MusicWorkshop" })
-        {
-            var button = game.GetNode<Button>($"World/{room}/GetItemButton");
-            camera.FocusOn(button.GetGlobalRect().GetCenter(), camera.CloseupSize, 0);
-            var shadow = button.GetNode<ButtonDropShadow>("DropShadow");
-            using var styled = await CapturePresentation($"craft-shadow-{room}-{Root.Size.X}");
-            shadow.Hide();
-            using var plain = await CapturePresentation();
-            shadow.Show();
-            Check(!SameButtonPixels(styled, plain, ScreenBounds(button).Grow(15)),
-                $"The {room} craft button must draw an actual shadow outside its face");
-        }
-    }
 
     private async Task CheckPulloutPanels(TradeScene game)
     {

@@ -13,11 +13,10 @@ public sealed class EconomyBalanceTests
     {
         var config = Config();
         Assert.That(config.Days.DurationSeconds, Is.EqualTo(60));
-        Assert.That(config.Days.ItemsPerCraft, Is.EqualTo(1));
         foreach (var workshop in config.Workshops)
         {
-            double value = config.Rarities.Sum(rarity => (double)rarity.Weight * rarity.BasePrices[workshop.Id]) / config.Rarities.Sum(rarity => rarity.Weight);
-            Assert.That(workshop.SpinCost / value, Is.InRange(0.5, 0.8), "Crafting must cost a meaningful but sustainable fraction of expected sale value");
+            double value = config.Items.Where(item => item.Workshop == workshop.Id).Average(item => item.BasePrice);
+            Assert.That(workshop.SpinCost / value, Is.InRange(0.25, 0.4), "Crafting must cost a meaningful but sustainable fraction of expected sale value");
         }
         Assert.That(config.Quotas.Single(quota => quota.Id == "first").DeadlineDay, Is.EqualTo(7));
     }
@@ -29,7 +28,7 @@ public sealed class EconomyBalanceTests
         var ordinary = WeekBalanceSimulator.Run(config, WeekBalanceSimulator.Profiles[0], 1000);
         var careful = WeekBalanceSimulator.Run(config, WeekBalanceSimulator.Profiles[1], 1000);
         var passive = WeekBalanceSimulator.Run(config, WeekBalanceSimulator.Profiles[5], 1000);
-        Assert.That(ordinary.FirstQuotaPassRate, Is.InRange(0.01, 0.99), "The imported balance must allow both first-quota outcomes");
+        Assert.That(ordinary.FirstQuotaPassRate, Is.GreaterThan(0.8), "The current time model must permit the first quota");
         Assert.That(ordinary.WinRate, Is.GreaterThan(0));
         Assert.That(ordinary.WinRate, Is.LessThanOrEqualTo(ordinary.FirstQuotaPassRate));
         Assert.That(careful.WinRate, Is.GreaterThanOrEqualTo(ordinary.WinRate));

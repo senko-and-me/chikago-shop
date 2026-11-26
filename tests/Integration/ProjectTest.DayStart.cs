@@ -151,15 +151,10 @@ public partial class ProjectTest
             game.NewGame();
             Check(!game.DayStarted && game.GetNode<Button>("HUD/DayClock/Root/DayTimer/StartButton").Visible,
                 "New Game must show Start again");
-            game.Score = 1000;
-            game.EndDay(); // The unlock layout fixture requires an explicitly started day.
-            game.TryUnlockMusicWorkshop();
             Root.Size = new Vector2I(1000, 800);
             using (var image = await CapturePresentation()) { }
             timer = game.GetNode<Label>("HUD/DayClock/Root/DayTimer");
-            var inventory = game.GetNode<Control>("HUD/InventoryUI/ScrollContainer");
-            Check(timer.GetGlobalRect().End.X <= inventory.GetGlobalRect().Position.X,
-                "The larger clock must not overlap the six-slot inventory on a narrow viewport");
+            Check(Root.GetVisibleRect().Encloses(timer.GetGlobalRect()), "The clock must fit on a narrow viewport");
             // Legacy saves already described a running day, including an active buyer.
             using (var file = FileAccess.Open(save, FileAccess.ModeFlags.Write))
                 file.StoreString("{\"save_version\":13,\"day\":1,\"score\":220,\"energy_remaining\":3,\"day_remaining_seconds\":42}");
@@ -171,7 +166,7 @@ public partial class ProjectTest
             game._Process(5);
             Check(!game.TradeActive && game.DayRemainingSeconds == duration, "Displayed goods must not attract buyers before Start");
             game.EndDay();
-            Check(game.TradeActive && game.BuyerWaitRemaining == game.BuyerWaitInitial && game.BuyerWaitInitial is >= 10 and <= 20,
+            Check(game.GetNode<Node2D>("World/TradingRoom/Customer").Visible && !game.TradeActive && game.BuyerWaitRemaining == game.BuyerWaitInitial && game.BuyerWaitInitial is >= 10 and <= 20,
                 "Start must immediately bring the first buyer with the full wait timer");
         }
         finally

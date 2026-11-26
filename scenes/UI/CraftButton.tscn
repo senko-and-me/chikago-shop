@@ -16,11 +16,6 @@ atlas = ExtResource("3_lettering")
 region = Rect2(320, 180, 1360, 550)
 filter_clip = true
 
-[sub_resource type="AtlasTexture" id="HelpIcon"]
-atlas = ExtResource("3_lettering")
-region = Rect2(1690, 55, 250, 250)
-filter_clip = true
-
 [node name="CraftButton" type="Button"]
 offset_right = 450.0
 offset_bottom = 190.0
@@ -82,21 +77,3 @@ text = "CREATE\nITEMS"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="RarityHotspot" type="Control" parent="."]
-layout_mode = 0
-offset_left = 375.0
-offset_top = 8.0
-offset_right = 447.0
-offset_bottom = 76.0
-mouse_filter = 1
-mouse_default_cursor_shape = 16
-
-[node name="EnglishHelp" type="TextureRect" parent="RarityHotspot"]
-layout_mode = 0
-offset_top = 4.0
-offset_right = 60.0
-offset_bottom = 64.0
-mouse_filter = 2
-texture = SubResource("HelpIcon")
-expand_mode = 1
-stretch_mode = 5

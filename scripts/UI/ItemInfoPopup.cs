@@ -1,10 +1,11 @@
 using Godot;
 
-// Owns item tooltip presentation and lifetime; inventory owns selection and transfers.
+// Owns item tooltip presentation and lifetime; the display owns its stock.
 public partial class ItemInfoPopup : PanelContainer
 {
     private Label _label = null!;
-    private SlotUI _slot;
+    private Control _slot;
+    private System.Func<string> _describe;
     internal FirstTradeTutorial Tutorial { get; set; }
     private CanvasLayer _layer;
     private int _normalLayer;
@@ -29,15 +30,16 @@ public partial class ItemInfoPopup : PanelContainer
         HideInfo();
     }
 
-    public void ShowFor(SlotUI slot)
+    public void ShowFor(Control slot, System.Func<string> describe)
     {
         if (GetTree().Paused || GetViewport().GuiIsDragging() || slot.IsQueuedForDeletion()) return;
         _slot = slot;
+        _describe = describe;
         Refresh();
         SetProcess(true);
     }
 
-    public void HideFor(SlotUI slot)
+    public void HideFor(Control slot)
     {
         if (_slot == slot) HideInfo();
     }
@@ -45,6 +47,7 @@ public partial class ItemInfoPopup : PanelContainer
     public void HideInfo()
     {
         _slot = null;
+        _describe = null;
         Hide();
         SetProcess(false);
     }
@@ -67,12 +70,15 @@ public partial class ItemInfoPopup : PanelContainer
     {
         if (_slot == null) return;
         _layer.Layer = Tutorial?.ContextTooltipLayer(_normalLayer, this) ?? _normalLayer;
-        if (_label.Text != _slot.ItemInfo) _label.Text = _slot.ItemInfo;
+        string text = _describe?.Invoke();
+        if (text == null) { HideInfo(); return; }
+        if (_label.Text != text) _label.Text = text;
         Vector2 minimum = GetCombinedMinimumSize();
         if (Size != minimum) Size = minimum;
         Rect2 anchor = _slot.GetGlobalTransformWithCanvas() * new Rect2(Vector2.Zero, _slot.Size);
         Vector2 position = new(anchor.GetCenter().X - Size.X / 2, anchor.Position.Y - Size.Y - 8);
         position.X = Mathf.Clamp(position.X, 8, Mathf.Max(8, GetViewportRect().Size.X - Size.X - 8));
+        if (position.Y < 8) position.Y = Mathf.Min(anchor.End.Y + 8, GetViewportRect().End.Y - Size.Y - 8);
         if (Position != position) Position = position;
         if (!Visible) Show();
     }

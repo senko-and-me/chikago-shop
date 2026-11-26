@@ -376,7 +376,7 @@ public partial class ProjectTest
 
             var card = game.GetNode<DayTransitionCard>("DayTransitionCard");
             card.Open(1, 2, new[] { ChikagoShop.Domain.Days.DayUpgrade.Cash,
-                ChikagoShop.Domain.Days.DayUpgrade.Energy, ChikagoShop.Domain.Days.DayUpgrade.Atelier }, 1000);
+                ChikagoShop.Domain.Days.DayUpgrade.AtelierPrice, ChikagoShop.Domain.Days.DayUpgrade.MusicPrice }, 1000);
             await WaitForDayCardAnimation(card);
             await SettleButtonFeedback();
             Check(Root.GuiGetFocusOwner() == null && controller.GetVisualFrame().Strength == 0,
@@ -414,7 +414,7 @@ public partial class ProjectTest
             foreach (int balance in new[] { 1000, 20, 0 })
             {
                 card.Open(1, 2, new[] { ChikagoShop.Domain.Days.DayUpgrade.Cash,
-                    ChikagoShop.Domain.Days.DayUpgrade.Energy, ChikagoShop.Domain.Days.DayUpgrade.Atelier }, balance);
+                    ChikagoShop.Domain.Days.DayUpgrade.AtelierPrice, ChikagoShop.Domain.Days.DayUpgrade.MusicPrice }, balance);
                 await WaitForDayCardAnimation(card);
                 await SettleButtonFeedback();
                 Check(Root.GuiGetFocusOwner() == null && controller.GetVisualFrame().Strength == 0,
@@ -431,12 +431,12 @@ public partial class ProjectTest
                         card.GetNode<Button>("Root/Center/Card/Content/Skip") }
                     : balance == 20
                         ? new BaseButton[] { card.GetNode<Button>(choicePath + "Cash/Content/Choose"),
-                            card.GetNode<Button>(choicePath + "Energy/Content/Choose"),
-                            card.GetNode<Button>(choicePath + "Atelier/Content/Choose"),
+                            card.GetNode<Button>(choicePath + "AtelierPrice/Content/Choose"),
+                            card.GetNode<Button>(choicePath + "MusicPrice/Content/Choose"),
                             card.GetNode<Button>("Root/Center/Card/Content/Skip") }
                         : new BaseButton[] { card.GetNode<Button>(choicePath + "Cash/Content/Choose"),
-                            card.GetNode<Button>(choicePath + "Energy/Content/Choose"),
-                            card.GetNode<Button>(choicePath + "Atelier/Content/Choose"),
+                            card.GetNode<Button>(choicePath + "AtelierPrice/Content/Choose"),
+                            card.GetNode<Button>(choicePath + "MusicPrice/Content/Choose"),
                             card.GetNode<Button>("Root/Center/Card/Content/Skip") };
                 Check(selected == expected[0], "First navigation must select the first available action");
                 foreach (Key direction in new[] { Key.Right, Key.Down, Key.Left, Key.Up })

@@ -6,9 +6,6 @@ namespace ChikagoShop.Domain.Tests;
 public sealed class DayCardPurchaseTests
 {
     [TestCase(DayUpgrade.Cash, 2, false, 0)]
-    [TestCase(DayUpgrade.Energy, 2, false, 10)]
-    [TestCase(DayUpgrade.Atelier, 3, false, 15)]
-    [TestCase(DayUpgrade.Music, 4, true, 25)]
     [TestCase(DayUpgrade.AtelierPrice, 4, false, 10)]
     [TestCase(DayUpgrade.MusicPrice, 5, true, 20)]
     public void PurchaseRequiresFundsAndChargesOnlyOnce(DayUpgrade choice, int day, bool musicUnlocked, int cost)
@@ -49,30 +46,14 @@ public sealed class DayCardPurchaseTests
     public void SkipIsFreeAndLegacyPermanentLevelsAreDiscardedOnRestore()
     {
         var session = new DayUpgradeSession();
-        session.Restore(true, DayUpgrade.None, 6, atelierLevel: 2, musicPriceLevel: 1);
+        session.Restore(true, DayUpgrade.None, 6, musicPriceLevel: 1);
         Assert.That(session.TrySkip(), Is.True);
         Assert.That(session.Selected, Is.EqualTo(DayUpgrade.None));
-        Assert.That(session.AtelierLevel + session.MusicPriceLevel, Is.Zero);
+        Assert.That(session.MusicPriceLevel, Is.Zero);
         var restored = new DayUpgradeSession();
-        restored.Restore(session.Pending, session.Selected, 6, atelierLevel: 6, musicPriceLevel: 6);
+        restored.Restore(session.Pending, session.Selected, 6, musicPriceLevel: 6);
         Assert.That(restored.Price("atelier", 100), Is.EqualTo(100));
         Assert.That(restored.Price("music", 100), Is.EqualTo(100));
     }
 
-    [Test]
-    public void OneEnergyBoostWorksForEitherRoomButExpiresNextDay()
-    {
-        foreach (int baseline in new[] { 3, 6 })
-        {
-            var session = new DayUpgradeSession();
-            session.Offer(2);
-            Assert.That(session.TryPurchase(DayUpgrade.Energy, 10, out int balance), Is.True);
-            Assert.That(balance, Is.Zero);
-            Assert.That(session.EnergyCapacityFor(baseline), Is.EqualTo(baseline + 1));
-            session.Restore(false, DayUpgrade.Energy);
-            Assert.That(session.EnergyCapacityFor(baseline), Is.EqualTo(baseline + 1));
-            session.Reset(preserveCategories: true);
-            Assert.That(session.EnergyCapacityFor(baseline), Is.EqualTo(baseline));
-        }
-    }
 }

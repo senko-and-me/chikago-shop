@@ -15,15 +15,8 @@ public partial class TradeScene
 			SaveVersion = ProgressJson.CurrentVersion,
 			Day = CurrentDay,
 			Score = Score,
-			EnergyRemaining = EnergyRemaining,
 			UpgradePending = _dayCycle.Upgrades.Pending,
 			SelectedUpgrade = (int)_dayCycle.Upgrades.Selected,
-			AtelierUpgradeLevel = _dayCycle.Upgrades.AtelierLevel,
-			MusicUpgradeLevel = _dayCycle.Upgrades.MusicLevel,
-			CheckpointAtelierUpgradeLevel =
-				_dayCycle.CheckpointAtelierLevel,
-			CheckpointMusicUpgradeLevel =
-				_dayCycle.CheckpointMusicLevel,
 			AtelierPriceLevel =
 				DayUpgrades.AtelierPriceLevel,
 			MusicPriceLevel =
@@ -48,7 +41,6 @@ public partial class TradeScene
 			QuotaDialogueLanguage = _quotaDialogueLanguage,
 			CheckpointDay = CheckpointDay,
 			CheckpointScore = CheckpointScore,
-			CheckpointEnergy = CheckpointEnergy,
 			MusicWorkshopUnlocked = MusicWorkshopUnlocked,
 			CheckpointMusicWorkshopUnlocked =
 				CheckpointMusicWorkshopUnlocked,
@@ -62,8 +54,11 @@ public partial class TradeScene
 			CustomerIndex = CustomerIndex,
 			Percentage = Percentage,
 			RerollsRemaining = RerollsRemaining,
-			StoredItems = _storedItems.ToArray(),
-			CheckpointItems = _checkpointItems.ToArray(),
+            DeferredDisplayItems = _deferredStock.ToArray(),
+            CheckpointDeferredDisplayItems = _checkpointStock.ToArray(),
+            ShowcaseRerolls = (int[])_showcaseRerolls.Clone(),
+            CheckpointShowcaseRerolls = (int[])_checkpointShowcaseRerolls.Clone(),
+            ReturnedOfferPercent = _returnedOfferPercent,
 			ShowcaseItems = (int[])_showcaseItems.Clone(),
 			CheckpointShowcaseItems =
 				(int[])_checkpointShowcaseItems.Clone(),
@@ -72,9 +67,7 @@ public partial class TradeScene
 			BuyerWaitInitial = _buyerWaitInitial,
 			WaitingBuyerPresent = _waitingBuyer,
 			WaitingBuyerMusic = _waitingBuyerMusic,
-			StoredGrades = _storedGrades.ToArray(),
 			ShowcaseGrades = (string[])_showcaseGrades.Clone(),
-			CheckpointGrades = _checkpointGrades.ToArray(),
 			CheckpointShowcaseGrades = (string[])_checkpointShowcaseGrades.Clone(),
 			ActiveTradeGrade = _activeTradeGrade
 		};
@@ -84,12 +77,12 @@ public partial class TradeScene
 
 	private bool LoadProgress()
 	{
-		var data = ProgressSaveStore.Load(SavePath, EnergyBeforeMusicUnlock);
+		var data = ProgressSaveStore.Load(SavePath);
 		if (data == null) return false;
 		data = ProgressMigration.Prepare(data);
 
-		MusicWorkshopUnlocked = data.MusicWorkshopUnlocked;
-		CheckpointMusicWorkshopUnlocked = data.CheckpointMusicWorkshopUnlocked;
+		MusicWorkshopUnlocked = data.MusicWorkshopUnlocked && data.QuotaStage >= 1;
+		CheckpointMusicWorkshopUnlocked = data.CheckpointMusicWorkshopUnlocked && data.CheckpointDay > 1;
 
 		_dayCycle.Restore(
 			data.DayRemainingSeconds,
@@ -97,68 +90,11 @@ public partial class TradeScene
 			data.UpgradePending,
 			(ChikagoShop.Domain.Days.DayUpgrade)data.SelectedUpgrade,
 			data.Day,
-			data.AtelierUpgradeLevel,
-			data.MusicUpgradeLevel,
-			data.CheckpointAtelierUpgradeLevel,
-			data.CheckpointMusicUpgradeLevel,
 			data.AtelierPriceLevel,
 			data.MusicPriceLevel,
 			data.CheckpointAtelierPriceLevel,
 			data.CheckpointMusicPriceLevel,
 			data.DayStarted);
-
-		_storedItems.Clear();
-		_checkpointItems.Clear();
-
-		foreach (int index in data.StoredItems ?? [])
-		{
-			if (index >= 0 && index < Items.Count)
-				_storedItems.Add(index);
-		}
-
-		foreach (int index in data.CheckpointItems ?? [])
-		{
-			if (index >= 0 && index < Items.Count)
-				_checkpointItems.Add(index);
-		}
-
-		for (int i = 0;
-			 i < Mathf.Min(
-				 ShowcaseCapacity,
-				 data.ShowcaseItems?.Length ?? 0);
-			 i++)
-		{
-			if (data.ShowcaseItems![i] >= 0 &&
-				data.ShowcaseItems[i] < Items.Count)
-			{
-				_showcaseItems[i] = data.ShowcaseItems[i];
-			}
-		}
-
-		for (int i = 0;
-			 i < Mathf.Min(
-				 ShowcaseCapacity,
-				 data.CheckpointShowcaseItems?.Length ?? 0);
-			 i++)
-		{
-			if (data.CheckpointShowcaseItems![i] >= 0 &&
-				data.CheckpointShowcaseItems[i] < Items.Count)
-			{
-				_checkpointShowcaseItems[i] =
-					data.CheckpointShowcaseItems[i];
-			}
-		}
-
-		LoadLegacyGradeArrays(data.StoredGrades, data.ShowcaseGrades);
-		_checkpointGrades.Clear();
-		for (int i = 0; i < _checkpointItems.Count; i++)
-			_checkpointGrades.Add(data.CheckpointGrades != null && i < data.CheckpointGrades.Length
-				? NormalizeRank(data.CheckpointGrades[i]) : "D");
-		for (int i = 0; i < ShowcaseCapacity; i++)
-			_checkpointShowcaseGrades[i] = data.CheckpointShowcaseGrades != null && i < data.CheckpointShowcaseGrades.Length
-				? NormalizeRank(data.CheckpointShowcaseGrades[i]) : "D";
-
-		MoveItemsOutOfLockedShowcases();
 
 		_activeShowcaseIndex =
 			data.ActiveShowcaseIndex >= 0 &&
@@ -169,9 +105,6 @@ public partial class TradeScene
 		CurrentDay = Mathf.Clamp(data.Day, 1, FinalDay);
 		Score = Mathf.Max(0, data.Score);
 
-		EnergyRemaining = ProgressMigration.Energy(
-			data.SaveVersion, data.EnergyRemaining, EnergyCapacity, MusicWorkshopUnlocked);
-
 		Accepted = Mathf.Max(0, data.Accepted);
 		Declined = Mathf.Max(0, data.Declined);
 		QuotaStage = Mathf.Clamp(data.QuotaStage, 0, 2);
@@ -181,6 +114,11 @@ public partial class TradeScene
 		MafiaNoticePending = data.MafiaNoticePending;
 		_quotaVisit = data.QuotaVisit;
 		_checkpointQuotaVisit = data.CheckpointQuotaVisit;
+        // Saves before the visitor state existed have already advanced beyond the first quota.
+        if (QuotaStage >= 1 && _quotaVisit == QuotaVisitStage.Unavailable)
+            _quotaVisit = QuotaVisitStage.Rewarded;
+        if (data.CheckpointDay > 1 && _checkpointQuotaVisit == QuotaVisitStage.Unavailable)
+            _checkpointQuotaVisit = QuotaVisitStage.Rewarded;
 		_quotaDialoguePage = data.QuotaDialoguePage;
 		_quotaDialogueRevealed = data.QuotaDialogueRevealed;
 		_quotaDialogueLanguage = data.QuotaDialogueLanguage;
@@ -191,15 +129,6 @@ public partial class TradeScene
 
 		CheckpointScore =
 			Mathf.Max(0, data.CheckpointScore);
-
-		int checkpointEnergyCapacity =
-			CheckpointMusicWorkshopUnlocked
-				? EnergyAfterMusicUnlock
-				: EnergyBeforeMusicUnlock;
-
-		CheckpointEnergy = Math.Clamp(ProgressMigration.Energy(
-			data.SaveVersion, data.CheckpointEnergy, checkpointEnergyCapacity,
-			CheckpointMusicWorkshopUnlocked), 0, checkpointEnergyCapacity);
 
 		CheckpointAccepted =
 			Mathf.Max(0, data.CheckpointAccepted);
@@ -222,7 +151,7 @@ public partial class TradeScene
 		TradeActive = data.TradeActive;
 		_activeTradeGrade = NormalizeRank(data.ActiveTradeGrade);
 		bool musicBuyer = TradeActive && ItemIndex >= 0 && ItemIndex < Items.Count
-			? Items[ItemIndex].WorkshopId == "music" : data.WaitingBuyerMusic;
+			? Items[ItemIndex].WorkshopId == "music" : MusicWorkshopUnlocked && data.WaitingBuyerMusic;
 		var range = ChikagoShop.Domain.Economy.RunRewardRules.BuyerWaitRange(musicBuyer);
 		_buyerWaitInitial = data.BuyerWaitInitial is double initial && initial >= range.Minimum && initial <= range.Maximum
 			? initial : BuyerWaitDuration;
@@ -231,7 +160,7 @@ public partial class TradeScene
 		_waitingBuyer = data.SaveVersion >= 16 && data.WaitingBuyerPresent && !TradeActive &&
 			!data.DayClosed && data.DayStarted && !Failed && !Completed &&
 			CustomerIndex >= 0 && CustomerIndex < _customer.GetAppearanceCount();
-		_waitingBuyerMusic = data.SaveVersion >= 16 && data.WaitingBuyerMusic;
+		_waitingBuyerMusic = data.SaveVersion >= 16 && MusicWorkshopUnlocked && data.WaitingBuyerMusic;
 
 		if (ItemIndex < 0 ||
 			ItemIndex >= Items.Count ||
@@ -246,11 +175,64 @@ public partial class TradeScene
 		if (!TradeActive)
 			_activeShowcaseIndex = -1;
 
-		if (_inventoryUI != null)
-			_inventoryUI.UpdateUI(_storedItems);
+        _returnedOfferPercent = data.ReturnedOfferPercent is int percent ? Math.Clamp(percent, -30, 30) : null;
+        RestoreDisplays(data.ShowcaseItems, data.ShowcaseGrades, data.ShowcaseRerolls,
+            data.StoredItems, data.StoredGrades, data.DeferredDisplayItems,
+            _showcaseItems, _showcaseGrades, _showcaseRerolls, _deferredStock,
+            MusicWorkshopUnlocked, restoreActive: true, savedWithReservedSlot: data.SaveVersion >= 20);
+        RestoreDisplays(data.CheckpointShowcaseItems, data.CheckpointShowcaseGrades, data.CheckpointShowcaseRerolls,
+            data.CheckpointItems, data.CheckpointGrades, data.CheckpointDeferredDisplayItems,
+            _checkpointShowcaseItems, _checkpointShowcaseGrades, _checkpointShowcaseRerolls, _checkpointStock,
+            CheckpointMusicWorkshopUnlocked, restoreActive: false);
+        if (_deferredStock.Count > 0)
+            GD.PushWarning("Legacy or deferred items are retained until matching displays become available.");
 
 		RefreshShowcases();
 		return true;
 	}
+
+
+    private void RestoreDisplays(int[] entries, string[] ranks, int[] savedRerolls,
+        int[] legacy, string[] legacyRanks, DisplayStock[] deferred,
+        int[] items, string[] grades, int[] rerolls, System.Collections.Generic.List<DisplayStock> overflow,
+        bool musicOpen, bool restoreActive, bool savedWithReservedSlot = false)
+    {
+        Array.Fill(items, -1);
+        Array.Fill(grades, "D");
+        Array.Fill(rerolls, -1);
+        overflow.Clear();
+        for (int slot = 0; slot < (entries?.Length ?? 0); slot++)
+        {
+            int item = entries[slot];
+            if (item < 0 || item >= Items.Count) continue;
+            var stock = new DisplayStock(item, ranks != null && slot < ranks.Length ? ranks[slot] : "D",
+                savedRerolls != null && slot < savedRerolls.Length ? savedRerolls[slot] : -1);
+            if (slot < ShowcaseCapacity && DisplayWorkshop(slot) == Items[item].WorkshopId &&
+                (slot < InitialShowcaseCapacity || musicOpen))
+                PutDisplay(slot, stock, items, grades, rerolls);
+            else if (!savedWithReservedSlot || !restoreActive || !TradeActive || slot != _activeShowcaseIndex || item != ItemIndex)
+                overflow.Add(stock);
+        }
+
+        if (restoreActive && TradeActive)
+        {
+            int slot = _activeShowcaseIndex;
+            bool compatible = slot >= 0 && DisplayWorkshop(slot) == Items[ItemIndex].WorkshopId &&
+                (slot < InitialShowcaseCapacity || musicOpen);
+            if (!compatible || items[slot] >= 0 && (!savedWithReservedSlot || items[slot] != ItemIndex))
+                slot = FreeDisplay(Items[ItemIndex].WorkshopId, items, musicOpen);
+            _activeShowcaseIndex = slot;
+            if (slot >= 0) PutDisplay(slot, new DisplayStock(ItemIndex, _activeTradeGrade, RerollsRemaining),
+                items, grades, rerolls);
+        }
+
+        for (int i = 0; i < (legacy?.Length ?? 0); i++)
+            if (legacy[i] >= 0 && legacy[i] < Items.Count)
+                overflow.Add(new DisplayStock(legacy[i], legacyRanks != null && i < legacyRanks.Length ? legacyRanks[i] : "D", -1));
+        foreach (var stock in deferred ?? [])
+            if (stock != null && stock.Item >= 0 && stock.Item < Items.Count)
+                overflow.Add(stock);
+        FillDeferredDisplays(overflow, items, grades, rerolls, musicOpen);
+    }
 
 }

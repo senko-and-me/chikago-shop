@@ -10,13 +10,11 @@ public partial class DebugBalancePanel : CanvasLayer
     private Control _root;
     private Label _status, _preview;
     private readonly Dictionary<string, LineEdit> _numbers = new();
-    private readonly Dictionary<string, OptionButton> _rarities = new();
     private readonly List<(Node Node, ProcessModeEnum Mode)> _suspended = new();
     private TradeScene _game;
     private bool _wasPaused;
     public bool IsOpen => _root?.Visible == true;
     public LineEdit Editor(string key) => _numbers[key];
-    public OptionButton RarityEditor(string kind) => _rarities[kind];
 
     public override void _Ready()
     {
@@ -45,13 +43,6 @@ public partial class DebugBalancePanel : CanvasLayer
             editor.TooltipText = $"{field.Min} .. {field.Max} / {field.Step}";
             _numbers.Add(field.Key, editor);
             editor.TextChanged += _ => Preview();
-            if (!field.Key.StartsWith("item.")) continue;
-            string kind = field.Key.Split('.')[1];
-            var rarity = row.GetNode<OptionButton>("Rarity");
-            rarity.Show();
-            foreach (var definition in EconomyConfigProvider.Baseline.Rarities) rarity.AddItem(definition.Name);
-            _rarities.Add(kind, rarity);
-            rarity.ItemSelected += _ => Preview();
         }
         Preview();
     }
@@ -104,20 +95,11 @@ public partial class DebugBalancePanel : CanvasLayer
     private void Fill(BalanceProfile profile)
     {
         foreach (var field in DebugBalanceSettings.Fields) _numbers[field.Key].Text = profile.Number(field.Key, field.Default).ToString(System.Globalization.CultureInfo.InvariantCulture);
-        foreach (var item in WorkshopItemCatalog.BaselineItems)
-        {
-            string id = profile.ItemRarities.GetValueOrDefault(item.Kind, item.RarityId);
-            _rarities[item.Kind].Select(EconomyConfigProvider.Baseline.Rarities.FindIndex(rarity => rarity.Id == id));
-        }
         Preview();
     }
     private BalanceProfile Draft()
     {
-        var draft = new BalanceProfile
-        {
-            ItemRarities = _rarities.ToDictionary(entry => entry.Key,
-                entry => EconomyConfigProvider.Baseline.Rarities[entry.Value.Selected].Id)
-        };
+        var draft = new BalanceProfile();
         foreach (var (key, editor) in _numbers)
         {
             if (!TryNumber(editor.Text, out double value))
@@ -139,7 +121,7 @@ public partial class DebugBalancePanel : CanvasLayer
         if (!DebugBalanceSettings.TrySave(draft, out string error)) { _status.Text = "Не применено: " + error; return; }
         Fill(DebugBalanceSettings.Profile);
         if (GodotObject.IsInstanceValid(_game)) _game.RefreshDebugBalance();
-        _status.Text = "Сохранено. Новые действия используют этот баланс; деньги и оставшаяся энергия не выдаются повторно.";
+        _status.Text = "Сохранено. Новые действия используют этот баланс; стартовые деньги не выдаются повторно.";
         if (!newGame || _game == null) return;
         var game = _game;
         Close();
@@ -150,15 +132,7 @@ public partial class DebugBalancePanel : CanvasLayer
     {
         if (_preview == null || _numbers.Count != DebugBalanceSettings.Fields.Count) return;
         string tab = GetNode<TabContainer>(Content + "/Tabs").GetCurrentTabControl().Name;
-        if (tab == "Редкости")
-        {
-            var rarities = EconomyConfigProvider.Baseline.Rarities;
-            double sum = rarities.Sum(rarity => Number($"rarity.{rarity.Id}.weight"));
-            _preview.Text = "Вес 0 исключает редкость. При наличии всех категорий: " + string.Join(" · ", rarities.Select(rarity =>
-                $"{rarity.Name} {(sum > 0 ? Number($"rarity.{rarity.Id}.weight") / sum * 100 : 0):0.#}%")) +
-                ". Пустые категории исключаются, остальные шансы нормируются внутри мастерской.";
-        }
-        else if (tab == "Карты")
+        if (tab == "Карты")
         {
             double sum = DebugBalanceSettings.Cards.Sum(card => Number($"card.{card}.weight"));
             _preview.Text = "В режиме 1 выбираются до трёх разных карт без повторов. Шанс первого выбора: " +

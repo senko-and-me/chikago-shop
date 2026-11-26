@@ -17,7 +17,7 @@ public static class DebugBalanceSettings
     private static IReadOnlyList<BalanceField> _fields;
     public static IReadOnlyList<BalanceField> Fields => _fields ??= BuildFields();
     public static int Revision { get { EnsureLoaded(); return _revision; } }
-    public static bool HasOverrides { get { EnsureLoaded(); return OS.IsDebugBuild() && (_profile.Numbers.Count > 0 || _profile.ItemRarities.Count > 0); } }
+    public static bool HasOverrides { get { EnsureLoaded(); return OS.IsDebugBuild() && _profile.Numbers.Count > 0; } }
     public static BalanceProfile Profile { get { EnsureLoaded(); return _profile.Clone(); } }
     public static EconomyConfig Economy { get { EnsureLoaded(); return _economy ?? EconomyConfigProvider.Baseline; } }
     public static double Number(string key)
@@ -33,11 +33,10 @@ public static class DebugBalanceSettings
         WeightedSelection = Number("cards.weighted") == 1,
         Seed = (int)Number("cards.seed")
     };
-    public static DayUpgrade[] Cards => Enum.GetValues<DayUpgrade>().Where(card => card is not (DayUpgrade.None or DayUpgrade.Time)).ToArray();
+    public static DayUpgrade[] Cards => [DayUpgrade.Cash, DayUpgrade.AtelierPrice, DayUpgrade.MusicPrice];
     public static string CardName(DayUpgrade card) => card switch
     {
-        DayUpgrade.Cash => "Оборотные средства", DayUpgrade.Energy => "Второе дыхание",
-        DayUpgrade.Atelier => "Мастерство портного", DayUpgrade.Music => "Мастерство мастера",
+        DayUpgrade.Cash => "Оборотные средства",
         DayUpgrade.AtelierPrice => "Имя на этикетке", _ => "Коллекционный звук"
     };
     private static void EnsureLoaded() { if (!_loaded) Reload(out _); }
@@ -131,7 +130,7 @@ public static class DebugBalanceSettings
 
     private static bool MigrateItemOverrides(BalanceProfile profile)
     {
-        if (profile.ItemCatalogueRevision >= 1 || profile.Numbers == null || profile.ItemRarities == null) return false;
+        if (profile.ItemCatalogueRevision >= 1 || profile.Numbers == null) return false;
         var aliases = new (string Old, string Current)[]
         {
             ("gloves", "vest"), ("trumpet", "drum"), ("clothing_first", "gloves"),
@@ -144,8 +143,6 @@ public static class DebugBalanceSettings
         {
             if (profile.Numbers.Remove($"item.{old}.price", out double price))
                 profile.Numbers.TryAdd($"item.{current}.price", price);
-            if (profile.ItemRarities.Remove(old, out string rarity))
-                profile.ItemRarities.TryAdd(current, rarity);
         }
         profile.ItemCatalogueRevision = 1;
         return true;
@@ -155,7 +152,14 @@ public static class DebugBalanceSettings
     {
         profile.Numbers?.Remove("card.Time.cost");
         profile.Numbers?.Remove("card.Cash.cost");
+        foreach (string key in new[] { "energy.before", "energy.after", "card.Energy.cost",
+            "card.Energy.weight", "workshop.music.unlock", "craft.count" }) profile.Numbers?.Remove(key);
         profile.Numbers?.Remove("card.Time.weight");
+        if (profile.Numbers != null)
+            foreach (string key in profile.Numbers.Keys.Where(key => key.StartsWith("rarity.", StringComparison.Ordinal) ||
+                key == "hand.rarity" || key.StartsWith("card.Atelier.", StringComparison.Ordinal) ||
+                key.StartsWith("card.Music.", StringComparison.Ordinal)).ToArray())
+                profile.Numbers.Remove(key);
         profile.Numbers?.Remove("buyer.min");
         profile.Numbers?.Remove("buyer.max");
         // A legacy profile may have disabled every other card and relied on Time.
@@ -170,18 +174,9 @@ public static class DebugBalanceSettings
     }
     public static void Validate(BalanceProfile profile)
     {
-        var baseline = EconomyConfigProvider.Baseline;
-        profile.Validate(Fields, WorkshopItemCatalog.BaselineItems.Select(item => item.Kind).ToHashSet(),
-            baseline.Rarities.Select(rarity => rarity.Id).ToHashSet());
+        profile.Validate(Fields);
         double Get(string key) => profile.Number(key, Fields.Single(field => field.Key == key).Default);
-        if (Get("energy.after") < Get("energy.before")) throw new ArgumentException("Энергия после открытия мастерской должна быть не ниже начальной.");
         if (Cards.Sum(card => Get($"card.{card}.weight")) <= 0) throw new ArgumentException("Хотя бы одна карта должна иметь положительный вес.");
-        foreach (string workshop in new[] { "atelier", "music" })
-        {
-            bool available = WorkshopItemCatalog.BaselineItems.Where(item => item.WorkshopId == workshop).Any(item =>
-                Get($"rarity.{profile.ItemRarities.GetValueOrDefault(item.Kind, item.RarityId)}.weight") > 0);
-            if (!available) throw new ArgumentException($"В мастерской {workshop} нет предметов с положительным шансом создания.");
-        }
     }
     private static EconomyConfig BuildEconomy(BalanceProfile profile)
     {
@@ -195,20 +190,12 @@ public static class DebugBalanceSettings
             {
                 TotalDays = source.Days.TotalDays, TutorialDay = source.Days.TutorialDay,
                 DurationSeconds = Get("day.seconds", source.Days.DurationSeconds),
-                EnergyBeforeMusicUnlock = Get("energy.before", source.Days.EnergyBeforeMusicUnlock),
-                EnergyAfterMusicUnlock = Get("energy.after", source.Days.EnergyAfterMusicUnlock),
-                ItemsPerCraft = Get("craft.count", source.Days.ItemsPerCraft)
             },
             Workshops = source.Workshops.Select(workshop => new WorkshopConfig
             {
                 Id = workshop.Id, SpinCost = Get($"workshop.{workshop.Id}.cost", workshop.SpinCost),
-                UnlockCost = Get($"workshop.{workshop.Id}.unlock", workshop.UnlockCost)
             }).ToList(),
-            Rarities = source.Rarities.Select(rarity => new RarityConfig
-            {
-                Id = rarity.Id, Name = rarity.Name, Weight = Get($"rarity.{rarity.Id}.weight", rarity.Weight),
-                Rerolls = Get($"rarity.{rarity.Id}.rerolls", rarity.Rerolls), BasePrices = new(rarity.BasePrices)
-            }).ToList(),
+            Items = source.Items,
             OfferRanges = source.OfferRanges,
             Quotas = source.Quotas.Select(quota => new QuotaConfig
             { Id = quota.Id, DeadlineDay = quota.DeadlineDay, Amount = Get($"quota.{quota.Id}", quota.Amount) }).ToList()
@@ -220,12 +207,8 @@ public static class DebugBalanceSettings
         var fields = new List<BalanceField>
         {
             new("start.cash", "Партия", "Стартовые деньги ($) · новая игра", config.StartingMoney, 0, 1000000),
-            new("energy.before", "Партия", "Энергия до открытия музыки · новая игра", config.Days.EnergyBeforeMusicUnlock, 1, 99),
-            new("energy.after", "Партия", "Энергия после открытия музыки", config.Days.EnergyAfterMusicUnlock, 1, 99),
             new("day.seconds", "Партия", "День до музыки (сек.; после +30)", config.Days.DurationSeconds, 5, 3600),
-            new("craft.count", "Создание", "Предметов за один крафт", config.Days.ItemsPerCraft, 1, 50),
             new("hand.enabled", "Партия", "Невидимая рука: 0 — выкл., 1 — вкл.", 1, 0, 1),
-            new("hand.rarity", "Редкости", "Невидимая рука: предел редкости (п.п.)", 5, 0, 5),
             new("hand.offer", "Партия", "Невидимая рука: предел предложения (п.п.)", 3, 0, 3),
             new("craft.atelier.seconds", "Создание", "Время вышивки (сек.)", 10, 1, 600),
             new("craft.music.seconds", "Создание", "Время полировки (сек.)", 10, 1, 600),
@@ -238,12 +221,6 @@ public static class DebugBalanceSettings
         {
             string name = workshop.Id == "atelier" ? "Ателье" : "Музыка";
             fields.Add(new($"workshop.{workshop.Id}.cost", "Создание", name + ": цена одного крафта ($)", workshop.SpinCost));
-            if (workshop.UnlockCost > 0) fields.Add(new($"workshop.{workshop.Id}.unlock", "Создание", name + ": цена открытия ($)", workshop.UnlockCost));
-        }
-        foreach (var rarity in config.Rarities)
-        {
-            fields.Add(new($"rarity.{rarity.Id}.weight", "Редкости", rarity.Name + ": вес создания", rarity.Weight, 0, 1000));
-            fields.Add(new($"rarity.{rarity.Id}.rerolls", "Редкости", rarity.Name + ": смен покупателя", rarity.Rerolls, 0, 50));
         }
         foreach (var card in Cards)
         {

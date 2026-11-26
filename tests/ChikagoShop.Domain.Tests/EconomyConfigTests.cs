@@ -7,9 +7,6 @@ namespace ChikagoShop.Domain.Tests;
 public sealed class EconomyConfigTests
 {
     [TestCase("duration_seconds", 0)]
-    [TestCase("items_per_craft", 3)]
-    [TestCase("energy_before_music_unlock", 0)]
-    [TestCase("energy_after_music_unlock", 1)]
     public void InvalidLiveDayRulesAreRejected(string property, int value)
     {
         JsonObject json = ReadConfig();
@@ -32,9 +29,7 @@ public sealed class EconomyConfigTests
             Assert.That(config.StartingMoney, Is.EqualTo(220));
             Assert.That(config.Workshops.Select(value => value.Id), Is.EqualTo(new[] { "atelier", "music" }));
             Assert.That(config.Workshops.Select(value => value.SpinCost), Is.EqualTo(new[] { 25, 50 }));
-            Assert.That(config.Workshops.Select(value => value.UnlockCost), Is.EqualTo(new[] { 0, 1000 }));
             Assert.That(config.Quotas.Select(value => value.Amount), Is.EqualTo(new[] { 750, 1500 }));
-            Assert.That(config.Rarities.Select(value => value.Weight), Is.EqualTo(new[] { 60, 25, 10, 4, 1 }));
             Assert.That(config.OfferRanges.Sum(value => value.ChancePercent), Is.EqualTo(100));
         });
     }
@@ -70,7 +65,7 @@ public sealed class EconomyConfigTests
             Throws.TypeOf<EconomyConfigException>());
 
 		json = ReadConfig();
-		json["workshops"]![1]!["unlock_cost"] = -1;
+		json["items"]![1]!["base_price"] = -1;
 		Assert.That(() => EconomyConfigLoader.Load(json.ToJsonString()),
 			Throws.TypeOf<EconomyConfigException>());
     }
@@ -85,18 +80,6 @@ public sealed class EconomyConfigTests
             Throws.TypeOf<EconomyConfigException>());
     }
 
-    [Test]
-    public void RelativeWeightsNeedNotSumToOneHundred()
-    {
-        JsonObject json = ReadConfig();
-        json["rarities"]![0]!["weight"] = 4;
-        json["rarities"]![1]!["weight"] = 1;
-
-        Assert.DoesNotThrow(() => EconomyConfigLoader.Load(json.ToJsonString()));
-        json["rarities"]![1]!["weight"] = 0;
-        Assert.That(() => EconomyConfigLoader.Load(json.ToJsonString()),
-            Throws.TypeOf<EconomyConfigException>());
-    }
 
     private static JsonObject ReadConfig() =>
         JsonNode.Parse(File.ReadAllText(ConfigPath))!.AsObject();

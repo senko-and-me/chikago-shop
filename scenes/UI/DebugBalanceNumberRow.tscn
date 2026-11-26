@@ -17,7 +17,3 @@ layout_mode = 2
 max_length = 32
 select_all_on_focus = true
 
-[node name="Rarity" type="OptionButton" parent="."]
-visible = false
-custom_minimum_size = Vector2(190, 40)
-layout_mode = 2

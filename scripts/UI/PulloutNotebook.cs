@@ -166,7 +166,7 @@ public partial class PulloutNotebook : Control
         int quota = _game.QuotaStage == 0 ? _game.FirstQuota : _game.SecondQuota;
         DayUpgrade selected = _game.DayUpgrades.Selected;
         bool english = GameLocalization.Language == "en";
-        string signature = $"{english}|{quota}|{deadline}|{_game.Completed}|{_game.Failed}|{selected}";
+        string signature = $"{english}|{quota}|{deadline}|{_game.Completed}|{_game.Failed}|{_game.QuotaVisitPending}|{_game.MusicWorkshopAvailable}|{_game.MusicWorkshopUnlocked}|{selected}";
         if (signature == _lastSignature)
             return;
         _lastSignature = signature;
@@ -183,12 +183,14 @@ public partial class PulloutNotebook : Control
                 ? $"Pay mafia: ${quota}\nBy the end of day {deadline}"
                 : $"Выплатить мафии: {quota}$\nДо конца {deadline}-го дня";
 
+        if (_game.QuotaVisitPending)
+            _questDetails.Text += "\n" + GameLocalization.Text("Поговорите с сыном");
+        else if (_game.MusicWorkshopAvailable && !_game.MusicWorkshopUnlocked && !_game.Completed && !_game.Failed)
+            _questDetails.Text += "\n" + GameLocalization.Text("Откройте музыкальную мастерскую");
+
         _buffsTitle.Text = english ? "DAY BUFFS" : "БАФФЫ ДНЯ";
         string activeBuff = selected switch
         {
-            DayUpgrade.Energy => english ? "+1 energy today" : "+1 энергия сегодня",
-            DayUpgrade.Atelier => english ? "Rare clothing chance ↑" : "Шанс редкой одежды ↑",
-            DayUpgrade.Music => english ? "Rare instruments chance ↑" : "Шанс редких инструментов ↑",
             DayUpgrade.AtelierPrice => english ? "+20% clothing prices" : "+20% к цене одежды",
             DayUpgrade.MusicPrice => english ? "+20% instrument prices" : "+20% к цене инструментов",
             // Cash is received immediately, not a lasting day buff.

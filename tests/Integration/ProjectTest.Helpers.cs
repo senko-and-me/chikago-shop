@@ -25,9 +25,6 @@ public partial class ProjectTest
         await ToSignal(this, SignalName.ProcessFrame);
     }
 
-    private static string ExpectedItemTooltip(int index) =>
-        $"{TradeScene.GetItemName(index)}\nРедкость: {TradeScene.GetItemRarity(index)}\nСтоимость: {TradeScene.GetItemBasePrice(index)}$";
-
     private async Task ClickControl(Node game, string path)
     {
         if (path.StartsWith("DayTransitionCard/", StringComparison.Ordinal)) await WaitForDayCardAnimation(game);
@@ -46,12 +43,7 @@ public partial class ProjectTest
         Check(control.IsVisibleInTree(), $"Mouse target must be visible: {path}");
         Vector2 point = control.GetGlobalTransformWithCanvas() * (control.Size / 2);
         Root.PushInput(new InputEventMouseMotion { Position = point, GlobalPosition = point }, true);
-        if (control is SlotUI slot)
-        {
-            var inventoryUi = game.GetNode<InventoryUI>("HUD/InventoryUI");
-            Check(inventoryUi.ItemPopup.Visible && inventoryUi.VisibleItemInfo == slot.ItemInfo,
-                "Item information must appear synchronously on mouse enter without waiting for a timer or another frame");
-        }
+
         await ToSignal(this, SignalName.ProcessFrame);
         Root.PushInput(new InputEventMouseButton
         {
@@ -92,31 +84,6 @@ public partial class ProjectTest
         return game;
     }
 
-    private static void CheckInventoryTooltips(TradeScene game)
-    {
-        var container = game.GetNode<HBoxContainer>("HUD/InventoryUI/ScrollContainer/HBoxContainer");
-        int[] items = game.StoredItems;
-        for (int i = 0; i < items.Length; i++)
-        {
-            var slot = (SlotUI)container.GetChild(i);
-            Check(slot.ItemInfo == ExpectedItemTooltip(items[i]),
-                "Inventory tooltips must follow each current item's name, rarity and price after creation, movement and reload");
-            var inventoryUi = game.GetNode<InventoryUI>("HUD/InventoryUI");
-            slot.EmitSignal(Control.SignalName.MouseEntered);
-            Check(inventoryUi.ItemPopup.Visible && inventoryUi.VisibleItemInfo == ExpectedItemTooltip(items[i]),
-                "The immediate popup must show fresh content after creation, movement and reload");
-            slot.EmitSignal(Control.SignalName.MouseExited);
-            Check(!inventoryUi.ItemPopup.Visible, "Item information must hide immediately on mouse exit");
-            Check(slot.GetNode<TextureRect>("Icon").MouseFilter == Control.MouseFilterEnum.Ignore,
-                "Inventory artwork must allow its slot to receive hover and click input");
-        }
-    }
-
-    private static void SelectInventorySlot(TradeScene game, int index)
-    {
-        var container = game.GetNode<HBoxContainer>("HUD/InventoryUI/ScrollContainer/HBoxContainer");
-        ((Button)container.GetChild(index)).EmitSignal(Button.SignalName.Pressed);
-    }
 
     private static void CheckSpriteInside(Rect2 worldBounds, Sprite2D sprite, string message)
     {

@@ -11,8 +11,6 @@ public sealed class DayCycleController
 	private bool _advanceWhenClosed;
 	private Action _tutorialUpgradeFinished;
 	public DayUpgradeSession Upgrades { get; } = new();
-	public int CheckpointAtelierLevel { get; private set; }
-	public int CheckpointMusicLevel { get; private set; }
 	public int CheckpointAtelierPriceLevel { get; private set; }
 	public int CheckpointMusicPriceLevel { get; private set; }
 	private readonly TradeScene _game;
@@ -24,7 +22,6 @@ public sealed class DayCycleController
 	private readonly Label _endCaption;
 	private readonly Texture2D _clockActive;
 	private readonly Texture2D _clockExpired;
-	private readonly Control _inventoryStrip;
 	private int _displayedSeconds = -1;
 	public const double TutorialDuration = 180;
 	private double? _restoredTutorialRemaining;
@@ -32,7 +29,6 @@ public sealed class DayCycleController
 	private readonly DayTransitionCard _card;
 	private readonly MafiaQuotaNotice _mafia;
 	private readonly DayNightBackground _dayNight;
-	private readonly DayAnnouncementOverlay _announcements;
 	private readonly DayStartGate _actionGate;
 	private double ExpectedDuration => TutorialActive ? TutorialDuration : WorkshopItemCatalog.DayDurationSeconds
 		+ (_game.MusicWorkshopUnlocked ? 30 : 0);
@@ -128,12 +124,8 @@ public sealed class DayCycleController
 		_endCaption.AddThemeConstantOverride("outline_size", 0);
 		_timer.AddChild(_endCaption);
 		_endCaption.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-		_inventoryStrip = game.GetNode<Control>("HUD/InventoryUI/ScrollContainer");
 		_timer.GetParent<Control>().Resized += LayoutTimer;
-		_inventoryStrip.Resized += LayoutTimer;
 		_dayNight = new DayNightBackground(game);
-		_announcements = new DayAnnouncementOverlay();
-		game.AddChild(_announcements);
 		_actionGate = new DayStartGate { Name = "DayStartGate" };
 		game.AddChild(_actionGate);
 		Session.Reset(ExpectedDuration);
@@ -229,20 +221,17 @@ public sealed class DayCycleController
 		Upgrades.Reset(preserveCategories);
 		Session.Reset(ExpectedDuration);
 		Started = false;
-		_announcements.Dismiss();
 		RefreshTimer();
 		UpdateDayNightBackground();
 	}
 
 	public void Restore(double? remaining, bool closed, bool pending = false, DayUpgrade selected = DayUpgrade.None,
-		int day = 2, int atelierLevel = 0, int musicLevel = 0, int checkpointAtelierLevel = 0, int checkpointMusicLevel = 0,
+		int day = 2,
 		int atelierPriceLevel = 0, int musicPriceLevel = 0, int checkpointAtelierPriceLevel = 0, int checkpointMusicPriceLevel = 0,
 		bool started = true)
 	{
-		Upgrades.Restore(pending, selected, day, atelierLevel, musicLevel, atelierPriceLevel, musicPriceLevel,
+		Upgrades.Restore(pending, selected, day, atelierPriceLevel, musicPriceLevel,
 			_game.MusicWorkshopUnlocked);
-		CheckpointAtelierLevel = Math.Clamp(checkpointAtelierLevel, 0, 6);
-		CheckpointMusicLevel = Math.Clamp(checkpointMusicLevel, 0, 6);
 		CheckpointAtelierPriceLevel = Math.Clamp(checkpointAtelierPriceLevel, 0, 6);
 		CheckpointMusicPriceLevel = Math.Clamp(checkpointMusicPriceLevel, 0, 6);
 		_restoredTutorialRemaining = remaining;
@@ -250,7 +239,6 @@ public sealed class DayCycleController
 		// Recover saves made in the closed-day state, including before this fix.
 		_advanceWhenClosed = Session.IsClosed;
 		Started = started || Session.IsClosed;
-		_announcements.Dismiss();
 		RefreshTimer();
 		UpdateDayNightBackground();
 	}
@@ -280,19 +268,15 @@ public sealed class DayCycleController
 			_card.Open(_game.CurrentDay - 1, _game.CurrentDay, Upgrades.Options, _game.Score);
 	}
 
-	public void FinishQuotaVisit() =>
-		_announcements.ShowReward(GameLocalization.Format("Получено {0}$", TradeScene.QuotaGift), ResumeUpgradeChoice);
+	public void FinishQuotaVisit() => ResumeUpgradeChoice();
 
 	public void CaptureCheckpointUpgrades()
 	{
-		CheckpointAtelierLevel = Upgrades.AtelierLevel;
-		CheckpointMusicLevel = Upgrades.MusicLevel;
 		CheckpointAtelierPriceLevel = Upgrades.AtelierPriceLevel;
 		CheckpointMusicPriceLevel = Upgrades.MusicPriceLevel;
 	}
 
 	public void RestoreCheckpointUpgrades() => Upgrades.Restore(false, DayUpgrade.None, _game.CurrentDay,
-		_game.CurrentDay > 1 ? CheckpointAtelierLevel : 0, _game.CurrentDay > 1 ? CheckpointMusicLevel : 0,
 		_game.CurrentDay > 1 ? CheckpointAtelierPriceLevel : 0, _game.CurrentDay > 1 ? CheckpointMusicPriceLevel : 0);
 
 	private void ChooseUpgrade(DayUpgrade upgrade)
@@ -302,7 +286,6 @@ public sealed class DayCycleController
 		switch (upgrade)
 		{
 			case DayUpgrade.Cash: _game.Score += Upgrades.CashReward; break;
-			case DayUpgrade.Energy: _game.EnergyRemaining++; break;
 		}
 		if (FinishTutorialUpgradeChoice()) return;
 		RefreshTimer();
@@ -357,7 +340,6 @@ public sealed class DayCycleController
 		Session.Restore(remaining, false, TutorialDuration);
 		_restoredTutorialRemaining = null;
 		_advanceWhenClosed = false;
-		_announcements.Dismiss();
 		RefreshTimer();
 		UpdateDayNightBackground();
 	}
@@ -434,9 +416,8 @@ public sealed class DayCycleController
 
 	private void LayoutTimer()
 	{
-		// Six inventory slots leave less room at narrow window sizes.
-		float inventoryLeft = _inventoryStrip.GetGlobalRect().Position.X;
-		float size = Mathf.Min(Mathf.Clamp(inventoryLeft - 24, 64, 180) * 1.15f, Mathf.Max(64, inventoryLeft - 12));
+		// Keep the existing clock position and its full display size.
+		const float size = 207;
 		_timer.OffsetLeft = 6;
 		_timer.OffsetRight = 6 + size;
 		_timer.OffsetTop = -6 - size;

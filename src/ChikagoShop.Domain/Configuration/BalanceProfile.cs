@@ -16,22 +16,21 @@ public sealed class BalanceProfile
     public int EconomyBaselineRevision { get; set; }
     public int ItemCatalogueRevision { get; set; }
     public Dictionary<string, double> Numbers { get; set; } = new();
-    public Dictionary<string, string> ItemRarities { get; set; } = new();
     public double Number(string key, double fallback) => Numbers.GetValueOrDefault(key, fallback);
     public BalanceProfile Clone() => new()
     {
         SchemaVersion = SchemaVersion, FirstQuotaBaselineRevision = FirstQuotaBaselineRevision,
         EconomyBaselineRevision = EconomyBaselineRevision,
         ItemCatalogueRevision = ItemCatalogueRevision,
-        Numbers = new(Numbers), ItemRarities = new(ItemRarities)
+        Numbers = new(Numbers)
     };
     public string ToJson() => JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
     public static BalanceProfile FromJson(string json) => JsonSerializer.Deserialize<BalanceProfile>(json)
         ?? throw new ArgumentException("Профиль пуст.");
 
-    public void Validate(IReadOnlyList<BalanceField> fields, IReadOnlySet<string> itemIds, IReadOnlySet<string> rarityIds)
+    public void Validate(IReadOnlyList<BalanceField> fields)
     {
-        if (SchemaVersion != 1 || Numbers == null || ItemRarities == null)
+        if (SchemaVersion != 1 || Numbers == null)
             throw new ArgumentException("Неизвестная версия или повреждённая структура профиля.");
         var definitions = fields.ToDictionary(field => field.Key);
         foreach (var (key, value) in Numbers)
@@ -41,8 +40,5 @@ public sealed class BalanceProfile
                 Math.Abs(value / field.Step - Math.Round(value / field.Step)) > 0.00001)
                 throw new ArgumentException($"{field.Label}: значение должно быть от {field.Min} до {field.Max}, шаг {field.Step}.");
         }
-        foreach (var (item, rarity) in ItemRarities)
-            if (!itemIds.Contains(item) || !rarityIds.Contains(rarity))
-                throw new ArgumentException($"Неизвестный предмет или редкость: {item} / {rarity}");
     }
 }

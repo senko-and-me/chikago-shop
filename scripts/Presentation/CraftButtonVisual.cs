@@ -1,6 +1,6 @@
 using Godot;
 
-// Scene-authored artwork shares one paper tint, including the help icon's paper.
+// Scene-authored artwork shares one paper tint.
 public partial class CraftButtonVisual : Button
 {
     private Control[] _artwork;
@@ -8,8 +8,7 @@ public partial class CraftButtonVisual : Button
     public override void _Ready()
     {
         _artwork = new[] { GetNode<Control>("Paper"), GetNode<Control>("Frame"),
-            GetNode<Control>("RussianCaption"), GetNode<Control>("EnglishCaption"),
-            GetNode<Control>("RarityHotspot/EnglishHelp") };
+            GetNode<Control>("RussianCaption"), GetNode<Control>("EnglishCaption") };
         // The artwork draws its own opaque face; the native button style is empty.
         ButtonDropShadow.Attach(this, solidFace: true);
     }

@@ -8,31 +8,6 @@ namespace ChikagoShop.Domain.Economy;
 /// </summary>
 public sealed class InvisibleHandDirector
 {
-    public static void ApplyRarityShift(Dictionary<string, int> weights, int requested)
-    {
-        if (requested == 0 || !weights.TryGetValue("common", out int common) || common <= 0) return;
-        string[] rare = ["first_class", "exclusive", "unique"];
-        var enabled = rare.Where(id => weights.GetValueOrDefault(id) > 0).ToArray();
-        if (enabled.Length == 0) return;
-        if (requested > 0)
-        {
-            int amount = Math.Min(requested, Math.Max(0, common - 1));
-            weights["common"] -= amount;
-            for (int i = 0; i < amount; i++) weights[enabled[i % enabled.Length]]++;
-        }
-        else
-        {
-            int amount = Math.Min(-requested, enabled.Sum(id => Math.Max(0, weights[id] - 1)));
-            for (int i = 0; i < amount; i++)
-            {
-                string id = enabled.OrderByDescending(key => weights[key]).First();
-                if (weights[id] <= 1) break;
-                weights[id]--;
-                weights["common"]++;
-            }
-        }
-    }
-
     public double Pressure { get; private set; }
 
     public void Reset() => Pressure = 0;
@@ -60,10 +35,6 @@ public sealed class InvisibleHandDirector
         if (progress < 0.1) desired *= progress / 0.1;
         Pressure += Math.Clamp(desired - Pressure, -0.12, 0.12);
     }
-
-    public int RarityShift(int totalWeight, double maximumPercentagePoints) =>
-        (int)Math.Round(totalWeight * Pressure * Math.Clamp(maximumPercentagePoints, 0, 5) / 100,
-            MidpointRounding.AwayFromZero);
 
     public int AdjustInitialOffer(int originalPercent, double maximumPercentagePoints)
     {

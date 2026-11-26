@@ -19,16 +19,14 @@ public sealed class DaySessionTests
     }
 
     [Test]
-    public void TimeoutClosesExactlyOnceAndDiscardsEnergy()
+    public void TimeoutClosesExactlyOnce()
     {
         var day = new DaySession();
         Assert.That(day.RemainingSeconds, Is.EqualTo(90));
-        Assert.That(day.AvailableEnergy(2), Is.EqualTo(2));
         Assert.That(day.Tick(89.75), Is.False);
         Assert.That(day.Tick(0.25), Is.True);
         Assert.That(day.IsClosed, Is.True);
         Assert.That(day.CanReceiveBuyers, Is.False);
-        Assert.That(day.AvailableEnergy(2), Is.Zero);
         Assert.That(day.Tick(100), Is.False);
         Assert.That(day.RemainingSeconds, Is.Zero);
     }

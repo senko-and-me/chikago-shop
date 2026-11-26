@@ -1,5 +1,7 @@
 namespace ChikagoShop.Domain.Persistence;
 
+public sealed record DisplayStock(int Item, string Grade, int Rerolls);
+
 public enum QuotaVisitStage { Unavailable, AwaitingVisitor, Dialogue, Rewarded }
 
 // Versioned wire DTO. Keep property names/defaults compatible with historical saves.
@@ -12,10 +14,6 @@ public sealed record ProgressData
 	public int MusicPriceLevel { get; set; }
 	public int CheckpointAtelierPriceLevel { get; set; }
 	public int CheckpointMusicPriceLevel { get; set; }
-	public int AtelierUpgradeLevel { get; set; }
-	public int MusicUpgradeLevel { get; set; }
-	public int CheckpointAtelierUpgradeLevel { get; set; }
-	public int CheckpointMusicUpgradeLevel { get; set; }
 	public double? DayRemainingSeconds { get; set; }
 	public bool DayClosed { get; set; }
 	// Saves without this additive field already had a running day.
@@ -23,7 +21,6 @@ public sealed record ProgressData
 	public int Day { get; set; } = 1;
 	public int Score { get; set; }
 
-	public int EnergyRemaining { get; set; }
 
 	public int Accepted { get; set; }
 	public int Declined { get; set; }
@@ -39,7 +36,6 @@ public sealed record ProgressData
 	public int CheckpointDay { get; set; } = 1;
 	public int CheckpointScore { get; set; }
 
-	public int CheckpointEnergy { get; set; }
 
 	public bool MusicWorkshopUnlocked { get; set; }
 	public bool CheckpointMusicWorkshopUnlocked { get; set; }
@@ -53,8 +49,15 @@ public sealed record ProgressData
 	public int CustomerIndex { get; set; } = -1;
 	public int Percentage { get; set; }
 	public int RerollsRemaining { get; set; }
-	public int[] StoredItems { get; set; } = [];
-	public int[] CheckpointItems { get; set; } = [];
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+	public int[]? StoredItems { get; set; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+	public int[]? CheckpointItems { get; set; }
+    public DisplayStock[] DeferredDisplayItems { get; set; } = [];
+    public DisplayStock[] CheckpointDeferredDisplayItems { get; set; } = [];
+    public int[] ShowcaseRerolls { get; set; } = [];
+    public int[] CheckpointShowcaseRerolls { get; set; } = [];
+    public int? ReturnedOfferPercent { get; set; }
 	public int[] ShowcaseItems { get; set; } = [];
 	public int[] CheckpointShowcaseItems { get; set; } = [];
 	public int ActiveShowcaseIndex { get; set; } = -1;
@@ -62,9 +65,11 @@ public sealed record ProgressData
 	public double? BuyerWaitInitial { get; set; }
 	public bool WaitingBuyerPresent { get; set; }
 	public bool WaitingBuyerMusic { get; set; }
-	public string[] StoredGrades { get; set; } = [];
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+	public string[]? StoredGrades { get; set; }
 	public string[] ShowcaseGrades { get; set; } = [];
-	public string[] CheckpointGrades { get; set; } = [];
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+	public string[]? CheckpointGrades { get; set; }
 	public string[] CheckpointShowcaseGrades { get; set; } = [];
 	public string ActiveTradeGrade { get; set; } = "D";
 }

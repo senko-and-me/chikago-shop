@@ -17,7 +17,7 @@ public partial class DayStartGate : CanvasLayer
         Layer = 15;
         foreach (string path in new[] {
             "World/Atelier/GetItemButton", "World/MusicWorkshop/GetItemButton",
-            "World/TradingRoom/Item/TradePanel", "HUD/InventoryUI/ScrollContainer/HBoxContainer" })
+            "World/TradingRoom/Item/TradePanel" })
             _targets.Add(_game.GetNode<Control>(path));
         foreach (string room in new[] { "ShowroomLeft", "Showroom" })
             foreach (Node slot in _game.GetNode($"World/{room}/Showcases").GetChildren())

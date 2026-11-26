@@ -3,7 +3,6 @@ using Godot;
 
 public partial class TradeScene
 {
-    public const int QuotaGift = ChikagoShop.Domain.Economy.RunRewardRules.FirstQuotaGift;
     private QuotaVisitStage _quotaVisit;
     private QuotaVisitStage _checkpointQuotaVisit;
     private int _quotaDialoguePage;
@@ -102,8 +101,6 @@ public partial class TradeScene
     {
         if (_quotaVisit != QuotaVisitStage.Dialogue) return;
         _quotaVisit = _checkpointQuotaVisit = QuotaVisitStage.Rewarded;
-        Score += QuotaGift;
-        CheckpointScore += QuotaGift;
         ResetQuotaVisitPresentation();
         _customer.Hide();
         RefreshDayPresentation();

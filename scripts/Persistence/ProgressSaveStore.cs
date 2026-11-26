@@ -21,10 +21,10 @@ public static class ProgressSaveStore
         }
     }
 
-    public static ProgressData Load(string path, int defaultEnergy)
+    public static ProgressData Load(string path)
     {
         if (string.IsNullOrEmpty(path) || !FileAccess.FileExists(path)) return null;
-        try { return ProgressJson.Deserialize(FileAccess.GetFileAsString(path), defaultEnergy); }
+        try { return ProgressJson.Deserialize(FileAccess.GetFileAsString(path)); }
         catch (JsonException) { return null; }
     }
 }

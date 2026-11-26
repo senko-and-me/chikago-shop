@@ -10,29 +10,20 @@ public static class EconomyConfigValidator
             throw new EconomyConfigException("Starting money cannot be negative.");
         if (config.Days.TotalDays <= 0 || config.Days.TutorialDay < 1 || config.Days.TutorialDay > config.Days.TotalDays)
             throw new EconomyConfigException("Day configuration is invalid.");
-        if (config.Days.DurationSeconds <= 0 || config.Days.DurationSeconds > 3600 ||
-            config.Days.EnergyBeforeMusicUnlock <= 0 || config.Days.EnergyAfterMusicUnlock < config.Days.EnergyBeforeMusicUnlock ||
-            config.Days.ItemsPerCraft != 1)
-            throw new EconomyConfigException("Day duration, energy and single-item crafting configuration are invalid.");
+        if (config.Days.DurationSeconds <= 0 || config.Days.DurationSeconds > 3600)
+            throw new EconomyConfigException("Day duration is invalid.");
 
         RequireUniqueIds(config.Workshops.Select(value => value.Id), "workshop");
-        RequireUniqueIds(config.Rarities.Select(value => value.Id), "rarity");
+        RequireUniqueIds(config.Items.Select(value => value.Id), "item");
         RequireUniqueIds(config.Quotas.Select(value => value.Id), "quota");
 
         if (config.Workshops.Count == 0 || config.Workshops.Any(value =>
-                value.SpinCost < 0 || value.UnlockCost < 0))
-            throw new EconomyConfigException("Workshops require non-negative spin and unlock costs.");
-        if (config.Rarities.Count == 0 || config.Rarities.Any(value => value.Rerolls <= 0))
-            throw new EconomyConfigException("Rarities require positive rerolls.");
-        ValidateRelativeWeights(config.Rarities.Select(value => value.Weight));
-
+                value.SpinCost < 0))
+            throw new EconomyConfigException("Workshops require non-negative crafting costs.");
         string[] workshopIds = config.Workshops.Select(value => value.Id).ToArray();
-        foreach (RarityConfig rarity in config.Rarities)
-        {
-            if (string.IsNullOrWhiteSpace(rarity.Name) || rarity.BasePrices.Count != workshopIds.Length ||
-                workshopIds.Any(id => !rarity.BasePrices.TryGetValue(id, out int price) || price <= 0))
-                throw new EconomyConfigException($"Rarity '{rarity.Id}' must define a positive price for every workshop.");
-        }
+        if (config.Items.Any(item => !workshopIds.Contains(item.Workshop) || item.BasePrice <= 0 || item.Rerolls < 0) ||
+            workshopIds.Any(id => config.Items.Count(item => item.Workshop == id) != 5))
+            throw new EconomyConfigException("Every workshop must have five items with positive prices and valid reroll counts.");
 
         if (config.OfferRanges.Count == 0 || config.OfferRanges.Any(value =>
                 value.MinPercent > value.MaxPercent || value.ChancePercent <= 0))

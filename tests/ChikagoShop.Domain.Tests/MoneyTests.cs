@@ -3,7 +3,7 @@ using NUnit.Framework;
 
 namespace ChikagoShop.Domain.Tests;
 
-public sealed class MoneyEnergyTests
+public sealed class MoneyTests
 {
     [Test]
     public void FailedSpendDoesNotChangeWallet()
@@ -17,20 +17,6 @@ public sealed class MoneyEnergyTests
         Assert.That(wallet.Balance, Is.Zero);
     }
 
-    [Test]
-    public void EnergyNeverDropsBelowZeroAndRestoresToCapacity()
-    {
-        var energy = new EnergyPool(1);
-
-        Assert.That(energy.TrySpend(), Is.True);
-        Assert.That(energy.TrySpend(), Is.False);
-        Assert.That(energy.Available, Is.Zero);
-        energy.SetCapacity(2, restore: true);
-        Assert.That(energy.Available, Is.EqualTo(2));
-        energy.TrySpend(2);
-        energy.Restore();
-        Assert.That(energy.Available, Is.EqualTo(2));
-    }
 
     [TestCase(5, 10, 6)]
     [TestCase(15, 10, 17)]

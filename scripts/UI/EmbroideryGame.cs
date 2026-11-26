@@ -27,7 +27,7 @@ public partial class EmbroideryGame : CanvasLayer
 	private readonly Label[] _statValues = new Label[3];
 	private readonly Label[] _statHeadings = new Label[3];
 	private Button _action = null!, _cancel = null!;
-	private readonly Action _acquire;
+	private readonly Func<bool> _acquire;
 	private bool _ownsPause;
 	private bool? _primaryAction;
     private Texture2D _paperButton = null!, _inkButton = null!;
@@ -41,7 +41,7 @@ public partial class EmbroideryGame : CanvasLayer
     private FirstTradeTutorial _tutorial = null!;
     private bool Covered => _pause.IsOpen || _tutorial.IsSkipConfirmationOpen;
 
-	public EmbroideryGame(Action acquire, bool polishing = false)
+	public EmbroideryGame(Func<bool> acquire, bool polishing = false)
 	{
 		_acquire = acquire;
 		IsPolishing = polishing;
@@ -189,10 +189,7 @@ public partial class EmbroideryGame : CanvasLayer
         var game = GetParent<TradeScene>();
         if (!game.RequireStartedDay()) return;
 
-        if (IsOpen || GetTree().Paused || game.Failed || game.Completed ||
-            game.EnergyRemaining <= 0 ||
-            game.Score < WorkshopItemCatalog.CraftCost(IsPolishing ? "music" : "atelier") ||
-            (IsPolishing && !game.MusicWorkshopUnlocked))
+        if (IsOpen || GetTree().Paused || !game.CanBeginCraft(IsPolishing ? "music" : "atelier"))
             return;
 
         game.PersistProgress();
@@ -236,14 +233,13 @@ public partial class EmbroideryGame : CanvasLayer
 
         if (ActiveSession.State == EmbroideryState.Ready)
         {
-            if (GetParent<TradeScene>().DayClosed)
+            if (!_acquire())
             {
                 Close();
                 return;
             }
 
             ActiveSession.Start();
-            _acquire();
             _preparedItemClaimed = true;
             Started?.Invoke();
         }
@@ -276,6 +272,7 @@ public partial class EmbroideryGame : CanvasLayer
     {
         if (!IsOpen) return;
         _surface.Hide();
+        _game.CollectCraft();
         RestoreMouseCursor();
 
         if (_ownsPause && !_pause.IsOpen)

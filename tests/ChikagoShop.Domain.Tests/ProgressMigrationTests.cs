@@ -31,7 +31,7 @@ public sealed class ProgressMigrationTests
             Assert.That(migrated.ActiveTradeGrade, Is.EqualTo("A"));
         });
         migrated.SaveVersion = ProgressJson.CurrentVersion;
-        var reread = ProgressMigration.Prepare(ProgressJson.Deserialize(ProgressJson.Serialize(migrated), 3)!);
+        var reread = ProgressMigration.Prepare(ProgressJson.Deserialize(ProgressJson.Serialize(migrated))!);
         Assert.That(reread.StoredItems, Is.EqualTo(migrated.StoredItems));
         Assert.That(reread.CheckpointItems, Is.EqualTo(migrated.CheckpointItems));
         Assert.That(reread.ItemIndex, Is.EqualTo(migrated.ItemIndex));
@@ -50,12 +50,12 @@ public sealed class ProgressMigrationTests
     [Test]
     public void MissingDayStartedPreservesLegacyRunningDay()
     {
-        var legacy = ProgressJson.Deserialize("{\"save_version\":13,\"day_remaining_seconds\":42}", 3)!;
+        var legacy = ProgressJson.Deserialize("{\"save_version\":13,\"day_remaining_seconds\":42}")!;
         Assert.That(ProgressMigration.Prepare(legacy).DayStarted, Is.True);
         foreach (bool started in new[] { false, true })
         {
             var restored = ProgressMigration.Prepare(ProgressJson.Deserialize(
-                ProgressJson.Serialize(new ProgressData { SaveVersion = ProgressJson.CurrentVersion, DayStarted = started }), 3)!);
+                ProgressJson.Serialize(new ProgressData { SaveVersion = ProgressJson.CurrentVersion, DayStarted = started }))!);
             Assert.That(restored.DayStarted, Is.EqualTo(started));
         }
     }
@@ -102,16 +102,6 @@ public sealed class ProgressMigrationTests
         Assert.That(restored.DayRemainingSeconds, Is.EqualTo(expected));
     }
 
-    [TestCase(5, -50, 3, false, 3)]
-    [TestCase(6, 0, 3, false, 2)]
-    [TestCase(7, 1, 6, true, 5)]
-    [TestCase(11, -100, 6, true, 0)]
-    [TestCase(11, 100, 6, true, 6)]
-    [TestCase(12, 2, 3, false, 2)]
-    [TestCase(13, 4, 4, false, 4)]
-    public void EnergyMigrationPreservesSpentEnergy(int version, int saved, int capacity, bool music, int expected) =>
-        Assert.That(ProgressMigration.Energy(version, saved, capacity, music), Is.EqualTo(expected));
-
     [Test]
     public void LegacyCustomersAndItemRerollsRemainCompatible()
     {
@@ -121,62 +111,28 @@ public sealed class ProgressMigrationTests
         Assert.That(ProgressMigration.Rerolls(legacy, 3), Is.EqualTo(3));
         Assert.That(ProgressMigration.Rerolls(legacy, -1), Is.EqualTo(2));
         Assert.That(ProgressMigration.CustomerIndex(legacy with { SaveVersion = 3 }), Is.EqualTo(1));
-        Assert.That(ProgressMigration.Rerolls(legacy with { SaveVersion = 2, RerollsRemaining = 10 }, 1), Is.EqualTo(3));
+        Assert.That(ProgressMigration.Rerolls(legacy with { SaveVersion = 2, RerollsRemaining = 10 }, 1), Is.EqualTo(10));
     }
 
     [Test]
-    public void JsonRoundTripKeepsVersion13WireFieldsAndCheckpointState()
+    public void Version20SerializesDisplayStockAndIgnoresLegacyEnergy()
     {
-        var data = new ProgressData
+        var legacy = ProgressJson.Deserialize("{\"energy_remaining\":3,\"stored_items\":[0],\"stored_grades\":[\"S\"]}")!;
+        Assert.That(legacy.StoredItems, Is.EqualTo(new[] { 0 }));
+        Assert.That(legacy.StoredGrades, Is.EqualTo(new[] { "S" }));
+        var current = new ProgressData
         {
-            SaveVersion = ProgressJson.CurrentVersion, Day = 5, Score = 321, EnergyRemaining = 4,
-            CheckpointDay = 5, CheckpointScore = 100, CheckpointEnergy = 5,
-            MusicWorkshopUnlocked = true, CheckpointMusicWorkshopUnlocked = true,
-            StoredItems = [0, 4, 9], CheckpointItems = [2, 3], ShowcaseItems = [1, -1, 8],
-            CheckpointShowcaseItems = [-1, 7], TradeActive = true, ItemIndex = 8,
-            CustomerIndex = 3, RerollsRemaining = 1, ActiveShowcaseIndex = 2, BuyerWaitRemaining = 12.5,
-            DayRemainingSeconds = 35.5, UpgradePending = true, SelectedUpgrade = (int)DayUpgrade.Energy,
-            AtelierUpgradeLevel = 2, MusicUpgradeLevel = 3, AtelierPriceLevel = 4, MusicPriceLevel = 5,
-            CheckpointAtelierUpgradeLevel = 1, CheckpointMusicUpgradeLevel = 2,
-            CheckpointAtelierPriceLevel = 3, CheckpointMusicPriceLevel = 4
+            SaveVersion = ProgressJson.CurrentVersion, ShowcaseItems = [0, -1, -1],
+            ShowcaseGrades = ["A", "D", "D"], ShowcaseRerolls = [1, -1, -1],
+            DeferredDisplayItems = [new(6, "S", 1)],
+            CheckpointDeferredDisplayItems = [new(2, "B", 2)],
+            ReturnedOfferPercent = 12, QuotaVisit = QuotaVisitStage.Rewarded,
+            MusicWorkshopUnlocked = true
         };
-        string json = ProgressJson.Serialize(data);
-        var restored = ProgressJson.Deserialize(json, 3)!;
-        Assert.That(ProgressJson.Serialize(restored), Is.EqualTo(json));
-        using var doc = JsonDocument.Parse(json);
-        Assert.That(doc.RootElement.GetProperty("save_version").GetInt32(), Is.EqualTo(ProgressJson.CurrentVersion));
-        Assert.That(doc.RootElement.GetProperty("checkpoint_music_price_level").GetInt32(), Is.EqualTo(4));
-        Assert.That(doc.RootElement.GetProperty("day_remaining_seconds").GetDouble(), Is.EqualTo(35.5));
-        string[] fields = [
-            "save_version", "upgrade_pending", "selected_upgrade", "atelier_price_level", "music_price_level",
-            "checkpoint_atelier_price_level", "checkpoint_music_price_level", "atelier_upgrade_level",
-            "music_upgrade_level", "checkpoint_atelier_upgrade_level", "checkpoint_music_upgrade_level",
-            "day_remaining_seconds", "day_closed", "day_started", "day", "score", "energy_remaining", "accepted", "declined",
-            "quota_stage", "invisible_hand_pressure", "checkpoint_invisible_hand_pressure", "mafia_notice_pending",
-            "checkpoint_day", "checkpoint_score", "checkpoint_energy", "music_workshop_unlocked",
-            "checkpoint_music_workshop_unlocked", "checkpoint_accepted", "checkpoint_declined", "failed", "completed",
-            "quota_visit", "checkpoint_quota_visit", "quota_dialogue_page", "quota_dialogue_revealed", "quota_dialogue_language",
-            "status", "trade_active", "item_index", "customer_index", "percentage", "rerolls_remaining", "stored_items",
-            "checkpoint_items", "showcase_items", "checkpoint_showcase_items", "active_showcase_index",
-            "buyer_wait_remaining", "waiting_buyer_present", "waiting_buyer_music", "stored_grades", "showcase_grades",
-            "checkpoint_grades", "checkpoint_showcase_grades", "active_trade_grade"
-        ];
-        Assert.That(doc.RootElement.EnumerateObject().Select(property => property.Name),
-            Is.EquivalentTo(fields), "Preserve the game state and customer wait without the retired arrival timer");
-    }
-
-    [Test]
-    public void MissingFieldsUseEconomyDefaultsAndInvalidJsonIsRejected()
-    {
-        var data = ProgressJson.Deserialize("{}", 6)!;
-        Assert.That(data.SaveVersion, Is.EqualTo(1));
-        Assert.That(data.EnergyRemaining, Is.EqualTo(6));
-        Assert.That(data.CheckpointEnergy, Is.EqualTo(6));
-        Assert.That(data.ItemIndex, Is.EqualTo(-1));
-        Assert.That(data.StoredItems, Is.Empty);
-        Assert.That(ProgressJson.Deserialize("{\"energy_remaining\":0,\"checkpoint_energy\":0}", 6)!.EnergyRemaining, Is.Zero);
-        Assert.That(ProgressJson.Deserialize("null", 3), Is.Null);
-        Assert.Throws<JsonException>(() => ProgressJson.Deserialize("{broken", 3));
-        Assert.Throws<JsonException>(() => ProgressJson.Deserialize("[]", 3));
+        string json = ProgressJson.Serialize(current);
+        Assert.That(json, Does.Not.Contain("energy").And.Not.Contain("stored_items"));
+        Assert.That(ProgressJson.Serialize(ProgressJson.Deserialize(json)!), Is.EqualTo(json));
+        Assert.That(ProgressJson.Deserialize("null"), Is.Null);
+        Assert.Throws<JsonException>(() => ProgressJson.Deserialize("{broken"));
     }
 }

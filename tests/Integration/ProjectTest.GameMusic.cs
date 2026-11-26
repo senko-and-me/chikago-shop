@@ -18,6 +18,7 @@ public partial class ProjectTest
         {
             game = scene.Instantiate<TradeScene>();
             game.SavePath = path;
+            game.GetNode<FirstTradeTutorial>("FirstTradeTutorial").ProgressPath = "";
             Root.AddChild(game);
             game.SetProcess(false);
             director = game.GetNode<GameplayMusicDirector>("GameplayMusicDirector");

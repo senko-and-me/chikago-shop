@@ -1,3 +1,4 @@
+using ChikagoShop.Domain.Persistence;
 
 using System;
 using System.Collections.Generic;
@@ -29,12 +30,9 @@ public partial class TradeScene : Node2D
 	private static int FinalDay => Economy.Days.TotalDays;
 	private const int ShowcaseCapacity = 6;
 	private const int InitialShowcaseCapacity = 3;
-	private static int EnergyBeforeMusicUnlock => Economy.Days.EnergyBeforeMusicUnlock;
-	private static int EnergyAfterMusicUnlock => Economy.Days.EnergyAfterMusicUnlock;
 	private static int AtelierSpinCost => WorkshopItemCatalog.CraftCost("atelier");
 	private static int MusicSpinCost => WorkshopItemCatalog.CraftCost("music");
-	private static int MusicUnlockCost => Economy.Workshops.Single(entry => entry.Id == "music").UnlockCost;
-	private static int ItemsPerSpin => Economy.Days.ItemsPerCraft;
+	private const int ItemsPerSpin = 1;
 
 	private static IReadOnlyList<CraftItem> Items =>
 		WorkshopItemCatalog.Items;
@@ -49,7 +47,6 @@ public partial class TradeScene : Node2D
 	private Button _declineButton = null!;
 	private Label _scoreLabel = null!;
 	private Label _dayLabel = null!;
-	private Label _energyLabel = null!;
 	private Label _quotaLabel = null!;
 	private Label _deadlineLabel = null!;
 	private Label _statusLabel = null!;
@@ -59,10 +56,9 @@ public partial class TradeScene : Node2D
 	private RoomCurtainPresentation _musicLockedOverlay = null!;
 	private MusicWorkshopUnlockPanel _musicUnlockPanel = null!;
 
-	private readonly Control[] _rarityPanels = new Control[2];
-	private readonly Control[] _rarityHotspots = new Control[2];
 	private readonly Control[] _priceHints = new Control[2];
 	private readonly Button[] _showcaseSlots = new Button[ShowcaseCapacity];
+	private readonly ColorRect[] _showcaseGlass = new ColorRect[ShowcaseCapacity];
 	private readonly TextureRect[] _showcaseIcons = new TextureRect[ShowcaseCapacity];
 	private FirstTradeTutorial _tutorial;
 	private readonly TextureRect[] _showcaseShadows = new TextureRect[ShowcaseCapacity];
@@ -72,13 +68,13 @@ public partial class TradeScene : Node2D
 	private static readonly Rect2 InstrumentDisplayArea = new(107, 28, 215, 126);
 	private readonly Label[] _showcaseLabels = new Label[ShowcaseCapacity];
 
+	private Label _extraShowroomHint = null!;
 	private RoomCurtainPresentation _rightShowroomOverlay = null!;
-	private InventoryUI _inventoryUI = null!;
 
 	private readonly InvisibleHandDirector _invisibleHand = new();
 	private readonly RandomNumberGenerator _rng = new();
-	private readonly List<int> _storedItems = new();
-	private readonly List<int> _checkpointItems = new();
+	private readonly List<DisplayStock> _deferredStock = new();
+	private readonly List<DisplayStock> _checkpointStock = new();
 	private readonly int[] _showcaseItems = new int[ShowcaseCapacity];
 	private readonly int[] _checkpointShowcaseItems =
 		new int[ShowcaseCapacity];
@@ -87,7 +83,6 @@ public partial class TradeScene : Node2D
 	private DayCycleController _dayCycle = null!;
 	private EmbroideryGame _embroidery = null!;
 	private EmbroideryGame _polishing = null!;
-	private int _energyRemaining = EnergyBeforeMusicUnlock;
 	private bool _localizationReady;
 
 	public void AcknowledgeMafiaNotice()
@@ -96,7 +91,6 @@ public partial class TradeScene : Node2D
 		SaveProgress();
 	}
 
-	public int SelectedInventoryIndex { get; set; } = -1;
 	public bool CraftMiniGameOpen =>
 		(_embroidery?.IsOpen ?? false) ||
 		(_polishing?.IsOpen ?? false);
@@ -113,15 +107,12 @@ public partial class TradeScene : Node2D
 	public double DayRemainingSeconds =>
 		_dayCycle.Session.RemainingSeconds;
 
-	public int[] StoredItems => _storedItems.ToArray();
 	public int[] ShowcaseItems => (int[])_showcaseItems.Clone();
 
 	public static string GetItemKind(int index) => Items[index].Kind;
 	public static string GetItemName(int index) =>
 		GameLocalization.Text(Items[index].Name);
 	public static string GetItemArtPath(int index) => Items[index].ArtPath;
-	public static string GetItemRarity(int index) =>
-		GameLocalization.Text(Items[index].Rarity);
 	public static int GetItemBasePrice(int index) => Items[index].BasePrice;
 
 	public int GetItemPrice(int index) =>
@@ -131,9 +122,6 @@ public partial class TradeScene : Node2D
 
 	public static int GetItemRerollLimit(int index) =>
 		Items[index].Rerolls;
-
-	public static int GetRerollsForRarity(string rarityId) =>
-		WorkshopItemCatalog.RerollsFor(rarityId);
 
 	public int ItemIndex { get; set; } = -1;
 	public int CustomerIndex { get; set; } = -1;
@@ -145,25 +133,6 @@ public partial class TradeScene : Node2D
 	public int Declined { get; private set; }
 	public int CurrentDay { get; set; } = 1;
 
-	public int EnergyCapacity =>
-		_dayCycle?.Upgrades.EnergyCapacityFor(MusicWorkshopUnlocked
-			? EnergyAfterMusicUnlock
-			: EnergyBeforeMusicUnlock) ?? EnergyBeforeMusicUnlock;
-
-	public int InventorySlotCapacity =>
-		MusicWorkshopUnlocked ? 6 : 3;
-
-	public int EnergyRemaining
-	{
-		get => Mathf.Clamp(
-			_dayCycle?.Session.AvailableEnergy(_energyRemaining)
-				?? _energyRemaining,
-			0,
-			EnergyCapacity);
-		set => _energyRemaining =
-			Mathf.Clamp(value, 0, EnergyCapacity);
-	}
-
 	public bool MafiaNoticePending { get; private set; }
 	public int QuotaStage { get; private set; }
 	public int CheckpointDay { get; private set; } = 1;
@@ -171,9 +140,6 @@ public partial class TradeScene : Node2D
 	private double _checkpointInvisibleHandPressure;
 	public int CheckpointAccepted { get; private set; }
 	public int CheckpointDeclined { get; private set; }
-
-	public int CheckpointEnergy { get; private set; } =
-		EnergyBeforeMusicUnlock;
 
 	public bool MusicWorkshopUnlocked { get; private set; }
 	public bool CheckpointMusicWorkshopUnlocked { get; private set; }
@@ -215,8 +181,6 @@ public partial class TradeScene : Node2D
 		_dayLabel = GetNode<Label>(
 			"HUD/Root/ProgressPanel/Content/DayLabel");
 
-		_energyLabel = GetNode<Label>(
-			"HUD/Root/EnergyPanel/EnergyLabel");
 
 		_quotaLabel = GetNode<Label>(
 			"HUD/Root/ProgressPanel/Content/QuotaLabel");
@@ -238,18 +202,6 @@ public partial class TradeScene : Node2D
 
 		BindMusicWorkshopUi();
 
-		_rarityPanels[0] = GetNode<Control>(
-			"World/Atelier/RarityPanel");
-
-		_rarityPanels[1] = GetNode<Control>(
-			"World/MusicWorkshop/RarityPanel");
-
-		_rarityHotspots[0] = GetNode<Control>(
-			"World/Atelier/GetItemButton/RarityHotspot");
-
-		_rarityHotspots[1] = GetNode<Control>(
-			"World/MusicWorkshop/GetItemButton/RarityHotspot");
-
 		_priceHints[0] = GetNode<Control>(
 			"World/Atelier/GetItemButton/PriceHint");
 
@@ -259,6 +211,8 @@ public partial class TradeScene : Node2D
 		Array.Fill(_showcaseItems, -1);
 		Array.Fill(_showcaseGrades, "D");
 		Array.Fill(_checkpointShowcaseGrades, "D");
+		Array.Fill(_showcaseRerolls, -1);
+		Array.Fill(_checkpointShowcaseRerolls, -1);
 		Array.Fill(_checkpointShowcaseItems, -1);
 		_tutorial = GetNode<FirstTradeTutorial>("FirstTradeTutorial");
 		NormalizeLeftShowcaseNames();
@@ -281,6 +235,8 @@ public partial class TradeScene : Node2D
 		{
 			int slotIndex = i;
 			_showcaseSlots[i] = GetNode<Button>(showcasePaths[i]);
+			_showcaseGlass[i] =
+				_showcaseSlots[i].GetNode<ColorRect>("Glass");
 			_showcaseIcons[i] =
 				_showcaseSlots[i].GetNode<TextureRect>("Icon");
 			_showcaseIconBounds[i] = _showcaseIcons[i].GetRect();
@@ -300,12 +256,13 @@ public partial class TradeScene : Node2D
 				() => OnShowcasePressed(slotIndex);
 		}
 
+		_extraShowroomHint = GetNode<Label>(
+			"World/Showroom/ShowroomHint");
 
 		BindExtraShowroomOverlay();
 
-		_inventoryUI = GetNode<InventoryUI>("HUD/InventoryUI");
-		_inventoryUI.Initialize(this);
 		InitializeBuyerWaitWidget();
+		InitializeShowcasePopup();
 
 		_rng.Randomize();
 
@@ -318,36 +275,10 @@ public partial class TradeScene : Node2D
 		ButtonDropShadow.Attach(_acceptButton);
 		ButtonDropShadow.Attach(_declineButton);
 		ButtonDropShadow.Attach(_musicUnlockPanel.UnlockButton, solidFace: true);
-		foreach (string name in new[] { "ScorePanel", "EnergyPanel" })
-			ButtonDropShadow.Attach(GetNode<PanelContainer>("HUD/Root/" + name), ButtonDropShadow.Direction.LeftAndBottom, blurScale: 0.85f);
+		ButtonDropShadow.Attach(GetNode<PanelContainer>("HUD/Root/ScorePanel"), ButtonDropShadow.Direction.LeftAndBottom, blurScale: 0.85f);
 
-		for (int i = 0; i < _rarityHotspots.Length; i++)
-		{
-			int index = i;
-
-			Button button = i == 0
-				? _atelierGetItemButton
-				: _musicGetItemButton;
-
-			button.MouseEntered += () =>
-				_priceHints[index].Visible =
-					!_rarityPanels[index].Visible;
-
-			button.MouseExited += () =>
-				_priceHints[index].Hide();
-
-			_rarityHotspots[index].MouseEntered += () =>
-			{
-				_priceHints[index].Hide();
-				_rarityPanels[index].Show();
-			};
-
-			_rarityHotspots[index].MouseExited += () =>
-			{
-				_rarityPanels[index].Hide();
-				_priceHints[index].Visible = button.IsHovered();
-			};
-		}
+        BindCraftPriceHint(_atelierGetItemButton, _priceHints[0]);
+        BindCraftPriceHint(_musicGetItemButton, _priceHints[1]);
 
 		GetNode<Button>(
             "HUD/Root/ProgressPanel/Content/CheckpointButton"
@@ -359,19 +290,17 @@ public partial class TradeScene : Node2D
 
 		Score = StartingMoney;
 		CheckpointScore = StartingMoney;
-		EnergyRemaining = EnergyCapacity;
-		CheckpointEnergy = EnergyCapacity;
 
 		_dayCycle = new DayCycleController(this);
 		InitializeQuotaVisit();
 
 		_embroidery = new EmbroideryGame(
-			() => AcquireItem("atelier", AtelierSpinCost));
+			() => BeginCraft("atelier", AtelierSpinCost));
 
 		AddChild(_embroidery);
 
 		_polishing = new EmbroideryGame(
-			() => AcquireItem("music", MusicSpinCost, _polishing.PreparedItemIndex),
+			() => BeginCraft("music", MusicSpinCost, _polishing.PreparedItemIndex),
 			polishing: true);
 
 		AddChild(_polishing);
@@ -396,7 +325,6 @@ public partial class TradeScene : Node2D
 		else FinishTrade();
 
 		RefreshItemButtons();
-		LogStoredItems();
 		_localizationReady = true;
 		_dayCycle.ResumeUpgradeChoice();
 	}
@@ -414,9 +342,15 @@ public partial class TradeScene : Node2D
 
 		if (TradeActive)
 			RefreshOffer();
+		RefreshItemButtons();
 
-		_inventoryUI.UpdateUI(_storedItems);
 	}
+
+    private static void BindCraftPriceHint(Button button, Control hint)
+    {
+        button.MouseEntered += hint.Show;
+        button.MouseExited += hint.Hide;
+    }
 
 	private void NormalizeLeftShowcaseNames()
 	{
@@ -460,12 +394,22 @@ public partial class TradeScene : Node2D
 	{
 		bool english = GameLocalization.Language == "en";
 
+		Label atelierHint = GetNode<Label>(
+			"World/Atelier/HintLabel");
+
+		Label musicHint = GetNode<Label>(
+			"World/MusicWorkshop/HintLabel");
+
 		Label atelierPrice = GetNode<Label>(
 			"World/Atelier/GetItemButton/PriceHint/Label");
 
 		Label musicPrice = GetNode<Label>(
 			"World/MusicWorkshop/GetItemButton/PriceHint/Label");
 
+		atelierHint.AutoTranslateMode =
+			Node.AutoTranslateModeEnum.Disabled;
+		musicHint.AutoTranslateMode =
+			Node.AutoTranslateModeEnum.Disabled;
 		atelierPrice.AutoTranslateMode =
 			Node.AutoTranslateModeEnum.Disabled;
 		musicPrice.AutoTranslateMode =
@@ -476,13 +420,21 @@ public partial class TradeScene : Node2D
 		_musicGetItemButton.AutoTranslateMode =
 			Node.AutoTranslateModeEnum.Disabled;
 
+		atelierHint.Text = english
+			? $"Clothing  •  ${AtelierSpinCost} per item"
+			: $"Одежда  •  {AtelierSpinCost}$ за предмет";
+
+		musicHint.Text = english
+			? $"Instruments  •  ${MusicSpinCost} per item"
+			: $"Инструменты  •  {MusicSpinCost}$ за предмет";
+
 		atelierPrice.Text = english
-			? $"{ItemsPerSpin} {(ItemsPerSpin == 1 ? "item" : "items")}  •  ${AtelierSpinCost} + 1 energy"
-			: $"{ItemsPerSpin} предмет  •  {AtelierSpinCost}$ + 1 энергия";
+			? $"{ItemsPerSpin} {(ItemsPerSpin == 1 ? "item" : "items")}  •  ${AtelierSpinCost}"
+			: $"{ItemsPerSpin} предмет  •  {AtelierSpinCost}$";
 
 		musicPrice.Text = english
-			? $"{ItemsPerSpin} {(ItemsPerSpin == 1 ? "item" : "items")}  •  ${MusicSpinCost} + 1 energy"
-			: $"{ItemsPerSpin} предмет  •  {MusicSpinCost}$ + 1 энергия";
+			? $"{ItemsPerSpin} {(ItemsPerSpin == 1 ? "item" : "items")}  •  ${MusicSpinCost}"
+			: $"{ItemsPerSpin} предмет  •  {MusicSpinCost}$";
 
 		CraftButtonPresentation.Apply(_atelierGetItemButton, english);
 		CraftButtonPresentation.Apply(_musicGetItemButton, english);
@@ -534,145 +486,37 @@ public partial class TradeScene : Node2D
 		_polishing.Open();
 	}
 
-	public void TryUnlockMusicWorkshop()
-	{
-		if (GetTree().Paused || DayTransitionOpen) return;
-		if (MusicWorkshopUnlocked ||
-			Failed ||
-			Completed ||
-			Score < MusicUnlockCost)
-			return;
+    public bool MusicWorkshopAvailable => QuotaStage >= 1 && _quotaVisit == QuotaVisitStage.Rewarded;
 
-		int availableEnergy = EnergyRemaining;
-
-		Score -= MusicUnlockCost;
-		MusicWorkshopUnlocked = true;
-
-		EnergyRemaining = availableEnergy +
-			EnergyAfterMusicUnlock -
-			EnergyBeforeMusicUnlock;
-
-		_dayCycle.SynchronizeRoomDuration();
-		RecalculateInvisibleHand();
-
-		StatusText = "Музыкальная мастерская открыта.";
-
-		_inventoryUI.UpdateUI(_storedItems);
-
-		RefreshScore();
-		RefreshProgress();
-		RefreshItemButtons();
-		_tutorial.OnMusicWorkshopUnlocked();
-		SaveProgress();
-	}
-
-	private void AcquireItem(string workshop, int cost, int? preparedItemIndex = null)
-	{
-		if (!RequireStartedDay()) return;
-		if (Failed ||
-			Completed ||
-			EnergyRemaining <= 0 ||
-			Score < cost)
-			return;
-
-		RecalculateInvisibleHand();
-		int hiddenShift = CraftRarityShift(workshop, _invisibleHand);
-		Score -= cost;
-		EnergyRemaining--;
-
-		for (int itemNumber = 0;
-			 itemNumber < ItemsPerSpin;
-			 itemNumber++)
-		{
-			int index = preparedItemIndex ?? WorkshopItemCatalog.Roll(
-				workshop,
-				_rng.RandiRange(
-					0,
-					WorkshopItemCatalog.TotalWeight(workshop, DayUpgrades, hiddenShift) - 1),
-				DayUpgrades, hiddenShift);
-
-			_storedItems.Add(index);
-			_storedGrades.Add("D");
-			_pendingCraftStorageIndex = _storedGrades.Count - 1;
-
-			GD.Print(
-				$"{workshop}: получен предмет {Items[index].Name} (индекс {index}).");
-		}
-
-		LogStoredItems();
-		RefreshScore();
-		RefreshProgress();
-		RefreshItemButtons();
-		_inventoryUI.UpdateUI(_storedItems);
-		SaveProgress();
-	}
-
-	private void LogStoredItems()
-	{
-		var entries = _storedItems.ConvertAll(
-			index => $"{index}:{Items[index].Name}");
-
-		GD.Print(
-			$"Массив предметов: [{string.Join(", ", entries)}]");
-	}
-
-	public void PlaceItemInShowcase(int slotIndex)
-	{
-		if (!RequireStartedDay()) return;
-		if (Failed ||
-			Completed ||
-			slotIndex < 0 ||
-			slotIndex >= ShowcaseCapacity ||
-			(slotIndex >= InitialShowcaseCapacity &&
-			 !MusicWorkshopUnlocked) ||
-			_showcaseItems[slotIndex] != -1 ||
-			SelectedInventoryIndex < 0 ||
-			SelectedInventoryIndex >= _storedItems.Count)
-			return;
-
-		_showcaseItems[slotIndex] =
-			_storedItems[SelectedInventoryIndex];
-
-		_showcaseGrades[slotIndex] = GetStoredItemQualityRank(SelectedInventoryIndex);
-		_storedItems.RemoveAt(SelectedInventoryIndex);
-		_storedGrades.RemoveAt(SelectedInventoryIndex);
-		if (_pendingCraftStorageIndex >= SelectedInventoryIndex) _pendingCraftStorageIndex--;
-
-		_inventoryUI.DeselectAll();
-		_inventoryUI.UpdateUI(_storedItems);
-
-		RefreshItemButtons();
-		LogStoredItems();
-		SaveProgress();
-	}
-
-	public void SelectInventoryItem(int index)
-	{
-		if (!RequireStartedDay()) return;
-		SelectedInventoryIndex = index;
-		RefreshItemButtons();
-	}
-
-	private void OnShowcasePressed(int slotIndex)
-	{
-		PlaceItemInShowcase(slotIndex);
-	}
+    public void TryUnlockMusicWorkshop()
+    {
+        if (GetTree().Paused || DayTransitionOpen || !MusicWorkshopAvailable ||
+            MusicWorkshopUnlocked || Failed || Completed) return;
+        MusicWorkshopUnlocked = true;
+        _dayCycle.SynchronizeRoomDuration();
+        RecalculateInvisibleHand();
+        StatusText = "Музыкальная мастерская открыта.";
+        FillDeferredDisplays();
+        RefreshDayPresentation();
+        _tutorial.OnMusicWorkshopUnlocked();
+        SaveProgress();
+    }
 
 	private void RefreshBuyers()
 	{
 		if (DeferTutorialBuyerArrival()) return;
 		if (!_dayCycle.CanReceiveBuyers || GetTree().Paused || DayTransitionOpen || TradeActive) return;
 		if (!_waitingBuyer) StartWaitingBuyer();
-		TryServeWaitingBuyer();
 	}
 
 	private void StartBuyerOffer()
 	{
 		RecalculateInvisibleHand();
-		Percentage = _invisibleHand.AdjustInitialOffer(
+		Percentage = _returnedOfferPercent ?? _invisibleHand.AdjustInitialOffer(
 			TradeOfferRules.InitialPercent(_rng.RandiRange(0, 60)),
 			DebugBalanceSettings.Number("hand.offer"));
-		RerollsRemaining = GetItemRerollLimit(ItemIndex);
+		RerollsRemaining = _activeShowcaseIndex >= 0 && _showcaseRerolls[_activeShowcaseIndex] >= 0
+            ? _showcaseRerolls[_activeShowcaseIndex] : GetItemRerollLimit(ItemIndex);
 
 		_waitingBuyer = false;
 		TradeActive = true;
@@ -695,27 +539,17 @@ public partial class TradeScene : Node2D
 		RefreshProgress();
 	}
 
-	public void RefreshItemButtons()
-	{
-		_atelierGetItemButton.Disabled =
-			Failed ||
-			Completed ||
-			EnergyRemaining <= 0 ||
-			Score < AtelierSpinCost;
-
-		_musicGetItemButton.Disabled =
-			!MusicWorkshopUnlocked ||
-			Failed ||
-			Completed ||
-			EnergyRemaining <= 0 ||
-			Score < MusicSpinCost;
-
-		_musicLockedOverlay.SetLocked(!MusicWorkshopUnlocked);
-
-		_musicUnlockPanel.SetOffer(MusicUnlockCost, !Failed && !Completed && Score >= MusicUnlockCost);
-
-		RefreshShowcases();
-	}
+    public void RefreshItemButtons()
+    {
+        _atelierGetItemButton.Disabled = !CanBeginCraft("atelier");
+        _musicGetItemButton.Disabled = !CanBeginCraft("music");
+        _musicLockedOverlay.SetLocked(!MusicWorkshopUnlocked);
+        _musicUnlockPanel.UnlockButton.Disabled = DayTransitionOpen;
+        _musicUnlockPanel.Visible = MusicWorkshopAvailable && !MusicWorkshopUnlocked && !Failed && !Completed;
+        RefreshCraftPriceHint(0, "atelier");
+        RefreshCraftPriceHint(1, "music");
+        RefreshShowcases();
+    }
 
 	private void RefreshShowcases()
 	{
@@ -726,10 +560,10 @@ public partial class TradeScene : Node2D
 				i >= InitialShowcaseCapacity &&
 				!MusicWorkshopUnlocked;
 
-			int itemIndex = _showcaseItems[i];
+			int itemIndex = i == _pendingCraftSlot ? -1 : _showcaseItems[i];
 
-			SetShowcaseArt(_showcaseIcons[i], _showcaseIconBounds[i], itemIndex, tiltInstruments: true);
 			bool reserved = !locked && TradeActive && i == _activeShowcaseIndex && ItemIndex >= 0 && ItemIndex < Items.Count;
+			SetShowcaseArt(_showcaseIcons[i], _showcaseIconBounds[i], reserved ? -1 : itemIndex, tiltInstruments: true);
 			var shadow = _showcaseShadows[i];
 			shadow.Visible = reserved;
 			if (reserved)
@@ -747,13 +581,10 @@ public partial class TradeScene : Node2D
 					? "СВОБОДНО"
 					: GetItemName(itemIndex).ToUpperInvariant();
 
-			_showcaseSlots[i].Disabled =
-				locked ||
-				Failed ||
-				Completed ||
-				(itemIndex < 0 &&
-				 (SelectedInventoryIndex < 0 ||
-				  SelectedInventoryIndex >= _storedItems.Count));
+			_showcaseGlass[i].Color =
+				new Color(0.870918f, 0.870918f, 0.870918f, 0.58f);
+
+            _showcaseSlots[i].Disabled = locked || Failed || Completed || itemIndex < 0 && !reserved;
 
 			_showcaseSlots[i].Modulate = locked
 				? new Color(0.45f, 0.45f, 0.45f, 1f)
@@ -761,7 +592,11 @@ public partial class TradeScene : Node2D
 		}
 
 		_rightShowroomOverlay.SetLocked(!MusicWorkshopUnlocked);
-	}
+
+        _extraShowroomHint.Text = !MusicWorkshopUnlocked
+            ? "Откройте музыкальную мастерскую, чтобы пользоваться витринами"
+            : "Нажмите на предмет, чтобы выбрать его для продажи";
+    }
 
 	private void SetShowcaseArt(TextureRect icon, Rect2 bounds, int itemIndex, bool tiltInstruments = false)
 	{
@@ -820,39 +655,6 @@ public partial class TradeScene : Node2D
 			max = max.Max(rotated);
 		}
 		return (texture, angle, new Rect2(min, max - min).Grow(1));
-	}
-
-	private void MoveItemsOutOfLockedShowcases()
-	{
-		if (!MusicWorkshopUnlocked)
-		{
-			for (int i = InitialShowcaseCapacity;
-				 i < ShowcaseCapacity; i++)
-			{
-				if (_showcaseItems[i] < 0)
-					continue;
-
-				_storedItems.Add(_showcaseItems[i]);
-				_storedGrades.Add(NormalizeRank(_showcaseGrades[i]));
-				_showcaseItems[i] = -1;
-				_showcaseGrades[i] = "D";
-			}
-		}
-
-		if (!CheckpointMusicWorkshopUnlocked)
-		{
-			for (int i = InitialShowcaseCapacity;
-				 i < ShowcaseCapacity; i++)
-			{
-				if (_checkpointShowcaseItems[i] < 0)
-					continue;
-
-				_checkpointItems.Add(_checkpointShowcaseItems[i]);
-				_checkpointGrades.Add(NormalizeRank(_checkpointShowcaseGrades[i]));
-				_checkpointShowcaseItems[i] = -1;
-				_checkpointShowcaseGrades[i] = "D";
-			}
-		}
 	}
 
 	private void RefreshOffer()
@@ -935,6 +737,7 @@ public partial class TradeScene : Node2D
 			return;
 
 		Score += CurrentBuyerPayout;
+		ReleaseSoldDisplay();
 		Accepted++;
 
 		RefreshScore();
@@ -951,6 +754,7 @@ public partial class TradeScene : Node2D
 
 	private void FinishTrade()
 	{
+		_returnedOfferPercent = null;
 		_waitingBuyer = false;
 		TradeActive = false;
 		ItemIndex = -1;
@@ -970,6 +774,8 @@ public partial class TradeScene : Node2D
 
 	private void RefreshScore()
 	{
+        _scoreLabel.GetParent<Control>().TooltipText = _deferredStock.Count > 0
+            ? GameLocalization.Format("Товаров ждут свободной витрины: {0}", _deferredStock.Count) : "";
 		_scoreLabel.Text = GameLocalization.Format(
 			"Счёт: {0}$", Score);
 	}
@@ -979,10 +785,6 @@ public partial class TradeScene : Node2D
 		_dayLabel.Text = GameLocalization.Format(
 			"День: {0} / {1}",
 			CurrentDay, FinalDay);
-
-		_energyLabel.Text = GameLocalization.Format(
-			"Энергия: {0} / {1}",
-			EnergyRemaining, EnergyCapacity);
 
 		if (Completed)
 		{
@@ -1042,7 +844,6 @@ public partial class TradeScene : Node2D
 	{
 		RefreshClosedBuyerOffer();
 		RefreshTutorialTradeActions();
-		_inventoryUI.UpdateUI(_storedItems);
 		RefreshScore();
 		RefreshProgress();
 		RefreshItemButtons();
@@ -1052,7 +853,6 @@ public partial class TradeScene : Node2D
 	internal void AdvanceTrainingDay()
 	{
 		CurrentDay++;
-		EnergyRemaining = EnergyCapacity;
 		RefreshDayPresentation();
 	}
 
@@ -1094,17 +894,14 @@ public partial class TradeScene : Node2D
 				CheckpointAccepted = Accepted;
 				CheckpointDeclined = Declined;
 
-				EnergyRemaining = EnergyCapacity;
-				CheckpointEnergy = EnergyRemaining;
 				CheckpointMusicWorkshopUnlocked =
 					MusicWorkshopUnlocked;
 
 				_dayCycle.CaptureCheckpointUpgrades();
 
-				_checkpointItems.Clear();
-				_checkpointItems.AddRange(_storedItems);
-				_checkpointGrades.Clear();
-				_checkpointGrades.AddRange(_storedGrades);
+                _checkpointStock.Clear();
+                _checkpointStock.AddRange(_deferredStock);
+                Array.Copy(_showcaseRerolls, _checkpointShowcaseRerolls, ShowcaseCapacity);
 				Array.Copy(_showcaseGrades, _checkpointShowcaseGrades, ShowcaseCapacity);
 
 				Array.Copy(
@@ -1125,7 +922,6 @@ public partial class TradeScene : Node2D
 		else
 		{
 			CurrentDay++;
-			EnergyRemaining = EnergyCapacity;
 			StatusText = "Начался новый день.";
 		}
 
@@ -1144,12 +940,11 @@ public partial class TradeScene : Node2D
 		_dayCycle.Reset();
 		FinishTrade();
 
-		_storedItems.Clear();
-		_storedItems.AddRange(_checkpointItems);
-		_storedGrades.Clear();
-		_storedGrades.AddRange(_checkpointGrades);
+        _deferredStock.Clear();
+        _deferredStock.AddRange(_checkpointStock);
+        Array.Copy(_checkpointShowcaseRerolls, _showcaseRerolls, ShowcaseCapacity);
 		Array.Copy(_checkpointShowcaseGrades, _showcaseGrades, ShowcaseCapacity);
-		_pendingCraftStorageIndex = -1;
+		_pendingCraftSlot = -1;
 
 		Array.Copy(
 			_checkpointShowcaseItems,
@@ -1157,7 +952,6 @@ public partial class TradeScene : Node2D
 			ShowcaseCapacity);
 
 
-		_inventoryUI.DeselectAll();
 		CurrentDay = CheckpointDay;
 		_dayCycle.RestoreCheckpointUpgrades();
 
@@ -1167,10 +961,9 @@ public partial class TradeScene : Node2D
 		MusicWorkshopUnlocked =
 			CheckpointMusicWorkshopUnlocked;
 
-		MoveItemsOutOfLockedShowcases();
+		FillDeferredDisplays();
 		_dayCycle.SynchronizeRoomDuration();
 
-		EnergyRemaining = CheckpointEnergy;
 		Accepted = CheckpointAccepted;
 		Declined = CheckpointDeclined;
 		QuotaStage = CheckpointDay == 1 ? 0 : 1;
@@ -1182,9 +975,7 @@ public partial class TradeScene : Node2D
 		RefreshScore();
 		RefreshProgress();
 		RefreshItemButtons();
-		LogStoredItems();
 
-		_inventoryUI.UpdateUI(_storedItems);
 		RefreshShowcases();
 		SaveProgress();
 		_dayCycle.ResumeUpgradeChoice();
@@ -1200,7 +991,6 @@ public partial class TradeScene : Node2D
 		RefreshCraftLabels();
 		RefreshDayPresentation();
 		RefreshShowcases();
-		_inventoryUI.UpdateUI(_storedItems);
 		if (TradeActive) RefreshOffer();
 	}
 
@@ -1213,17 +1003,16 @@ public partial class TradeScene : Node2D
 		_dayCycle.Reset();
 		FinishTrade();
 
-		_storedItems.Clear();
-		_checkpointItems.Clear();
-		_storedGrades.Clear();
-		_checkpointGrades.Clear();
-		_pendingCraftStorageIndex = -1;
+		_pendingCraftSlot = -1;
 		Array.Fill(_showcaseGrades, "D");
 		Array.Fill(_checkpointShowcaseGrades, "D");
+		Array.Fill(_showcaseRerolls, -1);
+		Array.Fill(_checkpointShowcaseRerolls, -1);
 		Array.Fill(_showcaseItems, -1);
 		Array.Fill(_checkpointShowcaseItems, -1);
-		_inventoryUI.DeselectAll();
 
+		_deferredStock.Clear();
+		_checkpointStock.Clear();
 		CurrentDay = 1;
 		_invisibleHand.Reset();
 		_checkpointInvisibleHandPressure = 0;
@@ -1234,13 +1023,11 @@ public partial class TradeScene : Node2D
 
 		_dayCycle.SynchronizeRoomDuration();
 
-		EnergyRemaining = EnergyCapacity;
 		Accepted = 0;
 		Declined = 0;
 		QuotaStage = 0;
 		CheckpointDay = 1;
 		CheckpointScore = StartingMoney;
-		CheckpointEnergy = EnergyCapacity;
 		CheckpointAccepted = 0;
 		CheckpointDeclined = 0;
 
@@ -1251,9 +1038,7 @@ public partial class TradeScene : Node2D
 		RefreshScore();
 		RefreshProgress();
 		RefreshItemButtons();
-		LogStoredItems();
 
-		_inventoryUI.UpdateUI(_storedItems);
 		RefreshShowcases();
 		SaveProgress();
 		NewGameStarted?.Invoke();

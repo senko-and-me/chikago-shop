@@ -5,8 +5,7 @@ public sealed class DayUpgradeRules
     // Keep the legacy Time enum value for old saves, but never offer that card.
     private static readonly DayUpgrade[] Available =
     [
-        DayUpgrade.Cash, DayUpgrade.Energy, DayUpgrade.Atelier,
-        DayUpgrade.Music, DayUpgrade.AtelierPrice, DayUpgrade.MusicPrice
+        DayUpgrade.Cash, DayUpgrade.AtelierPrice, DayUpgrade.MusicPrice
     ];
 
     public IReadOnlyDictionary<DayUpgrade, int> Costs { get; init; } = new Dictionary<DayUpgrade, int>();
@@ -20,10 +19,10 @@ public sealed class DayUpgradeRules
     public IReadOnlyList<DayUpgrade> Options(int day, bool musicUnlocked = false, bool training = false)
     {
         var eligible = Available.Where(card => (!training || card != DayUpgrade.Cash) &&
-            (musicUnlocked || card is not (DayUpgrade.Music or DayUpgrade.MusicPrice))).ToArray();
+            (musicUnlocked || card != DayUpgrade.MusicPrice)).ToArray();
         var pool = eligible.Where(card => Weight(card) > 0).ToList();
         if (!WeightedSelection || training && pool.Count == 0)
-            return Enumerable.Range(0, 3).Select(offset => eligible[(day - 2 + offset) % eligible.Length]).ToArray();
+            return Enumerable.Range(0, Math.Min(3, eligible.Length)).Select(offset => eligible[(day - 2 + offset) % eligible.Length]).ToArray();
 
         var random = new Random(unchecked(Seed * 397 ^ day));
         var result = new List<DayUpgrade>();
