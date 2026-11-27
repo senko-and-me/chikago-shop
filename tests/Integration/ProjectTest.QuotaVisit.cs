@@ -53,8 +53,8 @@ public partial class ProjectTest
         try
         {
             int[] expectedPrices = [25, 45, 40, 70, 75, 115, 195, 115, 175, 295];
-            Check(WorkshopItemCatalog.Items.Select(item => item.BasePrice).SequenceEqual(expectedPrices) && price == 1000,
-                "All catalogue items must use the new base prices and the music workshop must cost $1000");
+            Check(WorkshopItemCatalog.Items.Select(item => item.BasePrice).SequenceEqual(expectedPrices) && price == 0,
+                "Catalogue prices remain unchanged and the story workshop has no purchase cost");
             int[] remaining = [7, 6, 5, 4, 3, 2, 1, 7, 6, 5, 4, 3, 2, 1];
             string[] units = ["дней", "день", "дня", "дня", "дня", "дней", "дней", "дней"];
             for (int i = 0; i < remaining.Length; i++)
@@ -70,8 +70,35 @@ public partial class ProjectTest
             }
             SetLastDay(4000);
             await Reload();
+            game.TryUnlockMusicWorkshop();
+            Check(!game.MusicWorkshopUnlocked && game.Score == 4000,
+                "Money and a direct action must not unlock the workshop during week one");
+            var lockedNotice = game.GetNode<MusicWorkshopUnlockPanel>("World/MusicWorkshop/LockedOverlay/UnlockPanel");
+            Check(lockedNotice.UnlockButton.Disabled && !lockedNotice.UnlockButton.Text.Contains("$"),
+                "Locked workshop must explain story access without a purchase price");
+            TranslationServer.SetLocale("en");
+            Check(lockedNotice.UnlockButton.Tr(lockedNotice.UnlockButton.Text).Replace("\n", " ") == "Opens after the first week",
+                "The authored locked-room notice must explain the week gate in English");
+            TranslationServer.SetLocale("ru");
+            if (DisplayServer.GetName() != "headless")
+            {
+                var camera = game.GetNode<WorldCamera>("Camera2D");
+                Vector2 position = camera.Position, zoom = camera.Zoom;
+                camera.Position = lockedNotice.GetGlobalRect().GetCenter();
+                camera.Zoom = Vector2.One * 0.8f;
+                camera.ForceUpdateScroll();
+                using (await CapturePresentation("story-workshop-locked-ru")) { }
+                camera.Position = position;
+                camera.Zoom = zoom;
+                camera.ForceUpdateScroll();
+            }
             var notebook = game.GetNode<PulloutNotebook>("HUD/Root/PulloutNotebook");
-            Check(Mathf.IsEqualApprox(notebook.HoverBounds.Size.X, 67.2f) &&
+            // Keep the desktop pointer from opening this unrelated hover widget.
+            notebook.Hide();
+            notebook._Process(0);
+            notebook.Show();
+            notebook.SetProcess(false);
+            Check(Mathf.IsEqualApprox(notebook.HoverBounds.Position.X, notebook.ClosedX - 11.2f) &&
                 !notebook.HasNode("Page/Notes/Footer") && !notebook.GetNode<Label>("Page/Notes/DebuffsTitle").Visible,
                 "The notebook tab must have 20% extra hover area and only real content");
             if (DisplayServer.GetName() != "headless")
@@ -88,8 +115,9 @@ public partial class ProjectTest
                 slide.CustomStep(notebook.SlideSeconds / 2);
                 Check(notebook.Expanded && notes.Modulate.A is > 0 and < 1, "The notebook writing must fade during the slide");
                 slide.CustomStep(notebook.SlideSeconds);
-                Check(page.Size == pageSize && notes.Modulate.A == 1 && Mathf.IsEqualApprox(notebook.HoverBounds.Size.X, pageSize.X * 1.2f),
-                    "The open notebook must keep its texture size and get the same 20% hover expansion");
+                Check(page.Size == pageSize && notes.Modulate.A == 1 &&
+                    Mathf.IsEqualApprox((notebook.GetGlobalTransformWithCanvas() * notebook.HoverBounds).End.X, Root.GetVisibleRect().End.X),
+                    "The open notebook must keep its texture size and extend its hover area to the window edge");
             }
             game.EndDay();
             game._Process(0);
@@ -107,14 +135,28 @@ public partial class ProjectTest
             await ToSignal(CreateTimer(0.7), SceneTreeTimer.SignalName.Timeout);
             if (DisplayServer.GetName() == "headless") game.GetNode<TextureButton>(visitorPath).EmitSignal(BaseButton.SignalName.Pressed);
             else await ClickControl(game, visitorPath);
-            Check(Paused && Dialogue().Session.Current.Text.Contains("1000"), "Clicking the visitor must open the existing dialogue UI");
+            Check(Paused && Dialogue().Session.Current.Text.Contains("ключ") && !game.MusicWorkshopUnlocked,
+                "Visitor must explain free access in the existing dialogue UI without unlocking prematurely");
             await ToSignal(this, SignalName.ProcessFrame);
             Check(!game.GetNode<TextureButton>(visitorPath).Visible &&
                 Dialogue().GetNode<TextureRect>("Characters/Son").Visible,
                 "The son must use the full portrait while the world visitor is hidden during dialogue");
+            if (DisplayServer.GetName() != "headless")
+            {
+                foreach (string language in new[] { "ru", "en" })
+                {
+                    TranslationServer.SetLocale(language);
+                    Dialogue().RestorePage(0, true);
+                    using (await CapturePresentation("story-workshop-dialogue-" + language)) { }
+                }
+                TranslationServer.SetLocale("ru");
+            }
             Dialogue()._Input(new InputEventKey { Pressed = true, Keycode = Key.Escape });
             Check(!Paused && game.GetNode<TextureButton>(visitorPath).Visible && game.QuotaVisitPending,
                 "Escape must close the story layout and restore the clickable visitor");
+            game.TryUnlockMusicWorkshop();
+            Check(!game.MusicWorkshopUnlocked && game.Score == cashAfterQuota,
+                "Cancelling the conversation must not open the room or issue a gift");
             await ToSignal(this, SignalName.ProcessFrame);
             game.GetNode<TextureButton>(visitorPath).EmitSignal(BaseButton.SignalName.Pressed);
             await ToSignal(this, SignalName.ProcessFrame);
@@ -123,13 +165,16 @@ public partial class ProjectTest
                 "Starting the conversation must save the dialogue phase");
             await Reload();
             Check(Paused && game.GetNodeOrNull<DialoguePlayer>("QuotaDialogue/DialoguePlayer") is { SavedPageRevealed: true } &&
-                game.Score == cashAfterQuota,
+                game.Score == cashAfterQuota && !game.MusicWorkshopUnlocked,
                 $"Reload must resume the revealed dialogue without granting the gift. Paused={Paused}, pending={game.QuotaVisitPending}, saved={ProgressSaveStore.Load(save, 3).QuotaVisit}");
             TranslationServer.SetLocale("en");
             Check(Dialogue().GetNode<Label>("Panel/Content/Speaker").Text == "Son", "The story dialogue must localize in English");
+            Check(GameLocalization.Text(Dialogue().Session.Current.Text).Contains("key"),
+                "The free-workshop dialogue must be translated in English");
             for (int i = 0; i < 8 && game.QuotaVisitPending; i++) Dialogue().Advance();
-            Check(!game.QuotaVisitPending && game.Score == cashAfterQuota + 1000 && !game.MusicWorkshopUnlocked,
-                "Finishing must add the gift exactly once and leave the workshop locked");
+            Check(!game.QuotaVisitPending && game.Score == cashAfterQuota + 1000 && game.MusicWorkshopUnlocked &&
+                game.CheckpointMusicWorkshopUnlocked,
+                "Finishing must open the workshop free and add the supplies gift exactly once, including the checkpoint");
             Check(game.GetNode<DayAnnouncementOverlay>("DayAnnouncements").IsShowing &&
                 game.GetNode<Label>("DayAnnouncements/Root/Title").Text == GameLocalization.Format("Получено {0}$", TradeScene.QuotaGift), "The standard overlay must announce the gift");
             var customer = game.GetNode<ModularCustomer>("World/TradingRoom/Customer");
@@ -144,11 +189,11 @@ public partial class ProjectTest
             Check(!game.QuotaVisitPending && game.Score == cashAfterQuota + 1000, "Checkpoint must restore both the gift and the claimed flag");
             CheckCigarettes(8, 7, "дней", 1500);
             game.TryUnlockMusicWorkshop();
-            Check(game.MusicWorkshopUnlocked && game.Score == cashAfterQuota && game.EnergyRemaining == game.EnergyCapacity &&
+            Check(game.MusicWorkshopUnlocked && game.Score == cashAfterQuota + 1000 &&
                 !game.DayStarted && !game.GetNode<ModularCustomer>("World/TradingRoom/Customer").Visible,
-                "Buying with the gift must charge $1000 and grant energy without starting the day");
+                "Repeated legacy unlock actions must neither charge cash nor start the day");
             await Reload();
-            Check(game.MusicWorkshopUnlocked && !game.DayStarted && game.Score == cashAfterQuota &&
+            Check(game.MusicWorkshopUnlocked && !game.DayStarted && game.Score == cashAfterQuota + 1000 &&
                 !game.GetNode<ModularCustomer>("World/TradingRoom/Customer").Visible,
                 "Reload must keep the workshop open and the store waiting for Start");
             game.EndDay();
@@ -156,6 +201,39 @@ public partial class ProjectTest
             game.NewGame();
             CheckCigarettes(1, 7, "дней", 750);
             Check(ProgressSaveStore.Load(save, 3).QuotaVisit == QuotaVisitStage.Unavailable, "A new run must reset the visitor state");
+
+            // A previously claimed gift could leave the old paid workshop locked.
+            ProgressSaveStore.Save(save, new ProgressData
+            {
+                SaveVersion = 19, Day = 8, QuotaStage = 1, Score = 0, DayStarted = false,
+                QuotaVisit = QuotaVisitStage.Rewarded, CheckpointQuotaVisit = QuotaVisitStage.Rewarded,
+                CheckpointDay = 8, CheckpointScore = 0
+            });
+            await Reload();
+            Check(game.MusicWorkshopUnlocked && game.CheckpointMusicWorkshopUnlocked && game.Score == 0 &&
+                !game.QuotaVisitPending && !game.DayStarted,
+                "An old rewarded but locked save must gain access free without replaying the gift");
+            game.ReturnToCheckpoint();
+            await Reload();
+            Check(game.MusicWorkshopUnlocked && game.Score == 0,
+                "Migrated access must survive saving and checkpoint rollback even with no money");
+
+            // A player who only just pays the quota must receive the same free access.
+            SetLastDay(game.FirstQuota);
+            await Reload();
+            game.EndDay();
+            game._Process(0);
+            game.GetNode<MafiaQuotaNotice>("MafiaQuotaNotice").Close();
+            Check(game.Score == 0 && !game.MusicWorkshopUnlocked, "Exact quota payment must leave a pending story and zero cash");
+            game.GetNode<TextureButton>(visitorPath).EmitSignal(BaseButton.SignalName.Pressed);
+            await ToSignal(this, SignalName.ProcessFrame);
+            for (int i = 0; i < 20 && game.QuotaVisitPending; i++)
+            {
+                Dialogue().Advance();
+                await ToSignal(this, SignalName.ProcessFrame);
+            }
+            Check(game.MusicWorkshopUnlocked && game.Score == TradeScene.QuotaGift,
+                $"Completing the conversation with zero cash must open the room without consuming the supplies gift: open={game.MusicWorkshopUnlocked}, score={game.Score}, pending={game.QuotaVisitPending}");
 
             SetLastDay(0);
             await Reload();

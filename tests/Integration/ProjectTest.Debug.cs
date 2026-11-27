@@ -63,7 +63,7 @@ public partial class ProjectTest
             foreach (bool good in new[] { false, true })
             {
                 game.NewGame();
-                if (music) { game.Score = 10000; game.TryUnlockMusicWorkshop(); }
+                if (music) { game.Score = 10000; UnlockMusicForFixture(game); }
                 if (!game.DayStarted) game.EndDay();
                 var craft = game.GetNode<EmbroideryGame>(music ? "PolishingGame" : "EmbroideryGame");
                 craft.Open();

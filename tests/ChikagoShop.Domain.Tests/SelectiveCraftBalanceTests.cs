@@ -45,7 +45,7 @@ public sealed class SelectiveCraftBalanceTests
 
     [TestCase(false)]
     [TestCase(true)]
-    public void NeutralSalesCanFundBothQuotasWithOptionalMusicUnlock(bool openMusic)
+    public void NeutralSalesCanFundBothQuotasWithOptionalMusicCrafting(bool openMusic)
     {
         var config = Config();
         Assert.That(config.StartingMoney, Is.EqualTo(220));
@@ -63,7 +63,7 @@ public sealed class SelectiveCraftBalanceTests
             if (openMusic && firstQuotaPaid && !musicUnlocked)
             {
                 int unlockCost = config.Workshops.Single(w => w.Id == "music").UnlockCost;
-                Assert.That(money, Is.GreaterThanOrEqualTo(unlockCost), "Unlock must use earned money and the real quota gift.");
+                Assert.That(unlockCost, Is.Zero, "The first-week story grants the room without a purchase.");
                 money -= unlockCost;
                 musicUnlocked = true;
                 musicUnlockDay = day;

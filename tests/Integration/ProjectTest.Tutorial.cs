@@ -1012,16 +1012,16 @@ public partial class ProjectTest
             ProgressSaveStore.Save(save, new ChikagoShop.Domain.Persistence.ProgressData
             {
                 SaveVersion = ChikagoShop.Domain.Persistence.ProgressJson.CurrentVersion,
-                Day = 8, QuotaStage = 1, Score = 1000, DayStarted = false, EnergyRemaining = 2
+                Day = 8, QuotaStage = 1, Score = 1000, DayStarted = false, EnergyRemaining = 2,
+                QuotaVisit = ChikagoShop.Domain.Persistence.QuotaVisitStage.Rewarded,
+                CheckpointQuotaVisit = ChikagoShop.Domain.Persistence.QuotaVisitStage.Rewarded,
+                CheckpointDay = 8
             });
             var tutorial = await ReloadWorkshop();
-            Check(!tutorial.IsShowing, "The workshop tutorial must start only after purchase");
-            game.TryUnlockMusicWorkshop();
-            tutorial = await ReloadWorkshop();
             Check(tutorial.IsShowing && tutorial.CurrentStep == FirstTradeTutorial.Step.MusicWorkshop &&
-                game.MusicWorkshopUnlocked && game.Score == 0 && !game.DayStarted &&
+                game.MusicWorkshopUnlocked && game.Score == 1000 && !game.DayStarted &&
                 !game.GetNode<ModularCustomer>("World/TradingRoom/Customer").Visible,
-                "The first purchase must preserve the pending workshop lesson and an empty counter on reload");
+                "A completed story migrated from an older save must introduce the workshop free and keep an empty counter");
             await ClickControl(game, next);
             Check(tutorial.Target == null, "The polishing explanation has no fixed target");
             await ClickControl(game, next);
@@ -1032,7 +1032,7 @@ public partial class ProjectTest
             await ClickControl(game, "FirstTradeTutorial/Root/SkipConfirmation/Center/Panel/Content/Actions/Confirm");
             tutorial = await ReloadWorkshop();
             Check(!tutorial.IsShowing && !tutorial.IsActive && game.MusicWorkshopUnlocked && game.CurrentDay == 8 &&
-                !game.DayStarted && game.Score == 0 && !game.GetNode<WorldCamera>("Camera2D").NavigationLocked,
+                !game.DayStarted && game.Score == 1000 && !game.GetNode<WorldCamera>("Camera2D").NavigationLocked,
                 "Skipping the workshop lesson must persist without resetting or locking the campaign");
             game.EndDay();
             Check(game.DayStarted && game.GetNode<ModularCustomer>("World/TradingRoom/Customer").Visible,

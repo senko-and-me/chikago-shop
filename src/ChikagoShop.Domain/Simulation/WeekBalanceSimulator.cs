@@ -45,6 +45,8 @@ public static class WeekBalanceSimulator
             bool unlocked = false;
             for (int day = 1; day <= config.Days.TotalDays; day++)
             {
+                // Assume the first-quota story is completed before week two.
+                unlocked = day > firstDeadline;
                 upgrades.Reset(preserveCategories: true);
                 if (day > 1)
                 {
@@ -66,9 +68,6 @@ public static class WeekBalanceSimulator
                     }
                     else upgrades.TrySkip();
                 }
-                // Delay the investment until the second day and retain money to craft.
-                if (profile.Produce && profile.UnlockMusic && !unlocked && day >= 2 && cash >= music.UnlockCost + music.SpinCost + 25)
-                { cash -= music.UnlockCost; unlocked = true; }
                 double remaining = config.Days.DurationSeconds + (unlocked ? 30 : 0);
                 double duration = remaining;
                 void Observe(double stock = 0)
@@ -81,7 +80,7 @@ public static class WeekBalanceSimulator
                 Observe();
                 while (profile.Produce && remaining > 0)
                 {
-                    var workshop = unlocked && cash >= music.SpinCost ? music : atelier;
+                    var workshop = unlocked && profile.UnlockMusic && cash >= music.SpinCost ? music : atelier;
                     double cycle = profile.CycleSeconds;
                     if (!double.IsFinite(cycle) || cycle <= 0 || cash < workshop.SpinCost || remaining < cycle) break;
                     Observe();

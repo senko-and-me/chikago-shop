@@ -16,6 +16,13 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--notebook-hover-checks"))
+            {
+                await TestNotebookRightEdgeHover();
+                GD.Print("NOTEBOOK_HOVER_CHECKS_PASS: right-edge opening, gap retention, vertical exit and resize");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--selective-crafting-checks"))
             {
                 await TestSelectiveCrafting();

@@ -33,7 +33,6 @@ public partial class TradeScene : Node2D
 	private static int EnergyAfterMusicUnlock => Economy.Days.EnergyAfterMusicUnlock;
 	private static int AtelierSpinCost => WorkshopItemCatalog.CraftCost("atelier");
 	private static int MusicSpinCost => WorkshopItemCatalog.CraftCost("music");
-	private static int MusicUnlockCost => Economy.Workshops.Single(entry => entry.Id == "music").UnlockCost;
 
 	private static IReadOnlyList<CraftItem> Items =>
 		WorkshopItemCatalog.Items;
@@ -312,7 +311,6 @@ public partial class TradeScene : Node2D
 		_endDayButton.Pressed += EndDay;
 		_atelierGetItemButton.Pressed += GetItemFromAtelier;
 		_musicGetItemButton.Pressed += GetItemFromMusicWorkshop;
-		_musicUnlockPanel.UnlockButton.Pressed += TryUnlockMusicWorkshop;
 		ButtonDropShadow.Attach(_acceptButton);
 		ButtonDropShadow.Attach(_declineButton);
 		ButtonDropShadow.Attach(_musicUnlockPanel.UnlockButton, solidFace: true);
@@ -527,33 +525,6 @@ public partial class TradeScene : Node2D
 		Crafting.OpenCatalog("music");
 	}
 
-	public void TryUnlockMusicWorkshop()
-	{
-		if (GetTree().Paused || DayTransitionOpen) return;
-		if (MusicWorkshopUnlocked ||
-			Failed ||
-			Completed ||
-			Score < MusicUnlockCost)
-			return;
-
-
-		Score -= MusicUnlockCost;
-		MusicWorkshopUnlocked = true;
-
-
-		_dayCycle.SynchronizeRoomDuration();
-		RecalculateInvisibleHand();
-
-		StatusText = "Музыкальная мастерская открыта.";
-
-		_inventoryUI.UpdateUI(_storedItems);
-
-		RefreshScore();
-		RefreshProgress();
-		RefreshItemButtons();
-		_tutorial.OnMusicWorkshopUnlocked();
-		SaveProgress();
-	}
 
 	private void LogStoredItems()
 	{
@@ -656,7 +627,6 @@ public partial class TradeScene : Node2D
 
 		_musicLockedOverlay.SetLocked(!MusicWorkshopUnlocked);
 
-		_musicUnlockPanel.SetOffer(MusicUnlockCost, !Failed && !Completed && Score >= MusicUnlockCost);
 
 		RefreshShowcases();
 	}

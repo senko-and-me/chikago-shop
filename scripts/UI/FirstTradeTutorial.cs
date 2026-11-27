@@ -158,6 +158,8 @@ public partial class FirstTradeTutorial : CanvasLayer
         RoomFocusDone = restored && config.GetValue("tutorial", "room_focus_done", _cameraHandoffDone).AsBool();
         _cameraHandoffDone &= RoomFocusDone;
         _initialized = true;
+        // Also covers older saves migrated from paid to story-based room access.
+        _musicLessonPending |= _game.MusicWorkshopUnlocked && !_musicLessonDone;
         if (SkipOnInitialize)
         {
             Save(true);

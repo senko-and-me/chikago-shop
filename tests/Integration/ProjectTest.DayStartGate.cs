@@ -68,8 +68,8 @@ public partial class ProjectTest
             }
             gate.Dismiss();
             await ClickControl(game, "World/MusicWorkshop/LockedOverlay/UnlockPanel/Content/UnlockButton");
-            Check(!notice.Visible && game.MusicWorkshopUnlocked && game.Score == money - 1000 && !game.DayStarted,
-                "The workshop button must buy during preparation and leave the gate active for other actions");
+            Check(!game.MusicWorkshopUnlocked && game.Score == money && !game.DayStarted,
+                "The locked-room notice must not sell access before the first-week conversation");
             gate.Dismiss();
             await ClickControl(game, "World/ShowroomLeft/Showcases/Slot1");
             Check(notice.Visible && game.StoredItems.Length == 1, "Even a disabled display must explain why a pre-start click cannot act");
@@ -132,7 +132,8 @@ public partial class ProjectTest
             game.SelectInventoryItem(0);
             game.PlaceItemInShowcase(0);
             Check(game.StoredItems.Length == 0 && game.ShowcaseItems[0] == 0, "Placing inventory items must work normally after Start");
-            Check(game.MusicWorkshopUnlocked, "Starting the day must preserve the preparation purchase");
+            Check(!game.MusicWorkshopUnlocked && game.Score == money,
+                "Starting the day must preserve funds and keep story-gated rooms closed");
             game.PersistProgress();
             await Reload();
             Check(game.DayStarted, "Reload of a running day must not reapply the waiting-day gate");

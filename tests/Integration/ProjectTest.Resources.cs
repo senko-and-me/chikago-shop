@@ -16,7 +16,7 @@ public partial class ProjectTest
         var camera = game.GetNode<WorldCamera>("Camera2D");
         camera.SetProcess(false);
         game.Score = 2000;
-        game.TryUnlockMusicWorkshop();
+        UnlockMusicForFixture(game);
         try
         {
             if (!game.DayStarted) game.EndDay();
@@ -221,23 +221,23 @@ public partial class ProjectTest
             game.EndDay(); // Unlock checks exercise a running day after the pre-start action gate.
             game.Score = 0;
             game.TryUnlockMusicWorkshop();
-            Check(!game.MusicWorkshopUnlocked, "An unaffordable unlock must keep neighboring rooms closed");
+            Check(!game.MusicWorkshopUnlocked, "A direct action must not bypass the first-week story");
             CheckDoors(false);
             game.Score = 220;
-            game.TryUnlockMusicWorkshop();
-            Check(game.MusicWorkshopUnlocked && game.Score == 120,
-                "Existing unlock action and cost must remain unchanged");
+            UnlockMusicForFixture(game);
+            Check(game.MusicWorkshopUnlocked && game.Score == 220,
+                "The story grant must open the room without changing cash");
             CheckDoors(true);
             await Reload();
             Check(game.MusicWorkshopUnlocked, "Reload must restore the open-room state");
             CheckDoors(true);
             game.ReturnToCheckpoint();
-            Check(!game.MusicWorkshopUnlocked, "The initial checkpoint must close the added rooms again");
-            CheckDoors(false);
+            Check(game.MusicWorkshopUnlocked, "A completed story grant must survive returning to the checkpoint");
+            CheckDoors(true);
             await Reload();
-            CheckDoors(false);
+            CheckDoors(true);
             game.EndDay();
-            game.TryUnlockMusicWorkshop();
+            UnlockMusicForFixture(game);
             CheckDoors(true);
             game.NewGame();
             Check(!game.MusicWorkshopUnlocked && game.Score == 220, "New Game must restore the original locked state");
@@ -363,7 +363,7 @@ public partial class ProjectTest
             // Open the actual paid minigame and exercise its selected new silhouette.
             game.Score = 2000;
             game.EndDay(); // Start before crafting and unlocking.
-            game.TryUnlockMusicWorkshop();
+            UnlockMusicForFixture(game);
             var miniGame = game.GetNode<EmbroideryGame>("PolishingGame");
             miniGame.SetProcess(false);
             game.GetItemFromMusicWorkshop();

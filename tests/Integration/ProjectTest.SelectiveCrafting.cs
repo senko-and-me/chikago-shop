@@ -35,7 +35,7 @@ public partial class ProjectTest
             game.NewGame();
             game.EndDay();
             game.Score = 10000;
-            if (music) game.TryUnlockMusicWorkshop();
+            if (music) UnlockMusicForFixture(game);
             game.RefreshItemButtons();
         }
         async Task SelectThroughCatalog(string kind)

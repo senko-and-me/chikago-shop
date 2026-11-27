@@ -104,7 +104,7 @@ public partial class PulloutNotebook : Control
         if (!onClosedTab) _tabArmed = true;
         if (_expanded)
         {
-            // Only the drawn page owns the open hover area, independent of tooltip layers.
+            // Keep the page open across the gap between its right side and the window edge.
             if (_pinned || HoldOpenForLesson || OpenHoverBounds.HasPoint(cursor))
                 _leaveTime = 0;
             else if (_slide?.IsRunning() != true && (_leaveTime += delta) >= LeaveDelay)
@@ -126,9 +126,15 @@ public partial class PulloutNotebook : Control
         return hovered == null || hovered == _page || _page.IsAncestorOf(hovered);
     }
 
-    private Rect2 ClosedHoverBounds => new Rect2(ClosedX, 0, 56, _page.Size.Y).GrowIndividual(56 * 0.2f, 0, 0, 0);
-    private Rect2 OpenHoverBounds => _page.GetRect().Grow(8);
+    private Rect2 ClosedHoverBounds => ExtendToRightEdge(new Rect2(ClosedX, 0, 56, _page.Size.Y).GrowIndividual(56 * 0.2f, 0, 0, 0));
+    private Rect2 OpenHoverBounds => ExtendToRightEdge(_page.GetRect().Grow(8));
     public Rect2 HoverBounds => _expanded ? OpenHoverBounds : ClosedHoverBounds;
+
+    private Rect2 ExtendToRightEdge(Rect2 bounds)
+    {
+        float right = (GetGlobalTransformWithCanvas().AffineInverse() * GetViewportRect().End).X;
+        return new Rect2(bounds.Position, new Vector2(Mathf.Max(bounds.End.X, right) - bounds.Position.X, bounds.Size.Y));
+    }
 
     private void SetExpanded(bool expand, bool immediate = false, bool suppressed = false)
     {

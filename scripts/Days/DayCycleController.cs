@@ -280,8 +280,12 @@ public sealed class DayCycleController
 			_card.Open(_game.CurrentDay - 1, _game.CurrentDay, Upgrades.Options, _game.Score);
 	}
 
-	public void FinishQuotaVisit() =>
+	public void FinishQuotaVisit()
+	{
+		// The pending day-eight hand can now include the newly available room.
+		if (Upgrades.Pending) Upgrades.Offer(_game.CurrentDay, _game.MusicWorkshopUnlocked);
 		_announcements.ShowReward(GameLocalization.Format("Получено {0}$", TradeScene.QuotaGift), ResumeUpgradeChoice);
+	}
 
 	public void CaptureCheckpointUpgrades()
 	{

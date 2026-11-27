@@ -166,7 +166,7 @@ public partial class ProjectTest
             await Frame();
             game.EndDay();
             game.Score = 10000;
-            game.TryUnlockMusicWorkshop();
+            UnlockMusicForFixture(game);
             foreach (Vector2I size in new[] { new Vector2I(960, 540), new Vector2I(1280, 720), new Vector2I(1000, 800) })
             foreach (string language in new[] { "ru", "en" })
             {

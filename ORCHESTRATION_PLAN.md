@@ -9,6 +9,46 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### SC-222 — область наведения блокнота до правого края
+
+| Задача | Статус | Исполнитель | CP |
+| --- | --- | --- | --- |
+| SC-222 | DONE | /root | .local/checks/sc222/CP-SC-222.md |
+
+SC221 DONE; область наведения закрытого и открытого блокнота продлевается до правого края viewport с сохранением вертикальных границ и левого отступа. Один исполнитель; остальные локальные изменения сохранены, source/ и публикация вне scope.
+
+```text
+Task: SC-222
+Recommended status: REVIEW -> accepted DONE; gate OPEN -> PASSED 27.11.2026
+Changed: PulloutNotebook extends both hover rectangles to viewport right in local canvas coordinates; no extra input-blocking control. Resize follows current viewport. Quota test geometry assertion updated; dedicated notebook-hover runner and regression added.
+Checks: build PASS0warnings/errors; rendered notebook-hover PASS exit0/stderr empty at960/1280/1920 widths. Real mouse motion opens from far right, holds unpinned page over the visible gap, closes above bounds and outside window, reopens on return. Original left margin preserved. Scoped diffcheck PASS.
+Acceptance: full right-side gap is part of the trigger in closed/open states; vertical limits and exit behavior retained.
+Read-set exception: bounded search of notebook hover assertions to locate affected quota fixture; no source access.
+Risks/blocker: none scoped; pending SC221 changes preserved, no commit/push.
+Next: user preview right-edge notebook hover.
+```
+
+### SC-221 — бесплатная мастерская после первой недели
+
+| Задача | Статус | Исполнитель | CP |
+| --- | --- | --- | --- |
+| SC-221 | DONE | /root | .local/checks/sc221/CP-SC-221.md |
+
+SC220 DONE; пользователь запросил бесплатное сюжетное открытие музыкальной мастерской после первой недели. Разблокировка по завершении разговора посетителя после первой квоты; существующий подарок1000$ остаётся на закупку инструментов. Цена покупки и ручная кнопка открытия больше не действуют. Сценарий Google Docs прочитан (вкладка «Сценарий»): есть пролог, готовой сцены мастерской нет; короткие реплики пишутся в его стиле. Совместимость сохранений, checkpoint, обучение и RU/EN входят в приёмку; source/, внешние записи/публикация вне scope. Один владелец всех файлов.
+
+SC221 gate `OPEN → PASSED`, принято /root 27.11.2026.
+
+```text
+Task: SC-221
+Recommended status: REVIEW -> accepted DONE
+Changed: music unlock cost0; paid click removed; scene-authored disabled story notice in two readable lines; two concise Son lines inspired by supplied Scenario tab, RU/EN. Existing first-quota completion now grants room+checkpoint without cash debit, preserving the one-time1000supplies gift. Pending day8 cards include music. Legacy rewarded/old no-visitor saves migrate access free without reward replay; paid access retained. Tutorial covers migrated opens. Retired F10 unlock price discarded; simulator opens free from week2. TradeScene.cs only removes prior paid logic/wiring; story transaction remains owned by QuotaVisit. Non-story test setups use an explicit private fixture helper; quota suite exercises real flow.
+Checks: build PASS0warnings/errors. Focused domain25PASS incl9story migration cases; full domain224=222PASS,2same documented Cash-price/wire-list failures. Eleven rendered isolated suites PASS exit0, final stderr empty: quota-visit, selective-crafting, energy-removal, craft-session, craft-localization, room-title, debug-hotkey, day-start-gate, day-expiry, campaign-balance, tutorial. New quota assertions cover week1 direct action, cancel, reload mid-dialogue, zero cash completion, legacy rewarded zero cash save, checkpoint/reload/idempotence. RU/EN dialogue and locked-room screenshots reviewed, in .local/checks/sc221/. Diffcheck PASS; six previously external user files unchanged vs HEAD97a231d. Domain budget2120final with music/base sales,490without gift using atelier only; money/quotas/sale/craft prices unchanged.
+Acceptance: locked until first quota conversation completes; free access and all displays/inventory upgrade retained across save/checkpoint; no duplicate gift/charge; new game resets; completed migration gets polishing lesson. Scene owns notice text/font/geometry.
+Read-set exception: bounded diagnostic PulloutNotebook inspection exposed stale hover assertion; updated test to current8px margin and reset real pointer hover deterministically. Broader historical save/portrait tests inspected only; no source/ or Doc writes. Captures copied from test helper temp path.
+Risks/blocker: no scoped blockers. One transient Mono GCHandle log in day-expiry had exit0; independent rerun passed stderr empty. Additional historical save-compatibility suite fails initial v1aggregate assertion; broad portrait suite fails null prologue because fixture expects NewGame to skip tutorial (before reaching visitor); neither claimed green or repaired here. Two known domain failures remain. No commit/push requested/performed.
+Next: user playtest week1-to-week2 story transition in feature/selective-crafting.
+```
+
 ### SC-220 — удаление механики энергии
 
 Пользователь отменил энергию; SC219 DONE. План: убрать ограничения/расход крафта, энергетическую панель, бонус открытия мастерской и карту энергии, подсказки и debug-поля. Старые поля сохранений/числовые enum сохраняются как инертная совместимость; деньги и время дня остаются ограничениями, цены/квоты не меняются.

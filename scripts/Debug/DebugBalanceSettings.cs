@@ -160,6 +160,7 @@ public static class DebugBalanceSettings
         profile.Numbers?.Remove("card.Energy.weight");
         profile.Numbers?.Remove("energy.before");
         profile.Numbers?.Remove("energy.after");
+        profile.Numbers?.Remove("workshop.music.unlock");
         profile.Numbers?.Remove("buyer.min");
         profile.Numbers?.Remove("buyer.max");
         profile.Numbers?.Remove("craft.count");
@@ -207,7 +208,7 @@ public static class DebugBalanceSettings
             Workshops = source.Workshops.Select(workshop => new WorkshopConfig
             {
                 Id = workshop.Id, SpinCost = workshop.SpinCost,
-                UnlockCost = Get($"workshop.{workshop.Id}.unlock", workshop.UnlockCost)
+                UnlockCost = workshop.UnlockCost
             }).ToList(),
             Rarities = source.Rarities.Select(rarity => new RarityConfig
             {

@@ -29,7 +29,7 @@
     {
       "id": "music",
       "spin_cost": 50,
-      "unlock_cost": 1000
+      "unlock_cost": 0
     }
   ],
   "rarities": [

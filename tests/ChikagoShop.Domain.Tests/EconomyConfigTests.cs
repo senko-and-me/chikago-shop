@@ -39,7 +39,7 @@ public sealed class EconomyConfigTests
             Assert.That(config.StartingMoney, Is.EqualTo(220));
             Assert.That(config.Workshops.Select(value => value.Id), Is.EqualTo(new[] { "atelier", "music" }));
             Assert.That(config.Workshops.Select(value => value.SpinCost), Is.EqualTo(new[] { 25, 50 }));
-            Assert.That(config.Workshops.Select(value => value.UnlockCost), Is.EqualTo(new[] { 0, 1000 }));
+            Assert.That(config.Workshops.Select(value => value.UnlockCost), Is.EqualTo(new[] { 0, 0 }));
             Assert.That(config.Quotas.Select(value => value.Amount), Is.EqualTo(new[] { 750, 1500 }));
             Assert.That(config.Rarities.Select(value => value.Weight), Is.EqualTo(new[] { 60, 25, 10, 4, 1 }));
             Assert.That(config.OfferRanges.Sum(value => value.ChancePercent), Is.EqualTo(100));

@@ -24,7 +24,7 @@ public partial class ProjectTest
                 game.SavePath = "";
                 game.GetNode<FirstTradeTutorial>("FirstTradeTutorial").ProgressPath = "";
                 Root.AddChild(game); game.SetProcess(false);
-                game.EndDay(); game.Score = 10000; game.TryUnlockMusicWorkshop();
+                game.EndDay(); game.Score = 10000; UnlockMusicForFixture(game);
                 var craft = game.GetNode<EmbroideryGame>("PolishingGame");
                 game.GetItemFromMusicWorkshop(); SelectLegacyCraft(game, "guitar");
                 Check(craft.IsOpen, "Unlocked room must open polishing");
@@ -110,7 +110,7 @@ public partial class ProjectTest
             foreach (var entry in WorkshopItemCatalog.Items.Select((item, index) => (item, index))
                 .Where(entry => entry.item.WorkshopId == "music"))
             {
-                game.NewGame(); game.EndDay(); game.Score = 10000; game.TryUnlockMusicWorkshop();
+                game.NewGame(); game.EndDay(); game.Score = 10000; UnlockMusicForFixture(game);
                 game.DayUpgrades.Restore(false, DayUpgrade.None, musicLevel: level);
                 Check(!craft.PreparedItemIndex.HasValue, "New game must clear the prior selection");
                 game.GetItemFromMusicWorkshop();
@@ -184,7 +184,7 @@ public partial class ProjectTest
                 game.NewGame();
                 game.EndDay();
                 game.Score = 10000;
-                if (name == "PolishingGame") game.TryUnlockMusicWorkshop();
+                if (name == "PolishingGame") UnlockMusicForFixture(game);
                 var craft = game.GetNode<EmbroideryGame>(name);
                 craft.Open(); SelectLegacyCraft(game, craft.IsPolishing ? "guitar" : "hat");
                 craft.SetProcess(false);
@@ -473,7 +473,7 @@ public partial class ProjectTest
             if (!game.DayStarted) game.EndDay();
             game.GetItemFromMusicWorkshop(); SelectLegacyCraft(game, "guitar");
             Check(!polishing.IsOpen && !Paused,"Locked music workshop must not open polishing");
-            game.Score=2000; game.TryUnlockMusicWorkshop();
+            game.Score=2000; UnlockMusicForFixture(game);
             int initialEnergy = game.EnergyRemaining;
             foreach(string kind in PolishingSurface.InstrumentKinds)
             {
@@ -486,7 +486,7 @@ public partial class ProjectTest
                 Root.Size=size;
                 await ClickControl(game,"World/MusicWorkshop/GetItemButton");
                 SelectLegacyCraft(game, "guitar");
-                Check(polishing.IsOpen && Paused && game.Score==1000 && game.StoredItems.Length==0,
+                Check(polishing.IsOpen && Paused && game.Score==2000 && game.StoredItems.Length==0,
                     "The real music create button must open the shared craft shell without payment yet");
                 var surface=polishing.GetNode<EmbroiderySurface>("Surface");
                 var board=surface.GetNode<PolishingSurface>("Polishing");
@@ -507,7 +507,7 @@ public partial class ProjectTest
                     "Pause must cover polishing and another craft must not open");
                 pause.Close();
                 await CancelLegacyCraft(game, "PolishingGame");
-                Check(!Paused && !polishing.IsOpen && game.Score==1000,"Cancel polishing must be free");
+                Check(!Paused && !polishing.IsOpen && game.Score==2000,"Cancel polishing must be free");
             }
             TranslationServer.SetLocale("en");
             game.GetItemFromMusicWorkshop(); SelectLegacyCraft(game, "guitar");
@@ -522,11 +522,11 @@ public partial class ProjectTest
             await CancelLegacyCraft(game, "PolishingGame");
             game.GetItemFromMusicWorkshop(); SelectLegacyCraft(game, "guitar");
             await ClickControl(game,"PolishingGame/Surface/Panel/Buttons/Action");
-            Check(game.Score==970 && game.EnergyRemaining==initialEnergy && game.StoredItems.Length==1 &&
+            Check(game.Score==1970 && game.EnergyRemaining==initialEnergy && game.StoredItems.Length==1 &&
                   game.StoredItems.All(index=>WorkshopItemCatalog.Items[index].WorkshopId=="music"),
                 $"Polishing start must commit exactly the selected music item for 30 dollars without energy (score={game.Score}, energy={game.EnergyRemaining}, count={game.StoredItems.Length}, state={polishing.ActiveSession.State})");
             polishing.Activate();
-            Check(game.Score==970 && game.StoredItems.Length==1,"Duplicate start must not buy another batch");
+            Check(game.Score==1970 && game.StoredItems.Length==1,"Duplicate start must not buy another batch");
             var workspace=polishing.GetNode<PolishingSurface>("Surface/Polishing");
             var target=polishing.Polishing.Cells.First(cell=>cell.Inside && polishing.Polishing.Inside(cell.X+14,cell.Y));
             Vector2 left=workspace.LogicalToScreen(new Vector2((float)target.X,(float)target.Y));
@@ -564,23 +564,23 @@ public partial class ProjectTest
             Check(polishing.ActiveSession.State==ChikagoShop.Domain.Crafting.EmbroideryState.Finished &&
                   game.DayRemainingSeconds==beforeTimeout-10,"Both clocks must advance through polishing timeout");
             await ClickControl(game,"PolishingGame/Surface/Panel/Buttons/Action");
-            Check(!Paused && !polishing.IsOpen && game.Score==970 && game.StoredItems.Length==1,
+            Check(!Paused && !polishing.IsOpen && game.Score==1970 && game.StoredItems.Length==1,
                 "Collect after polishing must resume the world without duplicating payment or goods");
 
             game.SetProcess(false); polishing.SetProcess(false);
-            game.NewGame(); game.EndDay(); game.Score=2000; game.TryUnlockMusicWorkshop();
+            game.NewGame(); game.EndDay(); game.Score=2000; UnlockMusicForFixture(game);
             game._Process(Math.Max(0, game.DayRemainingSeconds - .5)); game.GetItemFromMusicWorkshop(); SelectLegacyCraft(game, "guitar"); polishing._Process(.5);
-            Check(!game.DayClosed && polishing.IsOpen && Paused && game.Score==1000,
+            Check(!game.DayClosed && polishing.IsOpen && Paused && game.Score==2000,
                 "Preparation near expiry must remain free and freeze the day");
             await CancelLegacyCraft(game, "PolishingGame");
-            game.NewGame(); game.EndDay(); game.Score=2000; game.TryUnlockMusicWorkshop();
+            game.NewGame(); game.EndDay(); game.Score=2000; UnlockMusicForFixture(game);
             game._Process(Math.Max(0, game.DayRemainingSeconds - .5)); game.GetItemFromMusicWorkshop(); SelectLegacyCraft(game, "guitar"); polishing.Activate(); polishing._Process(.5);
-            Check(game.DayClosed && polishing.IsOpen && game.StoredItems.Length==1 && game.Score==970,
+            Check(game.DayClosed && polishing.IsOpen && game.StoredItems.Length==1 && game.Score==1970,
                 "A started polishing craft must retain its batch when the day expires");
             polishing._Process(10); polishing.Activate(); polishing.Activate();
-            Check(!Paused && game.Score==970 && game.StoredItems.Length==1,"Late collect must remain idempotent");
+            Check(!Paused && game.Score==1970 && game.StoredItems.Length==1,"Late collect must remain idempotent");
 
-            game.NewGame(); game.EndDay(); game.Score=2000; game.TryUnlockMusicWorkshop(); game.SavePath=path;
+            game.NewGame(); game.EndDay(); game.Score=2000; UnlockMusicForFixture(game); game.SavePath=path;
             game.GetItemFromMusicWorkshop(); SelectLegacyCraft(game, "guitar"); polishing.Activate();
             int[] items=game.StoredItems;
             game.QueueFree(); await ToSignal(this,SignalName.ProcessFrame);
@@ -588,7 +588,7 @@ public partial class ProjectTest
             game=scene.Instantiate<TradeScene>(); game.SavePath=path; game.GetNode<FirstTradeTutorial>("FirstTradeTutorial").ProgressPath = "";
         Root.AddChild(game); game.SetProcess(false);
             await ToSignal(this,SignalName.ProcessFrame);
-            Check(game.Score==970 && game.EnergyRemaining==initialEnergy && game.StoredItems.SequenceEqual(items) &&
+            Check(game.Score==1970 && game.EnergyRemaining==initialEnergy && game.StoredItems.SequenceEqual(items) &&
                   !game.CraftMiniGameOpen && !Paused,"Reload must keep the paid music batch without reopening or duplicating the craft");
         }
         finally
