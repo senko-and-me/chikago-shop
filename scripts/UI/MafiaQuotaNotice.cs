@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Godot;
 using ChikagoShop.Domain.Dialogue;
 
@@ -29,6 +30,8 @@ public partial class MafiaQuotaNotice : CanvasLayer
     private Tween _fade = null!;
     private bool _ownsPause;
     private bool _terminal;
+    private bool _transitioning;
+    private int _transitionRevision;
 
     public bool IsOpen => _root != null && _root.Visible;
 
@@ -118,7 +121,7 @@ public partial class MafiaQuotaNotice : CanvasLayer
         };
         actions.AddThemeConstantOverride("separation", 12);
         content.AddChild(actions);
-        _continue = MakeAction(actions, "Continue", () => CloseCore(true));
+        _continue = MakeAction(actions, "Continue", CloseWithTransition);
         _checkpoint = MakeAction(actions, "Checkpoint", () =>
         {
             CloseCore(false);
@@ -163,6 +166,30 @@ public partial class MafiaQuotaNotice : CanvasLayer
         button.Pressed += click;
         parent.AddChild(button);
         return button;
+    }
+
+    public async void OpenWithTransition(int paidQuota, int remaining, bool succeeded, bool final)
+    {
+        if (!succeeded || final) { Open(paidQuota, remaining, succeeded, final); return; }
+        if (IsOpen || _transitioning || SceneTransition.IsActive(GetTree())) return;
+        _transitioning = true;
+        int revision = ++_transitionRevision;
+        bool pausedBefore = GetTree().Paused;
+        try
+        {
+            await SceneTransition.Run(this, () =>
+            {
+                if (revision != _transitionRevision)
+                {
+                    GetTree().Paused = pausedBefore;
+                    return Task.FromResult(false);
+                }
+                Open(paidQuota, remaining, succeeded, final);
+                _ownsPause = !pausedBefore;
+                return Task.FromResult(true);
+            }, keepChangedPause: true);
+        }
+        finally { _transitioning = false; }
     }
 
     public void Open(int paidQuota, int remaining, bool succeeded, bool final)
@@ -220,9 +247,26 @@ public partial class MafiaQuotaNotice : CanvasLayer
     public void Close() => CloseCore(true);
     public void CloseSilently() => CloseCore(false);
 
+    private async void CloseWithTransition()
+    {
+        if (!IsOpen || _transitioning || SceneTransition.IsActive(GetTree())) return;
+        if (_terminal) { CloseCore(true); return; }
+        _transitioning = true;
+        try
+        {
+            await SceneTransition.Run(this, () =>
+            {
+                CloseCore(true);
+                return Task.FromResult(true);
+            }, keepChangedPause: true);
+        }
+        finally { _transitioning = false; }
+    }
+
     private void CloseCore(bool notify)
     {
-        if (!IsOpen) return;
+        if (!IsOpen && !_transitioning) return;
+        ++_transitionRevision;
         if (_fade?.IsValid() == true) _fade.Kill();
         SetProcess(false);
         _portraits.ShowSpeech(null);
@@ -245,7 +289,7 @@ public partial class MafiaQuotaNotice : CanvasLayer
         if (!IsOpen || input is not InputEventKey { Pressed: true, Echo: false } key) return;
         if (key.Keycode != Key.Escape) return;
         GetViewport().SetInputAsHandled();
-        if (!_terminal) CloseCore(true);
+        if (!_terminal) CloseWithTransition();
         else _mainMenu.GrabFocus();
     }
 }

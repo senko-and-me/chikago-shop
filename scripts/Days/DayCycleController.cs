@@ -255,7 +255,7 @@ public sealed class DayCycleController
 		UpdateDayNightBackground();
 	}
 
-	private void ShowMafiaNotice() => _mafia.Open(
+	private void ShowMafiaNotice() => _mafia.OpenWithTransition(
 		_game.CurrentDay >= TotalDays || _game.QuotaStage == 2
 			? _game.SecondQuota : _game.FirstQuota,
 		_game.Score, !_game.Failed, _game.Completed);

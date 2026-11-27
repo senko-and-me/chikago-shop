@@ -33,6 +33,12 @@ public partial class ProjectTest
             SaveVersion = ProgressJson.CurrentVersion, Day = deadline, Score = score, DayStarted = true, EnergyRemaining = 3
         });
         DialoguePlayer Dialogue() => game.GetNode<DialoguePlayer>("QuotaDialogue/DialoguePlayer");
+        async Task WaitForQuotaFade()
+        {
+            for (int frame = 0; frame < 240 && SceneTransition.IsActive(this); frame++)
+                await ToSignal(this, SignalName.ProcessFrame);
+            Check(!SceneTransition.IsActive(this), "The quota fade must finish without leaving a black/input-blocking overlay");
+        }
         void CheckCigarettes(int day, int daysLeft, string russianUnit, int amount)
         {
             var cigarettes = game.GetNode<ProgressPanel>("HUD/Root/ProgressPanel");
@@ -171,7 +177,24 @@ public partial class ProjectTest
                 "The visitor must wait until the existing successful quota scene ends");
             int cashAfterQuota = game.Score;
             CheckCigarettes(8, 7, "дней", 1500);
-            game.GetNode<MafiaQuotaNotice>("MafiaQuotaNotice").Close();
+            var mafia = game.GetNode<MafiaQuotaNotice>("MafiaQuotaNotice");
+            Check(SceneTransition.IsActive(this) && Paused && !mafia.IsOpen,
+                "The world must fade first, with the clock paused, before Castello appears");
+            for (int frame = 0; frame < 120 && !mafia.IsOpen; frame++)
+                await ToSignal(this, SignalName.ProcessFrame);
+            Check(mafia.IsOpen && Root.GetNode<SceneTransition>("SceneTransition").Opacity >= 0.99f,
+                "The dialogue must appear behind a fully black cover");
+            await WaitForQuotaFade();
+            Check(Paused && mafia.IsOpen, "Fade-in must retain the dialogue pause");
+            game.ResumeQuotaVisit();
+            Check(!game.GetNode<TextureButton>(visitorPath).Visible, "The son must wait until Castello finishes");
+            await ClickControl(game, "MafiaQuotaNotice/StoryRoot/Speech/Content/Actions/Continue");
+            Check(SceneTransition.IsActive(this) && mafia.IsOpen && game.MafiaNoticePending,
+                "Continue must fade out before closing or acknowledging Castello");
+            mafia._Input(new InputEventKey { Pressed = true, Keycode = Key.Escape });
+            await WaitForQuotaFade();
+            Check(!mafia.IsOpen && !Paused && !game.MafiaNoticePending && game.Score == cashAfterQuota,
+                "A repeated close during the fade must acknowledge once, restore gameplay and leave the gift for the son's dialogue");
             Check(game.GetNode<TextureButton>(visitorPath).Visible && game.QuotaVisitPending && !game.DayStarted,
                 "The visitor must replace the regular customer before the next day");
             game.EndDay();
@@ -269,6 +292,7 @@ public partial class ProjectTest
             await Reload();
             game.EndDay();
             game._Process(0);
+            await WaitForQuotaFade();
             game.GetNode<MafiaQuotaNotice>("MafiaQuotaNotice").Close();
             Check(game.Score == 0 && !game.MusicWorkshopUnlocked, "Exact quota payment must leave a pending story and zero cash");
             game.GetNode<TextureButton>(visitorPath).EmitSignal(BaseButton.SignalName.Pressed);

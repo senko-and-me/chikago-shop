@@ -9,6 +9,21 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### SC226 — затемнение диалога Кастелло
+
+SC226 DONE; /root; CP `.local/checks/sc226/CP-SC226.md`; SC225 DONE. Последнее уточнение пользователя: только Кастелло. Общий чёрный переход при входе/выходе разговора после первой квоты; длительность как у меню. Разговор сына и финальные экраны вне scope.
+
+```text
+Task: SC226
+Recommended status: REVIEW -> accepted DONE; gate PASSED 27.11.2026
+Changed: MafiaQuotaNotice uses shared SceneTransition for nonterminal Castello entry/Continue/Escape exit; DayCycle calls animated entry. Common helper opt-in retains explicit destination pause for in-place story modals; existing scene changes retain previous semantics. Transition revision cancels stale entry after silent reset. Quota integration tests assert opaque swap, paused entry/dialogue, real Continue, repeat Escape ignored, single acknowledgement and no premature gift. Immediate Close API retained for resets/fixtures.
+Checks: solution build PASS0warnings/errors; rendered quota-visit, scene-transition, campaign-balance PASS exit0/stderr empty (.local/checks/sc226/). Scoped diffcheck PASS. Shared0.22s out/0.25s in, input cover layer1000; dialogue appears only at opacity>=0.99. Existing story reward/reload/checkpoint and both endings regressions pass.
+Acceptance: first-quota Castello scene enters/leaves through full black; pause remains while speaking and releases on return; son and terminal presentation unchanged.
+Read-set exception: bounded search for scene-transition runner located existing Menu suite; no source/.
+Risks/blocker: none scoped; no commit/push.
+Next: user preview Castello transition.
+```
+
 ### SC225 — кнопка открытия и подсказка мастерской
 
 SC225 DONE; /root; CP `.local/checks/sc225/CP-SC225.md`; SC224 DONE. Активная сценовая кнопка «Открыть» вместо постоянного пояснения. Клик показывает временную подсказку о первой неделе тем же механизмом, что предупреждение начала дня. Разблокировка остаётся сюжетной; существующие пользовательские изменения сохранены.

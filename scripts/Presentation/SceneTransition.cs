@@ -39,7 +39,7 @@ public partial class SceneTransition : CanvasLayer
         return _fade.Task;
     }
 
-    public static async Task<bool> Run(Node owner, Func<Task<bool>> change)
+    public static async Task<bool> Run(Node owner, Func<Task<bool>> change, bool keepChangedPause = false)
     {
         var tree = owner.GetTree();
         if (tree == null || owner.IsQueuedForDeletion() || IsActive(tree)) return false;
@@ -55,7 +55,8 @@ public partial class SceneTransition : CanvasLayer
             bool changed = await change();
             // Initialize the destination with its normal pause state, so a restored
             // crafting/card modal can take ownership of its own pause.
-            tree.Paused = paused;
+            // In-place story modals instead explicitly set their destination pause.
+            if (!keepChangedPause) tree.Paused = paused;
             pauseReleased = true;
             // ChangeSceneToNode installs the new scene at the end of the frame.
             // Let deferred initialization and layout settle behind the opaque cover.
