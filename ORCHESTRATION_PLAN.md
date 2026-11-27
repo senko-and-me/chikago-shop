@@ -9,6 +9,40 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### M232 — debug/gameplay в main с релизом v1.4.4
+
+M232 IN_PROGRESS; /root; CP `.local/checks/m232/CP-M232.md`. Пользователь разрешил merge/push. origin/main3be4aae содержит новый релиз поверх cec04d6; debug/gameplay0f72793 и локальные SC230/231 сохраняются. Сначала commit проверенных исправлений, затем merge с сохранением релизных изменений и удалением покупательницы; повторная проверка итогового дерева. Несвязанные локальные изменения сцены сохранить отдельно, source/ не читать.
+
+### SC231 — пролог без покупательницы
+
+SC231 DONE; /root; CP `.local/checks/sc231/CP-SC231.md`; SC230 DONE. Покупательница удалена из сценового состава, реплики и анимации; Кастелло сразу обращается к Френки. RU/EN и проверки движения/портретов/старта входят в scope. Остальной сюжет, музыка и исправление новой игры сохранены.
+
+```text
+Task: SC231
+Recommended status: REVIEW -> accepted DONE; gate PASSED 27.11.2026
+Changed: intro.ru removes customer line and rewrites Castello greeting; English updated. DialoguePlayer.tscn removes customer portrait/material/reference; runtime focus/tone and PrologueCharacterMotion keep only two characters and Castello arrival. Tests updated for25lines, shifted expression indices, two-person composition and current training-first startup.
+Checks: solution build PASS0warnings/errors; rendered prologue-motion, intro-transition and dialogue-portraits PASS exit0/stderr empty (.local/checks/sc231/). Motion check visits all25speeches through actual Advance, no customer node/speaker; arrival once at960/1280, resize/localization and stop pass. Portrait suite covers expressions, RU/EN focus/tones,720p/1080p, son/quota screens. Two-character screenshot reviewed. Scoped diffcheck PASS; runtime prologue has no customer/departure references.
+Acceptance: prologue starts with Castello greeting Frankie, no buyer or offer to pay her dress; wager/rest of scene preserved; fresh startup still works. Buyer artwork remains on disk as unrelated asset.
+Read-set exception: bounded dialogue test references identified hardcoded count/index/composition; included in CP. Legacy layout test now waits through training before checking prologue and expects completed speech to release focus. Full separate localization runner not claimed; its changed opening/count assertions follow new content.
+Risks/blocker: none scoped; SC230 scene repair remains in working tree. No commit/push requested.
+Next: user preview two-character prologue.
+```
+
+### SC230 — исправление новой игры
+
+SC230 DONE; /root; CP `.local/checks/sc230/CP-SC230.md`; SC229 DONE. На реальной локальной сцене воспроизведён timeout входа в обучение и ошибки пустого ресурса. Удалены35повреждённых null-переопределений C# экспортов, восстановлены значения по умолчанию без смены сценария/баланса. Остальные локальные правки и исправления SC227–229 сохранены.
+
+```text
+Task: SC230
+Recommended status: REVIEW -> accepted DONE; gate PASSED 27.11.2026
+Changed: trade_scene removes35null scalar/path exports; no transforms, non-null overrides or gameplay logic changed. Menu startup regression checks packed SavePath/money/quotas and tutorial/notebook/poster defaults before Ready.
+Checks: before actual local scene intro-latency FAIL timed out reaching active training with empty poster resource errors. After solution build PASS0warnings/errors. Actual repaired scene, without test-only sanitization: intro-transition, intro-latency, tutorial, notebook-hover, poster-navigation, room-frame PASS exit0/stderr empty (.local/checks/sc230/). Exact byte comparison against backup after removing null lines PASS; all other local edits preserved. Scoped diffcheck PASS.
+Acceptance: New Game ignores earlier completed tutorial, starts fresh camera practice; training finish/skip leads to prologue; prologue finish/skip leads to clean day1/money/stock, including empty GameScene fallback and Continue. Save path/UI defaults valid; notebook/poster repaired as affected consumers. Real player saves untouched; isolated userdata only.
+Read-set exception: none beyond CP diagnostics; no source/.
+Risks/blocker: no scoped blocker; editor origin of null serialization not proven, so no editor-version claim. No commit/push requested.
+Next: restart running game and verify New Game in debug/gameplay.
+```
+
 ### SC229 — витрины при выборе улучшений
 
 SC229 DONE; /root; CP `.local/checks/sc229/CP-SC229.md`; SC228 DONE. Общая анимация карточек скрывала ShowcaseSlot вместе с интерфейсом. Группы витрин, предметов и подписей сохраняются видимыми, закрытая музыкальная комната не открывается. Пользователь разрешил push текущей debug/gameplay после проверки.

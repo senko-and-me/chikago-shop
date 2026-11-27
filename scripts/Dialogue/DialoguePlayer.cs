@@ -58,8 +58,7 @@ public partial class DialoguePlayer : Control
 			StoryDialogueLayout.FrameShowroom(background);
 			_portraits = new StoryPortraitController(left, StoryPortraitController.Castello,
 				right, StoryPortraitController.Frankie);
-			_speakerFocus = new StorySpeakerFocus(this, ("Кастелло", left), ("Френки", right),
-				("Покупательница", GetNode<Control>("Characters/Customer")));
+			_speakerFocus = new StorySpeakerFocus(this, ("Кастелло", left), ("Френки", right));
 		}
 		else
 		{
@@ -115,7 +114,7 @@ public partial class DialoguePlayer : Control
 		if (IsPrologue)
 		{
 			UpdatePortraits();
-			GetNode<PrologueCharacterMotion>("Characters").SyncLine(Session.Index, Session.Current.Speaker);
+			GetNode<PrologueCharacterMotion>("Characters").SyncLine();
 		}
 		_portraits?.SetLine(Session.Current);
 		_localizedText = StoryDialogueLayout.LineText(Session.Current.Text);
@@ -127,7 +126,7 @@ public partial class DialoguePlayer : Control
 	{
 		if (_portraitTransition?.IsValid() == true) _portraitTransition.Kill();
 		_portraitTransition = CreateTween().SetParallel();
-		foreach (var entry in new[] { ("Frankie", "Френки"), ("Castello", "Кастелло"), ("Customer", "Покупательница") })
+		foreach (var entry in new[] { ("Frankie", "Френки"), ("Castello", "Кастелло") })
 		{
 			var portrait = GetNode<TextureRect>("Characters/" + entry.Item1);
 			float tone = Session.Current.Speaker == entry.Item2 ? 0 : StoryDialogueLayout.InactivePortraitTone;

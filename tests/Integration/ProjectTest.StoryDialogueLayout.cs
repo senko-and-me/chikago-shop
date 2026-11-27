@@ -30,19 +30,19 @@ public partial class ProjectTest
                 Root.AddChild(menu);
                 menu.OnPlayPressed();
                 menu.GetNode<TextureButton>("MainMenuContainer/Menu/NewGameButton").EmitSignal(BaseButton.SignalName.Pressed);
+                await SkipStartupTraining(menu);
                 TranslationServer.SetLocale("ru");
                 var prologue = menu.ActiveDialogue;
-                var customer = prologue.GetNode<TextureRect>("Characters/Customer");
-                await CheckSpeaking(customer, prologue.GetNode<TextureRect>("Characters/Frankie"));
+                var castello = prologue.GetNode<TextureRect>("Characters/Castello");
+                Check(!prologue.HasNode("Characters/Customer"), "The prologue must contain only Castello and Frankie");
+                await CheckSpeaking(castello, prologue.GetNode<TextureRect>("Characters/Frankie"));
                 await ToSignal(CreateTimer(0.57), SceneTreeTimer.SignalName.Timeout);
                 prologue.RestorePage(0, true);
                 await ToSignal(CreateTimer(0.46), SceneTreeTimer.SignalName.Timeout);
-                Check(customer.Scale.IsEqualApprox(Vector2.One * 1.06f), "The speaker stays in focus until the handoff");
-                prologue.Advance();
-                await CheckSpeaking(prologue.GetNode<TextureRect>("Characters/Castello"), customer);
+                Check(castello.Scale.IsEqualApprox(Vector2.One), "Revealing the complete line must release the speaking focus");
                 using (var frame = await CapturePresentation($"story-prologue-{size.X}"))
                     Check(frame.GetSize() == size, $"Expected a native {size} screenshot, got {frame.GetSize()}");
-                CheckStoryComposition(prologue, "Panel", "Castello", "Customer", "Frankie");
+                CheckStoryComposition(prologue, "Panel", "Castello", "Frankie");
                 prologue.StopInteraction();
                 menu.QueueFree();
                 await ToSignal(this, SignalName.ProcessFrame);
