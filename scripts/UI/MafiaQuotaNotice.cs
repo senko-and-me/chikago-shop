@@ -165,7 +165,7 @@ public partial class MafiaQuotaNotice : CanvasLayer
         return button;
     }
 
-    public async void OpenWithTransition(int paidQuota, int remaining, bool succeeded, bool final)
+    public async void OpenWithTransition(int paidQuota, int remaining, bool succeeded, bool final, bool firstQuotaFailure = false)
     {
         if (IsOpen || _transitioning || SceneTransition.IsActive(GetTree())) return;
         _transitioning = true;
@@ -180,7 +180,7 @@ public partial class MafiaQuotaNotice : CanvasLayer
                     GetTree().Paused = pausedBefore;
                     return Task.FromResult(false);
                 }
-                Open(paidQuota, remaining, succeeded, final);
+                Open(paidQuota, remaining, succeeded, final, firstQuotaFailure);
                 _ownsPause = !pausedBefore;
                 return Task.FromResult(true);
             }, keepChangedPause: true);
@@ -188,7 +188,7 @@ public partial class MafiaQuotaNotice : CanvasLayer
         finally { _transitioning = false; }
     }
 
-    public void Open(int paidQuota, int remaining, bool succeeded, bool final)
+    public void Open(int paidQuota, int remaining, bool succeeded, bool final, bool firstQuotaFailure = false)
     {
         if (IsOpen) return;
         bool english = GameLocalization.Language == "en";
@@ -198,7 +198,7 @@ public partial class MafiaQuotaNotice : CanvasLayer
             ? final ? (english ? "VICTORY" : "ПОБЕДА")
                 : (english ? "WEEK TWO" : "НЕДЕЛЯ ВТОРАЯ")
             : (english ? "DEFEAT" : "ПОРАЖЕНИЕ");
-        string notice = !succeeded ? "defeat" : final ? "victory" : "firstQuota";
+        string notice = !succeeded ? firstQuotaFailure ? "first_quota_defeat" : "defeat" : final ? "victory" : "firstQuota";
         _conversation = DialogueSession.FromJson(FileAccess.GetFileAsString(
             $"res://dialogue/{(notice == "firstQuota" ? "first_quota" : notice)}.ru.json"));
         DialogueLine line = _conversation.Current;

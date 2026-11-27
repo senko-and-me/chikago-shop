@@ -51,10 +51,10 @@ public partial class ProjectTest
                 var notice = new MafiaQuotaNotice();
                 fixture = notice;
                 Root.AddChild(notice);
-                foreach (var ending in new[] { ("mafia", true, false), ("victory", true, true), ("defeat", false, false) })
+                foreach (var ending in new[] { ("mafia", true, false), ("victory", true, true), ("defeat", false, false), ("first_quota_defeat", false, false) })
                 {
                     TranslationServer.SetLocale(ending.Item3 ? "en" : "ru");
-                    notice.Open(750, 3500, ending.Item2, ending.Item3);
+                    notice.Open(750, 3500, ending.Item2, ending.Item3, firstQuotaFailure: ending.Item1 == "first_quota_defeat");
                     if (ending.Item1 != "mafia")
                     {
                         Check(!notice.GetNode<Control>("StoryRoot/Speech/Content/Actions/Restart").Visible,
@@ -87,7 +87,7 @@ public partial class ProjectTest
                     if (ending.Item1 != "mafia")
                     {
                         var session = ChikagoShop.Domain.Dialogue.DialogueSession.FromJson(FileAccess.GetFileAsString(
-                            ending.Item1 == "victory" ? "res://dialogue/victory.ru.json" : "res://dialogue/defeat.ru.json"));
+                            $"res://dialogue/{ending.Item1}.ru.json"));
                         int[] seen = new int[session.Count];
                         for (int input = 0; input < 200 && !notice.StoryFinished; input++)
                         {
@@ -101,7 +101,7 @@ public partial class ProjectTest
                             "Both endings must reach their result actions without closing or unpausing the scene");
                         for (int i = 1; i < seen.Length; i++) Check(seen[i] > 0, "No ending bubble may be lost");
                         notice.Close();
-                        notice.Open(750, 3500, ending.Item2, ending.Item3);
+                        notice.Open(750, 3500, ending.Item2, ending.Item3, firstQuotaFailure: ending.Item1 == "first_quota_defeat");
                         notice.GetNode<TextureButton>("StoryRoot/SkipDialogue").EmitSignal(BaseButton.SignalName.Pressed);
                         Check(notice.StoryFinished && notice.IsOpen && Paused,
                             "Skipping an ending must reveal only its result actions and keep gameplay paused");

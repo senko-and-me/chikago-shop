@@ -9,6 +9,21 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### SC241 — поражение на первой квоте
+
+SC241 DONE; /root; CP `.local/checks/sc241/CP-SC241.md`; SC240 DONE. Отдельный пользовательский диалог нехватки денег первой недели подключён, с затемнением и отдельным «Последние слова?». Позднее поражение сохранено.
+
+```text
+Task: SC241
+Recommended status: REVIEW -> accepted DONE; gate PASSED 28.11.2026
+Changed: dialogue/first_quota_defeat.ru.json (8 short proofread bubbles), English translations; DayCycleController passes explicit first-quota-failure flag; MafiaQuotaNotice selects new script only for this outcome. QuotaVisit verifies real first-week failure path, greeting/final words/no son/no checkpoint. StoryDialogueLayout covers full play and skip of all three endings at720p/1080p.
+Checks: build PASS zero warnings/errors; JSON8 bubbles <=120 characters and English coverage PASS; quota-visit and dialogue-portraits rendered suites PASS exit0/stderr empty (.local/checks/sc241/); diffcheck PASS.
+Acceptance: first-week failure uses new story after fade, Последние слова separate, long threat split, result actions remain Restart/MainMenu. Later defeat unchanged; son/workshop not triggered by failure. Punctuation and typography corrected, narrative preserved.
+Read-set exception: none. Underlying balance/schema and unrelated user scene edits preserved; no source/ reads.
+Risks/blocker: stage directions textual, no new art/animation.
+Next: user review; no push requested.
+```
+
 ### SC240 — убрать кнопку контрольной точки
 
 SC240 DONE; /root; CP `.local/checks/sc240/CP-SC240.md`; SC239 DONE. Кнопка «С чекпоинта» и её UI callback/subscription удалены; после поражения остаются «Начать заново» и «Главное меню».

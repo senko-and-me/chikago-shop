@@ -349,6 +349,22 @@ public partial class ProjectTest
             game._Process(0);
             Check(game.Failed && !game.QuotaVisitPending && !game.GetNode<TextureButton>(visitorPath).Visible && game.Score == 0,
                 "Failure to pay must not show the visitor or grant a gift");
+            await WaitForQuotaFade();
+            var firstFailure = game.GetNode<MafiaQuotaNotice>("MafiaQuotaNotice");
+            Check(firstFailure.IsOpen && Paused && firstFailure.ConversationIndex == 0,
+                "Failure of the first quota must open a separate paused conversation under the fade");
+            firstFailure._Process(5);
+            firstFailure._Input(new InputEventKey { Pressed = true, Keycode = Key.Space });
+            Check(firstFailure.GetNode<Label>("StoryRoot/Speech/Content/Message").Text.StartsWith(
+                GameLocalization.Language == "en" ? "Good to see you" : "Рад тебя видеть"),
+                "First-quota failure must use the new greeting rather than the final-quota defeat script");
+            for (int input = 0; input < 100 && !firstFailure.StoryFinished; input++)
+                firstFailure._Input(new InputEventKey { Pressed = true, Keycode = Key.Space });
+            Check(firstFailure.StoryFinished && game.Failed && !game.QuotaVisitPending &&
+                firstFailure.GetNode<Label>("StoryRoot/Speech/Content/Message").Text.Contains(
+                    GameLocalization.Language == "en" ? "this house" : "жизнь этого дома") &&
+                !firstFailure.HasNode("StoryRoot/Speech/Content/Actions/Checkpoint"),
+                "First-quota defeat must reach its final words and result actions without opening the family conversation");
         }
         finally
         {
