@@ -9,6 +9,51 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### SC238 — финальные диалоги и редактура сценария
+
+SC238 DONE; /root; CP `.local/checks/sc238/CP-SC238.md`; SC237 DONE. Победа/поражение реализованы, действия результата появляются после диалога; текущие и предыдущие пользовательские сценарии вычитаны, большие реплики разделены на облачка. Возможные пожары/газета вне scope.
+
+```text
+Task: SC238
+Recommended status: REVIEW -> accepted DONE; gate PASSED 28.11.2026
+Changed: new victory.ru.json (18 bubbles) and defeat.ru.json (15); proofread and split intro (24), first_quota (14) and quota_visitor (23), English keys refreshed. MafiaQuotaNotice runs full terminal sessions under fade; result actions hidden until conversation completes/skips, checkpoints available only on defeat, pause retained. Old one-line notice dictionary no longer used. PrologueMotion, StoryPortraitExpressions, StoryDialogueLayout and QuotaVisit tests updated for edited scripts.
+Checks: build PASS zero warnings/errors; all five JSON files parse, each bubble <=120 characters (actual max114), English key coverage PASS. Rendered dialogue-portraits, quota-visit, prologue-motion and intro-transition suites PASS, exit0/stderr empty (.local/checks/sc238/). Diffcheck PASS. Ending screenshots reviewed at1280/1920.
+Acceptance: both supplied endings playable fully and skippable to their own result actions; natural input visits every ending bubble. Prior story chaining, separate skips, family reload/completion, camera/HUD restoration and startup finish/skip/Continue retained. Corrected закадычный/инструменты/сдастся/садится, за полночь/что ж/месье, ё, spacing, punctuation, numerical notation and grammar throughout active supplied scripts. Narrative outcomes preserved.
+Read-set exception: none. No source/ reads, no new art, unrelated editor scene changes preserved. Speculative fire/newspaper additions excluded as described to user. No economy/save-schema changes.
+Risks/blocker: stage directions remain textual; no new animations or portraits for bodyguards. Prior narrative amounts still differ from gameplay balance.
+Next: user review; no push requested.
+```
+
+### SC237 — сценарий второй недели
+
+SC237 DONE; /root; CP `.local/checks/sc237/CP-SC237.md`; SC236 DONE. После первой квоты полный разговор Френки/Кастелло, затем Билл. Плавные переходы, независимый пропуск, текущая композиция семейного разговора и баланс сохранены. Суммы60000/500 в сценарии не меняют экономику.
+
+```text
+Task: SC237
+Recommended status: REVIEW -> accepted DONE; gate PASSED 28.11.2026
+Changed: dialogue/first_quota.ru.json (11 bubbles), quota_visitor.ru.json (15 family turns); English text and Bill name; MafiaQuotaNotice now runs DialogueSession with page/reveal/advance and independent full-conversation Skip, heading WEEK TWO. QuotaVisit and StoryDialogueLayout tests updated. Existing uncommitted new prologue retained.
+Checks: build PASS zero warnings/errors; exact story speaker/order/text and translation coverage PASS; rendered quota-visit and dialogue-portraits PASS exit0, stderr empty (.local/checks/sc237/); scoped diffcheck PASS.
+Acceptance: both supplied conversations follow first quota, natural input visits every quota turn before son, separate skips and fades retained, Bill speaker/localization, family natural completion and save reload verified; camera framing, overview/HUD restoration and zero-cash workshop permission unchanged. Stage directions remain text, lengthy turns paginate. Family scene remains in actual trading room per prior explicit user direction; no new background art introduced.
+Read-set exception: none beyond recorded CP. No source/ reads; unrelated local trade_scene changes preserved.
+Risks/blocker: narrative $60000/$500 differ from current economy, which was intentionally not changed by this dialogue-content task. No money is granted from dialogue alone.
+Next: user review; no push requested.
+```
+
+### SC236 — новый текст пролога
+
+SC236 DONE; /root; CP `.local/checks/sc236/CP-SC236.md`; SC235 DONE. Новый пользовательский текст:23 облачка в указанном порядке, начало с Френки, без прежних добавочных реплик. Английские тексты и проверки начала сцены обновлены, музыкальные переходы сохранены.
+
+```text
+Task: SC236
+Recommended status: REVIEW -> accepted DONE; gate PASSED 28.11.2026
+Changed: dialogue/intro.ru.json replaced with user's 23 bubbles; English translations added. PrologueMotion, StoryPortraitExpressions and StoryDialogueLayout tests reflect Frankie opening, separate laughter, new indices, expressions and continued speaking focus (6% mouth/cloud overlap allowance covers existing 1.06 speaking scale). No runtime/layout change.
+Checks: exact speaker/text/order comparison against supplied lines and English key coverage PASS; build PASS zero warnings/errors; prologue-motion, dialogue-portraits and intro-transition rendered suites PASS, stderr empty (.local/checks/sc236/). Diffcheck PASS.
+Acceptance: every dash separate bubble, no previous extra lines/narration, proposal/threat retain thoughtful/sinister music; startup finish/skip/Continue and portrait speech tested.
+Read-set exception: StoryPortraitExpressions added to exact write-set after old hardcoded indices failed; IntroMusic read for shared AdvanceMusicLine helper. No source/ reads. Unrelated trade_scene changes preserved.
+Risks/blocker: none.
+Next: user review; no push requested.
+```
+
 ### SC235 — смещение камеры семейного разговора
 
 SC235 DONE; /root; CP `.local/checks/sc235/CP-SC235.md`; SC234 DONE. Центр камеры смещён вправо на8% ширины комнаты и вниз на4% высоты, приближение сохранено. Ожидания координат в quota-visit обновлены, включая resize. По прямому указанию пользователя debug и тесты не запускались; статическая проверка diff PASS. Несвязанные изменения сохранены. Next: визуальная оценка пользователем.

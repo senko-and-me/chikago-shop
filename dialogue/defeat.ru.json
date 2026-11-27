@@ -1,0 +1,92 @@
+[
+  {
+    "speaker": "",
+    "text": "*Звонок в дверь.*",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "Френки! Мой ненаглядный, закадычный! Выглядишь убитым.",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "Судя по тому, что ты теперь и инструменты стругаешь, я славно заставил тебя помучиться.",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "*Смешок.* Ну так… как твоё «ничего»?",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Френки",
+    "text": "…",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "Неужто и язык свой продал?",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Френки",
+    "text": "Пришёл глумиться?",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "Нет, проследить, чтобы ты ничего здесь не забыл.",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "Почему твоя семья не стоит здесь в полном составе? Ведь вы уже готовы уехать, не так ли?",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Френки",
+    "text": "Их здесь давно нет. И ты их больше не увидишь, Марко.",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Френки",
+    "text": "*Стоит лицом к лицу с Кастелло. Хватает сумку с вещами.*",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Френки",
+    "text": "Я рад лишь одному: мне не придётся всю жизнь чувствовать себя в долгу перед таким, как ты.",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "Мы поняли друг друга, Френк. Addio, amico!",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "",
+    "text": "*Френки уходит. Дверь закрывается. Кастелло садится на подлокотник диванчика.*",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "До последнего не верил, что он так быстро сдастся. Может, оно и к лучшему…",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  }
+]

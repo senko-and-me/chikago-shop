@@ -1,0 +1,86 @@
+[
+  {
+    "speaker": "Френки",
+    "text": "Неужели всё закончилось? Это была самая бурная неделя в моей жизни.",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Френки",
+    "text": "Этих денег бы спокойно хватило, чтобы открыть такой же магазин.",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "",
+    "text": "*Дверь открывается. В дом заходят трое: стильно одетый мужчина и двое амбалов.*",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "Рад тебя видеть, приятель. Как твои паучьи дела?",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Френки",
+    "text": "Нам больше не о чем болтать. Если ты пришёл за деньгами, забирай их и уходи.",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "За неделю собрать 60 000 долларов? Неужели продал душу дьяволу?",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Френки",
+    "text": "Почему тебя это вол… Постой, 60 000 долларов? Разве таков был наш уговор?",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "Я что-то путаю? *Оглядывается на мужчин сзади. Те отрицательно мотают головой.* Кажется, нет.",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "Неужели ты совсем забыл правила сделки, mio amico? 60 000 долларов — вот наш уговор.",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "*Открывает кассу.* У-у-у-у, этого не хватит моей семье, чтобы и полгода прожить как следует.",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "*Закрывает кассу.* Что ж, ты ведь помнишь о своей участи?",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Френки",
+    "text": "Но это нечестно… Кастелло, дай мне ещё неделю. Я прошу тебя.",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "*Молчит.* Неделя, Френки. И только потому, что мне жаль твоих детей.",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "",
+    "text": "*Дверь захлопывается.*",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  }
+]

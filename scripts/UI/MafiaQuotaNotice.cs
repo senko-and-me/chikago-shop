@@ -1,11 +1,9 @@
 using System;
-using System.Collections.Generic;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Godot;
 using ChikagoShop.Domain.Dialogue;
 
-// One-line story placeholders for the first quota and both possible endings.
+// First-quota conversation and both possible endings.
 // Uses the same backdrop, portraits and speech bubble as the opening cutscene.
 public partial class MafiaQuotaNotice : CanvasLayer
 {
@@ -23,15 +21,23 @@ public partial class MafiaQuotaNotice : CanvasLayer
     private Button _restart = null!;
     private Button _checkpoint = null!;
     private Button _mainMenu = null!;
-    private Dictionary<string, DialogueLine> _noticeLines = null!;
     private StoryPortraitController _portraits = null!;
     private StorySpeakerFocus _speakerFocus = null!;
     private double _speechTime;
     private Tween _fade = null!;
     private bool _ownsPause;
     private bool _terminal;
+    private bool _storyFinished;
+    private bool _canCheckpoint;
     private bool _transitioning;
     private int _transitionRevision;
+    private DialogueSession _conversation;
+    private string _pageText = "";
+    private int _pageStart;
+    private int _pageEnd;
+    private string _currentSpeaker = "";
+    public int ConversationIndex => _conversation?.Index ?? 0;
+    public bool StoryFinished => _storyFinished;
 
     public bool IsOpen => _root != null && _root.Visible;
 
@@ -40,10 +46,6 @@ public partial class MafiaQuotaNotice : CanvasLayer
         Name = "MafiaQuotaNotice";
         Layer = 150;
         ProcessMode = ProcessModeEnum.Always;
-        _noticeLines = JsonSerializer.Deserialize<Dictionary<string, DialogueLine>>(
-            FileAccess.GetFileAsString("res://dialogue/quota_notices.ru.json"),
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
-
         Theme theme = GD.Load<Theme>("res://themes/game_theme.tres");
         _root = new Control
         {
@@ -173,7 +175,6 @@ public partial class MafiaQuotaNotice : CanvasLayer
 
     public async void OpenWithTransition(int paidQuota, int remaining, bool succeeded, bool final)
     {
-        if (!succeeded || final) { Open(paidQuota, remaining, succeeded, final); return; }
         if (IsOpen || _transitioning || SceneTransition.IsActive(GetTree())) return;
         _transitioning = true;
         int revision = ++_transitionRevision;
@@ -200,28 +201,25 @@ public partial class MafiaQuotaNotice : CanvasLayer
         if (IsOpen) return;
         bool english = GameLocalization.Language == "en";
         _terminal = !succeeded || final;
+        _storyFinished = false;
+        _canCheckpoint = !succeeded;
         _heading.Text = succeeded
             ? final ? (english ? "VICTORY" : "ПОБЕДА")
-                : (english ? "FIRST QUOTA PAID" : "ПЕРВАЯ КВОТА ВЫПЛАЧЕНА")
+                : (english ? "WEEK TWO" : "НЕДЕЛЯ ВТОРАЯ")
             : (english ? "DEFEAT" : "ПОРАЖЕНИЕ");
         string notice = !succeeded ? "defeat" : final ? "victory" : "firstQuota";
-        DialogueLine line = _noticeLines[notice];
-        _speaker.Text = GameLocalization.Text(line.Speaker);
-        _message.Text = StoryDialogueLayout.LineText(line.Text);
-        _portraits.SetLine(line);
-        _speechTime = 0;
-        _message.VisibleCharacters = 0;
-        _portraits.ShowSpeech(0);
-        _speakerFocus.SetSpeaker(line.Speaker);
-        SetProcess(true);
+        _conversation = DialogueSession.FromJson(FileAccess.GetFileAsString(
+            $"res://dialogue/{(notice == "firstQuota" ? "first_quota" : notice)}.ru.json"));
+        DialogueLine line = _conversation.Current;
+        ShowLine(line);
         StoryDialogueLayout.StyleSkipButton(_skipDialogue);
         _checkpoint.Text = english ? "From checkpoint" : "С чекпоинта";
         _restart.Text = english ? "New game" : "Начать заново";
         _mainMenu.Text = english ? "Main menu" : "Главное меню";
-        _skipDialogue.Visible = !_terminal;
-        _checkpoint.Visible = !succeeded;
-        _restart.Visible = _terminal;
-        _mainMenu.Visible = _terminal;
+        _skipDialogue.Show();
+        _checkpoint.Hide();
+        _restart.Hide();
+        _mainMenu.Hide();
         _ownsPause = !GetTree().Paused;
         GetTree().Paused = true;
         _root.Show();
@@ -229,8 +227,42 @@ public partial class MafiaQuotaNotice : CanvasLayer
         if (_fade?.IsValid() == true) _fade.Kill();
         _fade = CreateTween().SetPauseMode(Tween.TweenPauseMode.Process);
         _fade.TweenProperty(_shade, "color:a", StoryDialogueLayout.Shade.A, 0.28f);
-        if (_terminal) _restart.GrabFocus();
-        else GetViewport().GuiReleaseFocus();
+        GetViewport().GuiReleaseFocus();
+    }
+
+    private void ShowLine(DialogueLine line)
+    {
+        _currentSpeaker = line.Speaker;
+        _speaker.Text = GameLocalization.Text(line.Speaker);
+        _speaker.Visible = !string.IsNullOrWhiteSpace(line.Speaker);
+        _pageText = StoryDialogueLayout.LineText(line.Text);
+        _pageStart = 0;
+        _portraits.SetLine(line);
+        ShowPage();
+    }
+
+    private void ShowPage()
+    {
+        // Bound each page to three rows at the current width, including narrow windows.
+        float width = Mathf.Max(160, _message.Size.X > 1 ? _message.Size.X
+            : GetViewport().GetVisibleRect().Size.X * 0.78f - 200);
+        var font = _message.GetThemeFont("font");
+        int lastSpace = -1, rowStart = _pageStart, rows = 1;
+        _pageEnd = _pageText.Length;
+        for (int i = _pageStart; i < _pageText.Length; i++)
+        {
+            if (char.IsWhiteSpace(_pageText[i])) lastSpace = i;
+            if (font.GetStringSize(_pageText[rowStart..(i + 1)], fontSize: StoryDialogueLayout.BodySize).X <= width) continue;
+            int wrap = lastSpace >= rowStart ? lastSpace + 1 : i;
+            if (++rows > 3) { _pageEnd = Mathf.Max(_pageStart + 1, wrap); break; }
+            rowStart = wrap;
+        }
+        _message.Text = _pageText[_pageStart.._pageEnd].Trim();
+        _speechTime = 0;
+        _message.VisibleCharacters = 0;
+        _portraits.ShowSpeech(0);
+        _speakerFocus.SetSpeaker(_currentSpeaker);
+        SetProcess(true);
     }
 
     public override void _Process(double delta)
@@ -254,7 +286,7 @@ public partial class MafiaQuotaNotice : CanvasLayer
     private async void CloseWithTransition()
     {
         if (!IsOpen || _transitioning || SceneTransition.IsActive(GetTree())) return;
-        if (_terminal) { CloseCore(true); return; }
+        if (_terminal) { FinishStory(); return; }
         _transitioning = true;
         try
         {
@@ -281,6 +313,21 @@ public partial class MafiaQuotaNotice : CanvasLayer
         if (notify) Dismissed?.Invoke();
     }
 
+    private void FinishStory()
+    {
+        if (_storyFinished) return;
+        _storyFinished = true;
+        SetProcess(false);
+        _message.VisibleCharacters = -1;
+        _portraits.ShowSpeech(null, lineComplete: true);
+        _speakerFocus.SetSpeaker(null);
+        _skipDialogue.Hide();
+        _checkpoint.Visible = _canCheckpoint;
+        _restart.Show();
+        _mainMenu.Show();
+        _restart.GrabFocus();
+    }
+
     public override void _ExitTree()
     {
         if (_fade?.IsValid() == true) _fade.Kill();
@@ -291,7 +338,7 @@ public partial class MafiaQuotaNotice : CanvasLayer
     public override void _Input(InputEvent input)
     {
         if (!IsOpen || _transitioning || SceneTransition.IsActive(GetTree())) return;
-        if (!_terminal && (input is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } ||
+        if (!_storyFinished && (input is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } ||
             input is InputEventKey { Pressed: true, Echo: false, Keycode: Key.Space }))
         {
             if (input is InputEventMouseButton && GetViewport().GuiGetHoveredControl() is BaseButton) return;
@@ -301,13 +348,19 @@ public partial class MafiaQuotaNotice : CanvasLayer
                 _speechTime = _message.Text.Length / 48.0 + 1;
                 _Process(0);
             }
+            else if (_pageEnd < _pageText.Length)
+            {
+                _pageStart = _pageEnd;
+                ShowPage();
+            }
+            else if (_conversation != null && !_conversation.Advance()) ShowLine(_conversation.Current);
             else CloseWithTransition();
             return;
         }
         if (!IsOpen || input is not InputEventKey { Pressed: true, Echo: false } key) return;
         if (key.Keycode != Key.Escape) return;
         GetViewport().SetInputAsHandled();
-        if (!_terminal) CloseWithTransition();
+        if (!_storyFinished) CloseWithTransition();
         else _mainMenu.GrabFocus();
     }
 }

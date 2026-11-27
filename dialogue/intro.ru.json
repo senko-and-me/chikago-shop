@@ -1,155 +1,148 @@
 [
-    {
-        "speaker": "Кастелло",
-        "leftPortrait": "smile",
-        "rightPortrait": "smile",
-        "text": "— Френки! Всё прячешься за прилавком? Старого друга не узнаёшь?"
-    },
-    {
-        "speaker": "",
-        "leftPortrait": "smile",
-        "rightPortrait": "smile",
-        "text": "*Френки оборачивается*"
-    },
-    {
-        "speaker": "Френки",
-        "leftPortrait": "smile",
-        "rightPortrait": "smile",
-        "text": "— Святая Мария, надеюсь, мои глаза мне не врут. Несколько месяцев о тебе ничего не слышал. Даже в газетах ни слуху ни духу."
-    },
-    {
-        "speaker": "Кастелло",
-        "leftPortrait": "smile",
-        "rightPortrait": "smile",
-        "text": "— Прости, в следующий раз отправлю своих ребят на разборки с копами, чтобы ты в газетах видел моё красивое личико."
-    },
-    {
-        "speaker": "Френки",
-        "leftPortrait": "smile",
-        "rightPortrait": "smile",
-        "text": "— Ну ты уж постарайся."
-    },
-    {
-        "speaker": "Кастелло",
-        "leftPortrait": "serious",
-        "rightPortrait": "serious",
-        "text": "— Но я к тебе по делу, Френк. Последняя поставка в Великобританию прошла все проверки, и мы купаемся в золоте. Я хочу, чтобы мои дети могли честно держать бизнес, а не жить как их папочка.",
-        "musicCue": "thoughtful"
-    },
-    {
-        "speaker": "Френки",
-        "leftPortrait": "serious",
-        "rightPortrait": "serious",
-        "text": "— Ты хочешь, чтобы я учил их вести бизнес?"
-    },
-    {
-        "speaker": "Кастелло",
-        "leftPortrait": "smile",
-        "rightPortrait": "serious",
-        "text": "— Не смеши мою покойную Нонну. Даже она знала, как втюхать кокс лучше, чем ты. Я здесь за тем, чтобы выкупить весь твой магазин. Если хочешь, оставайся здесь как главный дизайнер.",
-        "leftPortraitAfter": "serious"
-    },
-    {
-        "speaker": "Френки",
-        "leftPortrait": "serious",
-        "rightPortrait": "confused",
-        "text": "— …Прости, что?"
-    },
-    {
-        "speaker": "Кастелло",
-        "leftPortrait": "serious",
-        "rightPortrait": "confused",
-        "text": "— Френки, амбалы уже принесли мешок зелени. Тебе осталось только подписать пару бумаг."
-    },
-    {
-        "speaker": "Френки",
-        "leftPortrait": "serious",
-        "rightPortrait": "angry",
-        "text": "— С чего ты взял, что я позволю тебе владеть бизнесом всей моей семьи? Здесь уже 150 лет шьют одежду."
-    },
-    {
-        "speaker": "Френки",
-        "leftPortrait": "serious",
-        "rightPortrait": "angry",
-        "text": "— Здесь умерла моя бабушка из-за нечеловеческих переработок. При всем моем уважении, Кастелло, но этому не бывать."
-    },
-    {
-        "speaker": "Кастелло",
-        "leftPortrait": "serious",
-        "rightPortrait": "angry",
-        "text": "— Прости, не думал тебя оскорбить, мио амико. Цена-то двойная. Сейчас мода сильно изменилась, твои творения мало кто станет покупать в век рюшек и перьев."
-    },
-    {
-        "speaker": "Френки",
-        "leftPortrait": "serious",
-        "rightPortrait": "angry",
-        "text": "— Да хоть тройная, Кастелло. Я не перепишу на тебя ни сантиметр этого здания. Мои дети продолжат бизнес, и точка."
-    },
-    {
-        "speaker": "Кастелло",
-        "leftPortrait": "serious",
-        "rightPortrait": "angry",
-        "text": "— Либо мы подписываем договор, либо мы больше не товарищи. А ты ведь знаешь, что будет, когда переходят дорогу моей семье?",
-        "musicCue": "sinister"
-    },
-    {
-        "speaker": "Френки",
-        "leftPortrait": "serious",
-        "rightPortrait": "angry",
-        "text": "— Я не предам то, что мне передали как реликвию."
-    },
-    {
-        "speaker": "Кастелло",
-        "leftPortrait": "serious",
-        "rightPortrait": "angry",
-        "text": "— Ты очень упрям. Хорошо. Тогда давай пари. Я дам тебе ровно одну неделю, чтобы заработать ту сумму, которую сегодня я предложил тебе. И ни на цент меньше."
-    },
-    {
-        "speaker": "Кастелло",
-        "leftPortrait": "serious",
-        "rightPortrait": "angry",
-        "text": "— Проиграешь — я вышибу твои мозги и выкуплю всю мастерскую по половинной стоимости рынка. А твои дети извинятся перед моей семьёй."
-    },
-    {
-        "speaker": "Френки",
-        "leftPortrait": "serious",
-        "rightPortrait": "angry",
-        "text": "— Так, и?.. А что, если выиграю я?"
-    },
-    {
-        "speaker": "Кастелло",
-        "leftPortrait": "serious",
-        "rightPortrait": "angry",
-        "text": "— Так этого не произойдёт. Но если вдруг и произойдёт, я отдам тебе половину выручки с той поставки кокаина."
-    },
-    {
-        "speaker": "Френки",
-        "leftPortrait": "serious",
-        "rightPortrait": "angry",
-        "text": "— И отстанешь от меня с этим вопросом?"
-    },
-    {
-        "speaker": "Кастелло",
-        "leftPortrait": "serious",
-        "rightPortrait": "angry",
-        "text": "— И это тоже."
-    },
-    {
-        "speaker": "Френки",
-        "leftPortrait": "serious",
-        "rightPortrait": "angry",
-        "text": "— По рукам."
-    },
-    {
-        "speaker": "Кастелло",
-        "leftPortrait": "serious",
-        "rightPortrait": "angry",
-        "text": "— Ещё увидимся. Парни, уходим. Мы ещё не прощаемся."
-    },
-    {
-        "speaker": "",
-        "leftPortrait": "serious",
-        "rightPortrait": "angry",
-        "text": "Кастелло и его люди покидают бутик. Френки остаётся в доме моды. Впереди — одна неделя."
-    }
+  {
+    "speaker": "Френки",
+    "text": "!!!",
+    "leftPortrait": "smile",
+    "rightPortrait": "smile"
+  },
+  {
+    "speaker": "Френки",
+    "text": "Святая Мария, надеюсь, мои глаза мне не врут.",
+    "leftPortrait": "smile",
+    "rightPortrait": "smile"
+  },
+  {
+    "speaker": "Френки",
+    "text": "Несколько месяцев о тебе ничего не слышал.",
+    "leftPortrait": "smile",
+    "rightPortrait": "smile"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "*Смеётся.*",
+    "leftPortrait": "smile",
+    "rightPortrait": "smile"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "Прости, в следующий раз отправлю своих ребят на разборки с копами, чтобы ты в газетах видел моё прекрасное личико.",
+    "leftPortrait": "smile",
+    "rightPortrait": "smile"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "Но я к тебе по делу: мне нужно выкупить весь твой магазин.",
+    "leftPortrait": "serious",
+    "rightPortrait": "smile",
+    "musicCue": "thoughtful"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "С недавних пор задумался о будущем моих детей. Хотелось бы им спокойной жизни.",
+    "leftPortrait": "serious",
+    "rightPortrait": "smile"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "Если есть желание, оставайся здесь как главный дизайнер.",
+    "leftPortrait": "serious",
+    "rightPortrait": "smile"
+  },
+  {
+    "speaker": "Френки",
+    "text": "…Прости, что?",
+    "leftPortrait": "serious",
+    "rightPortrait": "confused"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "Френки, амбалы уже принесли мешок зелени.",
+    "leftPortrait": "serious",
+    "rightPortrait": "confused"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "Тебе осталось только подписать пару бумаг.",
+    "leftPortrait": "serious",
+    "rightPortrait": "confused"
+  },
+  {
+    "speaker": "Френки",
+    "text": "При всём уважении, Кастелло, но этому не бывать.",
+    "leftPortrait": "serious",
+    "rightPortrait": "angry"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "Прости, не думал тебя оскорбить, мио амико. Цена-то двойная.",
+    "leftPortrait": "serious",
+    "rightPortrait": "angry"
+  },
+  {
+    "speaker": "Френки",
+    "text": "Да хоть тройная, Кастелло. Я не перепишу на тебя ни сантиметр этого здания. Бизнес продолжат мои дети, и точка.",
+    "leftPortrait": "serious",
+    "rightPortrait": "angry"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "Либо подписываем договор, либо мы больше не товарищи. Не стоит упрямиться, дружище.",
+    "leftPortrait": "serious",
+    "rightPortrait": "angry",
+    "musicCue": "sinister"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "Хотя давай пари. Я дам тебе ровно одну неделю, чтобы заработать ту сумму, которую сегодня я предложил тебе.",
+    "leftPortrait": "serious",
+    "rightPortrait": "angry"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "И ни на цент меньше.",
+    "leftPortrait": "serious",
+    "rightPortrait": "angry"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "Проиграешь — я вышибу твои мозги и выкуплю всю мастерскую за половину рыночной стоимости.",
+    "leftPortrait": "serious",
+    "rightPortrait": "angry"
+  },
+  {
+    "speaker": "Френки",
+    "text": "А что, если выиграю я?",
+    "leftPortrait": "serious",
+    "rightPortrait": "angry"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "Я отдам тебе половину выручки с последней поставки кокаина.",
+    "leftPortrait": "serious",
+    "rightPortrait": "angry"
+  },
+  {
+    "speaker": "Френки",
+    "text": "И отстанешь от меня с этим вопросом?",
+    "leftPortrait": "serious",
+    "rightPortrait": "angry"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "И это тоже.",
+    "leftPortrait": "serious",
+    "rightPortrait": "angry"
+  },
+  {
+    "speaker": "Френки",
+    "text": "По рукам.",
+    "leftPortrait": "serious",
+    "rightPortrait": "angry"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "Ещё увидимся. Парни, уходим. Мы ещё не прощаемся.",
+    "leftPortrait": "serious",
+    "rightPortrait": "angry"
+  }
 ]

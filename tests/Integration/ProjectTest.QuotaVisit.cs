@@ -60,12 +60,13 @@ public partial class ProjectTest
         {
             var familyDialogue = ChikagoShop.Domain.Dialogue.DialogueSession.FromJson(
                 FileAccess.GetFileAsString("res://dialogue/quota_visitor.ru.json"));
-            Check(familyDialogue.Count == 6, "The workshop visit must remain a short conversation");
+            Check(familyDialogue.Count == 23, "The edited workshop visit must contain 23 short bubbles");
             TranslationServer.SetLocale("en");
             while (!familyDialogue.IsComplete)
             {
                 var line = familyDialogue.Current;
-                Check(line.Speaker == (familyDialogue.Index % 2 == 0 ? "Сын" : "Френки"),
+                bool billSpeaking = new[] { 0, 1, 3, 4, 7, 8, 11, 13, 14, 16, 17, 18, 20, 22 }.Contains(familyDialogue.Index);
+                Check(line.Speaker == (billSpeaking ? "Билл" : "Френки"),
                     "Both son and father must answer each other");
                 Check(GameLocalization.Text(line.Text) != line.Text,
                     "Every revised family line must have an English translation");
@@ -176,7 +177,7 @@ public partial class ProjectTest
             game.EndDay();
             Check(!game.DayStarted, "The next day cannot start until both conversations end");
             await Reload();
-            Check(Paused && Dialogue().Session.Current.Text.Contains("Пап") && !game.MusicWorkshopUnlocked,
+            Check(Paused && Dialogue().Session.Current.Text.Contains("Отец") && !game.MusicWorkshopUnlocked,
                 "The family conversation must open in the existing dialogue UI without unlocking prematurely");
             await ToSignal(this, SignalName.ProcessFrame);
             Check(game.GetNode<TextureButton>(visitorPath).Visible && Dialogue().UseWorldScene &&
@@ -226,8 +227,8 @@ public partial class ProjectTest
                 game.Score == cashAfterQuota && !game.MusicWorkshopUnlocked,
                 $"Reload must resume the revealed dialogue without granting the gift. Paused={Paused}, pending={game.QuotaVisitPending}, saved={ProgressSaveStore.Load(save, 3).QuotaVisit}");
             TranslationServer.SetLocale("en");
-            Check(Dialogue().GetNode<Label>("Panel/Content/Speaker").Text == "Son", "The story dialogue must localize in English");
-            Check(GameLocalization.Text(Dialogue().Session.Current.Text).Contains("Dad"),
+            Check(Dialogue().GetNode<Label>("Panel/Content/Speaker").Text == "Bill", "The story dialogue must localize in English");
+            Check(GameLocalization.Text(Dialogue().Session.Current.Text).Contains("Father"),
                 "The son must address his father naturally in English too");
             var cameraAfterStory = game.GetNode<WorldCamera>("Camera2D");
             cameraAfterStory.ResetToOverview();
@@ -239,7 +240,7 @@ public partial class ProjectTest
             cameraAfterStory._Input(new InputEventMouseMotion { Relative = new Vector2(80, 40), ButtonMask = MouseButtonMask.Left });
             Check(!cameraAfterStory.IsDragging && cameraAfterStory.Position == lockedCamera,
                 "The camera must stay locked while the son is speaking");
-            for (int i = 0; i < 24 && game.QuotaVisitPending; i++) Dialogue().Advance();
+            for (int i = 0; i < 200 && game.QuotaVisitPending; i++) Dialogue().Advance();
             await WaitForQuotaFade();
             if (game.DayTransitionOpen)
             {
@@ -314,6 +315,15 @@ public partial class ProjectTest
             Check(zeroCashNotice.IsOpen && zeroCashNotice.GetNode<Label>("StoryRoot/Speech/Content/Message").VisibleCharacters == -1,
                 "The first prologue-style input must reveal Castello's line without closing it");
             zeroCashNotice._Input(new InputEventKey { Pressed = true, Keycode = Key.Space });
+            Check(zeroCashNotice.IsOpen && zeroCashNotice.ConversationIndex == 1 && !game.GetNode<TextureButton>(visitorPath).Visible,
+                "The second input must advance only one bubble and must not start the family story prematurely");
+            int[] seenTurns = new int[14];
+            for (int input = 0; input < 200 && zeroCashNotice.IsOpen && !SceneTransition.IsActive(this); input++)
+            {
+                seenTurns[zeroCashNotice.ConversationIndex]++;
+                zeroCashNotice._Input(new InputEventKey { Pressed = true, Keycode = Key.Space });
+            }
+            Check(seenTurns.Skip(1).All(count => count > 0), "Natural completion must visit every remaining quota turn");
             await WaitForQuotaFade();
             Check(!zeroCashNotice.IsOpen, "The next input must finish Castello before the automatic son dialogue");
             Check(game.Score == 0 && !game.MusicWorkshopUnlocked, "Exact quota payment must leave a pending story and zero cash");

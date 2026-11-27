@@ -1,32 +1,140 @@
 [
   {
-    "speaker": "Сын",
-    "text": "— Пап, ты опять здесь ночевал? Я стучал — ты даже не услышал.",
-    "rightPortrait": "smile"
+    "speaker": "Билл",
+    "text": "Отец, что происходит? Почему ты продаёшь свои изделия по такой дешёвке?",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Билл",
+    "text": "Ведь ты учил меня продавать реже, но лучше.",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
   },
   {
     "speaker": "Френки",
-    "text": "— Всего-то прикрыл глаза. Ты чего в такую рань?",
-    "rightPortrait": "smile"
+    "text": "*Поднимает голову.* Билл, уже давно за полночь. Почему ты ещё не спишь?",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
   },
   {
-    "speaker": "Сын",
-    "text": "— Мастерскую разобрал. Помнишь, ты всё хотел снова заняться инструментами? Вот ключ.",
-    "rightPortrait": "smile"
+    "speaker": "Билл",
+    "text": "Я слышал ваш разговор. Месье Кастелло… Вы с ним поссорились?",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Билл",
+    "text": "Ведь он обещал не требовать возврата долгов, пока ты шьёшь для него и его семьи одежду.",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
   },
   {
     "speaker": "Френки",
-    "text": "— Так вот куда делся весь хлам. Только не говори, что выбросил моё кресло.",
-    "rightPortrait": "smile"
-  },
-  {
-    "speaker": "Сын",
-    "text": "— Твоё кресло никто не тронул, пап. Всё уже готово. Только пыль с инструментов смахнуть.",
-    "rightPortrait": "smile"
+    "text": "Времена меняются, Билл. Мы никогда не были друзьями, лишь партнёрами.",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
   },
   {
     "speaker": "Френки",
-    "text": "— Спасибо, сынок. Давай хоть позавтракаем вместе. Я угощаю.",
-    "rightPortrait": "smile"
+    "text": "Нельзя быть уверенным, что лев, защищающий твоё логово, не делает это ради твоей туши.",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Билл",
+    "text": "И как теперь быть? Почти вся ткань уже израсходована.",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Билл",
+    "text": "А новую можно купить только поблизости, где она обойдётся гораздо дороже.",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Френки",
+    "text": "Нет, Билл. Теперь остаётся надеяться на Бога.",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Френки",
+    "text": "Я не думаю, что мы сможем пройти это испытание Всевышнего. Приходится расплачиваться за грехи всей семьи.",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Билл",
+    "text": "*Садится рядом.* А если всё ещё можно что-то исправить?",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Френки",
+    "text": "Навряд ли.",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Билл",
+    "text": "У меня… есть сбережения. Небольшие. Я копил их, чтобы в будущем открыть мастерскую музыкальных инструментов.",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Билл",
+    "text": "Около 500 долларов. Ведь это не поможет?",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Френки",
+    "text": "*Треплет по голове.* Очень вряд ли, Вилли… Не знал, что ты хотел открыть мастерскую.",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Билл",
+    "text": "Да, я боялся, что тебе не понравится эта идея.",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Билл",
+    "text": "*Молчание.* У меня есть друзья из колледжа. Они учили меня создавать и настраивать несколько инструментов…",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Билл",
+    "text": "Думаю, их помощь за небольшую плату очень бы нам пригодилась. Таким, как они, как раз нужна подработка.",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Френки",
+    "text": "Ты уверен, Билл? Ведь это очень отчаянный шаг — понадеяться на кучку студентов.",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Билл",
+    "text": "Разве сейчас не то самое время для отчаянных поступков?",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Френки",
+    "text": "Ты прав… Завтра в 8:30 сможешь их собрать здесь? Начнём работу немедля.",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Билл",
+    "text": "*С сияющими глазами.* Конечно! Отец, я не подведу тебя.",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
   }
 ]

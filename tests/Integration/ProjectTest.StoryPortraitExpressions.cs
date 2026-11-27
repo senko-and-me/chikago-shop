@@ -30,62 +30,49 @@ public partial class ProjectTest
                 player.RestorePage(0, false);
             }
 
-            CheckPose("smile_open", "smile_closed"); // Castello greets Frankie directly.
+            CheckPose("smile_closed", "smile_open"); // Frankie reacts first.
             await ToSignal(CreateTimer(0.75), SceneTreeTimer.SignalName.Timeout);
-            GoTo(0);
-            CheckPose("smile_open", "smile_closed");
+            GoTo(1);
+            CheckPose("smile_closed", "smile_open");
             player._Process(0.18);
             CheckPose("smile_closed", "smile_closed");
             player._Process(0.08);
-            CheckPose("smile_open", "smile_closed");
-            GoTo(1);
-            CheckPose("smile_closed", "smile_closed"); // Stage direction.
-            await ToSignal(CreateTimer(0.65), SceneTreeTimer.SignalName.Timeout);
+            CheckPose("smile_closed", "smile_open");
             GoTo(2);
             CheckPose("smile_closed", "smile_open");
+            GoTo(3);
+            CheckPose("smile_open", "smile_closed"); // Castello's separate laugh.
             player.Advance();
             CheckPose("smile_closed", "smile_closed");
             GoTo(4);
-            CheckPose("smile_closed", "smile_open");
-
+            CheckPose("smile_open", "smile_closed");
             GoTo(5);
-            CheckPose("serious_open", "serious");
+            CheckPose("serious_open", "smile_closed");
             player._Process(0.8);
             using (await CapturePresentation("story-expression-serious")) { }
             player.Advance();
-            CheckPose("serious_closed", "serious");
-            GoTo(6);
-            CheckPose("serious_closed", "smile_open");
-            GoTo(7);
-            CheckPose("smile_open", "serious");
-            player._Process(0.8);
-            using (await CapturePresentation("story-expression-mockery")) { }
-            while (player.IsRevealing || !player.GetNode<RichTextLabel>("Panel/Content/Text").Text.EndsWith("главный дизайнер."))
-                player.Advance();
-            CheckPose("serious_closed", "serious"); // The line is complete before advancing.
+            CheckPose("serious_closed", "smile_closed");
             GoTo(8);
-            CheckPose("serious_closed", "serious");
+            CheckPose("serious_closed", "serious"); // Frankie's confused speaking expression.
             player.Advance();
             CheckPose("serious_closed", "smile_closed");
             GoTo(9);
             CheckPose("serious_open", "smile_closed");
-            GoTo(10);
+            GoTo(11);
             CheckPose("serious_closed", "angry_open");
             player._Process(0.8);
             using (await CapturePresentation("story-expression-angry")) { }
             player.Advance();
             CheckPose("serious_closed", "angry_closed");
-
             TranslationServer.SetLocale("en");
             CheckPose("serious_closed", "angry_open");
-            await ToSignal(CreateTimer(.44), SceneTreeTimer.SignalName.Timeout);
-            GoTo(11);
-            CheckPose("serious_closed", "angry_open");
-            await ToSignal(CreateTimer(.12), SceneTreeTimer.SignalName.Timeout);
-            Check(right.Scale.IsEqualApprox(Vector2.One * 1.06f), "Consecutive Frankie lines must not restart the focus pulse");
             GoTo(12);
             CheckPose("serious_open", "angry_closed");
-            GoTo(24);
+            GoTo(13);
+            CheckPose("serious_closed", "angry_open");
+            GoTo(player.Session.Count - 1);
+            CheckPose("serious_open", "angry_closed");
+            player.Advance();
             CheckPose("serious_closed", "angry_closed");
         }
         finally

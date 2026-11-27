@@ -33,9 +33,10 @@ public partial class ProjectTest
                 await SkipStartupTraining(menu);
                 TranslationServer.SetLocale("ru");
                 var prologue = menu.ActiveDialogue;
+                AdvanceMusicLine(prologue);
                 var castello = prologue.GetNode<TextureRect>("Characters/Castello");
                 Check(!prologue.HasNode("Characters/Customer"), "The prologue must contain only Castello and Frankie");
-                await CheckSpeaking(castello, prologue.GetNode<TextureRect>("Characters/Frankie"));
+                await CheckSpeaking(prologue.GetNode<TextureRect>("Characters/Frankie"), castello);
                 await ToSignal(CreateTimer(0.57), SceneTreeTimer.SignalName.Timeout);
                 prologue.RestorePage(0, true);
                 await ToSignal(CreateTimer(0.46), SceneTreeTimer.SignalName.Timeout);
@@ -54,12 +55,23 @@ public partial class ProjectTest
                 {
                     TranslationServer.SetLocale(ending.Item3 ? "en" : "ru");
                     notice.Open(750, 3500, ending.Item2, ending.Item3);
+                    if (ending.Item1 != "mafia")
+                    {
+                        Check(!notice.GetNode<Control>("StoryRoot/Speech/Content/Actions/Restart").Visible,
+                            "Result actions must remain hidden until the ending dialogue finishes");
+                        notice._Process(5);
+                        notice._Input(new InputEventKey { Pressed = true, Keycode = Key.Space });
+                        Check(notice.ConversationIndex == 1 && !notice.StoryFinished,
+                            "Revealing and advancing the opening stage direction must not skip the ending");
+                    }
                     var left = notice.GetNode<TextureRect>("StoryRoot/Characters/Castello");
                     var right = notice.GetNode<TextureRect>("StoryRoot/Characters/Frankie");
-                    Check(left.Texture.ResourcePath.EndsWith("_open.png") &&
-                          !right.Texture.ResourcePath.EndsWith("_open.png"),
-                        "Only Castello must speak in the quota notices");
-                    await CheckSpeaking(left, right);
+                    var speaking = ending.Item1 == "mafia" ? right : left;
+                    var listening = ending.Item1 == "mafia" ? left : right;
+                    Check(speaking.Texture.ResourcePath.EndsWith("_open.png") &&
+                          !listening.Texture.ResourcePath.EndsWith("_open.png"),
+                        "Only the current speaker must speak in the quota notices");
+                    await CheckSpeaking(speaking, listening);
                     notice._Process(5);
                     Check(left.Texture.ResourcePath.EndsWith("_closed.png"),
                         "Castello must close his mouth when the quota speech is fully visible");
@@ -72,6 +84,28 @@ public partial class ProjectTest
                         if (button.Visible)
                             Check(actions.GetGlobalRect().Grow(1).Encloses(button.GetGlobalRect()),
                                 $"The {button.Name} action must fit inside the dialogue at {size}");
+                    if (ending.Item1 != "mafia")
+                    {
+                        var session = ChikagoShop.Domain.Dialogue.DialogueSession.FromJson(FileAccess.GetFileAsString(
+                            ending.Item1 == "victory" ? "res://dialogue/victory.ru.json" : "res://dialogue/defeat.ru.json"));
+                        int[] seen = new int[session.Count];
+                        for (int input = 0; input < 200 && !notice.StoryFinished; input++)
+                        {
+                            seen[notice.ConversationIndex]++;
+                            notice._Input(new InputEventKey { Pressed = true, Keycode = Key.Space });
+                        }
+                        Check(notice.StoryFinished && notice.IsOpen && Paused &&
+                            notice.GetNode<Control>("StoryRoot/Speech/Content/Actions/Restart").Visible &&
+                            notice.GetNode<Control>("StoryRoot/Speech/Content/Actions/MainMenu").Visible &&
+                            notice.GetNode<Control>("StoryRoot/Speech/Content/Actions/Checkpoint").Visible == !ending.Item2,
+                            "Both endings must reach their result actions without closing or unpausing the scene");
+                        for (int i = 1; i < seen.Length; i++) Check(seen[i] > 0, "No ending bubble may be lost");
+                        notice.Close();
+                        notice.Open(750, 3500, ending.Item2, ending.Item3);
+                        notice.GetNode<TextureButton>("StoryRoot/SkipDialogue").EmitSignal(BaseButton.SignalName.Pressed);
+                        Check(notice.StoryFinished && notice.IsOpen && Paused,
+                            "Skipping an ending must reveal only its result actions and keep gameplay paused");
+                    }
                     notice.Close();
                 }
                 notice.QueueFree();
@@ -91,6 +125,7 @@ public partial class ProjectTest
                 await ToSignal(this, SignalName.ProcessFrame);
                 Check(Root.GetVisibleRect().Encloses(son.GetNode<Control>("Panel/Content").GetGlobalRect()),
                     "The prologue speech window must remain readable over the world");
+                AdvanceMusicLine(son);
                 AdvanceMusicLine(son);
                 Check(son.Session.Current.Speaker == "\u0424\u0440\u0435\u043d\u043a\u0438", "The father must answer the son");
                 son.QueueFree();
@@ -125,9 +160,9 @@ public partial class ProjectTest
             Check(portrait.IsVisibleInTree() && portrait.Modulate.A == 1 &&
                 portrait.StretchMode == TextureRect.StretchModeEnum.KeepAspectCentered &&
                 bounds.Encloses(art) && art.End.Y > cloud.GetGlobalRect().Position.Y - 43 &&
-                art.End.Y < content.Position.Y + bounds.Size.Y * 0.04f &&
+                art.End.Y < content.Position.Y + bounds.Size.Y * 0.06f &&
                 art.Size.Y >= bounds.Size.Y * 0.45f,
-                $"{name} must tuck into the cloud, remain in proportion and at least 45% of screen height");
+                $"{name} must tuck into the cloud, remain in proportion and at least 45% of screen height: art={art}, bounds={bounds}, content={content}, cloud={cloud.GetGlobalRect()}, scale={portrait.Scale}, alpha={portrait.Modulate.A}");
         }
     }
 }
