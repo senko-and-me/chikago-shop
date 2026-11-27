@@ -14,22 +14,35 @@ public sealed class EconomyBalanceTests
         var config = Config();
         Assert.That(config.Days.DurationSeconds, Is.EqualTo(60));
         Assert.That(config.Days.ItemsPerCraft, Is.EqualTo(1));
-        foreach (var workshop in config.Workshops)
+        foreach (var item in config.Items)
         {
-            double value = config.Rarities.Sum(rarity => (double)rarity.Weight * rarity.BasePrices[workshop.Id]) / config.Rarities.Sum(rarity => rarity.Weight);
-            Assert.That(workshop.SpinCost / value, Is.InRange(0.5, 0.8), "Crafting must cost a meaningful but sustainable fraction of expected sale value");
+            Assert.That((double)config.CraftCosts[item.Id] / item.BasePrice, Is.InRange(0.5, 0.8),
+                "Each selected item must have a sustainable crafting margin");
         }
         Assert.That(config.Quotas.Single(quota => quota.Id == "first").DeadlineDay, Is.EqualTo(7));
     }
 
     [Test]
-    public void ReproducibleWeekRewardsTradingDecisionsWithoutGuaranteeingVictory()
+    public void SelectedItemSimulationDoesNotUseRetiredRoomSpinCosts()
+    {
+        var config = Config();
+        var before = WeekBalanceSimulator.Run(config, WeekBalanceSimulator.Profiles[2], 10);
+        for (int i = 0; i < config.Workshops.Count; i++)
+        {
+            var room = config.Workshops[i];
+            config.Workshops[i] = new WorkshopConfig { Id = room.Id, SpinCost = 100000, UnlockCost = room.UnlockCost };
+        }
+        Assert.That(WeekBalanceSimulator.Run(config, WeekBalanceSimulator.Profiles[2], 10), Is.EqualTo(before));
+    }
+
+    [Test]
+    public void ReproducibleSelectedItemPolicyCanFundCampaignAndPassivePlayCannot()
     {
         var config = Config();
         var ordinary = WeekBalanceSimulator.Run(config, WeekBalanceSimulator.Profiles[0], 1000);
         var careful = WeekBalanceSimulator.Run(config, WeekBalanceSimulator.Profiles[1], 1000);
         var passive = WeekBalanceSimulator.Run(config, WeekBalanceSimulator.Profiles[5], 1000);
-        Assert.That(ordinary.FirstQuotaPassRate, Is.InRange(0.01, 0.99), "The imported balance must allow both first-quota outcomes");
+        Assert.That(ordinary.FirstQuotaPassRate, Is.EqualTo(1), "The model deliberately selects affordable high-margin items at fixed timing; it is a feasibility policy, not a human difficulty estimate");
         Assert.That(ordinary.WinRate, Is.GreaterThan(0));
         Assert.That(ordinary.WinRate, Is.LessThanOrEqualTo(ordinary.FirstQuotaPassRate));
         Assert.That(careful.WinRate, Is.GreaterThanOrEqualTo(ordinary.WinRate));

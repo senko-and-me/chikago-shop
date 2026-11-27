@@ -302,7 +302,11 @@ public partial class TradeScene : Node2D
 
 		_inventoryUI = GetNode<InventoryUI>("HUD/InventoryUI");
 		_inventoryUI.Initialize(this);
+		InitializeShowcasePopup();
 		InitializeBuyerWaitWidget();
+		_inventoryUI.Hide();
+		foreach (var panel in _rarityPanels) panel.Hide();
+		foreach (var hotspot in _rarityHotspots) hotspot.Hide();
 
 		_rng.Randomize();
 
@@ -335,7 +339,7 @@ public partial class TradeScene : Node2D
 			_rarityHotspots[index].MouseEntered += () =>
 			{
 				_priceHints[index].Hide();
-				_rarityPanels[index].Show();
+				// Retired rarity UI remains hidden for scene compatibility.
 			};
 
 			_rarityHotspots[index].MouseExited += () =>
@@ -407,6 +411,7 @@ public partial class TradeScene : Node2D
 			RefreshOffer();
 
 		_inventoryUI.UpdateUI(_storedItems);
+		_inventoryUI.Hide();
 	}
 
 	private void NormalizeLeftShowcaseNames()
@@ -559,6 +564,7 @@ public partial class TradeScene : Node2D
 
 		_inventoryUI.DeselectAll();
 		_inventoryUI.UpdateUI(_storedItems);
+		_inventoryUI.Hide();
 
 		RefreshItemButtons();
 		LogStoredItems();
@@ -572,26 +578,24 @@ public partial class TradeScene : Node2D
 		RefreshItemButtons();
 	}
 
-	private void OnShowcasePressed(int slotIndex)
-	{
-		PlaceItemInShowcase(slotIndex);
-	}
+
 
 	private void RefreshBuyers()
 	{
 		if (DeferTutorialBuyerArrival()) return;
 		if (!_dayCycle.CanReceiveBuyers || GetTree().Paused || DayTransitionOpen || TradeActive) return;
 		if (!_waitingBuyer) StartWaitingBuyer();
-		TryServeWaitingBuyer();
+
 	}
 
 	private void StartBuyerOffer()
 	{
 		RecalculateInvisibleHand();
-		Percentage = _invisibleHand.AdjustInitialOffer(
+		Percentage = _returnedOfferPercent ?? _invisibleHand.AdjustInitialOffer(
 			TradeOfferRules.InitialPercent(_rng.RandiRange(0, 60)),
 			DebugBalanceSettings.Number("hand.offer"));
-		RerollsRemaining = GetItemRerollLimit(ItemIndex);
+		RerollsRemaining = _activeShowcaseIndex >= 0 && _showcaseRerolls[_activeShowcaseIndex] >= 0
+            ? _showcaseRerolls[_activeShowcaseIndex] : GetItemRerollLimit(ItemIndex);
 
 		_waitingBuyer = false;
 		TradeActive = true;
@@ -640,7 +644,7 @@ public partial class TradeScene : Node2D
 				i >= InitialShowcaseCapacity &&
 				!MusicWorkshopUnlocked;
 
-			int itemIndex = _showcaseItems[i];
+			int itemIndex = i == _pendingCraftSlot || (TradeActive && i == _activeShowcaseIndex) ? -1 : _showcaseItems[i];
 
 			SetShowcaseArt(_showcaseIcons[i], _showcaseIconBounds[i], itemIndex, tiltInstruments: true);
 			bool reserved = !locked && TradeActive && i == _activeShowcaseIndex && ItemIndex >= 0 && ItemIndex < Items.Count;
@@ -665,9 +669,7 @@ public partial class TradeScene : Node2D
 				locked ||
 				Failed ||
 				Completed ||
-				(itemIndex < 0 &&
-				 (SelectedInventoryIndex < 0 ||
-				  SelectedInventoryIndex >= _storedItems.Count));
+				(itemIndex < 0 && !(TradeActive && i == _activeShowcaseIndex));
 
 			_showcaseSlots[i].Modulate = locked
 				? new Color(0.45f, 0.45f, 0.45f, 1f)
@@ -849,6 +851,7 @@ public partial class TradeScene : Node2D
 			return;
 
 		Score += CurrentBuyerPayout;
+		ReleaseSoldDisplay();
 		Accepted++;
 
 		RefreshScore();
@@ -954,6 +957,7 @@ public partial class TradeScene : Node2D
 		RefreshClosedBuyerOffer();
 		RefreshTutorialTradeActions();
 		_inventoryUI.UpdateUI(_storedItems);
+		_inventoryUI.Hide();
 		RefreshScore();
 		RefreshProgress();
 		RefreshItemButtons();
@@ -1016,6 +1020,7 @@ public partial class TradeScene : Node2D
 				_checkpointItems.AddRange(_storedItems);
 				_checkpointGrades.Clear();
 				_checkpointGrades.AddRange(_storedGrades);
+				CaptureDisplayCheckpoint();
 				Array.Copy(_showcaseGrades, _checkpointShowcaseGrades, ShowcaseCapacity);
 
 				Array.Copy(
@@ -1059,6 +1064,7 @@ public partial class TradeScene : Node2D
 		_storedItems.AddRange(_checkpointItems);
 		_storedGrades.Clear();
 		_storedGrades.AddRange(_checkpointGrades);
+		RestoreDisplayCheckpoint();
 		Array.Copy(_checkpointShowcaseGrades, _showcaseGrades, ShowcaseCapacity);
 		_pendingCraftStorageIndex = -1;
 
@@ -1079,6 +1085,7 @@ public partial class TradeScene : Node2D
 			CheckpointMusicWorkshopUnlocked;
 
 		MoveItemsOutOfLockedShowcases();
+		FillDeferredDisplays();
 		_dayCycle.SynchronizeRoomDuration();
 
 		EnergyRemaining = CheckpointEnergy;
@@ -1096,6 +1103,7 @@ public partial class TradeScene : Node2D
 		LogStoredItems();
 
 		_inventoryUI.UpdateUI(_storedItems);
+		_inventoryUI.Hide();
 		RefreshShowcases();
 		SaveProgress();
 		_dayCycle.ResumeUpgradeChoice();
@@ -1112,6 +1120,7 @@ public partial class TradeScene : Node2D
 		RefreshDayPresentation();
 		RefreshShowcases();
 		_inventoryUI.UpdateUI(_storedItems);
+		_inventoryUI.Hide();
 		if (TradeActive) RefreshOffer();
 	}
 
@@ -1129,6 +1138,7 @@ public partial class TradeScene : Node2D
 		_storedGrades.Clear();
 		_checkpointGrades.Clear();
 		_pendingCraftStorageIndex = -1;
+		ResetDisplayStock();
 		Array.Fill(_showcaseGrades, "D");
 		Array.Fill(_checkpointShowcaseGrades, "D");
 		Array.Fill(_showcaseItems, -1);
@@ -1165,6 +1175,7 @@ public partial class TradeScene : Node2D
 		LogStoredItems();
 
 		_inventoryUI.UpdateUI(_storedItems);
+		_inventoryUI.Hide();
 		RefreshShowcases();
 		SaveProgress();
 		NewGameStarted?.Invoke();

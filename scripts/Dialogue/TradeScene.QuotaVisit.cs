@@ -124,6 +124,7 @@ public partial class TradeScene
         if (MusicWorkshopUnlocked) return;
         MusicWorkshopUnlocked = true;
         CheckpointMusicWorkshopUnlocked = true;
+        FillDeferredDisplays();
         _dayCycle.SynchronizeRoomDuration();
         RecalculateInvisibleHand();
         StatusText = "Музыкальная мастерская открыта.";

@@ -148,6 +148,7 @@ public sealed class ProgressMigrationTests
         Assert.That(doc.RootElement.GetProperty("checkpoint_music_price_level").GetInt32(), Is.EqualTo(4));
         Assert.That(doc.RootElement.GetProperty("day_remaining_seconds").GetDouble(), Is.EqualTo(35.5));
         string[] fields = [
+            "deferred_display_items", "checkpoint_deferred_display_items", "showcase_rerolls", "checkpoint_showcase_rerolls", "returned_offer_percent",
             "save_version", "upgrade_pending", "selected_upgrade", "atelier_price_level", "music_price_level",
             "checkpoint_atelier_price_level", "checkpoint_music_price_level", "atelier_upgrade_level",
             "music_upgrade_level", "checkpoint_atelier_upgrade_level", "checkpoint_music_upgrade_level",

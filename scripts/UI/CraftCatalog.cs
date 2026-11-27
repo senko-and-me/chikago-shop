@@ -42,7 +42,6 @@ public partial class CraftCatalog : CanvasLayer
             card.Name = entry.item.Kind;
             card.GetNode<TextureRect>("Content/Art").Texture = GD.Load<Texture2D>(entry.item.ArtPath);
             card.GetNode<Label>("Content/Name").Text = GameLocalization.Text(entry.item.Name);
-            card.GetNode<Label>("Content/Rarity").Text = GameLocalization.Text(entry.item.Rarity);
             card.GetNode<Label>("Content/Cost").Text = GameLocalization.Format("{0}$",
                 WorkshopItemCatalog.ItemCraftCost(entry.index));
             string reason = Coordinator.UnavailableReason(entry.index);
@@ -85,7 +84,6 @@ public partial class CraftCatalog : CanvasLayer
             int index = WorkshopItemCatalog.IndexOf(card.Name);
             var item = WorkshopItemCatalog.Items[index];
             card.GetNode<Label>("Content/Name").Text = GameLocalization.Text(item.Name);
-            card.GetNode<Label>("Content/Rarity").Text = GameLocalization.Text(item.Rarity);
             card.GetNode<Label>("Content/Cost").Text = GameLocalization.Format("{0}$", WorkshopItemCatalog.ItemCraftCost(index));
             card.GetNode<Label>("Content/Reason").Text = GameLocalization.Text(Coordinator.UnavailableReason(index));
             card.GetNode<Label>("Content/Reason").Visible = Coordinator.UnavailableReason(index) != "";

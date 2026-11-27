@@ -33,7 +33,7 @@ public static class DebugBalanceSettings
         WeightedSelection = Number("cards.weighted") == 1,
         Seed = (int)Number("cards.seed")
     };
-    public static DayUpgrade[] Cards => Enum.GetValues<DayUpgrade>().Where(card => card is not (DayUpgrade.None or DayUpgrade.Time or DayUpgrade.Energy)).ToArray();
+    public static DayUpgrade[] Cards => new[] { DayUpgrade.Cash, DayUpgrade.AtelierPrice, DayUpgrade.MusicPrice };
     public static string CardName(DayUpgrade card) => card switch
     {
         DayUpgrade.Cash => "Оборотные средства", DayUpgrade.Energy => "Второе дыхание",
@@ -153,6 +153,7 @@ public static class DebugBalanceSettings
 
     private static void RemoveRetiredOverrides(BalanceProfile profile)
     {
+        profile.ItemRarities?.Clear();
         profile.Numbers?.Remove("card.Time.cost");
         profile.Numbers?.Remove("card.Cash.cost");
         profile.Numbers?.Remove("card.Time.weight");
@@ -161,6 +162,10 @@ public static class DebugBalanceSettings
         profile.Numbers?.Remove("energy.before");
         profile.Numbers?.Remove("energy.after");
         profile.Numbers?.Remove("workshop.music.unlock");
+        profile.Numbers?.Remove("card.Atelier.cost");
+        profile.Numbers?.Remove("card.Atelier.weight");
+        profile.Numbers?.Remove("card.Music.cost");
+        profile.Numbers?.Remove("card.Music.weight");
         profile.Numbers?.Remove("buyer.min");
         profile.Numbers?.Remove("buyer.max");
         profile.Numbers?.Remove("craft.count");
@@ -168,7 +173,10 @@ public static class DebugBalanceSettings
         foreach (var workshop in EconomyConfigProvider.Baseline.Workshops)
             profile.Numbers?.Remove($"workshop.{workshop.Id}.cost");
         foreach (var rarity in EconomyConfigProvider.Baseline.Rarities)
+        {
             profile.Numbers?.Remove($"rarity.{rarity.Id}.weight");
+            profile.Numbers?.Remove($"rarity.{rarity.Id}.rerolls");
+        }
         // A legacy profile may have disabled every other card and relied on Time.
         if (profile.Numbers != null && Cards.All(card => profile.Numbers.GetValueOrDefault($"card.{card}.weight", 1) == 0))
             profile.Numbers["card.Cash.weight"] = 1;
@@ -195,6 +203,7 @@ public static class DebugBalanceSettings
         {
             SchemaVersion = source.SchemaVersion, IsProvisional = source.IsProvisional,
             StartingMoney = Get("start.cash", source.StartingMoney),
+            Items = source.Items.Select(item => new ItemConfig { Id = item.Id, Workshop = item.Workshop, BasePrice = Get($"item.{item.Id}.price", item.BasePrice), Rerolls = Get($"item.{item.Id}.rerolls", item.Rerolls) }).ToList(),
             CraftCosts = source.CraftCosts.ToDictionary(entry => entry.Key,
                 entry => Get($"craft.{entry.Key}.cost", entry.Value)),
             Days = new DayConfig
@@ -241,10 +250,6 @@ public static class DebugBalanceSettings
             string name = workshop.Id == "atelier" ? "Ателье" : "Музыка";
             if (workshop.UnlockCost > 0) fields.Add(new($"workshop.{workshop.Id}.unlock", "Создание", name + ": цена открытия ($)", workshop.UnlockCost));
         }
-        foreach (var rarity in config.Rarities)
-        {
-            fields.Add(new($"rarity.{rarity.Id}.rerolls", "Редкости", rarity.Name + ": смен покупателя", rarity.Rerolls, 0, 50));
-        }
         foreach (var item in WorkshopItemCatalog.BaselineItems)
             fields.Add(new($"craft.{item.Kind}.cost", "Создание", item.Name + ": цена крафта ($)", config.CraftCosts[item.Kind], 1, 1000000));
         foreach (var card in Cards)
@@ -268,6 +273,8 @@ public static class DebugBalanceSettings
         }
         foreach (var item in WorkshopItemCatalog.BaselineItems)
             fields.Add(new($"item.{item.Kind}.price", "Предметы", item.Name + ": базовая цена ($)", item.BasePrice, 1, 100000));
+        foreach (var item in WorkshopItemCatalog.BaselineItems)
+            fields.Add(new($"item.{item.Kind}.rerolls", "Предметы", item.Name + ": смен покупателя", item.Rerolls, 0, 3));
         return fields;
     }
 }

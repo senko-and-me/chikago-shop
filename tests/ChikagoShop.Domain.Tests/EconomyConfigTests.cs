@@ -6,6 +6,25 @@ namespace ChikagoShop.Domain.Tests;
 
 public sealed class EconomyConfigTests
 {
+    [TestCase("base_price", 0)]
+    [TestCase("rerolls", -1)]
+    public void InvalidExplicitItemTermsAreRejected(string key, int value)
+    {
+        JsonObject json = ReadConfig();
+        json["items"]![0]![key] = value;
+        Assert.Throws<EconomyConfigException>(() => EconomyConfigLoader.Load(json.ToJsonString()));
+    }
+
+    [Test]
+    public void ExplicitItemDefinitionsMustBeCompleteAndUnique()
+    {
+        JsonObject json = ReadConfig();
+        json["items"]![1]!["id"] = "hat";
+        Assert.Throws<EconomyConfigException>(() => EconomyConfigLoader.Load(json.ToJsonString()));
+        json = ReadConfig();
+        json["items"]!.AsArray().RemoveAt(0);
+        Assert.Throws<EconomyConfigException>(() => EconomyConfigLoader.Load(json.ToJsonString()));
+    }
     [TestCase("duration_seconds", 0)]
     [TestCase("items_per_craft", 3)]
     public void InvalidLiveDayRulesAreRejected(string property, int value)

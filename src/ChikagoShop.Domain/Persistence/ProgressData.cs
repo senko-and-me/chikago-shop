@@ -1,10 +1,17 @@
 namespace ChikagoShop.Domain.Persistence;
 
+public sealed record DisplayStock(int Item, string Grade, int Rerolls);
+
 public enum QuotaVisitStage { Unavailable, AwaitingVisitor, Dialogue, Rewarded }
 
 // Versioned wire DTO. Keep property names/defaults compatible with historical saves.
 public sealed record ProgressData
 {
+    public DisplayStock[] DeferredDisplayItems { get; set; } = [];
+    public DisplayStock[] CheckpointDeferredDisplayItems { get; set; } = [];
+    public int[] ShowcaseRerolls { get; set; } = [];
+    public int[] CheckpointShowcaseRerolls { get; set; } = [];
+    public int? ReturnedOfferPercent { get; set; }
 	public int SaveVersion { get; set; } = 1;
 	public bool UpgradePending { get; set; }
 	public int SelectedUpgrade { get; set; }

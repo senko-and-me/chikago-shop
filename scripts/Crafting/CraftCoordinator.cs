@@ -32,6 +32,7 @@ public sealed class CraftCoordinator
         if (_game.Failed || _game.Completed || _game.DayClosed || !_game.DayStarted) return "Магазин закрыт";
         if (item.WorkshopId == "music" && !_game.MusicWorkshopUnlocked) return "Мастерская закрыта";
         if (_game.Score < WorkshopItemCatalog.ItemCraftCost(index)) return "Недостаточно денег";
+        if (!_game.HasFreeDisplay(item.WorkshopId)) return "Нет свободных витрин";
         return "";
     }
 

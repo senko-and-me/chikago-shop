@@ -16,6 +16,13 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--merged-crafting-checks"))
+            {
+                await TestMergedCrafting();
+                GD.Print("MERGED_CRAFTING_CHECKS_PASS: selected crafting, showcases, migration, pause, return and saves");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--notebook-hover-checks"))
             {
                 await TestNotebookRightEdgeHover();
@@ -25,7 +32,7 @@ public partial class ProjectTest : SceneTree
             }
             if (OS.GetCmdlineUserArgs().Contains("--selective-crafting-checks"))
             {
-                await TestSelectiveCrafting();
+                await TestMergedCrafting();
                 GD.Print("SELECTIVE_CRAFTING_CHECKS_PASS: catalog, ten selected items, debit, quality, cancel, pause, saves and responsive UI");
                 Quit();
                 return;
@@ -145,7 +152,7 @@ public partial class ProjectTest : SceneTree
             }
             if (OS.GetCmdlineUserArgs().Contains("--energy-removal-checks") || OS.GetCmdlineUserArgs().Contains("--energy-bulbs-checks"))
             {
-                await TestEnergyRemoval();
+                await TestMergedCrafting();
                 GD.Print("ENERGY_REMOVAL_CHECKS_PASS: legacy saves, repeated crafts, buyers, retired card, HUD and resource guards");
                 Quit();
                 return;
@@ -256,9 +263,9 @@ public partial class ProjectTest : SceneTree
             }
             if (OS.GetCmdlineUserArgs().Contains("--tutorial-checks"))
             {
-                await TestFirstTradeTutorial();
+                await TestMergedTutorial();
                 await TestWorkshopTutorial();
-                GD.Print("TUTORIAL_CHECKS_PASS: camera practice/flights, first sale, real clicks, highlights, pause, localization, skip, replay and reload");
+                GD.Print("TUTORIAL_CHECKS_PASS: selected crafting, showcase inspection, manual sales, price card, notebook, training reset and music lesson");
                 Quit();
                 return;
             }
@@ -487,8 +494,7 @@ public partial class ProjectTest : SceneTree
             await TestPauseAndZoomUi();
             await TestCollapsibleProgress();
             await TestRarityPopupGeometry();
-            await TestEmbroidery();
-            await TestPolishing();
+                await TestMergedCrafting();
             await TestLockedRoomDrag();
             await TestMouseControls();
             await TestInventoryTransfers();

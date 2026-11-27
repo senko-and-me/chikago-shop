@@ -5,8 +5,7 @@ public sealed class DayUpgradeRules
     // Keep retired Energy and Time enum values for old saves, but never offer those cards.
     private static readonly DayUpgrade[] Available =
     [
-        DayUpgrade.Cash, DayUpgrade.Atelier,
-        DayUpgrade.Music, DayUpgrade.AtelierPrice, DayUpgrade.MusicPrice
+        DayUpgrade.Cash, DayUpgrade.AtelierPrice, DayUpgrade.MusicPrice
     ];
 
     public IReadOnlyDictionary<DayUpgrade, int> Costs { get; init; } = new Dictionary<DayUpgrade, int>();
