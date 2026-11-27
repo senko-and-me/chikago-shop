@@ -38,6 +38,9 @@ public partial class ProjectTest
                 Check(player.Session.Index == 1 && mafia.Visible && !motion.IsMoving && customer.Visible,
                     "Castello's first line must retain the opening composition without replaying the entrance");
                 AdvanceMusicLine(player);
+                void PressSpace() => Root.PushInput(new InputEventKey { Keycode = Key.Space, Pressed = true }, true);
+                PressSpace();
+                PressSpace();
                 await Wait(0.2);
                 Check(player.Session.Index == 2 && motion.DepartureProgress > 0 && motion.DepartureProgress < 1 &&
                     customer.OffsetLeft < 0 && customer.Modulate.A > 0 && customer.Modulate.A < 1,

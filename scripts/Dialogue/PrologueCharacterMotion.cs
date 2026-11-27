@@ -13,7 +13,8 @@ public partial class PrologueCharacterMotion : Control
     private bool _departed, _stopped;
     public float ArrivalProgress { get; private set; }
     public float DepartureProgress { get; private set; }
-    public bool IsMoving => _arrival?.IsRunning() == true || _departure?.IsRunning() == true;
+    public bool IsDeparting => _departure?.IsRunning() == true;
+    public bool IsMoving => _arrival?.IsRunning() == true || IsDeparting;
 
     public override void _Ready()
     {
@@ -38,7 +39,7 @@ public partial class PrologueCharacterMotion : Control
                 0f, 1f, ArrivalDuration).SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
             _arrival.TweenCallback(Callable.From(() => _arrival = null));
         }
-        if (_firstMafiaLine < 0 && speaker == "РљР°СЃС‚РµР»Р»Рѕ") _firstMafiaLine = index;
+        if (_firstMafiaLine < 0 && speaker == StoryPortraitController.Castello) _firstMafiaLine = index;
         // She remains for his offer to pay, then leaves as Frankie turns to him.
         if (_firstMafiaLine >= 0 && index > _firstMafiaLine && !_departed)
         {

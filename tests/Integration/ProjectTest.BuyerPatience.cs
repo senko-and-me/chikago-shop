@@ -24,7 +24,7 @@ public partial class ProjectTest
             Check(game.TradeActive && game.BuyerWaitRemaining == 0 && game.Percentage == -50 && game.OfferedPrice == half,
                 "Expired buyer must immediately offer half the normal price and display -50%");
             var content = game.GetNode("World/TradingRoom/Item/TradePanel/Content");
-            Check(content.GetNode<Label>("OfferLabel").Text == GameLocalization.Format("Получим: {0}$", half),
+            Check(content.GetNode<RichTextLabel>("OfferLabel").GetParsedText() == GameLocalization.Format("Получим: {0}$", half),
                 "Expired displayed payout must be exactly half without speed/quality bonuses");
             Check(game.GetNode<Button>(buttons + "DeclineButton").Disabled && !game.GetNode<Button>(buttons + "AcceptButton").Disabled,
                 "After timeout only accepting the offer remains available");
@@ -54,13 +54,20 @@ public partial class ProjectTest
             Check(game.Score == expected, "Repeated accept must not pay twice");
             game._Process(0);
             Check(game.BuyerWaitRemaining == game.BuyerWaitInitial && game.BuyerWaitInitial is >= 10 and <= 20 && !game.TradeActive, "The next customer must reset their patience");
-            game.SelectInventoryItem(0); game.PlaceItemInShowcase(0); game._Process(0);
+            game.OnShowcasePressed(game.FirstDisplayedItem("atelier"));
+            game._Process(0);
             Check(game.TradeActive && game.Percentage >= -30 && !game.GetNode<Button>(buttons + "DeclineButton").Disabled,
                 "The next buyer must use a normal offer and available rerolls");
+            int ordinaryAttempts = game.RerollsRemaining;
+            double ordinaryPatience = game.BuyerWaitRemaining;
+            game.RerollCustomer();
+            Check(game.RerollsRemaining == ordinaryAttempts - 1 && game.BuyerWaitRemaining == ordinaryPatience,
+                "Outside tutorial, a reroll must spend one attempt without refreshing the buyer's patience");
 
             await Reload("""{"save_version":16,"day_started":true,"energy_remaining":0,"waiting_buyer_present":true,"customer_index":0,"buyer_wait_remaining":0.01,"stored_items":[0]}""");
             game._Process(0.02);
-            game.SelectInventoryItem(0); game.PlaceItemInShowcase(0); game._Process(0);
+            game.OnShowcasePressed(game.FirstDisplayedItem("atelier"));
+            game._Process(0);
             CheckExpiredOffer();
             game.PersistProgress(); await Reload(); CheckExpiredOffer();
             GD.Print("BUYER_PATIENCE_CHECKS_PASS: exact expiry, -50%, no reroll via UI/key/API, exact payout, reload and late stock");

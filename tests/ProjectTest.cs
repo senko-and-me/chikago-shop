@@ -118,7 +118,7 @@ public partial class ProjectTest : SceneTree
             if (OS.GetCmdlineUserArgs().Contains("--quota-visit-checks"))
             {
                 await TestQuotaVisit();
-                GD.Print("QUOTA_VISIT_CHECKS_PASS: greeting, dialogue reload, gift, checkpoint, failure, notebook and unlock");
+                GD.Print("QUOTA_VISIT_CHECKS_PASS: dialogue reload, unchanged balance, checkpoint, failure, notebook and free unlock");
                 Quit();
                 return;
             }

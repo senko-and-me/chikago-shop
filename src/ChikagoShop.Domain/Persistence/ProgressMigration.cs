@@ -7,10 +7,13 @@ public static class ProgressMigration
 {
     // Unavailable marks historical saves from before the visitor event existed.
     // A pending or interrupted conversation must never be bypassed by loading.
+    public static QuotaVisitStage RestoreQuotaVisit(int day, int quotaStage, QuotaVisitStage visit, int firstDeadline) =>
+        day > firstDeadline && quotaStage >= 1 && visit == QuotaVisitStage.Unavailable
+            ? QuotaVisitStage.Rewarded : visit;
+
     public static bool StoryWorkshopUnlocked(bool alreadyUnlocked, int day, int quotaStage,
-        QuotaVisitStage visit, int firstDeadline) => alreadyUnlocked ||
-        day > firstDeadline && quotaStage >= 1 &&
-        visit is QuotaVisitStage.Rewarded or QuotaVisitStage.Unavailable;
+        QuotaVisitStage visit, int firstDeadline) => alreadyUnlocked && day > firstDeadline &&
+        quotaStage >= 1 && RestoreQuotaVisit(day, quotaStage, visit, firstDeadline) == QuotaVisitStage.Rewarded;
 
     public static ProgressData Prepare(ProgressData data)
     {

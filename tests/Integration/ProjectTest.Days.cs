@@ -49,7 +49,7 @@ public partial class ProjectTest
                     "Expiry and manual closing must immediately disable reroll");
                 int half = TradeScene.PriceForPercent(game.GetItemPrice(game.ItemIndex), -50);
                 Check(game.BuyerWaitRemaining == 0 && game.Percentage == -50 && game.OfferedPrice == half &&
-                    game.GetNode<Label>("World/TradingRoom/Item/TradePanel/Content/OfferLabel").Text ==
+                    game.GetNode<RichTextLabel>("World/TradingRoom/Item/TradePanel/Content/OfferLabel").GetParsedText() ==
                         GameLocalization.Format("Получим: {0}$", half),
                     "Day closure must immediately replace a fresh buyer's offer with exactly half, without tips");
                 int buyer = game.CustomerIndex, offer = game.OfferedPrice, remaining = game.RerollsRemaining;

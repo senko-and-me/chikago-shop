@@ -85,18 +85,18 @@ public partial class ProjectTest
             game.PlaceItemInShowcase(0);
             game._Process(0);
             Check(game.TradeActive && game.BuyerWaitInitial == initial && game.BuyerWaitRemaining == half, "Serving starts a deal with the existing timer");
-            var offerLabel = game.GetNode<Label>("World/TradingRoom/Item/TradePanel/Content/OfferLabel");
+            var offerLabel = game.GetNode<RichTextLabel>("World/TradingRoom/Item/TradePanel/Content/OfferLabel");
             int price = game.OfferedPrice;
             int bonus = TradeScene.QualityBonus(game.ActiveTradeQualityRank);
-            Check(offerLabel.Text == GameLocalization.Format("Получим: {0}$", price + bonus + TradeScene.SpeedBonus(half, initial)),
+            Check(offerLabel.GetParsedText() == $"{GameLocalization.Format("Получим: {0}$", price)} {GameLocalization.Format("+{0}$", bonus + TradeScene.SpeedBonus(half, initial))}",
                 "The live offer must include the current speed band and the item quality");
             game._Process(half - 1);
-            Check(offerLabel.Text == GameLocalization.Format("Получим: {0}$", price + bonus + 1),
+            Check(offerLabel.GetParsedText() == $"{GameLocalization.Format("Получим: {0}$", price)} {GameLocalization.Format("+{0}$", bonus + 1)}",
                 "Crossing a time band must update the live total");
             game.RerollsRemaining = 3;
             game.RerollCustomer();
             Check(game.BuyerWaitRemaining == 1 && game.RerollsRemaining == 2 &&
-                offerLabel.Text == GameLocalization.Format("Получим: {0}$", game.OfferedPrice + bonus + 1),
+                offerLabel.GetParsedText() == $"{GameLocalization.Format("Получим: {0}$", game.OfferedPrice)} {GameLocalization.Format("+{0}$", bonus + 1)}",
                 "Reroll must update the offer and preserve remaining time");
             await Reload();
             Check(game.TradeActive && game.BuyerWaitRemaining == 1, "Reloading an active deal must preserve the exact time");

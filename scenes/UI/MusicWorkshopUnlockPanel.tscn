@@ -98,4 +98,4 @@ theme_override_styles/normal = SubResource("ButtonNormal")
 theme_override_styles/hover = SubResource("ButtonHover")
 theme_override_styles/pressed = SubResource("ButtonPressed")
 theme_override_styles/disabled = SubResource("ButtonDisabled")
-text = "Открыть"
+text = "Открыть мастерскую"

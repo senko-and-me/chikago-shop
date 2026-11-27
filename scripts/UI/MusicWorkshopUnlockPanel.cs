@@ -8,17 +8,15 @@ public partial class MusicWorkshopUnlockPanel : PanelContainer
     {
         UnlockButton = GetNode<Button>("Content/UnlockButton");
         ButtonDropShadow.Attach(this);
-        UnlockButton.Pressed += ShowLockedNotice;
+        UnlockButton.Pressed += OpenWorkshop;
     }
 
-    private void ShowLockedNotice()
+    private void OpenWorkshop()
     {
         for (Node parent = GetParent(); parent != null; parent = parent.GetParent())
             if (parent is TradeScene game)
             {
-                if (!game.MusicWorkshopUnlocked)
-                    game.GetNode<DayStartGate>("DayStartGate")
-                        .ShowMessage("Мастерская откроется после первой недели.");
+                game.TryUnlockMusicWorkshop();
                 return;
             }
     }

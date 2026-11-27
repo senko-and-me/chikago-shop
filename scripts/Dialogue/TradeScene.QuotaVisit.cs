@@ -3,7 +3,6 @@ using Godot;
 
 public partial class TradeScene
 {
-    public const int QuotaGift = ChikagoShop.Domain.Economy.RunRewardRules.FirstQuotaGift;
     private QuotaVisitStage _quotaVisit;
     private QuotaVisitStage _checkpointQuotaVisit;
     private int _quotaDialoguePage;
@@ -13,6 +12,9 @@ public partial class TradeScene
     private CanvasLayer _quotaDialogueLayer = null!;
     private DialoguePlayer _quotaDialogue;
     private bool _ownsQuotaDialoguePause;
+
+    public bool MusicWorkshopAvailable => !Failed && !Completed && !MusicWorkshopUnlocked &&
+        CurrentDay > FirstDeadline && QuotaStage >= 1 && _quotaVisit == QuotaVisitStage.Rewarded;
 
     public bool QuotaVisitPending => !Failed && !Completed && QuotaStage == 1 &&
         _quotaVisit is QuotaVisitStage.AwaitingVisitor or QuotaVisitStage.Dialogue;
@@ -102,24 +104,20 @@ public partial class TradeScene
     {
         if (_quotaVisit != QuotaVisitStage.Dialogue) return;
         _quotaVisit = _checkpointQuotaVisit = QuotaVisitStage.Rewarded;
-        Score += QuotaGift;
-        CheckpointScore += QuotaGift;
         ResetQuotaVisitPresentation();
-        UnlockMusicWorkshopAfterStory();
         _customer.Hide();
         RefreshDayPresentation();
+        SaveProgress();
         _dayCycle.FinishQuotaVisit();
     }
 
-    // Kept for legacy action callers. The story, never cash or a button, grants access.
     public void TryUnlockMusicWorkshop()
     {
-        if (GetTree().Paused || DayTransitionOpen || Failed || Completed ||
-            CurrentDay <= FirstDeadline || QuotaStage < 1 || _quotaVisit != QuotaVisitStage.Rewarded) return;
-        UnlockMusicWorkshopAfterStory();
+        if (GetTree().Paused || DayTransitionOpen || !MusicWorkshopAvailable) return;
+        OpenMusicWorkshop();
     }
 
-    private void UnlockMusicWorkshopAfterStory()
+    private void OpenMusicWorkshop()
     {
         if (MusicWorkshopUnlocked) return;
         MusicWorkshopUnlocked = true;

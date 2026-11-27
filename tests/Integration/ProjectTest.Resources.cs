@@ -38,9 +38,13 @@ public partial class ProjectTest
                             "Button states must leave the textured scene artwork unobstructed");
                     var caption = button.GetNode<Label>("EnglishCaption");
                     var help = button.GetNode<TextureRect>("RarityHotspot/EnglishHelp");
+                    foreach (string captionName in new[] { "RussianCaption", "EnglishCaption" })
+                        Check(new Rect2(Vector2.Zero, button.Size).Encloses(button.GetNode<Control>(captionName).GetRect()),
+                            "Both caption layouts must stay within the authored button");
+                    Check(!help.IsVisibleInTree(), "The retired help icon must stay hidden");
                     Check(caption.Visible == english && help.Visible && button.GetNode<Control>("RussianCaption").Visible == !english && caption.Text == "CREATE\nITEMS" &&
                         caption.MouseFilter == Control.MouseFilterEnum.Ignore && help.MouseFilter == Control.MouseFilterEnum.Ignore,
-                        "English lettering and question icon must switch together without blocking input");
+                        "Localized lettering must switch without blocking input");
                 }
             }
             var atelier = game.GetNode<Button>("World/Atelier/GetItemButton");
@@ -48,6 +52,7 @@ public partial class ProjectTest
             camera.Position = atelier.GetGlobalTransform() * (atelier.Size / 2);
             camera.ClampToBounds();
             using (var image = await CapturePresentation("craft-button-english")) { }
+            Rect2 rest = atelier.GetRect();
             Vector2 point = atelier.GetGlobalTransformWithCanvas() * (atelier.Size / 2);
             Root.PushInput(new InputEventMouseMotion { Position = point, GlobalPosition = point }, true);
             for (int i = 0; i < 3; i++) await ToSignal(this, SignalName.ProcessFrame);
@@ -55,6 +60,14 @@ public partial class ProjectTest
                 atelier.GetNode<Control>("Paper").Modulate.R < 1,
                 "Real mouse hover must darken the help artwork together with the paper");
             using (var image = await CapturePresentation("craft-button-hover")) { }
+            Check(atelier.GetRect() == rest && ButtonFeedbackController.Instance.FaceScale(atelier) == Vector2.One,
+                "Hover must keep the button at its authored size and position");
+            PressButtonPointer(point, true);
+            ButtonFeedbackController.Instance._Process(0.2);
+            Check(atelier.GetRect() == rest && ButtonFeedbackController.Instance.FaceScale(atelier).Y < 1,
+                "Press must deform only the artwork around the fixed button center");
+            MoveButtonPointer(point + new Vector2(0, -200));
+            PressButtonPointer(point + new Vector2(0, -200), false);
             TranslationServer.SetLocale("ru");
             using (var image = await CapturePresentation("craft-button-russian")) { }
             TranslationServer.SetLocale("en");
@@ -108,10 +121,30 @@ public partial class ProjectTest
                 Check(clear && ink && pixels.GetPixel(200, 190).A > 0.99f,
                     "The frame texture must render a broken transparent contour around an opaque paper center");
             }
+            foreach (bool english in new[] { false, true })
+            {
+                CraftButtonPresentation.Apply(button, english);
+                await ToSignal(this, SignalName.ProcessFrame);
+                await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+                using var pixels = viewport.GetTexture().GetImage();
+                Vector2I first = new(466, 206), last = new(16, 16);
+                for (int y = 30; y < 192; y++)
+                for (int x = 30; x < 452; x++)
+                {
+                    var color = pixels.GetPixel(x, y);
+                    if (color.A < 0.95f || color.R > 0.4f) continue;
+                    first = new(Mathf.Min(first.X, x), Mathf.Min(first.Y, y));
+                    last = new(Mathf.Max(last.X, x), Mathf.Max(last.Y, y));
+                }
+                Vector2 inkCenter = ((Vector2)(first + last) + Vector2.One) / 2f;
+                Check(first.X < last.X && first.Y < last.Y &&
+                    inkCenter.DistanceTo(button.Position + button.Size / 2) <= 1.5f,
+                    $"Visible lettering must be optically centered ({english}: {inkCenter}).");
+            }
             foreach (bool disabled in new[] { true, false })
             {
                 button.Disabled = disabled;
-                for (int i = 0; i < 2; i++) await ToSignal(this, SignalName.ProcessFrame);
+                ((CraftButtonVisual)button)._Process(0.2);
                 var paper = button.GetNode<Control>("Paper");
                 var help = button.GetNode<Control>("RarityHotspot/EnglishHelp");
                 Check(paper.Modulate == help.Modulate && (disabled ? help.Modulate.R < 0.6f : help.Modulate == Colors.White),
@@ -126,7 +159,7 @@ public partial class ProjectTest
             }
             button.ToggleMode = true;
             button.ButtonPressed = true;
-            for (int i = 0; i < 2; i++) await ToSignal(this, SignalName.ProcessFrame);
+            ((CraftButtonVisual)button)._Process(0.2);
             Check(button.GetNode<Control>("Paper").Modulate == button.GetNode<Control>("RarityHotspot/EnglishHelp").Modulate &&
                 Mathf.IsEqualApprox(button.GetNode<Control>("Paper").Modulate.R, 0.78f),
                 "Pressed artwork must darken the icon and paper together as well");

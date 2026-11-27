@@ -95,18 +95,13 @@ public sealed class SelectiveCraftBalanceTests
                 Assert.That(money, Is.GreaterThanOrEqualTo(quota.Amount), $"Day {day}: quota must be payable without borrowing.");
                 money -= quota.Amount;
                 paidQuotas++;
-                if (quota.Id == "first")
-                {
-                    firstQuotaPaid = true;
-                    money += RunRewardRules.FirstQuotaGift;
-                }
+                if (quota.Id == "first") firstQuotaPaid = true;
             }
         }
         Assert.That(paidQuotas, Is.EqualTo(2));
         Assert.That(musicUnlocked, Is.EqualTo(openMusic));
         if (openMusic) Assert.That(musicUnlockDay, Is.EqualTo(8));
-        else Assert.That(money - RunRewardRules.FirstQuotaGift, Is.GreaterThanOrEqualTo(0),
-            "Atelier-only route remains affordable even without spending the first-quota gift.");
+        Assert.That(money, Is.GreaterThanOrEqualTo(0), "The route remains affordable without a story reward.");
         TestContext.WriteLine($"Budget feasibility: music={openMusic}, unlock day={musicUnlockDay}, final cash={money}; neutral base sales, no extra bonuses.");
     }
 

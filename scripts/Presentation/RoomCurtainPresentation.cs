@@ -10,7 +10,7 @@ public partial class RoomCurtainPresentation : ColorRect
     private Color _restModulate, _restSelfModulate;
     private MouseFilterEnum _restMouseFilter;
     private Tween _reveal;
-    private bool _initialized, _locked, _unlockVisible;
+    private bool _initialized, _locked;
     public bool IsRevealing => _reveal?.IsRunning() == true;
 
     public override void _Ready()
@@ -22,12 +22,12 @@ public partial class RoomCurtainPresentation : ColorRect
         _restModulate = Modulate;
         _restSelfModulate = SelfModulate;
         _restMouseFilter = MouseFilter;
-        _unlockVisible = _unlock?.Visible == true;
         ClipContents = true;
     }
 
-    public void SetLocked(bool locked)
+    public void SetLocked(bool locked, bool unlockAvailable = true)
     {
+        if (_unlock != null) _unlock.Visible = locked && unlockAvailable;
         if (_initialized && locked == _locked) return;
         bool animate = _initialized && _locked && !locked && IsVisibleInTree();
         _initialized = true;
@@ -38,7 +38,6 @@ public partial class RoomCurtainPresentation : ColorRect
         Modulate = _restModulate;
         SelfModulate = _restSelfModulate;
         MouseFilter = locked ? _restMouseFilter : MouseFilterEnum.Ignore;
-        if (_unlock != null) _unlock.Visible = locked && _unlockVisible;
         Visible = locked || animate;
         if (!animate) return;
 

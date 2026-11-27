@@ -341,6 +341,7 @@ expand_mode = 1
 stretch_mode = 6
 
 [node name="UnlockPanel" parent="World/MusicWorkshop/LockedOverlay" unique_id=1319952408 instance=ExtResource("36_unlock_panel")]
+visible = false
 layout_mode = 1
 
 [node name="Showroom" type="Node2D" parent="World" unique_id=1166953855]
@@ -593,13 +594,19 @@ text = "Обычно: 4$"
 layout_mode = 2
 theme_override_colors/font_color = Color(0.360948, 0.360948, 0.360948, 1)
 theme_override_font_sizes/font_size = 22
+mouse_filter = 1
 text = "К цене: +0%"
 
-[node name="OfferLabel" type="Label" parent="World/TradingRoom/Item/TradePanel/Content" unique_id=1977303820]
+[node name="OfferLabel" type="RichTextLabel" parent="World/TradingRoom/Item/TradePanel/Content" unique_id=1977303820]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.42849, 0.42849, 0.42849, 1)
-theme_override_font_sizes/font_size = 26
+mouse_filter = 1
+theme_override_colors/default_color = Color(0.42849, 0.42849, 0.42849, 1)
+theme_override_font_sizes/normal_font_size = 26
+bbcode_enabled = true
 text = "Получим: 4$"
+fit_content = true
+scroll_active = false
+autowrap_mode = 0
 
 [node name="Buttons" type="HBoxContainer" parent="World/TradingRoom/Item/TradePanel/Content" unique_id=359729028]
 layout_mode = 2

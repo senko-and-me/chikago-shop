@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Threading.Tasks;
 using Godot;
 
@@ -15,6 +16,23 @@ public partial class ProjectTest
             game.GetNode<RoomCurtainPresentation>("World/Showroom/LockedOverlay") };
         Vector2 start = covers[0].GetNode<Control>("LockedCurtain").Position;
         async Task Wait(double time) => await ToSignal(CreateTimer(time, true), SceneTreeTimer.SignalName.Timeout);
+        async Task PayFirstQuota()
+        {
+            game.CurrentDay = EconomyConfigProvider.Load().Quotas.Single(quota => quota.Id == "first").DeadlineDay;
+            game.Score = game.FirstQuota;
+            game.AdvanceToNextDay();
+            game.AcknowledgeMafiaNotice();
+            game.ResumeQuotaVisit();
+            game.GetNode<TextureButton>("World/TradingRoom/QuotaVisitor").EmitSignal(BaseButton.SignalName.Pressed);
+            var dialogue = game.GetNode<DialoguePlayer>("QuotaDialogue/DialoguePlayer");
+            await ToSignal(this, SignalName.ProcessFrame);
+            for (int i = 0; i < 32 && game.QuotaVisitPending; i++)
+            {
+                dialogue.Advance();
+                await ToSignal(this, SignalName.ProcessFrame);
+            }
+            Check(game.MusicWorkshopAvailable && !game.MusicWorkshopUnlocked, "The curtain remains locked after the story grants access.");
+        }
         try
         {
             game.NewGame();
@@ -58,18 +76,19 @@ public partial class ProjectTest
                 Paused = false;
             }
             var purchase = covers[0].GetNode<Button>("UnlockPanel/Content/UnlockButton");
+            await PayFirstQuota();
+            navigation.CancelFocusTransition();
             navigation.Position = covers[0].GlobalPosition + covers[0].Size / 2;
             navigation.ForceUpdateScroll();
-            game.Score = 10000;
             game.RefreshItemButtons();
             await ToSignal(this, SignalName.ProcessFrame);
             Vector2 purchasePoint = ScreenBounds(purchase).GetCenter();
             MoveButtonPointer(purchasePoint);
             Press(purchasePoint, true);
             Check(!navigation.IsDragging && purchase.ButtonPressed,
-                "Purchase button must retain GUI input without starting camera drag");
+                "Unlock button must retain GUI input without starting camera drag");
             Press(purchasePoint, false);
-            Check(game.MusicWorkshopUnlocked, "An actual purchase click must still unlock the workshop");
+            Check(game.MusicWorkshopUnlocked, "A real button click must open the workshop at zero cash");
             game.NewGame();
             foreach (var cover in covers)
             {
@@ -115,8 +134,8 @@ public partial class ProjectTest
             game.Score = 0;
             game.TryUnlockMusicWorkshop();
             foreach (var cover in covers) Check(cover.Visible && !cover.IsRevealing,
-                "An unaffordable purchase must leave the curtains closed without animation");
-            game.Score = 10000;
+                "A first-week action must leave the curtains closed without animation");
+            await PayFirstQuota();
             game.TryUnlockMusicWorkshop();
             foreach (var cover in covers) Check(cover.Visible && cover.IsRevealing &&
                 cover.MouseFilter == Control.MouseFilterEnum.Ignore && cover.ClipContents,
@@ -139,7 +158,7 @@ public partial class ProjectTest
                 "Repeated refresh must not restart the tween and pause must not strand a curtain");
             Paused = false;
             game.NewGame();
-            game.EndDay(); game.Score = 10000; game.TryUnlockMusicWorkshop();
+            await PayFirstQuota(); game.TryUnlockMusicWorkshop();
             await Wait(0.15);
             game.NewGame();
             await Wait(1);
@@ -147,8 +166,8 @@ public partial class ProjectTest
                 cover.Modulate == Colors.White && cover.GetNode<Control>("LockedCurtain").Scale == Vector2.One,
                 "NewGame during reveal must cancel callbacks and restore the complete curtain");
             Check(covers[0].GetNode<Control>("LockedCurtain").Position == start &&
-                covers[0].GetNode<Control>("UnlockPanel").Visible,
-                "Reset must restore authored position and the purchase button");
+                !covers[0].GetNode<Control>("UnlockPanel").Visible,
+                "Reset must restore the authored curtain and hide the unlock button");
             var loadedScene = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
             var loaded = loadedScene.GetNode<RoomCurtainPresentation>("World/MusicWorkshop/LockedOverlay");
             // A standalone initial unlocked state models loading an already-owned room.
@@ -159,7 +178,7 @@ public partial class ProjectTest
             Check(!loaded.Visible && !loaded.IsRevealing,
                 "The first unlocked refresh must show an owned room immediately without replay");
             loaded.QueueFree();
-            game.EndDay(); game.Score = 10000; game.TryUnlockMusicWorkshop();
+            await PayFirstQuota(); game.TryUnlockMusicWorkshop();
         }
         finally
         {

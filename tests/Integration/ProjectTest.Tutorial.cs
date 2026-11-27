@@ -1018,10 +1018,15 @@ public partial class ProjectTest
                 CheckpointDay = 8
             });
             var tutorial = await ReloadWorkshop();
+            Check(game.MusicWorkshopAvailable && !game.MusicWorkshopUnlocked && !tutorial.IsShowing,
+                "Finishing the story exposes a separate unlock action without starting the music lesson");
+            game.TryUnlockMusicWorkshop();
+            await ToSignal(this, SignalName.ProcessFrame);
+            await ToSignal(this, SignalName.ProcessFrame);
             Check(tutorial.IsShowing && tutorial.CurrentStep == FirstTradeTutorial.Step.MusicWorkshop &&
                 game.MusicWorkshopUnlocked && game.Score == 1000 && !game.DayStarted &&
                 !game.GetNode<ModularCustomer>("World/TradingRoom/Customer").Visible,
-                "A completed story migrated from an older save must introduce the workshop free and keep an empty counter");
+                "Opening the workshop must start its lesson, keep the balance and leave an empty counter");
             await ClickControl(game, next);
             Check(tutorial.Target == null, "The polishing explanation has no fixed target");
             await ClickControl(game, next);
