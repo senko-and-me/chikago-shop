@@ -23,7 +23,9 @@ public sealed class DayCardSceneTransition(Node owner)
         }
         void WorldUi(Node node)
         {
-            if (node.Name.ToString() is "RoomFrame" or "RoomPartitions" or "LockedCurtain" or "Wall") return;
+            // Showcase buttons also contain the room's tables and displayed stock.
+            // Keep that scenery intact while gameplay actions are paused by the card modal.
+            if (node.Name.ToString() is "RoomFrame" or "RoomPartitions" or "LockedCurtain" or "Wall" or "Showcases") return;
             if (node is Control control && node.Name != "LockedOverlay") { Remember(control); return; }
             foreach (Node child in node.GetChildren()) WorldUi(child);
         }

@@ -9,6 +9,96 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### M232 — debug/gameplay в main с релизом v1.4.4
+
+M232 DONE; /root; CP `.local/checks/m232/CP-M232.md`. Пользователь разрешил merge/push. origin/main3be4aae содержит новый релиз поверх cec04d6; debug/gameplay0f72793 и SC230/231ae8ba6e объединены с сохранением релизных изменений и удалением покупательницы. Несвязанные локальные изменения сцены сохранены отдельно, source/ не читался.
+
+```text
+Task: M232
+Recommended status: REVIEW -> accepted DONE; gate PASSED 27.11.2026
+Changed: integrated v1.4.4 from origin/main3be4aae into debug/gameplay. Three content conflicts resolved: customer-free motion and motion test retained; latest release tutorial regression retained with per-frame showcase visibility assertions restored. Removed now-obsolete input guard for customer's departure from merged DialoguePlayer. Release gameplay/trading/tutorial changes otherwise preserved. Backup backup/main-before-m232-20261127 points to3be4aae; local unrelated scene changes stored separately for restoration.
+Checks: build PASS0warnings/errors; domain226/226PASS (.local/checks/m232/domain-results/m232.trx). Seven rendered merged-tree suites PASS exit0/stderr empty: intro-transition, tutorial, prologue-motion, showcase-card-visibility, room-frame, quota-visit, dialogue-portraits. Exact final scenes copied to isolated fixture; real player saves untouched. Scoped diffcheck PASS; no unresolved conflicts.
+Acceptance: latest release plus house/curtain/showcase fixes and customer-free prologue compose; new-game completion/skip/continue, new tutorial/reroll lessons, story workshop flow, card visibility, frames and portraits pass. Both histories preserved, no forced updates.
+Read-set exception: remote44-file change manifest inspected for merge diagnosis; only three conflicting files edited plus obsolete caller guard, within CP; no source/.
+Risks/blocker: no scoped blocker; separate legacy localization runner not re-run. Local non-task scene visibility/order edits excluded from merge publication and restored afterward.
+Next: publish debug/gameplay; fast-forward local main to origin/main then merge debug/gameplay and push; verify ancestry and restore local scene edits.
+```
+
+### SC231 — пролог без покупательницы
+
+SC231 DONE; /root; CP `.local/checks/sc231/CP-SC231.md`; SC230 DONE. Покупательница удалена из сценового состава, реплики и анимации; Кастелло сразу обращается к Френки. RU/EN и проверки движения/портретов/старта входят в scope. Остальной сюжет, музыка и исправление новой игры сохранены.
+
+```text
+Task: SC231
+Recommended status: REVIEW -> accepted DONE; gate PASSED 27.11.2026
+Changed: intro.ru removes customer line and rewrites Castello greeting; English updated. DialoguePlayer.tscn removes customer portrait/material/reference; runtime focus/tone and PrologueCharacterMotion keep only two characters and Castello arrival. Tests updated for25lines, shifted expression indices, two-person composition and current training-first startup.
+Checks: solution build PASS0warnings/errors; rendered prologue-motion, intro-transition and dialogue-portraits PASS exit0/stderr empty (.local/checks/sc231/). Motion check visits all25speeches through actual Advance, no customer node/speaker; arrival once at960/1280, resize/localization and stop pass. Portrait suite covers expressions, RU/EN focus/tones,720p/1080p, son/quota screens. Two-character screenshot reviewed. Scoped diffcheck PASS; runtime prologue has no customer/departure references.
+Acceptance: prologue starts with Castello greeting Frankie, no buyer or offer to pay her dress; wager/rest of scene preserved; fresh startup still works. Buyer artwork remains on disk as unrelated asset.
+Read-set exception: bounded dialogue test references identified hardcoded count/index/composition; included in CP. Legacy layout test now waits through training before checking prologue and expects completed speech to release focus. Full separate localization runner not claimed; its changed opening/count assertions follow new content.
+Risks/blocker: none scoped; SC230 scene repair remains in working tree. No commit/push requested.
+Next: user preview two-character prologue.
+```
+
+### SC230 — исправление новой игры
+
+SC230 DONE; /root; CP `.local/checks/sc230/CP-SC230.md`; SC229 DONE. На реальной локальной сцене воспроизведён timeout входа в обучение и ошибки пустого ресурса. Удалены35повреждённых null-переопределений C# экспортов, восстановлены значения по умолчанию без смены сценария/баланса. Остальные локальные правки и исправления SC227–229 сохранены.
+
+```text
+Task: SC230
+Recommended status: REVIEW -> accepted DONE; gate PASSED 27.11.2026
+Changed: trade_scene removes35null scalar/path exports; no transforms, non-null overrides or gameplay logic changed. Menu startup regression checks packed SavePath/money/quotas and tutorial/notebook/poster defaults before Ready.
+Checks: before actual local scene intro-latency FAIL timed out reaching active training with empty poster resource errors. After solution build PASS0warnings/errors. Actual repaired scene, without test-only sanitization: intro-transition, intro-latency, tutorial, notebook-hover, poster-navigation, room-frame PASS exit0/stderr empty (.local/checks/sc230/). Exact byte comparison against backup after removing null lines PASS; all other local edits preserved. Scoped diffcheck PASS.
+Acceptance: New Game ignores earlier completed tutorial, starts fresh camera practice; training finish/skip leads to prologue; prologue finish/skip leads to clean day1/money/stock, including empty GameScene fallback and Continue. Save path/UI defaults valid; notebook/poster repaired as affected consumers. Real player saves untouched; isolated userdata only.
+Read-set exception: none beyond CP diagnostics; no source/.
+Risks/blocker: no scoped blocker; editor origin of null serialization not proven, so no editor-version claim. No commit/push requested.
+Next: restart running game and verify New Game in debug/gameplay.
+```
+
+### SC229 — витрины при выборе улучшений
+
+SC229 DONE; /root; CP `.local/checks/sc229/CP-SC229.md`; SC228 DONE. Общая анимация карточек скрывала ShowcaseSlot вместе с интерфейсом. Группы витрин, предметов и подписей сохраняются видимыми, закрытая музыкальная комната не открывается. Пользователь разрешил push текущей debug/gameplay после проверки.
+
+```text
+Task: SC229
+Recommended status: REVIEW -> accepted DONE; gate PASSED 27.11.2026
+Changed: DayCardSceneTransition excludes Showcases subtree from UI fade/hide; no model/input/schema changes. Focused runner/tests cover empty+stocked, locked+open rooms,960/1280, all deal frames, paused selection, skip/purchase and reloaded grades/stock. Full current tutorial checks tables every deal frame, CardExplanation and after purchase; training screenshot reviewed.
+Checks: build PASS0warnings/errors; actual local scene showcase-card-visibility assertions PASS exit0 (known null poster errors). Isolated scene without unrelated local null exports: tutorial and showcase-card-visibility PASS exit0/stderr empty. Exact staged scene additionally passes room-frame, tutorial, showcase-card-visibility exit0/stderr empty (.local/checks/sc229/staged-*); only seven intended frame/cover/day-background node blocks staged. Training screenshot clearly retains3tables behind lesson and card. Scoped diffcheck PASS.
+Acceptance: ordinary and training cards retain table art, labels and stock; buttons stay inactive while paused; HUD/craft UI still hide; locked music stays hidden. No second tutorial hiding path exists; same shared transition fixes both.
+Read-set exception: bounded TutorialSpotlight/FirstTradeTutorial diagnostic after user reported training; CP expanded to MergedTutorial regression. No source/.
+Risks/blocker: existing editor-generated null scene parameters cause unrelated poster/notebook errors. Keep these local and stage only SC227/SC228 scene hunks for publication; all tests of the committed scene use initialized defaults. No scoped blocker.
+Next: publish SC227/SC228/SC229 to debug/gameplay; restart an already running game to load rebuilt code.
+```
+
+### SC228 — рамка поверх шторки
+
+SC228 DONE; /root; CP `.local/checks/sc228/CP-SC228.md`; SC227 DONE. Две шторки ограничены границами комнат, чёрные рамки подняты над ними. Геометрия сцены сохраняет SC227 и пользовательские правки; source/ и публикация вне scope.
+
+```text
+Task: SC228
+Recommended status: REVIEW -> accepted DONE; gate PASSED 27.11.2026
+Changed: two RoomFrame Z indices200; LockedOverlay authored clip/bounds match room art; curtain sizes match openings. RoomFrames asserts packed clipping/bounds/order and pixels of frame over an opaque later-drawn cover.
+Checks: build PASS0warnings/errors; rendered room-frame geometry/pixel assertions PASS exit0; closeup screenshot reviewed. Diff against SC228 backup contains only two frame/cover sections, preserving other local edits. Exact local scene still logs known empty poster resource. Quota-click suite hits unrelated notebook null settings; same suite on isolated scene copy omitting editor-added null exports PASS exit0/stderr empty, covering Open before/after Start and free story unlock. Copy restored to actual scene afterward. Scoped diffcheck PASS.
+Acceptance: frame ink remains above curtain, no fabric protrudes beyond room opening; scene owns all geometry.
+Read-set exception: fixture-only removal of existing null exports to isolate button/story checks; workspace exports unchanged, no source/.
+Risks/blocker: no scoped blocker; inherited null scene exports remain separate issue. No commit/push.
+Next: user preview frame and curtain edges.
+```
+
+### SC227 — совмещение текстур дома
+
+SC227 DONE; /root; CP `.local/checks/sc227/CP-SC227.md`; SC226 DONE; debug/gameplay. Дневной слой был смещён на (31,42) относительно ночного и RoomLayout. Удалён только этот offset. Существующие локальные правки сцены сохранены отдельно и вне scope.
+
+```text
+Task: SC227
+Recommended status: REVIEW -> accepted DONE; gate PASSED 27.11.2026
+Changed: scenes/trade_scene.tscn only removes TimeOfDayDay position(31,42); tests/Integration/ProjectTest.RoomFrames.cs asserts packed day/night alignment before Ready; plan.
+Checks: solution build PASS0warnings/errors. Rendered room-frame assertions PASS exit0 incl six room geometry/strokes, matching day/night/layout bounds before/after Ready; overview and closeup screenshots visually reviewed. Scoped diffcheck PASS. Exact comparison with .local/checks/sc227/trade_scene.before.tscn confirms every other local scene edit preserved.
+Acceptance: house backdrop no longer drifts right/down relative to room frames or night layer; correction authored in editor scene. No runtime position override.
+Read-set exception: bounded room-frame runner lookup and scene history for diagnosis; no source/.
+Risks/blocker: unrelated pre-existing local scene null exports remain untouched; rendered run logs empty poster resource from ThumbnailPath=null (TradingRoomPosterHotspot), not claimed stderr-clean. Geometry checks and rendering complete. No commit/push.
+Next: user preview aligned house in debug/gameplay.
+```
+
 ### SC226 — затемнение диалога Кастелло
 
 SC226 DONE; /root; CP `.local/checks/sc226/CP-SC226.md`; SC225 DONE. Последнее уточнение пользователя: только Кастелло. Общий чёрный переход при входе/выходе разговора после первой квоты; длительность как у меню. Разговор сына и финальные экраны вне scope.

@@ -16,6 +16,13 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--showcase-card-visibility-checks"))
+            {
+                await TestShowcaseCardVisibility();
+                GD.Print("SHOWCASE_CARD_VISIBILITY_PASS: tables and stock retained through cards, pause, skip, purchase and reload");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--merged-crafting-checks"))
             {
                 await TestMergedCrafting();

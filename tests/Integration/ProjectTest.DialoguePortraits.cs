@@ -14,7 +14,7 @@ public partial class ProjectTest
             {
                 Root.Size = size;
                 player = GD.Load<PackedScene>("res://scenes/UI/DialoguePlayer.tscn").Instantiate<DialoguePlayer>();
-                foreach (string name in new[] { "Frankie", "Castello", "Customer" })
+                foreach (string name in new[] { "Frankie", "Castello" })
                     Check(player.HasNode("Characters/" + name), "All characters must be placed in the scene before _Ready");
                 Root.AddChild(player);
                 player.SetProcess(false);
@@ -24,13 +24,13 @@ public partial class ProjectTest
                     foreach (string language in new[] { "ru", "en" })
                     {
                         TranslationServer.SetLocale(language);
-                        await ToSignal(CreateTimer(0.25), SceneTreeTimer.SignalName.Timeout);
-                        foreach (var entry in new[] { ("Frankie", "Френки"), ("Castello", "Кастелло"), ("Customer", "Покупательница") })
+                        await ToSignal(CreateTimer(0.35), SceneTreeTimer.SignalName.Timeout);
+                        foreach (var entry in new[] { ("Frankie", "Френки"), ("Castello", "Кастелло") })
                         {
                             var portrait = player.GetNode<TextureRect>("Characters/" + entry.Item1);
                             float tone = ((ShaderMaterial)portrait.Material).GetShaderParameter("lighten").AsSingle();
                             Check(Mathf.IsEqualApprox(tone, player.Session.Current.Speaker == entry.Item2 ? 0 : StoryDialogueLayout.InactivePortraitTone),
-                                "Only the current speaker must keep the original tone; narration lightens everyone in either locale");
+                                $"Only the current speaker must keep the original tone: index={index}, locale={language}, portrait={entry.Item1}, speaker={player.Session.Current.Speaker}, tone={tone}");
                             Check(portrait.MouseFilter == Control.MouseFilterEnum.Ignore &&
                                 (!portrait.Visible || player.GetGlobalRect().Grow(1).Encloses(portrait.GetGlobalRect())),
                                 "Scene portraits must fit both viewport sizes without intercepting dialogue clicks");
@@ -38,7 +38,7 @@ public partial class ProjectTest
                     }
                     if (player.IsRevealing) player.Advance();
                     if (size.X == 1280 && index == 0)
-                        using (var image = await CapturePresentation("dialogue-customer")) { }
+                        using (var image = await CapturePresentation("dialogue-castello")) { }
                     if (size.X == 1280 && index == 3)
                         using (var image = await CapturePresentation("dialogue-frankie")) { }
                 }

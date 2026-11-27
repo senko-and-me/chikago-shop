@@ -214,8 +214,22 @@ public partial class ProjectTest
                 "Clock expiry must show the explanation before opening cards");
             next.EmitSignal(Button.SignalName.Pressed);
             await Wait(() => game.DayTransitionOpen, "Continuing from the day-end briefing must open the existing cards");
-            await WaitForDayCardAnimation(game);
+            void CheckTrainingDisplays()
+            {
+                foreach (Control slot in game.GetNode("World/ShowroomLeft/Showcases").GetChildren())
+                    Check(slot.GetNode<Control>("DisplayTable").IsVisibleInTree() && slot.Modulate.A == 1,
+                        "Training must retain its display tables during dealing and card explanations");
+            }
+            ulong cardDeadline = Time.GetTicksMsec() + 6000;
+            while (game.GetNode<DayTransitionCard>("DayTransitionCard").IsAnimating)
+            {
+                CheckTrainingDisplays();
+                Check(Time.GetTicksMsec() < cardDeadline, "The training cards must finish dealing");
+                await Frame();
+            }
             await Frame();
+            CheckTrainingDisplays();
+            using (await CapturePresentation("training-card-showcases")) { }
             Check(tutorial.CurrentStep == FirstTradeTutorial.Step.CardExplanation, "The remaining upgrades need their existing explanation");
             next.EmitSignal(Button.SignalName.Pressed); await Frame();
             next.EmitSignal(Button.SignalName.Pressed); await Frame();
@@ -225,6 +239,7 @@ public partial class ProjectTest
             card.Choose(DayUpgrade.AtelierPrice);
             await WaitForDayCardAnimation(game);
             await Frame();
+            CheckTrainingDisplays();
             Check(game.DayUpgrades.Selected == DayUpgrade.AtelierPrice && tutorial.CurrentStep == FirstTradeTutorial.Step.Notebook,
                 "The real purchase must continue to the notebook lesson");
             var notebook = game.GetNode<PulloutNotebook>("HUD/Root/PulloutNotebook");
