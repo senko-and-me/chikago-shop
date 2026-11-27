@@ -10,6 +10,8 @@ public partial class DayStartGate : CanvasLayer
     private PanelContainer _notice;
     private Label _message;
     private double _remaining;
+    private string _noticeText = Message;
+    private bool _dismissOnStart;
 
     public override void _Ready()
     {
@@ -47,11 +49,19 @@ public partial class DayStartGate : CanvasLayer
         if (_game.DayStarted) return true;
         if (!_game.Failed && !_game.Completed && !_game.GetTree().Paused && !_game.DayTransitionOpen)
         {
-            _remaining = 3.5;
-            RefreshNotice();
-            _notice.Show();
+            ShowMessage(Message, dismissOnStart: true);
         }
         return false;
+    }
+
+    public void ShowMessage(string message, bool dismissOnStart = false)
+    {
+        if (_game.Failed || _game.Completed || GetTree().Paused || _game.DayTransitionOpen) return;
+        _noticeText = message;
+        _dismissOnStart = dismissOnStart;
+        _remaining = 3.5;
+        RefreshNotice();
+        _notice.Show();
     }
 
     public void Dismiss()
@@ -68,14 +78,14 @@ public partial class DayStartGate : CanvasLayer
         _notice.OffsetRight = width / 2;
         _notice.OffsetTop = -210;
         _notice.OffsetBottom = -130;
-        _message.Text = GameLocalization.Text(Message);
+        _message.Text = GameLocalization.Text(_noticeText);
     }
 
     public override void _Process(double delta)
     {
         if (!_notice.Visible) return;
         _remaining -= delta;
-        if (_remaining <= 0 || _game.DayStarted || _game.Failed || _game.Completed || _game.DayTransitionOpen)
+        if (_remaining <= 0 || _dismissOnStart && _game.DayStarted || _game.Failed || _game.Completed || _game.DayTransitionOpen)
             Dismiss();
         else RefreshNotice();
     }

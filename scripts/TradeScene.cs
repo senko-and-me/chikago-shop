@@ -595,7 +595,7 @@ public partial class TradeScene : Node2D
 			TradeOfferRules.InitialPercent(_rng.RandiRange(0, 60)),
 			DebugBalanceSettings.Number("hand.offer"));
 		RerollsRemaining = _activeShowcaseIndex >= 0 && _showcaseRerolls[_activeShowcaseIndex] >= 0
-            ? _showcaseRerolls[_activeShowcaseIndex] : GetItemRerollLimit(ItemIndex);
+			? _showcaseRerolls[_activeShowcaseIndex] : GetItemRerollLimit(ItemIndex);
 
 		_waitingBuyer = false;
 		TradeActive = true;

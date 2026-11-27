@@ -52,6 +52,20 @@ public partial class ProjectTest
         string originalLanguage = TranslationServer.GetLocale();
         try
         {
+            var familyDialogue = ChikagoShop.Domain.Dialogue.DialogueSession.FromJson(
+                FileAccess.GetFileAsString("res://dialogue/quota_visitor.ru.json"));
+            Check(familyDialogue.Count == 6, "The workshop visit must remain a short conversation");
+            TranslationServer.SetLocale("en");
+            while (!familyDialogue.IsComplete)
+            {
+                var line = familyDialogue.Current;
+                Check(line.Speaker == (familyDialogue.Index % 2 == 0 ? "Сын" : "Френки"),
+                    "Both son and father must answer each other");
+                Check(GameLocalization.Text(line.Text) != line.Text,
+                    "Every revised family line must have an English translation");
+                familyDialogue.Advance();
+            }
+            TranslationServer.SetLocale("ru");
             int[] expectedPrices = [25, 45, 40, 70, 75, 115, 195, 115, 175, 295];
             Check(WorkshopItemCatalog.Items.Select(item => item.BasePrice).SequenceEqual(expectedPrices) && price == 0,
                 "Catalogue prices remain unchanged and the story workshop has no purchase cost");
@@ -74,11 +88,43 @@ public partial class ProjectTest
             Check(!game.MusicWorkshopUnlocked && game.Score == 4000,
                 "Money and a direct action must not unlock the workshop during week one");
             var lockedNotice = game.GetNode<MusicWorkshopUnlockPanel>("World/MusicWorkshop/LockedOverlay/UnlockPanel");
-            Check(lockedNotice.UnlockButton.Disabled && !lockedNotice.UnlockButton.Text.Contains("$"),
-                "Locked workshop must explain story access without a purchase price");
+            Check(!lockedNotice.UnlockButton.Disabled && lockedNotice.UnlockButton.Text == "Открыть",
+                "The locked workshop must have an enabled, price-free Open button");
             TranslationServer.SetLocale("en");
-            Check(lockedNotice.UnlockButton.Tr(lockedNotice.UnlockButton.Text).Replace("\n", " ") == "Opens after the first week",
-                "The authored locked-room notice must explain the week gate in English");
+            Check(lockedNotice.UnlockButton.Tr(lockedNotice.UnlockButton.Text) == "Open",
+                "The authored button must localize in English");
+            async Task CheckLockedClick()
+            {
+                foreach (string language in new[] { "ru", "en" })
+                {
+                    TranslationServer.SetLocale(language);
+                    await ClickControl(game, "World/MusicWorkshop/LockedOverlay/UnlockPanel/Content/UnlockButton");
+                    var gate = game.GetNode<DayStartGate>("DayStartGate");
+                    gate._Process(0);
+                    Check(gate.GetNode<Control>("Root/Notice").Visible &&
+                        gate.GetNode<Label>("Root/Notice/Message").Text == GameLocalization.Text("Мастерская откроется после первой недели.") &&
+                        !game.MusicWorkshopUnlocked && game.Score == 4000,
+                        "An Open click must show the localized week notice without charging or unlocking, before and after day Start");
+                    gate._Process(3.6);
+                    Check(!gate.GetNode<Control>("Root/Notice").Visible, "The notice must disappear automatically");
+                }
+                if (!game.DayStarted)
+                {
+                    Check(!game.RequireStartedDay() &&
+                        game.GetNode<Label>("DayStartGate/Root/Notice/Message").Text ==
+                        GameLocalization.Text("Сначала начните день — нажмите «Начать» на часах."),
+                        "A normal day-start warning must still replace the workshop notice");
+                    game.GetNode<DayStartGate>("DayStartGate").Dismiss();
+                }
+                else Check(game.RequireStartedDay(), "The workshop notice must not block actions during a started day");
+            }
+            await CheckLockedClick();
+            ProgressSaveStore.Save(save, new ProgressData { SaveVersion = ProgressJson.CurrentVersion, Day = deadline, Score = 4000, DayStarted = false });
+            await Reload();
+            await CheckLockedClick();
+            SetLastDay(4000);
+            await Reload();
+            lockedNotice = game.GetNode<MusicWorkshopUnlockPanel>("World/MusicWorkshop/LockedOverlay/UnlockPanel");
             TranslationServer.SetLocale("ru");
             if (DisplayServer.GetName() != "headless")
             {
@@ -135,8 +181,8 @@ public partial class ProjectTest
             await ToSignal(CreateTimer(0.7), SceneTreeTimer.SignalName.Timeout);
             if (DisplayServer.GetName() == "headless") game.GetNode<TextureButton>(visitorPath).EmitSignal(BaseButton.SignalName.Pressed);
             else await ClickControl(game, visitorPath);
-            Check(Paused && Dialogue().Session.Current.Text.Contains("ключ") && !game.MusicWorkshopUnlocked,
-                "Visitor must explain free access in the existing dialogue UI without unlocking prematurely");
+            Check(Paused && Dialogue().Session.Current.Text.Contains("Пап") && !game.MusicWorkshopUnlocked,
+                "The family conversation must open in the existing dialogue UI without unlocking prematurely");
             await ToSignal(this, SignalName.ProcessFrame);
             Check(!game.GetNode<TextureButton>(visitorPath).Visible &&
                 Dialogue().GetNode<TextureRect>("Characters/Son").Visible,
@@ -169,9 +215,9 @@ public partial class ProjectTest
                 $"Reload must resume the revealed dialogue without granting the gift. Paused={Paused}, pending={game.QuotaVisitPending}, saved={ProgressSaveStore.Load(save, 3).QuotaVisit}");
             TranslationServer.SetLocale("en");
             Check(Dialogue().GetNode<Label>("Panel/Content/Speaker").Text == "Son", "The story dialogue must localize in English");
-            Check(GameLocalization.Text(Dialogue().Session.Current.Text).Contains("key"),
-                "The free-workshop dialogue must be translated in English");
-            for (int i = 0; i < 8 && game.QuotaVisitPending; i++) Dialogue().Advance();
+            Check(GameLocalization.Text(Dialogue().Session.Current.Text).Contains("Dad"),
+                "The son must address his father naturally in English too");
+            for (int i = 0; i < 24 && game.QuotaVisitPending; i++) Dialogue().Advance();
             Check(!game.QuotaVisitPending && game.Score == cashAfterQuota + 1000 && game.MusicWorkshopUnlocked &&
                 game.CheckpointMusicWorkshopUnlocked,
                 "Finishing must open the workshop free and add the supplies gift exactly once, including the checkpoint");

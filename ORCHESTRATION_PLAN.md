@@ -9,6 +9,36 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### SC225 — кнопка открытия и подсказка мастерской
+
+SC225 DONE; /root; CP `.local/checks/sc225/CP-SC225.md`; SC224 DONE. Активная сценовая кнопка «Открыть» вместо постоянного пояснения. Клик показывает временную подсказку о первой неделе тем же механизмом, что предупреждение начала дня. Разблокировка остаётся сюжетной; существующие пользовательские изменения сохранены.
+
+```text
+Task: SC225
+Recommended status: REVIEW -> accepted DONE; gate PASSED 27.11.2026
+Changed: MusicWorkshopUnlockPanel script/scene; DayStartGate reusable timed message; EN localization; quota integration assertions; plan. Enabled Open button shows week-unlock message for3.5seconds using existing nonblocking notice. No transaction or domain changes.
+Checks: solution build PASS0warnings/errors; rendered quota-visit and poster-navigation PASS exit0/stderr empty (.local/checks/sc225/). Real RU/EN clicks before/after day Start, timeout, unchanged money/access, replacement with normal day-start warning, dialogue completion/free unlock pass. Scoped diffcheck PASS.
+Acceptance: short enabled button; explanation appears on request, localized and timed; story still grants access. Input outside button remains unchanged.
+Read-set exception: attempted historical day-start-gate suite fails before exercising notice because it requires retired inventory fixture; documented rather than changing unrelated coverage. Current quota suite directly covers normal gate before/after day Start. No source/.
+Risks/blocker: no scoped blockers; historical inventory gate suite not claimed green. User changes and SC224 retained; no commit/push.
+Next: user preview Open-button notice.
+```
+
+### SC224 — разговор отца и сына
+
+SC224 DONE; /root; CP `.local/checks/sc224/CP-SC224.md`. M223 DONE. Короткий разговор об открытии мастерской: сын обращается к отцу как к отцу, оба отвечают друг другу; подарок и сюжетный триггер сохранены. RU/EN и существующая quota-проверка входят в scope. Пользовательские изменения TradeScene.cs и новые UID сохранены; source/ и публикация вне scope.
+
+```text
+Task: SC224
+Recommended status: REVIEW -> accepted DONE; gate PASSED 27.11.2026
+Changed: dialogue/quota_visitor.ru.json; localization/en.tres; tests/Integration/ProjectTest.QuotaVisit.cs; ORCHESTRATION_PLAN.md. Six alternating lines replace two businesslike monologues; father/son address, familiar teasing, practical support and breakfast. English updated.
+Checks: solution build PASS0warnings/errors; rendered quota-visit PASS exit0/stderr empty (.local/checks/sc224/). New assertions confirm alternating speakers and translation of every line; existing cancellation, reload, gift once, checkpoint/free unlock pass. Scoped diffcheck PASS.
+Acceptance: father speaks too; son says Dad, not Frankie; short family exchange, unchanged reward transaction.
+Read-set exception: bounded DialoguePlayer/session diagnosis for speaker and pagination compatibility; no source/.
+Risks/blocker: none scoped; user's TradeScene.cs edits and generated UID files untouched, no commit/push.
+Next: user preview revised workshop conversation.
+```
+
 ### M223 — последовательное объединение main и new-update
 
 Пользователь разрешил два последовательных объединения. Решения: сохранить выбор10предметов, пять узоров и две сценовые миниигры; принять витрины вместо инвентаря, ручную продажу/возврат Goodmornee; удалить редкости и улучшения времени (явный ответ пользователя); оставить автоматическое бесплатное открытие после диалога, подарок1000$, обучение→пролог→игра, затемнения, приоритет перемещения и правый триггер блокнота.
