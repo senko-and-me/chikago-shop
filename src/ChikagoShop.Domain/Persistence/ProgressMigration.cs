@@ -5,6 +5,13 @@ namespace ChikagoShop.Domain.Persistence;
 // Legacy interpretation is independent of Godot, disk paths and scene state.
 public static class ProgressMigration
 {
+    // Unavailable marks historical saves from before the visitor event existed.
+    // A pending or interrupted conversation must never be bypassed by loading.
+    public static bool StoryWorkshopUnlocked(bool alreadyUnlocked, int day, int quotaStage,
+        QuotaVisitStage visit, int firstDeadline) => alreadyUnlocked ||
+        day > firstDeadline && quotaStage >= 1 &&
+        visit is QuotaVisitStage.Rewarded or QuotaVisitStage.Unavailable;
+
     public static ProgressData Prepare(ProgressData data)
     {
         bool music = data.SaveVersion >= 7 && data.MusicWorkshopUnlocked;

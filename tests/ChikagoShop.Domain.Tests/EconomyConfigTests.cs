@@ -8,8 +8,6 @@ public sealed class EconomyConfigTests
 {
     [TestCase("duration_seconds", 0)]
     [TestCase("items_per_craft", 3)]
-    [TestCase("energy_before_music_unlock", 0)]
-    [TestCase("energy_after_music_unlock", 1)]
     public void InvalidLiveDayRulesAreRejected(string property, int value)
     {
         JsonObject json = ReadConfig();
@@ -18,6 +16,15 @@ public sealed class EconomyConfigTests
     }
     private static string ConfigPath => Path.Combine(
         TestContext.CurrentContext.TestDirectory, "config", "economy.v1.json");
+
+    [Test]
+    public void RetiredEnergyFieldsDoNotConstrainLiveDayRules()
+    {
+        JsonObject json = ReadConfig();
+        json["days"]!["energy_before_music_unlock"] = 0;
+        json["days"]!["energy_after_music_unlock"] = 0;
+        Assert.DoesNotThrow(() => EconomyConfigLoader.Load(json.ToJsonString()));
+    }
 
     [Test]
     public void CanonicalConfigLoads()
@@ -32,7 +39,7 @@ public sealed class EconomyConfigTests
             Assert.That(config.StartingMoney, Is.EqualTo(220));
             Assert.That(config.Workshops.Select(value => value.Id), Is.EqualTo(new[] { "atelier", "music" }));
             Assert.That(config.Workshops.Select(value => value.SpinCost), Is.EqualTo(new[] { 25, 50 }));
-            Assert.That(config.Workshops.Select(value => value.UnlockCost), Is.EqualTo(new[] { 0, 1000 }));
+            Assert.That(config.Workshops.Select(value => value.UnlockCost), Is.EqualTo(new[] { 0, 0 }));
             Assert.That(config.Quotas.Select(value => value.Amount), Is.EqualTo(new[] { 750, 1500 }));
             Assert.That(config.Rarities.Select(value => value.Weight), Is.EqualTo(new[] { 60, 25, 10, 4, 1 }));
             Assert.That(config.OfferRanges.Sum(value => value.ChancePercent), Is.EqualTo(100));

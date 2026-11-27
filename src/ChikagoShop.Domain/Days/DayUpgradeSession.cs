@@ -1,6 +1,6 @@
 namespace ChikagoShop.Domain.Days;
 
-// Serialized enum values must remain stable; Time is retired, not renumbered.
+// Serialized enum values must remain stable; Energy and Time are retired, not renumbered.
 public enum DayUpgrade { None, Cash, Energy, Time, Atelier, Music, AtelierPrice, MusicPrice }
 
 // Every purchased upgrade is effective only during the upcoming day.
@@ -20,7 +20,8 @@ public sealed class DayUpgradeSession
     public IReadOnlyList<DayUpgrade> Options => Rules.Options(Day, MusicUnlocked, _training);
     public int CostFor(DayUpgrade upgrade) => Rules.Cost(upgrade);
     public int EnergyCapacity => EnergyCapacityFor(2);
-    public int EnergyCapacityFor(int baseline) => baseline + (Selected == DayUpgrade.Energy ? 1 : 0);
+    // Legacy callers and saves retain this API, but energy upgrades no longer have an effect.
+    public int EnergyCapacityFor(int baseline) => baseline;
     public double Duration => DaySession.DurationSeconds;
     public int CashReward => 50;
 
@@ -44,7 +45,6 @@ public sealed class DayUpgradeSession
     public static int Cost(DayUpgrade upgrade) => upgrade switch
     {
         DayUpgrade.Cash => 0,
-        DayUpgrade.Energy => 10,
         DayUpgrade.Atelier => 15,
         DayUpgrade.Music => 25,
         DayUpgrade.AtelierPrice => 10,
@@ -79,7 +79,7 @@ public sealed class DayUpgradeSession
         MusicUnlocked = musicUnlocked;
         _training = false;
         // Permanent bonuses in legacy saves do not carry over to the new day-only system.
-        Selected = Enum.IsDefined(selected) && selected != DayUpgrade.Time ? selected : DayUpgrade.None;
+        Selected = Enum.IsDefined(selected) && selected is not (DayUpgrade.Time or DayUpgrade.Energy) ? selected : DayUpgrade.None;
         if (!MusicUnlocked && (Selected is DayUpgrade.Music or DayUpgrade.MusicPrice)) Selected = DayUpgrade.None;
         Pending = pending && Selected == DayUpgrade.None;
     }
@@ -94,21 +94,14 @@ public sealed class DayUpgradeSession
             : baseline;
     }
 
-    public int Weight(string workshop, string rarity, int baseline, int commonBaseline)
+    public double CraftDuration(string workshop, double baseline)
     {
+        if (!double.IsFinite(baseline) || baseline <= 0) throw new ArgumentOutOfRangeException(nameof(baseline));
         bool boosted = (workshop == "atelier" && Selected == DayUpgrade.Atelier) ||
                        (workshop == "music" && Selected == DayUpgrade.Music);
-        if (!boosted) return baseline;
-        int transfer = Math.Min(12, Math.Max(0, commonBaseline - 1));
-        int first = transfer * 6 / 12;
-        int exclusive = transfer * 4 / 12;
-        return baseline + (rarity switch
-        {
-            "common" => -transfer,
-            "first_class" => first,
-            "exclusive" => exclusive,
-            "unique" => transfer - first - exclusive,
-            _ => 0
-        });
+        return boosted ? baseline * 1.2 : baseline;
     }
+
+    // Kept for save/runtime compatibility; selected-item crafting no longer rolls rarity.
+    public int Weight(string workshop, string rarity, int baseline, int commonBaseline) => baseline;
 }

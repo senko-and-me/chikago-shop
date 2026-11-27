@@ -33,7 +33,7 @@ public static class DebugBalanceSettings
         WeightedSelection = Number("cards.weighted") == 1,
         Seed = (int)Number("cards.seed")
     };
-    public static DayUpgrade[] Cards => Enum.GetValues<DayUpgrade>().Where(card => card is not (DayUpgrade.None or DayUpgrade.Time)).ToArray();
+    public static DayUpgrade[] Cards => Enum.GetValues<DayUpgrade>().Where(card => card is not (DayUpgrade.None or DayUpgrade.Time or DayUpgrade.Energy)).ToArray();
     public static string CardName(DayUpgrade card) => card switch
     {
         DayUpgrade.Cash => "Оборотные средства", DayUpgrade.Energy => "Второе дыхание",
@@ -156,8 +156,19 @@ public static class DebugBalanceSettings
         profile.Numbers?.Remove("card.Time.cost");
         profile.Numbers?.Remove("card.Cash.cost");
         profile.Numbers?.Remove("card.Time.weight");
+        profile.Numbers?.Remove("card.Energy.cost");
+        profile.Numbers?.Remove("card.Energy.weight");
+        profile.Numbers?.Remove("energy.before");
+        profile.Numbers?.Remove("energy.after");
+        profile.Numbers?.Remove("workshop.music.unlock");
         profile.Numbers?.Remove("buyer.min");
         profile.Numbers?.Remove("buyer.max");
+        profile.Numbers?.Remove("craft.count");
+        profile.Numbers?.Remove("hand.rarity");
+        foreach (var workshop in EconomyConfigProvider.Baseline.Workshops)
+            profile.Numbers?.Remove($"workshop.{workshop.Id}.cost");
+        foreach (var rarity in EconomyConfigProvider.Baseline.Rarities)
+            profile.Numbers?.Remove($"rarity.{rarity.Id}.weight");
         // A legacy profile may have disabled every other card and relied on Time.
         if (profile.Numbers != null && Cards.All(card => profile.Numbers.GetValueOrDefault($"card.{card}.weight", 1) == 0))
             profile.Numbers["card.Cash.weight"] = 1;
@@ -174,14 +185,7 @@ public static class DebugBalanceSettings
         profile.Validate(Fields, WorkshopItemCatalog.BaselineItems.Select(item => item.Kind).ToHashSet(),
             baseline.Rarities.Select(rarity => rarity.Id).ToHashSet());
         double Get(string key) => profile.Number(key, Fields.Single(field => field.Key == key).Default);
-        if (Get("energy.after") < Get("energy.before")) throw new ArgumentException("Энергия после открытия мастерской должна быть не ниже начальной.");
         if (Cards.Sum(card => Get($"card.{card}.weight")) <= 0) throw new ArgumentException("Хотя бы одна карта должна иметь положительный вес.");
-        foreach (string workshop in new[] { "atelier", "music" })
-        {
-            bool available = WorkshopItemCatalog.BaselineItems.Where(item => item.WorkshopId == workshop).Any(item =>
-                Get($"rarity.{profile.ItemRarities.GetValueOrDefault(item.Kind, item.RarityId)}.weight") > 0);
-            if (!available) throw new ArgumentException($"В мастерской {workshop} нет предметов с положительным шансом создания.");
-        }
     }
     private static EconomyConfig BuildEconomy(BalanceProfile profile)
     {
@@ -191,22 +195,24 @@ public static class DebugBalanceSettings
         {
             SchemaVersion = source.SchemaVersion, IsProvisional = source.IsProvisional,
             StartingMoney = Get("start.cash", source.StartingMoney),
+            CraftCosts = source.CraftCosts.ToDictionary(entry => entry.Key,
+                entry => Get($"craft.{entry.Key}.cost", entry.Value)),
             Days = new DayConfig
             {
                 TotalDays = source.Days.TotalDays, TutorialDay = source.Days.TutorialDay,
                 DurationSeconds = Get("day.seconds", source.Days.DurationSeconds),
-                EnergyBeforeMusicUnlock = Get("energy.before", source.Days.EnergyBeforeMusicUnlock),
-                EnergyAfterMusicUnlock = Get("energy.after", source.Days.EnergyAfterMusicUnlock),
-                ItemsPerCraft = Get("craft.count", source.Days.ItemsPerCraft)
+                EnergyBeforeMusicUnlock = source.Days.EnergyBeforeMusicUnlock,
+                EnergyAfterMusicUnlock = source.Days.EnergyAfterMusicUnlock,
+                ItemsPerCraft = 1
             },
             Workshops = source.Workshops.Select(workshop => new WorkshopConfig
             {
-                Id = workshop.Id, SpinCost = Get($"workshop.{workshop.Id}.cost", workshop.SpinCost),
-                UnlockCost = Get($"workshop.{workshop.Id}.unlock", workshop.UnlockCost)
+                Id = workshop.Id, SpinCost = workshop.SpinCost,
+                UnlockCost = workshop.UnlockCost
             }).ToList(),
             Rarities = source.Rarities.Select(rarity => new RarityConfig
             {
-                Id = rarity.Id, Name = rarity.Name, Weight = Get($"rarity.{rarity.Id}.weight", rarity.Weight),
+                Id = rarity.Id, Name = rarity.Name, Weight = rarity.Weight,
                 Rerolls = Get($"rarity.{rarity.Id}.rerolls", rarity.Rerolls), BasePrices = new(rarity.BasePrices)
             }).ToList(),
             OfferRanges = source.OfferRanges,
@@ -220,12 +226,8 @@ public static class DebugBalanceSettings
         var fields = new List<BalanceField>
         {
             new("start.cash", "Партия", "Стартовые деньги ($) · новая игра", config.StartingMoney, 0, 1000000),
-            new("energy.before", "Партия", "Энергия до открытия музыки · новая игра", config.Days.EnergyBeforeMusicUnlock, 1, 99),
-            new("energy.after", "Партия", "Энергия после открытия музыки", config.Days.EnergyAfterMusicUnlock, 1, 99),
             new("day.seconds", "Партия", "День до музыки (сек.; после +30)", config.Days.DurationSeconds, 5, 3600),
-            new("craft.count", "Создание", "Предметов за один крафт", config.Days.ItemsPerCraft, 1, 50),
             new("hand.enabled", "Партия", "Невидимая рука: 0 — выкл., 1 — вкл.", 1, 0, 1),
-            new("hand.rarity", "Редкости", "Невидимая рука: предел редкости (п.п.)", 5, 0, 5),
             new("hand.offer", "Партия", "Невидимая рука: предел предложения (п.п.)", 3, 0, 3),
             new("craft.atelier.seconds", "Создание", "Время вышивки (сек.)", 10, 1, 600),
             new("craft.music.seconds", "Создание", "Время полировки (сек.)", 10, 1, 600),
@@ -237,14 +239,14 @@ public static class DebugBalanceSettings
         foreach (var workshop in config.Workshops)
         {
             string name = workshop.Id == "atelier" ? "Ателье" : "Музыка";
-            fields.Add(new($"workshop.{workshop.Id}.cost", "Создание", name + ": цена одного крафта ($)", workshop.SpinCost));
             if (workshop.UnlockCost > 0) fields.Add(new($"workshop.{workshop.Id}.unlock", "Создание", name + ": цена открытия ($)", workshop.UnlockCost));
         }
         foreach (var rarity in config.Rarities)
         {
-            fields.Add(new($"rarity.{rarity.Id}.weight", "Редкости", rarity.Name + ": вес создания", rarity.Weight, 0, 1000));
             fields.Add(new($"rarity.{rarity.Id}.rerolls", "Редкости", rarity.Name + ": смен покупателя", rarity.Rerolls, 0, 50));
         }
+        foreach (var item in WorkshopItemCatalog.BaselineItems)
+            fields.Add(new($"craft.{item.Kind}.cost", "Создание", item.Name + ": цена крафта ($)", config.CraftCosts[item.Kind], 1, 1000000));
         foreach (var card in Cards)
         {
             if (card != DayUpgrade.Cash) fields.Add(new($"card.{card}.cost", "Карты", CardName(card) + ": цена ($)", DayUpgradeSession.Cost(card)));

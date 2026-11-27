@@ -1,60 +1,45 @@
 [gd_scene format=3 uid="uid://4j1i60hag1el"]
 
 [ext_resource type="Script" uid="uid://bbdbrlsqvmgia" path="res://scripts/MainMenu.cs" id="1_script"]
-
 [ext_resource type="Texture2D" uid="uid://byqyjwldbq35i" path="res://art/ui/button_settings.png" id="2_settings"]
-
 [ext_resource type="Texture2D" uid="uid://bda7bxwxwttqa" path="res://art/ui/button_quit.png" id="3_quit"]
-
-[ext_resource type="Texture2D" uid="uid://blr5mo3usryyx" path="res://art/ui/button_back.png" id="4_back"]
-
 [ext_resource type="Texture2D" uid="uid://e5kmc4ojg427" path="res://art/ui/button_play.png" id="5_play"]
-
 [ext_resource type="Texture2D" uid="uid://7bwj2nywuk1p" path="res://art/ui/menu_background.png" id="6_background"]
-
 [ext_resource type="Texture2D" uid="uid://dfkvkw5r50k4v" path="res://art/ui/logo.png" id="7_logo"]
-
 [ext_resource type="FontFile" uid="uid://q8nuqkeci347" path="res://art/fonts/game.ttf" id="8_font"]
-
 [ext_resource type="Texture2D" uid="uid://j27bt53frben" path="res://art/ui/ru/fullscreen_off.png" id="9_5dd4i"]
-
 [ext_resource type="Texture2D" uid="uid://ti6uump1r481" path="res://art/ui/settings_panel.png" id="9_settings_panel"]
-
 [ext_resource type="AudioStream" uid="uid://dapsv2fl4qete" path="res://audio/music/menu_theme_loop.wav" id="10_menu_music"]
-
 [ext_resource type="Script" uid="uid://cg33sfinb6h1a" path="res://scripts/Audio/IntroMusicDirector.cs" id="11_music_director"]
-
 [ext_resource type="PackedScene" path="res://scenes/UI/MusicVolumeControl.tscn" id="14_volume"]
-
-[ext_resource type="Texture2D" path="res://art/ui/panel_small.png" id="15_paper"]
-
-[sub_resource type="ButtonGroup" id="LanguageGroup"]
+[ext_resource type="Texture2D" uid="uid://bf1y5qehuwoj" path="res://art/ui/panel_small.png" id="15_paper"]
 
 [sub_resource type="StyleBoxTexture" id="LanguageNormal"]
-texture = ExtResource("15_paper")
-modulate_color = Color(1, 1, 1, 1)
 content_margin_left = 16.0
-content_margin_right = 16.0
 content_margin_top = 8.0
+content_margin_right = 16.0
 content_margin_bottom = 8.0
-
-[sub_resource type="StyleBoxTexture" id="LanguageHover"]
 texture = ExtResource("15_paper")
-modulate_color = Color(0.85, 0.85, 0.85, 1)
-content_margin_left = 16.0
-content_margin_right = 16.0
-content_margin_top = 8.0
-content_margin_bottom = 8.0
 
 [sub_resource type="StyleBoxTexture" id="LanguageSelected"]
+content_margin_left = 16.0
+content_margin_top = 8.0
+content_margin_right = 16.0
+content_margin_bottom = 8.0
 texture = ExtResource("15_paper")
 modulate_color = Color(0.47, 0.47, 0.47, 1)
+
+[sub_resource type="StyleBoxTexture" id="LanguageHover"]
 content_margin_left = 16.0
-content_margin_right = 16.0
 content_margin_top = 8.0
+content_margin_right = 16.0
 content_margin_bottom = 8.0
+texture = ExtResource("15_paper")
+modulate_color = Color(0.85, 0.85, 0.85, 1)
 
 [sub_resource type="StyleBoxEmpty" id="NoFocusBorder"]
+
+[sub_resource type="ButtonGroup" id="LanguageGroup"]
 
 [node name="MainMenu" type="Control" unique_id=1262597174]
 layout_mode = 3
@@ -64,7 +49,6 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_script")
-GameScene = null
 
 [node name="MenuMusic" type="AudioStreamPlayer" parent="." unique_id=495363970]
 stream = ExtResource("10_menu_music")
@@ -73,9 +57,18 @@ autoplay = true
 
 [node name="MusicDirector" type="Node" parent="." unique_id=1010500646]
 script = ExtResource("11_music_director")
-IntroVolumeDb = -12.0
-ThoughtfulVolumeDb = -12.0
-SinisterVolumeDb = -12.0
+MenuVolumeDb = null
+IntroVolumeDb = null
+ThoughtfulVolumeDb = null
+SinisterVolumeDb = null
+ThoughtfulCompensation = null
+SinisterCompensation = null
+ThoughtfulStream = null
+SinisterStream = null
+IntroFadeSeconds = null
+CrossfadeSeconds = null
+ExitFadeSeconds = null
+SkipFadeSeconds = null
 
 [node name="Background" type="TextureRect" parent="." unique_id=1737544570]
 layout_mode = 1
@@ -192,25 +185,25 @@ custom_minimum_size = Vector2(500, 72)
 layout_mode = 2
 size_flags_horizontal = 4
 mouse_default_cursor_shape = 2
+texture_normal = ExtResource("9_5dd4i")
 ignore_texture_size = true
 stretch_mode = 0
-texture_normal = ExtResource("9_5dd4i")
 
-[node name="CaptionPaper" type="ColorRect" parent="SettingsMenuContainer/Settings/FullscreenButton"]
+[node name="CaptionPaper" type="ColorRect" parent="SettingsMenuContainer/Settings/FullscreenButton" unique_id=1613173669]
 layout_mode = 1
+anchors_preset = -1
 anchor_left = 0.04
 anchor_top = 0.15
 anchor_right = 0.72
 anchor_bottom = 0.86
 mouse_filter = 2
-color = Color(1, 1, 1, 1)
 
-[node name="Caption" type="Label" parent="SettingsMenuContainer/Settings/FullscreenButton"]
+[node name="Caption" type="Label" parent="SettingsMenuContainer/Settings/FullscreenButton" unique_id=211287324]
 layout_mode = 1
+anchors_preset = -1
 anchor_left = 0.045
 anchor_right = 0.72
 anchor_bottom = 1.0
-mouse_filter = 2
 theme_override_colors/font_color = Color(0.08, 0.08, 0.08, 1)
 theme_override_font_sizes/font_size = 24
 text = "Полный экран"
@@ -219,10 +212,13 @@ vertical_alignment = 1
 [node name="MusicVolume" parent="SettingsMenuContainer/Settings" unique_id=1884032349 instance=ExtResource("14_volume")]
 custom_minimum_size = Vector2(500, 100)
 layout_mode = 2
+PlainStyle = null
+ControlsSoundEffects = null
 
-[node name="SoundVolume" parent="SettingsMenuContainer/Settings" instance=ExtResource("14_volume")]
+[node name="SoundVolume" parent="SettingsMenuContainer/Settings" unique_id=413326795 instance=ExtResource("14_volume")]
 custom_minimum_size = Vector2(500, 100)
 layout_mode = 2
+PlainStyle = null
 ControlsSoundEffects = true
 
 [node name="LanguageRow" type="HBoxContainer" parent="SettingsMenuContainer/Settings" unique_id=1713369841]
@@ -232,28 +228,28 @@ theme_override_constants/separation = 12
 alignment = 1
 
 [node name="LanguageLabel" type="Label" parent="SettingsMenuContainer/Settings/LanguageRow" unique_id=1227003346]
+auto_translate_mode = 2
 custom_minimum_size = Vector2(128, 0)
 layout_mode = 2
-auto_translate_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 24
 text = "Язык"
-clip_text = true
 vertical_alignment = 1
+clip_text = true
 
 [node name="EnglishButton" type="Button" parent="SettingsMenuContainer/Settings/LanguageRow" unique_id=558163948]
+auto_translate_mode = 2
 custom_minimum_size = Vector2(160, 52)
 layout_mode = 2
-auto_translate_mode = 2
 mouse_default_cursor_shape = 2
 theme_override_colors/font_color = Color(0.08, 0.08, 0.08, 1)
-theme_override_colors/font_hover_color = Color(0.08, 0.08, 0.08, 1)
 theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(0.08, 0.08, 0.08, 1)
 theme_override_colors/font_hover_pressed_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 24
 theme_override_styles/normal = SubResource("LanguageNormal")
-theme_override_styles/hover = SubResource("LanguageHover")
 theme_override_styles/pressed = SubResource("LanguageSelected")
+theme_override_styles/hover = SubResource("LanguageHover")
 theme_override_styles/hover_pressed = SubResource("LanguageSelected")
 theme_override_styles/focus = SubResource("NoFocusBorder")
 toggle_mode = true
@@ -261,18 +257,18 @@ button_group = SubResource("LanguageGroup")
 text = "English"
 
 [node name="RussianButton" type="Button" parent="SettingsMenuContainer/Settings/LanguageRow" unique_id=1729965360]
+auto_translate_mode = 2
 custom_minimum_size = Vector2(160, 52)
 layout_mode = 2
-auto_translate_mode = 2
 mouse_default_cursor_shape = 2
 theme_override_colors/font_color = Color(0.08, 0.08, 0.08, 1)
-theme_override_colors/font_hover_color = Color(0.08, 0.08, 0.08, 1)
 theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(0.08, 0.08, 0.08, 1)
 theme_override_colors/font_hover_pressed_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 24
 theme_override_styles/normal = SubResource("LanguageNormal")
-theme_override_styles/hover = SubResource("LanguageHover")
 theme_override_styles/pressed = SubResource("LanguageSelected")
+theme_override_styles/hover = SubResource("LanguageHover")
 theme_override_styles/hover_pressed = SubResource("LanguageSelected")
 theme_override_styles/focus = SubResource("NoFocusBorder")
 toggle_mode = true
@@ -288,12 +284,13 @@ texture_normal = ExtResource("15_paper")
 ignore_texture_size = true
 stretch_mode = 0
 
-[node name="Caption" type="Label" parent="SettingsMenuContainer/Settings/BackButton"]
+[node name="Caption" type="Label" parent="SettingsMenuContainer/Settings/BackButton" unique_id=1016392937]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-mouse_filter = 2
+grow_horizontal = 2
+grow_vertical = 2
 theme_override_colors/font_color = Color(0.08, 0.08, 0.08, 1)
 theme_override_font_sizes/font_size = 24
 text = "Назад"

@@ -44,7 +44,7 @@ public partial class RarityPanel : Control
 		_normalLayer = _layer.Layer;
 		_camera = _game.GetNode<Camera2D>("Camera2D");
 
-		string[] headings = ["Редкость", "Ср. цена", "Шанс", "Рероллы"];
+		string[] headings = ["Редкость", "Ср. цена", "Крафт", "Рероллы"];
 		for (int i = 0; i < headings.Length; i++) AddCell($"Heading{i}", headings[i], true, i == 0);
 		string[] names = ["Ширпотреб", "Заурядная", "Первоклассная", "Эксклюзивная", "Неповторимая"];
 		string[] chances = ["60%", "25%", "10%", "4%", "1%"];
@@ -94,21 +94,14 @@ public partial class RarityPanel : Control
 		string[] rarities = ["common", "ordinary", "first_class", "exclusive", "unique"];
 		var game = _game as TradeScene;
 		var items = WorkshopItemCatalog.ActiveItems.Where(item => item.WorkshopId == workshop).ToArray();
-		var baseWeights = WorkshopItemCatalog.RarityWeights(workshop);
-		var currentWeights = game?.PreviewRarityWeights(workshop) ?? baseWeights;
-		int baseTotal = baseWeights.Values.Sum();
-		int total = currentWeights.Values.Sum();
 		for (int i = 0; i < rarities.Length; i++)
 		{
-			int baseWeight = baseWeights[rarities[i]];
-			int currentWeight = currentWeights[rarities[i]];
-			double baseline = baseTotal > 0 ? baseWeight * 100.0 / baseTotal : 0;
-			double current = total > 0 ? currentWeight * 100.0 / total : 0;
 			var label = Values.GetNode<Label>($"Chance{i}");
-			label.Text = $"{current:0.#}%";
-			label.TooltipText = GameLocalization.Format("Базовый шанс: {0:0.#}%", baseline);
-			SetChangeColor(label, ((long)currentWeight * baseTotal).CompareTo((long)baseWeight * total));
 			var category = items.Where(item => item.RarityId == rarities[i]).ToArray();
+			var representative = category.FirstOrDefault();
+			label.Text = representative == null ? "—" : $"{WorkshopItemCatalog.ItemCraftCost(WorkshopItemCatalog.IndexOf(representative.Kind))}$";
+			label.TooltipText = GameLocalization.Text("Предмет выбирается в каталоге");
+			SetChangeColor(label, 0);
 			int average = category.Length > 0 ? (int)Math.Round(category.Average(item => item.BasePrice)) : 0;
 			int price = category.Length > 0
 				? (int)Math.Round(category.Average(item => game?.DayUpgrades?.Price(workshop, item.BasePrice) ?? item.BasePrice))
@@ -146,7 +139,6 @@ public partial class RarityPanel : Control
 			_game.GetNode<Control>("HUD/Root/ProgressPanel"),
 			_game.GetNode<Control>("HUD/Root/ProgressToggleButton"),
 			_game.GetNode<Control>("HUD/Root/ScorePanel"),
-			_game.GetNode<Control>("HUD/Root/EnergyPanel"),
 			_game.GetNode<Control>("HUD/InventoryUI/ScrollContainer")
 		];
 		Span<Rect2> obstacles = stackalloc Rect2[_hudControls.Length];

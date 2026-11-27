@@ -34,19 +34,15 @@ public partial class TradeScene
 		return WorkshopItemCatalog.RarityWeights(workshop, DayUpgrades, CraftRarityShift(workshop, preview));
 	}
 
-	private int CraftRarityShift(string workshop, InvisibleHandDirector director) =>
-		director.RarityShift(WorkshopItemCatalog.RarityWeightTotal(workshop, DayUpgrades),
-			DebugBalanceSettings.Number("hand.rarity"));
+	private int CraftRarityShift(string workshop, InvisibleHandDirector director) => 0;
 
-    // The polishing mini-game reveals the instrument before acquisition;
-    // roll that prepared item through the same hidden rarity adjustment.
+    // Compatibility accessor; selected crafting never rolls a replacement instrument.
     public (int ItemIndex, string InstrumentKind) PreparePolishingItem()
     {
-        RecalculateInvisibleHand();
-        int hiddenShift = CraftRarityShift("music", _invisibleHand);
-        return WorkshopItemCatalog.PreparePolishing(
-            GD.RandRange(0, WorkshopItemCatalog.TotalWeight("music", DayUpgrades, hiddenShift) - 1),
-            DayUpgrades, hiddenShift);
+        int index = Crafting.SelectedIndex;
+        if (index < 0 || WorkshopItemCatalog.Items[index].WorkshopId != "music")
+            throw new System.InvalidOperationException("Choose an instrument in the catalog first.");
+        return (index, WorkshopItemCatalog.Items[index].Kind);
     }
 
 }

@@ -88,8 +88,10 @@ public partial class TradeScene
 		if (data == null) return false;
 		data = ProgressMigration.Prepare(data);
 
-		MusicWorkshopUnlocked = data.MusicWorkshopUnlocked;
-		CheckpointMusicWorkshopUnlocked = data.CheckpointMusicWorkshopUnlocked;
+		MusicWorkshopUnlocked = ProgressMigration.StoryWorkshopUnlocked(data.MusicWorkshopUnlocked,
+			data.Day, data.QuotaStage, data.QuotaVisit, FirstDeadline);
+		CheckpointMusicWorkshopUnlocked = ProgressMigration.StoryWorkshopUnlocked(data.CheckpointMusicWorkshopUnlocked,
+			data.CheckpointDay, data.CheckpointDay > FirstDeadline ? 1 : 0, data.CheckpointQuotaVisit, FirstDeadline);
 
 		_dayCycle.Restore(
 			data.DayRemainingSeconds,

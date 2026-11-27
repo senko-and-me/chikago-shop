@@ -378,13 +378,18 @@ public partial class ProjectTest
             Check(!rarity.Popup.IsVisibleInTree(), "The rarity popup must still close on pointer exit");
             await ClickControl(game, "World/Atelier/GetItemButton");
             await Frame();
+            Step(FirstTradeTutorial.Step.CraftSelection);
+            Check(game.Crafting.IsCatalogOpen && tutorial.Target == game.Crafting.Catalog.ItemButton("hat") &&
+                tutorial.Layer > game.Crafting.Catalog.Layer, "Tutorial must highlight the hat in the actual catalog");
+            await ClickControl(game, game.GetPathTo(game.Crafting.Catalog.ItemButton("hat")).ToString());
+            await Frame();
             Step(FirstTradeTutorial.Step.EmbroideryStart);
             var embroidery = game.GetNode<EmbroideryGame>("EmbroideryGame");
             var spotlight = tutorial.GetNode<TutorialSpotlight>("Spotlight");
             Check(game.CraftMiniGameOpen && tutorial.Target == embroidery.StartButton &&
                 tutorial.Layer > embroidery.Layer && spotlight.MouseFilter == Control.MouseFilterEnum.Ignore,
                 "The ready lesson must highlight only the actual Start button above the modal");
-            Check(embroidery.GetNode<Label>("Surface/Hint").Text.Length == 0,
+            Check(embroidery.GetNode<Label>("Surface/Panel/Hint").Text.Length == 0,
                 "The regular ready screen must not repeat the tutorial instruction");
             TranslationServer.SetLocale("en");
             await Frame();
@@ -405,9 +410,9 @@ public partial class ProjectTest
                     Mathf.IsEqualApprox(darkness, 0.50f), "The visible spotlight must settle over Start at both resolutions");
             }
             Root.Size = new Vector2I(1280, 720);
-            await ClickControl(game, "EmbroideryGame/Surface/Action");
+            await ClickControl(game, "EmbroideryGame/Surface/Panel/Buttons/Action");
             await Frame();
-            var craftHint = embroidery.GetNode<Label>("Surface/Hint");
+            var craftHint = embroidery.GetNode<Label>("Surface/Panel/Hint");
             Check(!tutorial.IsShowing && craftHint.Text == GameLocalization.Text("Нажимайте на подсвечивающиеся точки по очереди."),
                 "Clicking Start must finish the spotlight lesson and reveal the stitch instruction");
             var sewingSurface = embroidery.GetNode<EmbroiderySurface>("Surface");
@@ -422,7 +427,7 @@ public partial class ProjectTest
             embroidery.FinishForTesting(true);
             Check(string.IsNullOrEmpty(craftHint.Text),
                 "The craft result must only show the Collect button");
-            await ClickControl(game, "EmbroideryGame/Surface/Action");
+            await ClickControl(game, "EmbroideryGame/Surface/Panel/Buttons/Action");
             await Frame();
             Step(FirstTradeTutorial.Step.Select);
             await CheckCameraLocked();
@@ -920,8 +925,8 @@ public partial class ProjectTest
             game.GetItemFromAtelier();
             FinishEmbroidery(game);
             await Frame();
-            Check(game.DayStarted && game.Score < game.StartingMoney && game.StoredItems.Length > 0 &&
-                game.EnergyRemaining < game.EnergyCapacity, "Skip must be tested after real paid practice has changed the run");
+            Check(game.DayStarted && game.Score < game.StartingMoney && game.StoredItems.Length > 0,
+                "Skip must be tested after real paid practice has changed the run");
             int scoreBeforeCancel = game.Score;
             await ClickControl(game, "FirstTradeTutorial/" + skipPath);
             await ClickControl(game, "FirstTradeTutorial/Root/SkipConfirmation/Center/Panel/Content/Actions/Cancel");
@@ -1007,16 +1012,16 @@ public partial class ProjectTest
             ProgressSaveStore.Save(save, new ChikagoShop.Domain.Persistence.ProgressData
             {
                 SaveVersion = ChikagoShop.Domain.Persistence.ProgressJson.CurrentVersion,
-                Day = 8, QuotaStage = 1, Score = 1000, DayStarted = false, EnergyRemaining = 2
+                Day = 8, QuotaStage = 1, Score = 1000, DayStarted = false, EnergyRemaining = 2,
+                QuotaVisit = ChikagoShop.Domain.Persistence.QuotaVisitStage.Rewarded,
+                CheckpointQuotaVisit = ChikagoShop.Domain.Persistence.QuotaVisitStage.Rewarded,
+                CheckpointDay = 8
             });
             var tutorial = await ReloadWorkshop();
-            Check(!tutorial.IsShowing, "The workshop tutorial must start only after purchase");
-            game.TryUnlockMusicWorkshop();
-            tutorial = await ReloadWorkshop();
             Check(tutorial.IsShowing && tutorial.CurrentStep == FirstTradeTutorial.Step.MusicWorkshop &&
-                game.MusicWorkshopUnlocked && game.Score == 0 && !game.DayStarted &&
+                game.MusicWorkshopUnlocked && game.Score == 1000 && !game.DayStarted &&
                 !game.GetNode<ModularCustomer>("World/TradingRoom/Customer").Visible,
-                "The first purchase must preserve the pending workshop lesson and an empty counter on reload");
+                "A completed story migrated from an older save must introduce the workshop free and keep an empty counter");
             await ClickControl(game, next);
             Check(tutorial.Target == null, "The polishing explanation has no fixed target");
             await ClickControl(game, next);
@@ -1027,7 +1032,7 @@ public partial class ProjectTest
             await ClickControl(game, "FirstTradeTutorial/Root/SkipConfirmation/Center/Panel/Content/Actions/Confirm");
             tutorial = await ReloadWorkshop();
             Check(!tutorial.IsShowing && !tutorial.IsActive && game.MusicWorkshopUnlocked && game.CurrentDay == 8 &&
-                !game.DayStarted && game.Score == 0 && !game.GetNode<WorldCamera>("Camera2D").NavigationLocked,
+                !game.DayStarted && game.Score == 1000 && !game.GetNode<WorldCamera>("Camera2D").NavigationLocked,
                 "Skipping the workshop lesson must persist without resetting or locking the campaign");
             game.EndDay();
             Check(game.DayStarted && game.GetNode<ModularCustomer>("World/TradingRoom/Customer").Visible,

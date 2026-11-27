@@ -72,7 +72,20 @@ public static class WorkshopItemCatalog
             .Sum(rarity => RarityWeight(workshop, rarity.Id, upgrades));
     public static int TotalWeight(string workshop, DayUpgradeSession upgrades = null, int hiddenShift = 0) =>
         Table(workshop, upgrades, hiddenShift).TotalWeight;
-    public static int CraftCost(string workshop) => Config.Workshops.Single(entry => entry.Id == workshop).SpinCost;
+    public static int IndexOf(string kind)
+    {
+        for (int i = 0; i < Items.Count; i++) if (Items[i].Kind == kind) return i;
+        return -1;
+    }
+    public static int ItemCraftCost(int index)
+    {
+        var item = Items[index];
+        if (!Config.CraftCosts.TryGetValue(item.Kind, out int cost) || cost <= 0)
+            throw new InvalidOperationException($"Missing positive craft cost for {item.Kind}");
+        return cost;
+    }
+    public static int CraftCost(string workshop) => Items.Select((item, index) => (item, index))
+        .Where(entry => entry.item.WorkshopId == workshop).Min(entry => ItemCraftCost(entry.index));
     public static int DayDurationSeconds => Config.Days.DurationSeconds;
     public static int Roll(string workshop, int ticket, DayUpgradeSession upgrades = null, int hiddenShift = 0) =>
         Table(workshop, upgrades, hiddenShift).Select(ticket);

@@ -2,12 +2,22 @@
   "schema_version": 1,
   "is_provisional": true,
   "starting_money": 220,
+  "craft_costs": {
+    "hat": 20,
+    "vest": 30,
+    "gloves": 55,
+    "matteo_hat": 80,
+    "lorgnette": 135,
+    "guitar": 30,
+    "drum": 50,
+    "banjo": 80,
+    "violin": 125,
+    "tuba": 205
+  },
   "days": {
     "total_days": 14,
     "tutorial_day": 1,
     "duration_seconds": 60,
-    "energy_before_music_unlock": 3,
-    "energy_after_music_unlock": 6,
     "items_per_craft": 1
   },
   "workshops": [
@@ -19,7 +29,7 @@
     {
       "id": "music",
       "spin_cost": 50,
-      "unlock_cost": 1000
+      "unlock_cost": 0
     }
   ],
   "rarities": [

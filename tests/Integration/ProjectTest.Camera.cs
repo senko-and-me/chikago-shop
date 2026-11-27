@@ -123,7 +123,7 @@ public partial class ProjectTest
         {
             string room = workshop.Id == "atelier" ? "Atelier" : "MusicWorkshop";
             string preview = game.GetNode<Label>($"World/{room}/GetItemButton/PriceHint/Label").Text;
-            Check(preview == $"1 предмет  •  {workshop.SpinCost}$ + 1 энергия",
+            Check(preview == $"Выбор предмета  •  от {WorkshopItemCatalog.CraftCost(workshop.Id)}$",
                 "The authored price preview must match the default single-item economy before Ready");
         }
         var tradePanel = game.GetNode<Control>("World/TradingRoom/Item/TradePanel");
@@ -166,7 +166,7 @@ public partial class ProjectTest
             await Frame();
             game.EndDay();
             game.Score = 10000;
-            game.TryUnlockMusicWorkshop();
+            UnlockMusicForFixture(game);
             foreach (Vector2I size in new[] { new Vector2I(960, 540), new Vector2I(1280, 720), new Vector2I(1000, 800) })
             foreach (string language in new[] { "ru", "en" })
             {

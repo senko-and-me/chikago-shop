@@ -7,6 +7,12 @@ using ChikagoShop.Domain.Days;
 // Subsystem checks share the ProjectTest runner and fixture helpers.
 public partial class ProjectTest
 {
+    // Non-story suites arrange an open room without simulating a whole campaign.
+    // The real paid-quota/conversation flow is covered by TestQuotaVisit.
+    private static void UnlockMusicForFixture(TradeScene game) =>
+        typeof(TradeScene).GetMethod("UnlockMusicWorkshopAfterStory",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.Invoke(game, null);
+
     private async Task WaitForDayCardAnimation(Node game)
     {
         var card = game is DayTransitionCard direct ? direct : game.GetNodeOrNull<DayTransitionCard>("DayTransitionCard");

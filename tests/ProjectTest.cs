@@ -16,6 +16,28 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--notebook-hover-checks"))
+            {
+                await TestNotebookRightEdgeHover();
+                GD.Print("NOTEBOOK_HOVER_CHECKS_PASS: right-edge opening, gap retention, vertical exit and resize");
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--selective-crafting-checks"))
+            {
+                await TestSelectiveCrafting();
+                GD.Print("SELECTIVE_CRAFTING_CHECKS_PASS: catalog, ten selected items, debit, quality, cancel, pause, saves and responsive UI");
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--craft-session-checks"))
+            {
+                await TestEmbroidery();
+                await TestPolishing();
+                GD.Print("CRAFT_SESSION_CHECKS_PASS");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--scene-transition-checks"))
             {
                 await TestSceneTransitions();
@@ -121,10 +143,10 @@ public partial class ProjectTest : SceneTree
                 Quit();
                 return;
             }
-            if (OS.GetCmdlineUserArgs().Contains("--energy-bulbs-checks"))
+            if (OS.GetCmdlineUserArgs().Contains("--energy-removal-checks") || OS.GetCmdlineUserArgs().Contains("--energy-bulbs-checks"))
             {
-                await TestEnergyBulbs();
-                GD.Print("ENERGY_BULBS_CHECKS_PASS: remaining, depleted, unlocked/upgraded capacity, localized tooltips, pause and three window sizes");
+                await TestEnergyRemoval();
+                GD.Print("ENERGY_REMOVAL_CHECKS_PASS: legacy saves, repeated crafts, buyers, retired card, HUD and resource guards");
                 Quit();
                 return;
             }
@@ -145,7 +167,7 @@ public partial class ProjectTest : SceneTree
             if (OS.GetCmdlineUserArgs().Contains("--polishing-reward-checks"))
             {
                 await TestPolishingReward();
-                GD.Print("POLISHING_REWARD_CHECKS_PASS: all instruments, weighted previews, free cancel, exact reward, payment, quality, timeout and reload");
+                GD.Print("POLISHING_REWARD_CHECKS_PASS: all selected instruments, free cancel, exact reward, payment, quality, timeout and reload");
                 Quit();
                 return;
             }

@@ -287,6 +287,8 @@ public partial class PauseMenu : CanvasLayer
 
     private void DismissCraft()
     {
+        GetParent<TradeScene>().Crafting.Catalog.CloseForReset();
+        GetParent<TradeScene>().Crafting.CancelPreparation();
         GetParent().GetNode<EmbroideryGame>("EmbroideryGame").Dismiss();
         GetParent().GetNode<EmbroideryGame>("PolishingGame").Dismiss();
     }

@@ -105,9 +105,34 @@ public partial class TradeScene
         Score += QuotaGift;
         CheckpointScore += QuotaGift;
         ResetQuotaVisitPresentation();
+        UnlockMusicWorkshopAfterStory();
         _customer.Hide();
         RefreshDayPresentation();
         _dayCycle.FinishQuotaVisit();
+    }
+
+    // Kept for legacy action callers. The story, never cash or a button, grants access.
+    public void TryUnlockMusicWorkshop()
+    {
+        if (GetTree().Paused || DayTransitionOpen || Failed || Completed ||
+            CurrentDay <= FirstDeadline || QuotaStage < 1 || _quotaVisit != QuotaVisitStage.Rewarded) return;
+        UnlockMusicWorkshopAfterStory();
+    }
+
+    private void UnlockMusicWorkshopAfterStory()
+    {
+        if (MusicWorkshopUnlocked) return;
+        MusicWorkshopUnlocked = true;
+        CheckpointMusicWorkshopUnlocked = true;
+        _dayCycle.SynchronizeRoomDuration();
+        RecalculateInvisibleHand();
+        StatusText = "Музыкальная мастерская открыта.";
+        _inventoryUI.UpdateUI(_storedItems);
+        RefreshScore();
+        RefreshProgress();
+        RefreshItemButtons();
+        _tutorial.OnMusicWorkshopUnlocked();
+        SaveProgress();
     }
 
     private void CloseQuotaDialogue()
