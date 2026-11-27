@@ -9,6 +9,7 @@ public partial class MafiaQuotaNotice : CanvasLayer
 {
     public event Action Dismissed;
     public event Action RestartRequested;
+    public event Action CheckpointRequested;
     public event Action MainMenuRequested;
 
     private Control _root = null!;
@@ -18,6 +19,7 @@ public partial class MafiaQuotaNotice : CanvasLayer
     private Label _message = null!;
     private TextureButton _skipDialogue = null!;
     private Button _restart = null!;
+    private Button _checkpoint = null!;
     private Button _mainMenu = null!;
     private StoryPortraitController _portraits = null!;
     private StorySpeakerFocus _speakerFocus = null!;
@@ -25,6 +27,7 @@ public partial class MafiaQuotaNotice : CanvasLayer
     private Tween _fade = null!;
     private bool _ownsPause;
     private bool _terminal;
+    private bool _canCheckpoint;
     private bool _storyFinished;
     private bool _transitioning;
     private int _transitionRevision;
@@ -124,6 +127,12 @@ public partial class MafiaQuotaNotice : CanvasLayer
         _root.AddChild(_skipDialogue);
         StoryDialogueLayout.StyleSkipButton(_skipDialogue);
         _skipDialogue.Pressed += CloseWithTransition;
+        _checkpoint = MakeAction(actions, "Checkpoint", () =>
+        {
+            if (!_canCheckpoint || !_storyFinished) return;
+            CloseCore(false);
+            CheckpointRequested?.Invoke();
+        });
         _restart = MakeAction(actions, "Restart", () =>
         {
             CloseCore(false);
@@ -193,7 +202,9 @@ public partial class MafiaQuotaNotice : CanvasLayer
         if (IsOpen) return;
         bool english = GameLocalization.Language == "en";
         _terminal = !succeeded || final;
+        _canCheckpoint = !succeeded && !firstQuotaFailure;
         _storyFinished = false;
+        _heading.AddThemeFontSizeOverride("font_size", succeeded ? 18 : 54);
         _heading.Text = succeeded
             ? final ? (english ? "VICTORY" : "ПОБЕДА")
                 : (english ? "WEEK TWO" : "НЕДЕЛЯ ВТОРАЯ")
@@ -205,9 +216,11 @@ public partial class MafiaQuotaNotice : CanvasLayer
         ShowLine(line);
         StoryDialogueLayout.StyleSkipButton(_skipDialogue);
         _restart.Text = english ? "New game" : "Начать заново";
+        _checkpoint.Text = english ? "From checkpoint" : "С контрольной точки";
         _mainMenu.Text = english ? "Main menu" : "Главное меню";
         _skipDialogue.Show();
         _restart.Hide();
+        _checkpoint.Hide();
         _mainMenu.Hide();
         _ownsPause = !GetTree().Paused;
         GetTree().Paused = true;
@@ -312,6 +325,7 @@ public partial class MafiaQuotaNotice : CanvasLayer
         _speakerFocus.SetSpeaker(null);
         _skipDialogue.Hide();
         _restart.Show();
+        _checkpoint.Visible = _canCheckpoint;
         _mainMenu.Show();
         _restart.GrabFocus();
     }

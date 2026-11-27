@@ -75,7 +75,7 @@ public partial class ProjectTest
                 Press(point, false);
                 Paused = false;
             }
-            var purchase = covers[0].GetNode<Button>("UnlockPanel/Content/UnlockButton");
+            var purchase = covers[0].GetParent().GetNode<Button>("UnlockPanel/Content/UnlockButton");
             await PayFirstQuota();
             navigation.CancelFocusTransition();
             navigation.Position = covers[0].GlobalPosition + covers[0].Size / 2;
@@ -140,7 +140,7 @@ public partial class ProjectTest
             foreach (var cover in covers) Check(cover.Visible && cover.IsRevealing &&
                 cover.MouseFilter == Control.MouseFilterEnum.Ignore && cover.ClipContents,
                 "Unlock must reveal both rooms within their clipped openings without blocking input");
-            Check(!covers[0].GetNode<Control>("UnlockPanel").Visible,
+            Check(!covers[0].GetParent().GetNode<Control>("UnlockPanel").Visible,
                 "The purchase button must disappear immediately on successful unlock");
             await Wait(0.35);
             foreach (var cover in covers)
@@ -166,7 +166,7 @@ public partial class ProjectTest
                 cover.Modulate == Colors.White && cover.GetNode<Control>("LockedCurtain").Scale == Vector2.One,
                 "NewGame during reveal must cancel callbacks and restore the complete curtain");
             Check(covers[0].GetNode<Control>("LockedCurtain").Position == start &&
-                !covers[0].GetNode<Control>("UnlockPanel").Visible,
+                !covers[0].GetParent().GetNode<Control>("UnlockPanel").Visible,
                 "Reset must restore the authored curtain and hide the unlock button");
             var loadedScene = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
             var loaded = loadedScene.GetNode<RoomCurtainPresentation>("World/MusicWorkshop/LockedOverlay");

@@ -60,6 +60,7 @@ public sealed class DayCycleController
 			ResumeUpgradeChoice();
 		};
 		_mafia.RestartRequested += _game.NewGame;
+		_mafia.CheckpointRequested += _game.ReturnToCheckpoint;
 		_mafia.MainMenuRequested += () =>
 		{
 			_game.GetTree().Paused = false;

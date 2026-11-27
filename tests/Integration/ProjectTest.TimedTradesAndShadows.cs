@@ -189,7 +189,7 @@ public partial class ProjectTest
                 var accept = game.GetNode<Button>(tradeButtons + "AcceptButton");
                 var decline = game.GetNode<Button>(tradeButtons + "DeclineButton");
                 var craftButton = game.GetNode<Button>("World/Atelier/GetItemButton");
-                var unlock = game.GetNode<MusicWorkshopUnlockPanel>("World/MusicWorkshop/LockedOverlay/UnlockPanel").UnlockButton;
+                var unlock = game.GetNode<MusicWorkshopUnlockPanel>("World/MusicWorkshop/UnlockPanel").UnlockButton;
                 foreach (BaseButton button in new BaseButton[] { accept, decline, craftButton, unlock })
                     CheckButtonShadow(button);
                 foreach (var button in new[] { craftButton, unlock })

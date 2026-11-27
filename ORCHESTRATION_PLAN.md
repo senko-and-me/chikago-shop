@@ -9,6 +9,40 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### SC244 — контрольная точка после второй квоты
+
+SC244 DONE; /root; CP `.local/checks/sc244/CP-SC244.md`; SC243 DONE. Кнопка «С контрольной точки» возвращена только после поражения на второй квоте, включая пропуск финального диалога. Первое поражение без этой кнопки.
+
+```text
+Task: SC244
+Recommended status: REVIEW -> accepted DONE; gate PASSED 28.11.2026
+Changed: MafiaQuotaNotice checkpoint action/callback restored with !succeeded&&!firstQuotaFailure visibility gate after story completion; DayCycleController subscribes existing ReturnToCheckpoint. QuotaVisit exercises second-quota failure, skip, button activation and saved day8/score123 restoration; StoryDialogueLayout verifies visibility on full play/skip for all endings and absence during dialogue.
+Checks: build PASS zero warnings/errors; quota-visit and dialogue-portraits rendered suites PASS exit0/stderr empty (.local/checks/sc244/); diffcheck PASS.
+Acceptance: checkpoint offered only after second-quota defeat, hidden for first-quota defeat/victory and until story ends. Actual button restores checkpoint state, no failed flag or stale ending overlay. Prior large defeat heading and centered room unlock panel retained.
+Read-set exception: none; no source/ reads, no balance/schema change, prior and unrelated scene edits preserved.
+Risks/blocker: none.
+Next: user review; no push requested.
+```
+
+### SC243 — панель открытия между закрытыми комнатами
+
+SC243 DONE; /root; CP `.local/checks/sc243/CP-SC243.md`; SC242 DONE. Панель открытия перенесена на вертикальную середину двух шторок; вынесена из clipping верхней шторки, пути обновлены, текущая логика доступности сохранена.
+
+```text
+Task: SC243
+Recommended status: REVIEW -> accepted DONE; gate PASSED 28.11.2026
+Changed: trade_scene UnlockPanel reparented as MusicWorkshop child, scene-authored center(958.144,1101.746) with z201 above divider/frames. TradeScene node lookup only, RoomCurtainPresentation sibling panel lookup, test node references updated. QuotaVisit asserts real combined-room vertical midpoint, horizontal center and unclipped parent/z before opening.
+Checks: build PASS zero warnings/errors; quota-visit and room-frame rendered suites PASS exit0/stderr empty (.local/checks/sc243/); diffcheck PASS.
+Acceptance: panel spans midpoint of two closed room openings within1world pixel, not clipped by top curtain; availability, clicking/opening, hide after unlock/reload and room frames retained. Curtain geometry/reveal untouched.
+Read-set exception: focused diagnostic search located references in test files, all exact paths included in CP. TradeScene changed only presentation lookup, no domain logic. Existing user edits in trade_scene preserved.
+Risks/blocker: scene also contains unrelated pre-existing user edits; future commit should stage only UnlockPanel hunk for this task.
+Next: user review; no push requested.
+```
+
+### SC242 — увеличить заголовок поражения
+
+SC242 DONE; /root; CP `.local/checks/sc242/CP-SC242.md`; SC241 DONE. Размер заголовка поражения18→54; успешные заголовки сохранены18. Добавлена проверка размера в существующий тест композиции. Build PASS0warnings/errors (.local/checks/sc242/build.log), diffcheck PASS. Полный rendered suite не запускался для этой точечной стилевой правки. User scene edits preserved; no source/ reads. Next: user review, no push requested.
+
 ### SC241 — поражение на первой квоте
 
 SC241 DONE; /root; CP `.local/checks/sc241/CP-SC241.md`; SC240 DONE. Отдельный пользовательский диалог нехватки денег первой недели подключён, с затемнением и отдельным «Последние слова?». Позднее поражение сохранено.

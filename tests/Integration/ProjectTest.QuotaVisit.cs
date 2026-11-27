@@ -94,7 +94,7 @@ public partial class ProjectTest
             game.TryUnlockMusicWorkshop();
             Check(!game.MusicWorkshopUnlocked && game.Score == 4000,
                 "Money and a direct action must not unlock the workshop during week one");
-            var lockedNotice = game.GetNode<MusicWorkshopUnlockPanel>("World/MusicWorkshop/LockedOverlay/UnlockPanel");
+            var lockedNotice = game.GetNode<MusicWorkshopUnlockPanel>("World/MusicWorkshop/UnlockPanel");
             Check(!lockedNotice.IsVisibleInTree() && !lockedNotice.UnlockButton.IsVisibleInTree(),
                 "The first-week curtain must hide the panel and its button");
             lockedNotice.UnlockButton.EmitSignal(BaseButton.SignalName.Pressed);
@@ -102,11 +102,11 @@ public partial class ProjectTest
                 "A locked-room action must not display a notice");
             ProgressSaveStore.Save(save, new ProgressData { SaveVersion = ProgressJson.CurrentVersion, Day = deadline, Score = 4000, DayStarted = false });
             await Reload();
-            Check(!game.GetNode<MusicWorkshopUnlockPanel>("World/MusicWorkshop/LockedOverlay/UnlockPanel").IsVisibleInTree(),
+            Check(!game.GetNode<MusicWorkshopUnlockPanel>("World/MusicWorkshop/UnlockPanel").IsVisibleInTree(),
                 "The locked panel must remain hidden before day Start on reload");
             SetLastDay(4000);
             await Reload();
-            lockedNotice = game.GetNode<MusicWorkshopUnlockPanel>("World/MusicWorkshop/LockedOverlay/UnlockPanel");
+            lockedNotice = game.GetNode<MusicWorkshopUnlockPanel>("World/MusicWorkshop/UnlockPanel");
             TranslationServer.SetLocale("ru");
             if (DisplayServer.GetName() != "headless")
             {
@@ -270,7 +270,14 @@ public partial class ProjectTest
             game.ReturnToCheckpoint();
             Check(!game.QuotaVisitPending && game.Score == cashAfterQuota, "Checkpoint must restore completed access and the original cash");
             CheckCigarettes(8, 7, "дней", 1500);
-            var unlockPanel = game.GetNode<MusicWorkshopUnlockPanel>("World/MusicWorkshop/LockedOverlay/UnlockPanel");
+            var unlockPanel = game.GetNode<MusicWorkshopUnlockPanel>("World/MusicWorkshop/UnlockPanel");
+            Rect2 upperCover = game.GetNode<Control>("World/MusicWorkshop/LockedOverlay").GetGlobalRect();
+            Rect2 lowerCover = game.GetNode<Control>("World/Showroom/LockedOverlay").GetGlobalRect();
+            float pairCenterY = (upperCover.Position.Y + lowerCover.End.Y) / 2;
+            Check(Mathf.Abs(unlockPanel.GetGlobalRect().GetCenter().Y - pairCenterY) < 1 &&
+                Mathf.Abs(unlockPanel.GetGlobalRect().GetCenter().X - upperCover.GetCenter().X) < 1 &&
+                unlockPanel.GetParent() is Node2D && unlockPanel.ZIndex > 200,
+                "The unlock panel must span the vertical center of both locked rooms without curtain clipping or frame overlap");
             Check(game.MusicWorkshopAvailable && unlockPanel.IsVisibleInTree() && !unlockPanel.UnlockButton.Disabled &&
                 GameLocalization.Text(unlockPanel.UnlockButton.Text) == "Open workshop",
                 "The localized button must appear after the restored completed visit");
@@ -363,8 +370,27 @@ public partial class ProjectTest
             Check(firstFailure.StoryFinished && game.Failed && !game.QuotaVisitPending &&
                 firstFailure.GetNode<Label>("StoryRoot/Speech/Content/Message").Text.Contains(
                     GameLocalization.Language == "en" ? "this house" : "жизнь этого дома") &&
-                !firstFailure.HasNode("StoryRoot/Speech/Content/Actions/Checkpoint"),
+                !firstFailure.GetNode<Control>("StoryRoot/Speech/Content/Actions/Checkpoint").Visible,
                 "First-quota defeat must reach its final words and result actions without opening the family conversation");
+            ProgressSaveStore.Save(save, new ProgressData
+            {
+                SaveVersion = ProgressJson.CurrentVersion, Day = config.Quotas.Max(quota => quota.DeadlineDay), QuotaStage = 1,
+                Score = 0, DayStarted = true, QuotaVisit = QuotaVisitStage.Rewarded,
+                CheckpointQuotaVisit = QuotaVisitStage.Rewarded, CheckpointDay = 8, CheckpointScore = 123
+            });
+            await Reload();
+            game.EndDay();
+            game._Process(0);
+            await WaitForQuotaFade();
+            var secondFailure = game.GetNode<MafiaQuotaNotice>("MafiaQuotaNotice");
+            Check(game.Failed && !secondFailure.GetNode<Control>("StoryRoot/Speech/Content/Actions/Checkpoint").Visible,
+                "Second-quota failure must initially keep result actions hidden");
+            secondFailure.GetNode<TextureButton>("StoryRoot/SkipDialogue").EmitSignal(BaseButton.SignalName.Pressed);
+            var checkpointButton = secondFailure.GetNode<Button>("StoryRoot/Speech/Content/Actions/Checkpoint");
+            Check(checkpointButton.Visible, "Second-quota defeat must offer return to checkpoint after skipping");
+            checkpointButton.EmitSignal(BaseButton.SignalName.Pressed);
+            Check(!game.Failed && game.CurrentDay == 8 && game.Score == 123 && !secondFailure.IsOpen,
+                "The checkpoint action must restore the saved second-week state");
         }
         finally
         {

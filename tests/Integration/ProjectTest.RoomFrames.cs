@@ -70,7 +70,7 @@ public partial class ProjectTest
             Check(roomNode.GetNode<Control>("RoomFrame").ZIndex > curtainCover.ZIndex,
                 "The black frame must render above the entire locked-room cover");
         }
-        Check(game.GetNode<Control>("World/MusicWorkshop/LockedOverlay/UnlockPanel").Owner == game,
+        Check(game.GetNode<Control>("World/MusicWorkshop/UnlockPanel").Owner == game,
             "The reusable unlock panel must be authored in the room scene; its contents lay out after Ready");
         Remember("World/TimeOfDayDay");
         Remember("World/TimeOfDayNight");

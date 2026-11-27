@@ -449,7 +449,7 @@ public partial class TradeScene : Node2D
 		_musicLockedOverlay =
 			workshop.GetNode<RoomCurtainPresentation>("LockedOverlay");
 
-		_musicUnlockPanel = workshop.GetNode<MusicWorkshopUnlockPanel>("LockedOverlay/UnlockPanel");
+		_musicUnlockPanel = workshop.GetNode<MusicWorkshopUnlockPanel>("UnlockPanel");
 	}
 
 	private void RefreshCraftLabels()

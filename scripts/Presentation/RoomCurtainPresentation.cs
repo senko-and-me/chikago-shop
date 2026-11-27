@@ -16,7 +16,7 @@ public partial class RoomCurtainPresentation : ColorRect
     public override void _Ready()
     {
         _curtain = GetNode<TextureRect>("LockedCurtain");
-        _unlock = GetNodeOrNull<Control>("UnlockPanel");
+        _unlock = GetNodeOrNull<Control>("../UnlockPanel");
         _restPosition = _curtain.Position;
         _restScale = _curtain.Scale;
         _restModulate = Modulate;

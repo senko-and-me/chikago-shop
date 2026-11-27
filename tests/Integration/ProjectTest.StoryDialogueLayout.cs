@@ -55,10 +55,14 @@ public partial class ProjectTest
                 {
                     TranslationServer.SetLocale(ending.Item3 ? "en" : "ru");
                     notice.Open(750, 3500, ending.Item2, ending.Item3, firstQuotaFailure: ending.Item1 == "first_quota_defeat");
+                    Check(notice.GetNode<Label>("StoryRoot/Heading").GetThemeFontSize("font_size") == (ending.Item2 ? 18 : 54),
+                        "Defeat headings must use triple font size; other headings must retain their original size");
                     if (ending.Item1 != "mafia")
                     {
                         Check(!notice.GetNode<Control>("StoryRoot/Speech/Content/Actions/Restart").Visible,
                             "Result actions must remain hidden until the ending dialogue finishes");
+                        Check(!notice.GetNode<Control>("StoryRoot/Speech/Content/Actions/Checkpoint").Visible,
+                            "Checkpoint must stay hidden during every ending dialogue");
                         notice._Process(5);
                         notice._Input(new InputEventKey { Pressed = true, Keycode = Key.Space });
                         Check(notice.ConversationIndex == 1 && !notice.StoryFinished,
@@ -97,7 +101,7 @@ public partial class ProjectTest
                         Check(notice.StoryFinished && notice.IsOpen && Paused &&
                             notice.GetNode<Control>("StoryRoot/Speech/Content/Actions/Restart").Visible &&
                             notice.GetNode<Control>("StoryRoot/Speech/Content/Actions/MainMenu").Visible &&
-                            !notice.HasNode("StoryRoot/Speech/Content/Actions/Checkpoint"),
+                            notice.GetNode<Control>("StoryRoot/Speech/Content/Actions/Checkpoint").Visible == (ending.Item1 == "defeat"),
                             "Both endings must reach their result actions without closing or unpausing the scene");
                         for (int i = 1; i < seen.Length; i++) Check(seen[i] > 0, "No ending bubble may be lost");
                         notice.Close();
@@ -105,6 +109,8 @@ public partial class ProjectTest
                         notice.GetNode<TextureButton>("StoryRoot/SkipDialogue").EmitSignal(BaseButton.SignalName.Pressed);
                         Check(notice.StoryFinished && notice.IsOpen && Paused,
                             "Skipping an ending must reveal only its result actions and keep gameplay paused");
+                        Check(notice.GetNode<Control>("StoryRoot/Speech/Content/Actions/Checkpoint").Visible == (ending.Item1 == "defeat"),
+                            "Skipping must offer a checkpoint only for second-quota defeat");
                     }
                     notice.Close();
                 }

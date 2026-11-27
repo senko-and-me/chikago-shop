@@ -340,9 +340,18 @@ texture = ExtResource("background_6_2e12l")
 expand_mode = 1
 stretch_mode = 6
 
-[node name="UnlockPanel" parent="World/MusicWorkshop/LockedOverlay" unique_id=1319952408 instance=ExtResource("36_unlock_panel")]
+[node name="UnlockPanel" parent="World/MusicWorkshop" unique_id=1319952408 instance=ExtResource("36_unlock_panel")]
 visible = false
-layout_mode = 1
+z_index = 201
+layout_mode = 0
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+offset_left = 488.144
+offset_top = 929.746
+offset_right = 1428.144
+offset_bottom = 1273.746
 
 [node name="Showroom" type="Node2D" parent="World" unique_id=1166953855]
 position = Vector2(3250.1052, 1638.3158)
