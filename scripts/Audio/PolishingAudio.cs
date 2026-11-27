@@ -6,8 +6,8 @@ public partial class PolishingAudio : Node
 {
     [Export] public float VolumeDb { get; set; } = -12;
     [Export(PropertyHint.Range, "0.1,2,0.01")] public float PitchScale { get; set; } = 1;
-    [Export] public float MinRate { get; set; } = 1.5f;
-    [Export] public float MaxRate { get; set; } = 3;
+    [Export] public float MinRate { get; set; } = 2;
+    [Export] public float MaxRate { get; set; } = 4;
     [Export] public float SlowSpeed { get; set; } = 60;
     [Export] public float FastSpeed { get; set; } = 600;
     [Export] public float MinimumMovement { get; set; } = 3;
@@ -20,7 +20,9 @@ public partial class PolishingAudio : Node
     public float CurrentRate { get; private set; }
     public int ActiveVoiceCount => (_voices[0]?.Player.Playing == true ? 1 : 0) +
         (_voices[1]?.Player.Playing == true ? 1 : 0);
-    private readonly AudioStreamPlayer[] _samples = new AudioStreamPlayer[5];
+    private static readonly int[] ActiveSamples = [1, 3, 4];
+    private readonly AudioStreamPlayer[] _samples = new AudioStreamPlayer[ActiveSamples.Length];
+    private int _lastSampleIndex = -1;
     private readonly Voice[] _voices = new Voice[2];
     private readonly RandomNumberGenerator _random = new();
     private Node _owner;
@@ -43,7 +45,7 @@ public partial class PolishingAudio : Node
         ProcessMode = ProcessModeEnum.Always;
         _random.Randomize();
         for (int i = 0; i < _samples.Length; i++)
-            _samples[i] = GetNode<AudioStreamPlayer>("Scrape" + (i + 1));
+            _samples[i] = GetNode<AudioStreamPlayer>("Scrape" + ActiveSamples[i]);
         for (int i = 0; i < _voices.Length; i++)
         {
             var player = new AudioStreamPlayer { Name = "Voice" + (i + 1), Bus = SoundEffects.BusName, VolumeLinear = 0 };
@@ -106,8 +108,8 @@ public partial class PolishingAudio : Node
 
     private void StartSample()
     {
-        int index = _random.RandiRange(0, _samples.Length - (LastSample == 0 ? 1 : 2));
-        if (LastSample != 0 && index >= LastSample - 1) index++;
+        int index = _random.RandiRange(0, _samples.Length - (_lastSampleIndex < 0 ? 1 : 2));
+        if (_lastSampleIndex >= 0 && index >= _lastSampleIndex) index++;
         var sample = _samples[index];
         var voice = !_voices[0].Player.Playing ? _voices[0] : !_voices[1].Player.Playing ? _voices[1] :
             _voices[0].Age >= _voices[1].Age ? _voices[0] : _voices[1];
@@ -122,7 +124,8 @@ public partial class PolishingAudio : Node
             Math.Max(0.01, 2 / CurrentRate - Math.Max(0.001, AttackSeconds)));
         voice.Releasing = false;
         voice.Player.Play();
-        LastSample = index + 1;
+        _lastSampleIndex = index;
+        LastSample = ActiveSamples[index];
         _lastSampleAt = _clock;
         _nextSample = _clock + 1 / CurrentRate;
         SamplePlayed?.Invoke(LastSample);

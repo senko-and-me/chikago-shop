@@ -1,11 +1,11 @@
 [gd_scene format=3 uid="uid://ry3gier3b7g1"]
 
 [ext_resource type="Script" uid="uid://bwai0obofr82j" path="res://scripts/Audio/PolishingAudio.cs" id="1_script"]
-[ext_resource type="AudioStream" uid="uid://ov0uvj312kjm" path="res://audio/sfx/polish_1.wav" id="sample_1"]
-[ext_resource type="AudioStream" uid="uid://du28j1lx42b74" path="res://audio/sfx/polish_2.wav" id="sample_2"]
-[ext_resource type="AudioStream" uid="uid://bckve8777q12g" path="res://audio/sfx/polish_3.wav" id="sample_3"]
-[ext_resource type="AudioStream" uid="uid://8wolw6sa7r7r" path="res://audio/sfx/polish_4.wav" id="sample_4"]
-[ext_resource type="AudioStream" uid="uid://bhdnx012ny886" path="res://audio/sfx/polish_5.wav" id="sample_5"]
+[ext_resource type="AudioStream" uid="uid://b8uuinasxu335" path="res://audio/sfx/stitch_1.wav" id="sample_1"]
+[ext_resource type="AudioStream" uid="uid://bwk0m1266ix3t" path="res://audio/sfx/stitch_2.wav" id="sample_2"]
+[ext_resource type="AudioStream" uid="uid://of5rfd4tg0k2" path="res://audio/sfx/stitch_3.wav" id="sample_3"]
+[ext_resource type="AudioStream" uid="uid://j87oehe1ghc5" path="res://audio/sfx/stitch_4.wav" id="sample_4"]
+[ext_resource type="AudioStream" uid="uid://c5l4hux1ky8ro" path="res://audio/sfx/stitch_5.wav" id="sample_5"]
 [ext_resource type="AudioStream" uid="uid://dd0adjp77v21q" path="res://audio/sfx/polish_6.wav" id="sample_6"]
 [ext_resource type="AudioStream" uid="uid://dhv3ejom4pnl2" path="res://audio/sfx/polish_7.wav" id="sample_7"]
 [ext_resource type="AudioStream" uid="uid://cs4yftg5tl34d" path="res://audio/sfx/polish_8.wav" id="sample_8"]
@@ -20,10 +20,10 @@
 [node name="PolishingAudio" type="Node" unique_id=1985519286]
 process_mode = 3
 script = ExtResource("1_script")
-VolumeDb = -15.521825
-PitchScale = 0.6666667
-MinRate = 1.5
-MaxRate = 3.0
+VolumeDb = 0.0
+PitchScale = 1.0
+MinRate = 2.0
+MaxRate = 4.0
 
 [node name="Scrape1" type="AudioStreamPlayer" parent="." unique_id=1199842335]
 stream = ExtResource("sample_1")

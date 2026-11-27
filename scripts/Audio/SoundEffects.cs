@@ -7,7 +7,7 @@ public partial class SoundEffects : Node
 {
     public enum Cue { Hover, Click, Settings, Sale, CustomerBell, RerollSuccess, RerollFailure, Stitch1, Stitch2, Stitch3, CraftGreat, CraftNormal, CraftBad, Stitch4, Stitch5, Stitch6, Stitch7, Stitch8, Stitch9 }
     private static readonly Cue[] CraftResultCues = { Cue.CraftGreat, Cue.CraftNormal, Cue.CraftBad };
-    private static readonly Cue[] StitchCues = { Cue.Stitch1, Cue.Stitch2, Cue.Stitch3, Cue.Stitch4, Cue.Stitch5, Cue.Stitch6, Cue.Stitch7, Cue.Stitch8, Cue.Stitch9 };
+    private static readonly Cue[] StitchCues = { Cue.Stitch1, Cue.Stitch2, Cue.Stitch3, Cue.Stitch4, Cue.Stitch5, Cue.Stitch6, Cue.Stitch7 };
     private static readonly Cue[] UiCues = { Cue.Hover, Cue.Click, Cue.Settings, Cue.Sale };
     private readonly RandomNumberGenerator _stitchRandom = new();
     public const string BusName = "SFX";

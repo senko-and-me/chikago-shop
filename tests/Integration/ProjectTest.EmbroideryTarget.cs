@@ -21,13 +21,13 @@ public partial class ProjectTest
         try
         {
             var effects = SoundEffects.Instance;
-            for (int variant = 1; variant <= 9; variant++)
+            for (int variant = 1; variant <= 7; variant++)
             {
                 var player = effects.GetNode<AudioStreamPlayer>("Stitch" + variant);
                 var stream = (AudioStreamWav)player.Stream;
                 Check(stream.ResourcePath == $"res://audio/sfx/stitch_{variant}.wav" &&
                     stream.GetLength() > 0 && stream.LoopMode == AudioStreamWav.LoopModeEnum.Disabled,
-                    "All nine supplied stitch variants must be editable playable one-shots");
+                    "All seven active stitch variants must be editable playable one-shots");
             }
             for (int sample = 0; sample < 256; sample++)
             {
@@ -35,10 +35,12 @@ public partial class ProjectTest
                 effects.PlayStitch();
                 Check(sounds.Count == 1 && sounds[0].ToString().StartsWith("Stitch"),
                     "One random draw must play exactly one stitch variant");
+                Check(sounds[0] != SoundEffects.Cue.Stitch8 && sounds[0] != SoundEffects.Cue.Stitch9,
+                    "Stitch variants eight and nine must never be selected");
                 variants.Add(sounds[0]);
                 effects.GetNode<AudioStreamPlayer>(sounds[0].ToString()).Stop();
             }
-            Check(variants.Count == 9, "Every one of the nine variants must be reachable from the random pool");
+            Check(variants.Count == 7, "Every one of the seven active variants must be reachable from the random pool");
             foreach (var (kind, size) in new[] { ("hat", new Vector2I(1280, 720)), ("hat", new Vector2I(960, 540)),
                 ("vest", new Vector2I(1920, 1080)), ("gloves", new Vector2I(1280, 720)),
                 ("matteo_hat", new Vector2I(1920, 1080)), ("lorgnette", new Vector2I(1280, 720)) })

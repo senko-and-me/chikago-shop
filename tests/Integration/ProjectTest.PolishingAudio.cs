@@ -36,14 +36,15 @@ public partial class ProjectTest
         { Position = point, GlobalPosition = point, Relative = new Vector2(10, 0), ButtonMask = MouseButtonMask.Left }, true);
         try
         {
-            Check(Math.Abs(pitchScale - 2f / 3) < 0.0001 && audio.MinRate == 1.5f && audio.MaxRate == 3,
-                "The loaded scene must retain the lower pitch and slower polishing cadence");
-            for (int i = 1; i <= 5; i++)
+            Check(pitchScale == 1 && volumeDb == 0 && audio.MinRate == 2 && audio.MaxRate == 4,
+                "The loaded scene must use natural pitch and gain while retaining the chosen cadence");
+            foreach (int i in new[] { 1, 3, 4 })
             {
                 var sample = (AudioStreamWav)audio.GetNode<AudioStreamPlayer>("Scrape" + i).Stream;
-                Check(sample.ResourcePath == $"res://audio/sfx/polish_{i}.wav" && sample.GetLength() > 0 &&
+                Check(sample.ResourcePath == $"res://audio/sfx/stitch_{i}.wav" &&
+                    sample == effects.GetNode<AudioStreamPlayer>("Stitch" + i).Stream && sample.GetLength() > 0 &&
                     sample.LoopMode == AudioStreamWav.LoopModeEnum.Disabled,
-                    "The five active polishing sounds must use original numbered assets and remain editable one-shots");
+                    "The instrument minigame must use only stitch recordings one, three and four");
             }
             audio.BeginContact(owner, Vector2.Zero);
             Advance(0.2);
@@ -64,7 +65,7 @@ public partial class ProjectTest
             Advance(1);
             Check(heard.Count == stopped, "Idle time must never queue or retrigger a scrape");
 
-            foreach (var (speed, expectedRate) in new[] { (30f, 1.5f), (60f, 1.5f), (330f, 2.25f), (1200f, 3f) })
+            foreach (var (speed, expectedRate) in new[] { (30f, 2f), (60f, 2f), (330f, 3f), (1200f, 4f) })
             {
                 audio.EndContact(owner); Advance(0.1); heard.Clear();
                 audio.BeginContact(owner, Vector2.Zero);
@@ -95,8 +96,8 @@ public partial class ProjectTest
                 Advance(0.01);
                 audio.EndContact(owner);
             }
-            Check(heard.Count is >= 5 and <= 7,
-                "Rapid contour reentry must still be limited to about three scrapes per second");
+            Check(heard.Count is >= 7 and <= 9,
+                "Rapid contour reentry must still be limited to about four scrapes per second");
             var variants = new HashSet<int>();
             int previous = audio.LastSample;
             for (int i = 0; i < 512; i++)
@@ -104,11 +105,11 @@ public partial class ProjectTest
                 audio.EndContact(owner); Advance(1);
                 audio.BeginContact(owner, Vector2.Zero);
                 audio.MoveContact(owner, new Vector2(10, 0), 0.02);
-                Check(audio.LastSample is >= 1 and <= 5, "Only polishing sounds numbered one through five may play");
+                Check(audio.LastSample is 1 or 3 or 4, "Instrument polishing must never select stitch two or five");
                 Check(audio.LastSample != previous, "Consecutive samples must never repeat");
                 variants.Add(audio.LastSample); previous = audio.LastSample;
             }
-            Check(variants.Count == 5, "All five selected scraping variants must be reachable");
+            Check(variants.Count == 3, "All three selected instrument sounds must be reachable");
             audio.EndContact(owner); Advance(1);
             audio.VolumeDb = -18;
             audio.PitchScale = 2f / 3;
@@ -156,8 +157,8 @@ public partial class ProjectTest
             Check(heard.Count == 1 && audio.ActiveVoiceCount > 0, "A real mouse rub over the silhouette must play a scrape");
             var realVoice = new[] { audio.GetNode<AudioStreamPlayer>("Voice1"), audio.GetNode<AudioStreamPlayer>("Voice2") }
                 .Single(player => player.Playing);
-            Check(Math.Abs(realVoice.PitchScale - 2f / 3) < 0.0001,
-                "The actual minigame rub must play at two-thirds pitch, not only a test override");
+            Check(Math.Abs(realVoice.PitchScale - 1) < 0.0001,
+                "The actual second minigame must play the stitch recording at its original pitch");
             GD.Print($"POLISHING_PITCH_CHECK: configured={pitchScale}, actual={realVoice.PitchScale}, maxRate={audio.MaxRate}");
             Motion(surface.LogicalToScreen(Vector2.Zero)); Advance(0.08);
             Check(audio.ActiveVoiceCount == 0, "Moving off the silhouette must fade out");
