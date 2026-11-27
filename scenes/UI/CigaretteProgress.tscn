@@ -14,7 +14,7 @@ region = Rect2(138, 8, 1705, 1267)
 
 [sub_resource type="AtlasTexture" id="Cigarette"]
 atlas = ExtResource("3_stick")
-region = Rect2(10, 1335, 1763, 208)
+region = Rect2(214, 1343, 1763, 208)
 
 [node name="Visual" type="Control"]
 layout_mode = 0

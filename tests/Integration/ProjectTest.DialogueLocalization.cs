@@ -10,7 +10,7 @@ public partial class ProjectTest
 {
     private async Task TestDialogueLocalization()
     {
-        Check(OS.GetUserDataDir().Contains("DialogueLocalizationHF97"),
+        Check(OS.GetUserDataDir().Contains("DialogueLocalizationHF97") || OS.GetUserDataDir().Contains("SC218"),
             "Dialogue language checks require isolated settings and saves");
         string originalLocale = TranslationServer.GetLocale();
         Vector2I originalSize = Root.Size;
@@ -21,7 +21,7 @@ public partial class ProjectTest
         var keys = catalog.GetMessageList().Select(key => key.ToString()).ToHashSet();
         var source = new List<DialogueLine>();
         while (!original.IsComplete) { source.Add(original.Current); original.Advance(); }
-        Check(source.Count == 25 && source.All(line => line.Speaker != "Покупательница"),
+        Check(source.Count == 24 && source.All(line => line.Speaker != "Покупательница"),
             "The prologue must retain the wager without the removed customer's speech");
         foreach (var line in source)
         {
@@ -53,8 +53,8 @@ public partial class ProjectTest
             await ToSignal(this, SignalName.ProcessFrame);
             await ToSignal(this, SignalName.ProcessFrame);
             await SkipStartupTraining(menu);
-            Check(menu.ActiveDialogue.GetNode<Label>("Panel/Content/Speaker").Text == "Castello" &&
-                  menu.ActiveDialogue.GetNode<RichTextLabel>("Panel/Content/Text").Text.StartsWith("Frankie!") &&
+            Check(menu.ActiveDialogue.GetNode<Label>("Panel/Content/Speaker").Text == "Frankie" &&
+                  menu.ActiveDialogue.GetNode<RichTextLabel>("Panel/Content/Text").Text == "!!!" &&
                   menu.ActiveDialogue.GetNode<Label>("Heading").Text.Contains("Frankie's Fashion House"),
                 "New Game after selecting English must open an English dialogue and title");
             while (menu.ActiveDialogue.Session.Index < 6) AdvanceMusicLine(menu.ActiveDialogue);
@@ -65,6 +65,7 @@ public partial class ProjectTest
             Check(menu.GetNode<IntroMusicDirector>("MusicDirector").CurrentCue == "sinister",
                 "The English refusal speech must still trigger the sinister soundtrack");
             menu.ActiveDialogue._Input(new InputEventKey { Pressed = true, Keycode = Key.Escape });
+            await WaitForSceneFade();
             menu.OnSettingsPressed();
             await ClickControl(menu, "SettingsMenuContainer/Settings/LanguageRow/RussianButton");
             Check(GameLocalization.Language == "ru", "The Russian settings button must restore Russian");
@@ -131,7 +132,7 @@ public partial class ProjectTest
             Root.AddChild(player);
             await ToSignal(this, SignalName.ProcessFrame);
             await ToSignal(this, SignalName.ProcessFrame);
-            while (player.Session.Index < 6) AdvanceMusicLine(player);
+            while (player.Session.Index < 5) AdvanceMusicLine(player);
             player.Advance();
             int liveIndex = player.Session.Index;
             int cuesBefore = liveCues.Count;
@@ -140,14 +141,14 @@ public partial class ProjectTest
             Check(player.Session.Index == liveIndex && liveCues.Count == cuesBefore &&
                   player.GetNode<Label>("Panel/Content/Speaker").Text == "Castello" &&
                   player.GetNode<Label>("Heading").Text.Contains("Frankie's Fashion House") &&
-                  player.GetNode<RichTextLabel>("Panel/Content/Text").Text.StartsWith("But I'm here on business, Frank."),
+                  player.GetNode<RichTextLabel>("Panel/Content/Text").Text.StartsWith("But I'm here on business:"),
                 "Live language change must translate the current line without advancing or repeating its music cue");
             Check(player.IsRevealing, "The translated line must restart its normal typewriter reveal");
             TranslationServer.SetLocale("ru");
             await ToSignal(this, SignalName.ProcessFrame);
             Check(player.Session.Index == liveIndex && liveCues.Count == cuesBefore &&
                   player.GetNode<Label>("Panel/Content/Speaker").Text == "Кастелло" &&
-                  player.GetNode<RichTextLabel>("Panel/Content/Text").Text.StartsWith("Но я к тебе по делу, Френк."),
+                  player.GetNode<RichTextLabel>("Panel/Content/Text").Text.StartsWith("Но я к тебе по делу:"),
                 "Switching back must restore the original Russian line without changing progression");
             Check(GameLocalization.SelectLanguage("en") == Error.Ok, "English preference must save");
             TranslationServer.SetLocale("ru");

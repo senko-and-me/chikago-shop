@@ -14,6 +14,7 @@ public partial class DebugBalancePanel : CanvasLayer
 	private readonly List<(Node Node, ProcessModeEnum Mode)> _suspended = new();
 	private TradeScene _game;
 	private bool _wasPaused;
+	private Func<string> _draftError, _statusError;
 	public bool IsOpen => _root?.Visible == true;
 	public LineEdit Editor(string key) => _numbers[key];
 	public OptionButton RarityEditor(string kind) => _rarities[kind];
@@ -30,6 +31,7 @@ public partial class DebugBalancePanel : CanvasLayer
 		GetNode<Button>(Content + "/Actions/Defaults").Pressed += () =>
 		{
 			Fill(new BalanceProfile());
+			_statusError = null;
 			_status.Text = "Исходные значения загружены в поля. Для сохранения нажмите «Применить».";
 		};
 		GetNode<TabContainer>(Content + "/Tabs").TabChanged += _ => Preview();
@@ -50,6 +52,32 @@ public partial class DebugBalancePanel : CanvasLayer
 			row.GetNode<OptionButton>("Rarity").Hide();
 		}
 		Preview();
+		RefreshLocalizedFields();
+	}
+	internal static string LocalizedFieldLabel(BalanceField field)
+	{
+		if (field.Key.StartsWith("quota."))
+			return GameLocalization.Format("Квота к концу дня {0} ($)",
+				EconomyConfigProvider.Baseline.Quotas.Single(quota => "quota." + quota.Id == field.Key).DeadlineDay);
+		int separator = field.Label.IndexOf(": ", StringComparison.Ordinal);
+		string translated = GameLocalization.Text(field.Label);
+		return separator < 0 || translated != field.Label ? translated
+			: GameLocalization.Format("{0}" + field.Label[separator..], GameLocalization.Text(field.Label[..separator]));
+	}
+	private void RefreshLocalizedFields()
+	{
+		var tabs = GetNode<TabContainer>(Content + "/Tabs");
+		for (int i = 0; i < tabs.GetTabCount(); i++)
+			tabs.SetTabTitle(i, GameLocalization.Text(tabs.GetTabControl(i).Name));
+		foreach (var field in DebugBalanceSettings.Fields)
+			GetNode<Label>(Content + "/Tabs/" + field.Section + "/Rows/" + field.Key.Replace('.', '_') + "/Label").Text = LocalizedFieldLabel(field);
+		Preview();
+	}
+	public override void _Notification(int what)
+	{
+		if (what != NotificationTranslationChanged || !IsNodeReady()) return;
+		RefreshLocalizedFields();
+		if (_statusError != null) _status.Text = _statusError();
 	}
 	public override void _Input(InputEvent input)
 	{
@@ -84,6 +112,7 @@ public partial class DebugBalancePanel : CanvasLayer
 		GetNode<Button>(Content + "/Actions/Apply").Disabled = blocked;
 		GetNode<Button>(Content + "/Actions/NewGame").Disabled = blocked || _game == null;
 		_status.Text = blocked ? "Мини-игра/подтверждение заморожены. Закройте их перед применением баланса." : "Изменения в полях ещё не применены.";
+		_statusError = null;
 		_root.Show();
 		GetNode<Button>(Content + "/Header/Close").GrabFocus();
 	}
@@ -109,6 +138,7 @@ public partial class DebugBalancePanel : CanvasLayer
 	}
 	private BalanceProfile Draft()
 	{
+		_draftError = null;
 		var draft = new BalanceProfile
 		{
 			ItemRarities = _rarities.ToDictionary(entry => entry.Key,
@@ -116,11 +146,24 @@ public partial class DebugBalancePanel : CanvasLayer
 		};
 		foreach (var (key, editor) in _numbers)
 		{
+			var field = DebugBalanceSettings.Fields.Single(field => field.Key == key);
 			if (!TryNumber(editor.Text, out double value))
-				throw new ArgumentException("Введите число: " + DebugBalanceSettings.Fields.Single(field => field.Key == key).Label);
+				throw DraftError(() => GameLocalization.Format("Введите число: {0}", LocalizedFieldLabel(field)));
+			if (value < field.Min || value > field.Max || Math.Abs(value / field.Step - Math.Round(value / field.Step)) > 0.00001)
+				throw DraftError(() => GameLocalization.Format("{0}: значение должно быть от {1} до {2}, шаг {3}.", LocalizedFieldLabel(field), field.Min, field.Max, field.Step));
 			draft.Numbers[key] = value;
 		}
 		return draft;
+	}
+	private ArgumentException DraftError(Func<string> render)
+	{
+		_draftError = render;
+		return new ArgumentException(render());
+	}
+	private void ShowError(Func<string> render)
+	{
+		_statusError = () => GameLocalization.Format("Не применено: {0}", render());
+		_status.Text = _statusError();
 	}
 	private static bool TryNumber(string text, out double value) => double.TryParse(text.Replace(',', '.'),
 		System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out value) && double.IsFinite(value);
@@ -131,11 +174,12 @@ public partial class DebugBalancePanel : CanvasLayer
 			_game?.GetNode<FirstTradeTutorial>("FirstTradeTutorial").IsSkipConfirmationOpen == true) return;
 		BalanceProfile draft;
 		try { draft = Draft(); }
-		catch (ArgumentException exception) { _status.Text = "Не применено: " + exception.Message; return; }
-		if (!DebugBalanceSettings.TrySave(draft, out string error)) { _status.Text = "Не применено: " + error; return; }
+		catch (ArgumentException exception) { ShowError(_draftError ?? (() => GameLocalization.Text(exception.Message))); return; }
+		if (!DebugBalanceSettings.TrySave(draft, out string error)) { ShowError(() => GameLocalization.Text(error)); return; }
 		Fill(DebugBalanceSettings.Profile);
 		if (GodotObject.IsInstanceValid(_game)) _game.RefreshDebugBalance();
 		_status.Text = "Сохранено. Новые действия используют этот баланс; деньги не выдаются повторно.";
+		_statusError = null;
 		if (!newGame || _game == null) return;
 		var game = _game;
 		Close();
@@ -149,10 +193,9 @@ public partial class DebugBalancePanel : CanvasLayer
 		if (tab == "Карты")
 		{
 			double sum = DebugBalanceSettings.Cards.Sum(card => Number($"card.{card}.weight"));
-			_preview.Text = "В режиме 1 выбираются до трёх разных карт без повторов. Шанс первого выбора: " +
+			_preview.Text = GameLocalization.Format("В режиме 1 выбираются до трёх разных карт без повторов. Шанс первого выбора: {0}. Один seed повторяет выбор при загрузке.",
 				string.Join(" · ", DebugBalanceSettings.Cards.Select(card =>
-					$"{DebugBalanceSettings.CardName(card)} {(sum > 0 ? Number($"card.{card}.weight") / sum * 100 : 0):0.#}%")) +
-				". Один seed повторяет выбор при загрузке.";
+					$"{GameLocalization.Text(DebugBalanceSettings.CardName(card))} {(sum > 0 ? Number($"card.{card}.weight") / sum * 100 : 0):0.#}%")));
 		}
 		else _preview.Text = "«Применить сейчас» меняет будущий крафт, цены и длительность дня с сохранением уже прошедшего времени. «Начать заново» сбрасывает партию. Новое время мини-игры применяется при её следующем открытии.";
 	}

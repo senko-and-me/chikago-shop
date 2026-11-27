@@ -29,6 +29,7 @@ public partial class DayTransitionCard : CanvasLayer
     public event Action Skipped;
     private Button _skip = null!;
     private int _balance;
+    private int _previousDay, _nextDay;
     private bool _ownsPause;
     private bool _instructionLocked;
 
@@ -39,6 +40,15 @@ public partial class DayTransitionCard : CanvasLayer
         if (_phase == Phase.Choosing) LockActions(locked);
     }
     public bool IsOpen => _root?.Visible ?? false;
+
+    public override void _Notification(int what)
+    {
+        if (what != NotificationTranslationChanged || !IsNodeReady() || !IsOpen) return;
+        _route.Text = $"{_previousDay:00}  →  {_nextDay:00}  ·  " + GameLocalization.Format("Средства: {0}$", _balance);
+        for (int i = 0; i < _cards.Count; i++)
+            _cards[i].GetNode<Button>("Content/Choose").Text = Options[i] == DayUpgrade.Cash
+                ? GameLocalization.Text("Получить 50$") : GameLocalization.Format("Купить за {0}$", Cost(Options[i]));
+    }
     private int Cost(DayUpgrade upgrade) => (GetParent() as TradeScene)?.DayUpgrades.CostFor(upgrade)
         ?? DebugBalanceSettings.CardRules.Cost(upgrade);
 
@@ -180,6 +190,8 @@ public partial class DayTransitionCard : CanvasLayer
     {
         if (IsOpen || previousDay < 1 || nextDay != previousDay + 1 || GetTree().Paused) return;
         Options = options.ToArray();
+        _previousDay = previousDay;
+        _nextDay = nextDay;
         _balance = balance;
         _navigationButtons.Clear();
         _cards.Clear();

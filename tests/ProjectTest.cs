@@ -16,6 +16,13 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--localization-coverage-checks"))
+            {
+                await TestLocalizationCoverage();
+                GD.Print("LOCALIZATION_COVERAGE_PASS: scene texts, all stories, format tokens, live quota, menus, catalog, crafting, cards, tutorial and debug");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--showcase-card-visibility-checks"))
             {
                 await TestShowcaseCardVisibility();
@@ -383,6 +390,13 @@ public partial class ProjectTest : SceneTree
             {
                 await TestCollapsibleProgress();
                 GD.Print("PROGRESS_TOGGLE_CHECKS_PASS: cigarette pack hover, animation, live quotas, keyboard and recovery");
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--progress-art-checks"))
+            {
+                await TestCollapsibleProgress(visualsOnly: true);
+                GD.Print("PROGRESS_ART_CHECKS_PASS: supplied cigarette crop, pack hover, labels, sizes, RU/EN and music room");
                 Quit();
                 return;
             }

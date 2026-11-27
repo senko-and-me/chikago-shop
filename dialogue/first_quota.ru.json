@@ -31,13 +31,13 @@
   },
   {
     "speaker": "Кастелло",
-    "text": "За неделю собрать 60 000 долларов? Неужели продал душу дьяволу?",
+    "text": "За неделю собрать {second_quota}$? Неужели продал душу дьяволу?",
     "leftPortrait": "serious",
     "rightPortrait": "serious"
   },
   {
     "speaker": "Френки",
-    "text": "Почему тебя это вол… Постой, 60 000 долларов? Разве таков был наш уговор?",
+    "text": "Почему тебя это вол… Постой, {second_quota}$? Разве таков был наш уговор?",
     "leftPortrait": "serious",
     "rightPortrait": "serious"
   },
@@ -49,7 +49,7 @@
   },
   {
     "speaker": "Кастелло",
-    "text": "Неужели ты совсем забыл правила сделки, mio amico? 60 000 долларов — вот наш уговор.",
+    "text": "Неужели ты совсем забыл правила сделки, mio amico? {second_quota}$ — вот наш уговор.",
     "leftPortrait": "serious",
     "rightPortrait": "serious"
   },
