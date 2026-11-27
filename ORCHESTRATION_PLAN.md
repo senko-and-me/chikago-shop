@@ -9,6 +9,21 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### M245 — интеграция диалогов в main
+
+M245 DONE; /root; CP `.local/checks/m245/CP-M245.md`; SC244 DONE. Пользователь разрешил перенос в main и публикацию. origin/main93aa847 — предок feature/dialogue-editing f99b9ff, перенос fast-forward без конфликтов. Несвязанные изменения сцены сохранены отдельно для восстановления после публикации.
+
+```text
+Task: M245
+Recommended status: REVIEW -> accepted DONE; gate PASSED 28.11.2026
+Changed: main fast-forward from93aa847 to feature/dialogue-editing f99b9ff, preserving all six feature commits; integration evidence recorded in plan. No merge conflicts or runtime edits during integration.
+Checks: build PASS zero warnings/errors; rendered quota-visit and dialogue-portraits PASS exit0/stderr empty on committed scene copies (.local/checks/m245/); diffcheck PASS. Prior SC238/SC241/SC243/SC244 evidence retained.
+Acceptance: main contains revised prologue/first quota/Bill and three endings, separate skips/fades, camera restoration, larger defeat heading, centered portraits and workshop unlock panel, checkpoint only after second-quota defeat. Local editor scene changes backed up in named stash, hash recorded in .local/checks/m245/stash-ref.txt; restore after push without including them in commit.
+Read-set exception: none; no source/ reads, no forced remote update or branch deletion.
+Risks/blocker: none.
+Next: publish main normally and reapply preserved local scene diff; feature branch remains available.
+```
+
 ### SC244 — контрольная точка после второй квоты
 
 SC244 DONE; /root; CP `.local/checks/sc244/CP-SC244.md`; SC243 DONE. Кнопка «С контрольной точки» возвращена только после поражения на второй квоте, включая пропуск финального диалога. Первое поражение без этой кнопки.
