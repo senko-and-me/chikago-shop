@@ -298,7 +298,7 @@ offset_bottom = 734.0
 
 [node name="RoomFrame" type="NinePatchRect" parent="World/MusicWorkshop" unique_id=191755671]
 self_modulate = Color(0, 0, 0, 1)
-z_index = 101
+z_index = 200
 offset_left = -18.901524
 offset_top = -6.933375
 offset_right = 4866.329
@@ -322,19 +322,19 @@ mouse_filter = 2
 theme_override_styles/panel = SubResource("RoomFrameSealStyle")
 
 [node name="LockedOverlay" type="ColorRect" parent="World/MusicWorkshop" unique_id=1604263624]
+clip_contents = true
 z_index = 100
-offset_left = -28.0
-offset_top = -24.0
-offset_right = 1944.0
-offset_bottom = 1129.0
+offset_left = -3.7118425
+offset_right = 1920.0
+offset_bottom = 1104.8657
 mouse_filter = 1
 color = Color(0, 0, 0, 1)
 script = ExtResource("34_curtain")
 
 [node name="LockedCurtain" type="TextureRect" parent="World/MusicWorkshop/LockedOverlay" unique_id=1953917145]
 layout_mode = 0
-offset_right = 1972.0
-offset_bottom = 1153.0
+offset_right = 1923.7118
+offset_bottom = 1104.8657
 mouse_filter = 2
 texture = ExtResource("background_6_2e12l")
 expand_mode = 1
@@ -402,7 +402,7 @@ offset_bottom = 890.0
 
 [node name="RoomFrame" type="NinePatchRect" parent="World/Showroom" unique_id=1745261771]
 self_modulate = Color(0, 0, 0, 1)
-z_index = 101
+z_index = 200
 offset_left = -18.901524
 offset_top = -32.54399
 offset_right = 4866.329
@@ -426,18 +426,19 @@ mouse_filter = 2
 theme_override_styles/panel = SubResource("RoomFrameSealStyle")
 
 [node name="LockedOverlay" type="ColorRect" parent="World/Showroom" unique_id=581286688]
+clip_contents = true
 z_index = 100
-offset_left = -28.0
-offset_top = -50.0
-offset_right = 1944.0
-offset_bottom = 1104.0
+offset_left = -3.7118425
+offset_top = -25.610617
+offset_right = 1920.0
+offset_bottom = 1080.0
 color = Color(0, 0, 0, 1)
 script = ExtResource("34_curtain")
 
 [node name="LockedCurtain" type="TextureRect" parent="World/Showroom/LockedOverlay" unique_id=744648570]
 layout_mode = 0
-offset_right = 1972.0
-offset_bottom = 1154.0
+offset_right = 1923.7118
+offset_bottom = 1105.6106
 mouse_filter = 2
 texture = ExtResource("background_6_2e12l")
 expand_mode = 1
@@ -764,7 +765,6 @@ centered = false
 
 [node name="TimeOfDayDay" type="Sprite2D" parent="World" unique_id=1385586684]
 z_index = -9
-position = Vector2(31, 42)
 scale = Vector2(1.2631578, 1.2631578)
 texture = ExtResource("background_2_31fg5")
 centered = false
