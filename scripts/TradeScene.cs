@@ -42,7 +42,7 @@ public partial class TradeScene : Node2D
 	private PanelContainer _tradePanel = null!;
 	private Label _baseLabel = null!;
 	private Label _percentLabel = null!;
-	private Label _offerLabel = null!;
+	private RichTextLabel _offerLabel = null!;
 	private Button _acceptButton = null!;
 	private Button _declineButton = null!;
 	private Label _scoreLabel = null!;
@@ -199,7 +199,7 @@ public partial class TradeScene : Node2D
 		_percentLabel = GetNode<Label>(
 			"World/TradingRoom/Item/TradePanel/Content/PercentLabel");
 
-		_offerLabel = GetNode<Label>(
+		_offerLabel = GetNode<RichTextLabel>(
 			"World/TradingRoom/Item/TradePanel/Content/OfferLabel");
 
 		_acceptButton = GetNode<Button>(
@@ -311,7 +311,7 @@ public partial class TradeScene : Node2D
 		_rng.Randomize();
 
 		_acceptButton.Pressed += AcceptTrade;
-		_declineButton.Pressed += RerollCustomer;
+		_declineButton.Pressed += () => RerollCustomer(fromButton: true);
 		_endDayButton.Pressed += EndDay;
 		_atelierGetItemButton.Pressed += GetItemFromAtelier;
 		_musicGetItemButton.Pressed += GetItemFromMusicWorkshop;
@@ -493,11 +493,8 @@ public partial class TradeScene : Node2D
 		if (GetTree().Paused)
 			return;
 
-		if (!TradeActive || !_tutorial.BlocksFirstOffer)
-		{
-			_dayCycle.Tick(delta);
-			TickBuyerWait(delta);
-		}
+		_dayCycle.Tick(delta);
+		TickBuyerWait(delta);
 		RefreshBuyers();
 	}
 
@@ -596,6 +593,8 @@ public partial class TradeScene : Node2D
 			DebugBalanceSettings.Number("hand.offer"));
 		RerollsRemaining = _activeShowcaseIndex >= 0 && _showcaseRerolls[_activeShowcaseIndex] >= 0
 			? _showcaseRerolls[_activeShowcaseIndex] : GetItemRerollLimit(ItemIndex);
+		if (_tutorial.NeedsTrainingReroll && RerollsRemaining > 0)
+			LimitTrainingInitialOffer();
 
 		_waitingBuyer = false;
 		TradeActive = true;
@@ -629,7 +628,7 @@ public partial class TradeScene : Node2D
 			Failed ||
 			Completed;
 
-		_musicLockedOverlay.SetLocked(!MusicWorkshopUnlocked);
+		_musicLockedOverlay.SetLocked(!MusicWorkshopUnlocked, MusicWorkshopAvailable);
 
 
 		RefreshShowcases();
@@ -805,7 +804,7 @@ public partial class TradeScene : Node2D
 	{
 		DeferTutorialBuyerArrival();
 		_acceptButton.Disabled = !TradeActive || _tutorial.BlocksSaleActions;
-		_declineButton.Disabled = _tutorial.BlocksSaleActions || !CanRerollCurrentBuyer;
+		_declineButton.Disabled = !CanRerollCurrentBuyer || (_tutorial.BlocksSaleActions && !_tutorial.TrainingRerollRequired);
 	}
 
 	public static int PriceForPercent(int basePrice, int value)
@@ -813,17 +812,21 @@ public partial class TradeScene : Node2D
 		return TradeOfferRules.Price(basePrice, value);
 	}
 
-	public void RerollCustomer()
+	public void RerollCustomer() => RerollCustomer(fromButton: false);
+
+	private void RerollCustomer(bool fromButton)
 	{
 		if (!RequireStartedDay()) return;
-		if (_tutorial.BlocksSaleActions || !CanRerollCurrentBuyer)
+		bool trainingReroll = _tutorial.TrainingRerollRequired;
+		if (trainingReroll && !fromButton) return;
+		if (!CanRerollCurrentBuyer || !trainingReroll && _tutorial.BlocksSaleActions)
 			return;
 
 		RerollsRemaining--;
 		int basePrice = GetItemPrice(ItemIndex);
-
-		int[] pool = TradeOfferRules.RerollOptions(basePrice, OfferedPrice,
-			_rng.Randf() < TradeOfferRules.HigherRerollChance);
+		int previousOffer = OfferedPrice;
+		int[] pool = TradeOfferRules.RerollOptions(basePrice, previousOffer,
+			trainingReroll || _rng.Randf() < TradeOfferRules.HigherRerollChance);
 		if (pool.Length == 0)
 			return;
 
@@ -842,6 +845,8 @@ public partial class TradeScene : Node2D
 		RefreshOffer();
 		SaveProgress();
 		BuyerOfferChanged?.Invoke();
+		if (trainingReroll && OfferedPrice > previousOffer)
+			_tutorial.OnTrainingRerollSucceeded();
 	}
 
 	public void AcceptTrade()

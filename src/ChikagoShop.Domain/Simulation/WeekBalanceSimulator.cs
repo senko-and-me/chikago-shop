@@ -122,7 +122,6 @@ public static class WeekBalanceSimulator
                 {
                     firstPassed++;
                     checkpointCash = cash;
-                    cash += RunRewardRules.FirstQuotaGift;
                     hand.Reset();
                 }
                 if (day == config.Days.TotalDays) won++;

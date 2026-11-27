@@ -38,7 +38,7 @@ public partial class WorldCamera : Camera2D
     }
     public event Action<Vector2> UserPanned;
     public event Action UserZoomed;
-    public event Action UserFocusedRoom;
+    public event Action<Control> UserFocusedRoom;
     public event Action OverviewReset;
     public bool IsFocusing => _focusTween?.IsRunning() == true;
     public bool IsReturningToOverview => _overviewTween?.IsRunning() == true;
@@ -263,7 +263,7 @@ public partial class WorldCamera : Camera2D
             Vector2 view = HasReference && CloseupSize.X > 0 && CloseupSize.Y > 0
                 ? CloseupSize : HasReference ? bounds.Size / WorldBounds.Size * ReferenceSize : bounds.Size;
             FocusOn(bounds.GetCenter(), view, 0.45);
-            UserFocusedRoom?.Invoke();
+            UserFocusedRoom?.Invoke(frame);
             return true;
         }
         return false;

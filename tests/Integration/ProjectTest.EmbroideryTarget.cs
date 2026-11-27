@@ -19,13 +19,16 @@ public partial class ProjectTest
         SoundEffects.Instance.Played += Observe;
         try
         {
-            foreach (var size in new[] { new Vector2I(1280, 720), new Vector2I(960, 540) })
+            foreach (var (kind, size) in new[] { ("hat", new Vector2I(1280, 720)), ("vest", new Vector2I(1920, 1080)),
+                ("gloves", new Vector2I(1280, 720)), ("matteo_hat", new Vector2I(1920, 1080)),
+                ("lorgnette", new Vector2I(1280, 720)) })
             {
                 Root.Size = size;
                 game.NewGame();
                 game.EndDay();
                 var craft = game.GetNode<EmbroideryGame>("EmbroideryGame");
-                craft.Open();
+                game.GetItemFromAtelier();
+                Check(game.Crafting.Select(kind) && craft.IsOpen, $"The real catalogue must prepare the {kind} pattern.");
                 await ToSignal(this, SignalName.ProcessFrame);
                 var surface = craft.GetNode<EmbroiderySurface>("Surface");
                 sounds.Clear();
@@ -56,7 +59,7 @@ public partial class ProjectTest
                         if (Pixel(new Vector2(x, 0)).R < 0.25f) darkRing++;
                     Check(darkRing >= 1, $"The pulsing outer ring must remain dark on white fabric ({size}, stitch {stitch})");
                     if (stitch == 4)
-                        image.SavePng(Path.Combine(Path.GetTempPath(), $"chikago-hf93-target-{size.X}.png"));
+                        image.SavePng(Path.Combine(Path.GetTempPath(), $"chikago-target-{kind}-{size.X}.png"));
                     sounds.Clear();
                     if (stitch % 2 == 0) PushEmbroideryClick(target);
                     else

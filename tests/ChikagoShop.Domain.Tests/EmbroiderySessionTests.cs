@@ -12,7 +12,7 @@ public sealed class EmbroiderySessionTests
     {
         var session = new EmbroiderySession(kind);
         Assert.That(session.Points, Is.EqualTo(new EmbroiderySession(kind).Points));
-        Assert.That(session.Points.Count, Is.InRange(10, 24));
+        Assert.That(session.Points.Count, Is.InRange(13, 15));
         Assert.That(session.Points.All(p => p.X >= 25 && p.X <= 815 && p.Y >= 25 && p.Y <= 455), Is.True);
         Assert.That(session.Points.Max(p => p.X) - session.Points.Min(p => p.X), Is.GreaterThan(200));
         Assert.That(session.Points.Max(p => p.Y) - session.Points.Min(p => p.Y), Is.GreaterThan(100));
@@ -25,6 +25,20 @@ public sealed class EmbroiderySessionTests
         Assert.That(session.Complete, Is.True);
         Assert.That(session.State, Is.EqualTo(EmbroideryState.Finished));
         Assert.That(session.Rank, Is.EqualTo("S"));
+    }
+
+    [Test]
+    public void SelectedContoursHaveSimilarTravelAndWellSeparatedConsecutiveTargets()
+    {
+        var lengths = ItemKinds.Select(kind =>
+        {
+            var points = new EmbroiderySession(kind).Points;
+            var segments = points.Zip(points.Skip(1), (a, b) =>
+                Math.Sqrt(Math.Pow(a.X - b.X, 2) + Math.Pow(a.Y - b.Y, 2))).ToArray();
+            Assert.That(segments.Min(), Is.GreaterThanOrEqualTo(30), kind);
+            return segments.Sum();
+        }).ToArray();
+        Assert.That(lengths.Max() / lengths.Min(), Is.LessThanOrEqualTo(1.12));
     }
 
     [Test]

@@ -25,7 +25,9 @@ public partial class PulloutNotebook : Control
     private Tween? _slide;
     private bool _expanded;
     private float _targetX = float.NaN;
+    internal bool TrackLessonHover { get; set; }
     internal bool HoldOpenForLesson { get; set; }
+    internal event Action? LessonOpened;
     public bool Expanded => _expanded;
     private bool _pinned;
     private bool _tabArmed = true;
@@ -74,15 +76,26 @@ public partial class PulloutNotebook : Control
             return;
         _pinned = !_pinned;
         SetExpanded(_pinned || _expanded);
+        if (_expanded && TrackLessonHover) LessonOpened?.Invoke();
         AcceptEvent();
     }
 
     public override void _Input(InputEvent input)
     {
-        if (input is InputEventMouseMotion motion) _pointer = motion.Position;
+        if (input is not InputEventMouseMotion motion) return;
+        _pointer = motion.Position;
+        InspectForLesson(GetGlobalTransformWithCanvas().AffineInverse() * motion.Position);
     }
 
     private void OnPointerLeft() => _pointer = new Vector2(-1, -1);
+
+    private void InspectForLesson(Vector2 cursor)
+    {
+        if (!TrackLessonHover || GetTree().Paused || !IsVisibleInTree() ||
+            !(ClosedHoverBounds.HasPoint(cursor) || _expanded && OpenHoverBounds.HasPoint(cursor))) return;
+        SetExpanded(true);
+        LessonOpened?.Invoke();
+    }
 
     public override void _Process(double delta)
     {
@@ -100,6 +113,7 @@ public partial class PulloutNotebook : Control
         Vector2 cursor = _pointer.HasValue
             ? GetGlobalTransformWithCanvas().AffineInverse() * _pointer.Value
             : GetLocalMousePosition();
+        InspectForLesson(cursor);
         bool onClosedTab = ClosedHoverBounds.HasPoint(cursor);
         if (!onClosedTab) _tabArmed = true;
         if (_expanded)
@@ -113,7 +127,7 @@ public partial class PulloutNotebook : Control
                 SetExpanded(false);
             }
         }
-        else if (_slide?.IsRunning() != true && (_pinned || _tabArmed && onClosedTab && CanHoverTab()))
+        else if (HoldOpenForLesson || _slide?.IsRunning() != true && (_pinned || _tabArmed && onClosedTab && CanHoverTab()))
         {
             _leaveTime = 0;
             SetExpanded(true);

@@ -11,7 +11,18 @@
 ## Текущий фронт
 ### M232 — debug/gameplay в main с релизом v1.4.4
 
-M232 IN_PROGRESS; /root; CP `.local/checks/m232/CP-M232.md`. Пользователь разрешил merge/push. origin/main3be4aae содержит новый релиз поверх cec04d6; debug/gameplay0f72793 и локальные SC230/231 сохраняются. Сначала commit проверенных исправлений, затем merge с сохранением релизных изменений и удалением покупательницы; повторная проверка итогового дерева. Несвязанные локальные изменения сцены сохранить отдельно, source/ не читать.
+M232 DONE; /root; CP `.local/checks/m232/CP-M232.md`. Пользователь разрешил merge/push. origin/main3be4aae содержит новый релиз поверх cec04d6; debug/gameplay0f72793 и SC230/231ae8ba6e объединены с сохранением релизных изменений и удалением покупательницы. Несвязанные локальные изменения сцены сохранены отдельно, source/ не читался.
+
+```text
+Task: M232
+Recommended status: REVIEW -> accepted DONE; gate PASSED 27.11.2026
+Changed: integrated v1.4.4 from origin/main3be4aae into debug/gameplay. Three content conflicts resolved: customer-free motion and motion test retained; latest release tutorial regression retained with per-frame showcase visibility assertions restored. Removed now-obsolete input guard for customer's departure from merged DialoguePlayer. Release gameplay/trading/tutorial changes otherwise preserved. Backup backup/main-before-m232-20261127 points to3be4aae; local unrelated scene changes stored separately for restoration.
+Checks: build PASS0warnings/errors; domain226/226PASS (.local/checks/m232/domain-results/m232.trx). Seven rendered merged-tree suites PASS exit0/stderr empty: intro-transition, tutorial, prologue-motion, showcase-card-visibility, room-frame, quota-visit, dialogue-portraits. Exact final scenes copied to isolated fixture; real player saves untouched. Scoped diffcheck PASS; no unresolved conflicts.
+Acceptance: latest release plus house/curtain/showcase fixes and customer-free prologue compose; new-game completion/skip/continue, new tutorial/reroll lessons, story workshop flow, card visibility, frames and portraits pass. Both histories preserved, no forced updates.
+Read-set exception: remote44-file change manifest inspected for merge diagnosis; only three conflicting files edited plus obsolete caller guard, within CP; no source/.
+Risks/blocker: no scoped blocker; separate legacy localization runner not re-run. Local non-task scene visibility/order edits excluded from merge publication and restored afterward.
+Next: publish debug/gameplay; fast-forward local main to origin/main then merge debug/gameplay and push; verify ancestry and restore local scene edits.
+```
 
 ### SC231 — пролог без покупательницы
 

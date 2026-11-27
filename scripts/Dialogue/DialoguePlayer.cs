@@ -215,6 +215,11 @@ public partial class DialoguePlayer : Control
 		else DisplayLine();
 	}
 
+	private void AdvanceFromInput()
+	{
+		Advance();
+	}
+
 	public override void _Input(InputEvent @event)
 	{
 		if (_closed) return;
@@ -225,7 +230,7 @@ public partial class DialoguePlayer : Control
 			var scrollbar = _text.GetVScrollBar();
 			if (scrollbar.IsVisibleInTree() && scrollbar.GetGlobalRect().HasPoint(mouse.Position)) return;
 			GetViewport().SetInputAsHandled();
-			Advance();
+			AdvanceFromInput();
 			return;
 		}
 		if (@event is not InputEventKey { Pressed: true, Echo: false } key) return;
@@ -238,7 +243,7 @@ public partial class DialoguePlayer : Control
 		else if (key.Keycode == Key.Space)
 		{
 			GetViewport().SetInputAsHandled();
-			Advance();
+			AdvanceFromInput();
 		}
 	}
 }

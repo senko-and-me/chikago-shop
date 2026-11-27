@@ -96,8 +96,10 @@ public partial class TradeScene
 
 		MusicWorkshopUnlocked = ProgressMigration.StoryWorkshopUnlocked(data.MusicWorkshopUnlocked,
 			data.Day, data.QuotaStage, data.QuotaVisit, FirstDeadline);
+		CheckpointDay = data.CheckpointDay > 1 ? FirstDeadline + 1 : 1;
+		int checkpointQuotaStage = CheckpointDay > FirstDeadline ? 1 : 0;
 		CheckpointMusicWorkshopUnlocked = ProgressMigration.StoryWorkshopUnlocked(data.CheckpointMusicWorkshopUnlocked,
-			data.CheckpointDay, data.CheckpointDay > FirstDeadline ? 1 : 0, data.CheckpointQuotaVisit, FirstDeadline);
+			CheckpointDay, checkpointQuotaStage, data.CheckpointQuotaVisit, FirstDeadline);
 
 		_dayCycle.Restore(
 			data.DayRemainingSeconds,
@@ -138,15 +140,12 @@ public partial class TradeScene
 		_checkpointInvisibleHandPressure = double.IsFinite(data.CheckpointInvisibleHandPressure)
 			? Math.Clamp(data.CheckpointInvisibleHandPressure, -1, 1) : 0;
 		MafiaNoticePending = data.MafiaNoticePending;
-		_quotaVisit = data.QuotaVisit;
-		_checkpointQuotaVisit = data.CheckpointQuotaVisit;
+		_quotaVisit = ProgressMigration.RestoreQuotaVisit(data.Day, data.QuotaStage, data.QuotaVisit, FirstDeadline);
+		_checkpointQuotaVisit = ProgressMigration.RestoreQuotaVisit(CheckpointDay,
+			checkpointQuotaStage, data.CheckpointQuotaVisit, FirstDeadline);
 		_quotaDialoguePage = data.QuotaDialoguePage;
 		_quotaDialogueRevealed = data.QuotaDialogueRevealed;
 		_quotaDialogueLanguage = data.QuotaDialogueLanguage;
-
-		CheckpointDay = data.CheckpointDay > 1
-			? FirstDeadline + 1
-			: 1;
 
 		CheckpointScore =
 			Mathf.Max(0, data.CheckpointScore);

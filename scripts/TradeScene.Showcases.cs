@@ -101,8 +101,13 @@ public partial class TradeScene
             ? info + "\n" + GameLocalization.Text("Нажмите, чтобы вернуть товар на витрину") : info;
     }
 
-    internal int FirstDisplayedItem(string workshop) => Array.FindIndex(_showcaseItems,
-        item => item >= 0 && Items[item].WorkshopId == workshop);
+    internal int FirstDisplayedItem(string workshop)
+    {
+        for (int slot = 0; slot < _showcaseItems.Length; slot++)
+            if (slot != _pendingCraftSlot && _showcaseItems[slot] is int item && item >= 0 &&
+                Items[item].WorkshopId == workshop) return slot;
+        return -1;
+    }
 
     internal Control DisplayControl(int slot) => _showcaseSlots[slot];
 

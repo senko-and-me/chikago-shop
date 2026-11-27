@@ -132,7 +132,7 @@ public partial class ButtonFeedbackController : Node
             state.Hovered = pointerControl == button || (pointerControl != null && button.IsAncestorOf(pointerControl));
             if (HasFace(button))
                 AnimateFace(state, state.Held && button.IsPressed() ? new Vector2(.985f, .94f) :
-                    state.Hovered ? Vector2.One * 1.04f : Vector2.One, delta);
+                    state.Hovered && button is not CraftButtonVisual ? Vector2.One * 1.04f : Vector2.One, delta);
             else AnimateFace(state, Vector2.One, delta);
             if (local) continue;
             state.Flash = Mathf.Max(0, state.Flash - (float)delta);

@@ -71,14 +71,67 @@ public partial class TradeScene
         _lastShownSpeedBonus = -1;
     }
 
+    private void LimitTrainingInitialOffer()
+    {
+        int basePrice = GetItemPrice(ItemIndex);
+        int ceiling = TradeOfferRules.Price(basePrice, TradeOfferRules.MaxPercent);
+        if (TradeOfferRules.Price(basePrice, Percentage) < ceiling) return;
+        // Preserve the ordinary price range and leave room for a higher rounded price.
+        for (int percent = TradeOfferRules.MaxPercent - 1; percent >= TradeOfferRules.MinPercent; percent--)
+        {
+            if (TradeOfferRules.Price(basePrice, percent) >= ceiling) continue;
+            Percentage = percent;
+            break;
+        }
+    }
+
+    internal void PrepareTutorialReroll()
+    {
+        int basePrice = GetItemPrice(ItemIndex);
+        int ceiling = TradeOfferRules.Price(basePrice, TradeOfferRules.MaxPercent);
+        if (OfferedPrice < ceiling && _buyerWaitRemaining > 0)
+        {
+            RefreshTutorialTradeActions();
+            return;
+        }
+        if (_buyerWaitRemaining <= 0)
+        {
+            _buyerWaitRemaining = _buyerWaitInitial;
+            _buyerWaitWidget.SetState(Items[ItemIndex].WorkshopId == "music", _buyerWaitRemaining, _buyerWaitInitial);
+        }
+        LimitTrainingInitialOffer();
+        RefreshOffer();
+        SaveProgress();
+    }
+
+    internal void BeginTutorialTimedSale()
+    {
+        _buyerWaitRemaining = _buyerWaitInitial;
+        _buyerWaitAutosave = 0;
+        _buyerWaitWidget.SetState(Items[ItemIndex].WorkshopId == "music", _buyerWaitRemaining, _buyerWaitInitial);
+        RefreshOffer();
+        SaveProgress();
+    }
+
+    internal void ShortenTutorialLateSale()
+    {
+        const double previewSeconds = 2;
+        if (_buyerWaitRemaining <= previewSeconds) return;
+
+        _buyerWaitRemaining = previewSeconds;
+        _buyerWaitWidget.SetState(Items[ItemIndex].WorkshopId == "music", _buyerWaitRemaining, _buyerWaitInitial);
+        RefreshOffer();
+        SaveProgress();
+    }
+
     private void TickBuyerWait(double delta)
     {
-        if ((!TradeActive && !_waitingBuyer) || _dayCycle.Session.IsClosed)
+        if ((!TradeActive && !_waitingBuyer) || _dayCycle.Session.IsClosed || _tutorial.FreezeTrainingBuyer)
             return;
 
         // The timer belongs to the customer and follows them into the offer.
         bool wasExpired = BuyerPatienceRules.IsExpired(_buyerWaitRemaining);
-        _buyerWaitRemaining = Math.Max(TradeActive && _tutorial.HoldTrainingBuyer ? 1 : 0, _buyerWaitRemaining - delta);
+        _buyerWaitRemaining = Math.Max(_tutorial.HoldTrainingBuyer ? 1 : 0, _buyerWaitRemaining - delta);
         bool justExpired = !wasExpired && BuyerPatienceRules.IsExpired(_buyerWaitRemaining);
         if (_buyerWaitWidget != null)
             _buyerWaitWidget.SetState(_waitingBuyer ? _waitingBuyerMusic :
@@ -177,11 +230,18 @@ public partial class TradeScene
         int speed = SpeedBonus(_buyerWaitRemaining, _buyerWaitInitial);
         int grade = BuyerPatienceRules.IsExpired(_buyerWaitRemaining) ? 0 : QualityBonus(_activeTradeGrade);
         _lastShownSpeedBonus = speed;
-        _offerLabel.Text = GameLocalization.Format("Получим: {0}$", CurrentBuyerPayout);
-        _offerLabel.TooltipText = GameLocalization.Language == "en"
-            ? $"Offer {OfferedPrice}$ + speed {speed}$ + quality {_activeTradeGrade} {grade}$"
-            : $"Цена {OfferedPrice}$ + скорость {speed}$ + качество {_activeTradeGrade} {grade}$";
+        int basePrice = GetItemPrice(ItemIndex);
+        int bonus = CurrentBuyerPayout - OfferedPrice;
+        string offer = GameLocalization.Format("Получим: {0}$", OfferedPrice);
+        _offerLabel.Text = bonus > 0 ? $"{offer} [color=#268d48]{SignedAmount(bonus)}[/color]" : offer;
+
+        string breakdown = GameLocalization.Format("Предложение: {0}\nСкорость: {1}\nКачество: {2}",
+            SignedAmount(OfferedPrice - basePrice), SignedAmount(speed), SignedAmount(grade));
+        _percentLabel.TooltipText = _offerLabel.TooltipText = breakdown;
     }
+
+    private static string SignedAmount(int value) =>
+        GameLocalization.Format(value < 0 ? "−{0}$" : "+{0}$", Math.Abs(value));
 
     #nullable enable annotations
     private void LoadLegacyGradeArrays(string[]? storedGrades, string[]? showcaseGrades)
