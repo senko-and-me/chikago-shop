@@ -190,7 +190,8 @@ public partial class ProjectTest
                 "Castello must use a top-right prologue skip button without Continue");
             var storyCamera = game.GetNode<WorldCamera>("Camera2D");
             var storyRoom = game.GetNode<Control>("World/TradingRoom/RoomFrame").GetGlobalRect();
-            Check(storyCamera.Position.DistanceTo(storyRoom.GetCenter()) < 0.1f &&
+            Vector2 storyCenter = storyRoom.GetCenter() + storyRoom.Size * new Vector2(0.08f, 0.04f);
+            Check(storyCamera.Position.DistanceTo(storyCenter) < 0.1f &&
                 !game.GetNode<CanvasLayer>("HUD").Visible && !game.GetNode<CanvasLayer>("HUD/DayClock").Visible,
                 "The camera must frame the actual trading room and hide the gameplay HUD during the story");
             if (DisplayServer.GetName() != "headless")
@@ -203,7 +204,7 @@ public partial class ProjectTest
                     await ToSignal(this, SignalName.ProcessFrame);
                     await ToSignal(this, SignalName.ProcessFrame);
                     Dialogue().RestorePage(0, true);
-                    Check(storyCamera.Position.DistanceTo(storyRoom.GetCenter()) < 0.1f &&
+                    Check(storyCamera.Position.DistanceTo(storyCenter) < 0.1f &&
                         Root.GetVisibleRect().Encloses(Dialogue().GetNode<Control>("Panel/Content").GetGlobalRect()),
                         "Resizing the story must preserve the real room framing and readable dialogue");
                     using (await CapturePresentation("story-workshop-dialogue-" + language)) { }

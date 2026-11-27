@@ -119,7 +119,7 @@ public partial class WorldCamera : Camera2D
         Vector2 ratio = GetViewportRect().Size / room.Size;
         _targetZoom = Mathf.Max(ratio.X, ratio.Y);
         Zoom = Vector2.One * _targetZoom;
-        Position = room.GetCenter();
+        Position = room.GetCenter() + room.Size * new Vector2(0.08f, 0.04f);
         ForceUpdateScroll();
     }
 
