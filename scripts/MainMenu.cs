@@ -49,6 +49,7 @@ public partial class MainMenu : Control
 	private bool _skipMouseWasDown;
 
 	public DialoguePlayer ActiveDialogue { get; private set; } = null!;
+	public TradeScene ActiveTrainingGame { get; private set; }
 
 	public override void _Ready()
 	{
@@ -536,7 +537,7 @@ public partial class MainMenu : Control
 
 	public void OnPlayPressed()
 	{
-		if (_startingGame || _endingIntro || ActiveDialogue != null)
+		if (_startingGame || _endingIntro || ActiveDialogue != null || ActiveTrainingGame != null)
 			return;
 
 		ShowGameChoice();
@@ -552,19 +553,77 @@ public partial class MainMenu : Control
 
 	private void OnNewGamePressed()
 	{
-		if (_startingGame || _endingIntro || ActiveDialogue != null)
+		if (_startingGame || _endingIntro || ActiveDialogue != null || ActiveTrainingGame != null)
 			return;
 
+		BeginTraining(newGame: true);
+	}
+
+	private void HideMenuForSequence()
+	{
 		_mainMenu.Hide();
 		_settingsMenu.Hide();
 		_settingsFrame.Hide();
 		_title.Hide();
-
-		StartIntroDialogue();
 	}
 
-	private void StartIntroDialogue()
+	private async void BeginTraining(bool newGame)
 	{
+		_startingGame = true;
+		if (!await PrepareGameScene()) return;
+		await SceneTransition.Run(this, () =>
+		{
+			if (newGame && !ResetSavedGame()) return Task.FromResult(false);
+			HideMenuForSequence();
+			var game = GameScene.Instantiate<TradeScene>();
+			var tutorial = game.GetNode<FirstTradeTutorial>("FirstTradeTutorial");
+			tutorial.ProloguePending = true;
+			tutorial.Finished += OnTrainingFinished;
+			ActiveTrainingGame = game;
+			GetNode<AudioStreamPlayer>("MenuMusic").Stop();
+			AddChild(game);
+			return Task.FromResult(true);
+		});
+		if (GodotObject.IsInstanceValid(this)) _startingGame = false;
+	}
+
+	private void OnTrainingFinished()
+	{
+		// Finish the tutorial's own reset before removing its scene and starting the prologue.
+		Callable.From(FinishTrainingTransition).CallDeferred();
+	}
+
+	private async void FinishTrainingTransition()
+	{
+		if (!IsInsideTree() || IsQueuedForDeletion() || ActiveTrainingGame == null || _startingGame) return;
+		_startingGame = true;
+		await SceneTransition.Run(this, () =>
+		{
+			var game = ActiveTrainingGame;
+			ActiveTrainingGame = null;
+			game.GetNode<FirstTradeTutorial>("FirstTradeTutorial").Finished -= OnTrainingFinished;
+			RemoveChild(game);
+			game.QueueFree();
+			StartIntroDialogue();
+			return Task.FromResult(true);
+		});
+		if (GodotObject.IsInstanceValid(this)) _startingGame = false;
+	}
+
+	private async void ShowPrologueWithTransition()
+	{
+		_startingGame = true;
+		await SceneTransition.Run(this, () =>
+		{
+			StartIntroDialogue();
+			return Task.FromResult(true);
+		});
+		if (GodotObject.IsInstanceValid(this)) _startingGame = false;
+	}
+
+	internal void StartIntroDialogue()
+	{
+		HideMenuForSequence();
 		Music.BeginIntro();
 		ActiveDialogue = GD.Load<PackedScene>("res://scenes/UI/DialoguePlayer.tscn").Instantiate<DialoguePlayer>();
 
@@ -611,45 +670,34 @@ public partial class MainMenu : Control
 		_endingIntro = true;
 		_skipLayer.Hide();
 		ActiveDialogue?.StopInteraction();
-		bool silent = await Music.FadeToSilence(skipped);
-		if (!GodotObject.IsInstanceValid(this)) return;
-		if (!silent || !IsInsideTree())
-		{
-			_endingIntro = false;
-			return;
-		}
-
-		if (ActiveDialogue != null)
-		{
-			var dialogue = ActiveDialogue;
-
-			ActiveDialogue = null!;
-			dialogue.QueueFree();
-		}
-
-		_endingIntro = false;
-		EnterGame(true);
+		await EnterGame(true, Music.FadeToSilence(skipped, SceneTransition.FadeOutSeconds));
+		if (GodotObject.IsInstanceValid(this)) _endingIntro = false;
 	}
 
 	private void OnContinuePressed()
 	{
-		if (_startingGame || _endingIntro || !HasSavedGame())
+		if (_startingGame || _endingIntro || ActiveDialogue != null || ActiveTrainingGame != null || !HasSavedGame())
 			return;
 
-		EnterGame(false);
+		var progress = new ConfigFile();
+		if (progress.Load(ProgressSavePath + ".tutorial.cfg") == Error.Ok &&
+			progress.GetValue("tutorial", "prologue_pending", false).AsBool())
+		{
+			if (progress.GetValue("tutorial", "finished", false).AsBool()) ShowPrologueWithTransition();
+			else BeginTraining(newGame: false);
+			return;
+		}
+		_ = EnterGame(false);
 	}
 
-	private async void EnterGame(bool newGame)
+	private async Task<bool> PrepareGameScene()
 	{
-		if (_startingGame)
-			return;
-
-		_startingGame = true;
+		if (!IsInsideTree() || IsQueuedForDeletion()) return false;
 		if (GameScene == null)
 		{
 			_gameSceneWarmup ??= SceneResourceWarmup.LoadAsync(GetTree(), DefaultGameScenePath);
 			var prepared = await _gameSceneWarmup;
-			if (!GodotObject.IsInstanceValid(this) || !IsInsideTree()) return;
+			if (!GodotObject.IsInstanceValid(this) || !IsInsideTree() || IsQueuedForDeletion()) return false;
 			GameScene ??= prepared;
 		}
 		if (GameScene == null)
@@ -657,10 +705,14 @@ public partial class MainMenu : Control
 			_startingGame = false;
 			GD.PushError("Could not load res://scenes/trade_scene.tscn");
 			ShowGameChoice();
-			return;
+			return false;
 		}
+		return true;
+	}
 
-		if (newGame && HasSavedGame())
+	private bool ResetSavedGame()
+	{
+		if (HasSavedGame())
 		{
 			string path = ProjectSettings.GlobalizePath(
 				ProgressSavePath);
@@ -675,45 +727,55 @@ public partial class MainMenu : Control
 					$"Could not reset saved game: {deleteError}");
 
 				ShowGameChoice();
-				return;
+				return false;
 			}
 		}
-
-		GetNode<AudioStreamPlayer>("MenuMusic").Stop();
-
-		_skipLayer.Hide();
-		_mainMenu.Hide();
-		_settingsMenu.Hide();
-		_settingsFrame.Hide();
-		_title.Hide();
-
-		Error error =
-			GetTree().ChangeSceneToPacked(GameScene);
-
-		if (error != Error.Ok)
-		{
-			_startingGame = false;
-
-			GD.PushError(
-				$"Could not open game: {error}");
-
-			ShowGameChoice();
-		}
+		return true;
 	}
 
-	private void CloseDialogue()
+	private async Task EnterGame(bool newGame, Task<bool> silence = null)
+	{
+		if (_startingGame) return;
+		_startingGame = true;
+		if (!await PrepareGameScene()) return;
+		await SceneTransition.Run(this, async () =>
+		{
+			if (silence != null && !await silence) return false;
+			if (!GodotObject.IsInstanceValid(this) || !IsInsideTree() || IsQueuedForDeletion()) return false;
+			if (newGame && !ResetSavedGame()) return false;
+			GetNode<AudioStreamPlayer>("MenuMusic").Stop();
+			_skipLayer.Hide();
+			HideMenuForSequence();
+			var game = GameScene.Instantiate();
+			if (newGame && game is TradeScene trade)
+				trade.GetNode<FirstTradeTutorial>("FirstTradeTutorial").SkipOnInitialize = true;
+			Error error = GetTree().ChangeSceneToNode(game);
+			if (error == Error.Ok) return true;
+			game.Free();
+			GD.PushError($"Could not open game: {error}");
+			ShowGameChoice();
+			return false;
+		});
+		if (GodotObject.IsInstanceValid(this)) _startingGame = false;
+	}
+
+	private async void CloseDialogue()
 	{
 		if (_endingIntro || ActiveDialogue == null)
 			return;
 
-		var dialogue = ActiveDialogue;
-
-		ActiveDialogue = null!;
-		dialogue.QueueFree();
-
-		_skipLayer.Hide();
-
-		ShowGameChoice();
+		_endingIntro = true;
+		ActiveDialogue.StopInteraction();
+		await SceneTransition.Run(this, () =>
+		{
+			var dialogue = ActiveDialogue;
+			ActiveDialogue = null!;
+			dialogue.QueueFree();
+			_skipLayer.Hide();
+			ShowGameChoice();
+			return Task.FromResult(true);
+		});
+		if (GodotObject.IsInstanceValid(this)) _endingIntro = false;
 	}
 
 	public void OnSettingsPressed()
@@ -760,6 +822,11 @@ public partial class MainMenu : Control
 	{
 		bool mouseDown =
 			Input.IsMouseButtonPressed(MouseButton.Left);
+		if (SceneTransition.IsActive(GetTree()))
+		{
+			_skipMouseWasDown = mouseDown;
+			return;
+		}
 
 		if (ActiveDialogue != null &&
 			_skipLayer.Visible &&
@@ -783,6 +850,12 @@ public partial class MainMenu : Control
 
 	public override void _Input(InputEvent @event)
 	{
+		if (SceneTransition.IsActive(GetTree()))
+		{
+			GetViewport().SetInputAsHandled();
+			return;
+		}
+		if (ActiveTrainingGame != null) return;
 		if (_endingIntro || _startingGame)
 		{
 			GetViewport().SetInputAsHandled();

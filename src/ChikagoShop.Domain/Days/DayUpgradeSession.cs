@@ -1,12 +1,13 @@
 namespace ChikagoShop.Domain.Days;
 
-// Serialized enum values must remain stable; Time is retired, not renumbered.
+// Serialized enum values must remain stable; Energy and Time are retired, not renumbered.
 public enum DayUpgrade { None, Cash, Energy, Time, Atelier, Music, AtelierPrice, MusicPrice }
 
 // Every purchased upgrade is effective only during the upcoming day.
 // Legacy level fields remain readable for save compatibility but no longer affect gameplay.
 public sealed class DayUpgradeSession
 {
+    private bool _training;
     public bool Pending { get; private set; }
     public DayUpgrade Selected { get; private set; }
     public int Day { get; private set; } = 2;
@@ -16,15 +17,17 @@ public sealed class DayUpgradeSession
     public int AtelierPriceLevel => 0;
     public int MusicPriceLevel => 0;
     public DayUpgradeRules Rules { get; set; } = new();
-    public IReadOnlyList<DayUpgrade> Options => Rules.Options(Day, MusicUnlocked);
+    public IReadOnlyList<DayUpgrade> Options => Rules.Options(Day, MusicUnlocked, _training);
     public int CostFor(DayUpgrade upgrade) => Rules.Cost(upgrade);
     public int EnergyCapacity => EnergyCapacityFor(2);
-    public int EnergyCapacityFor(int baseline) => baseline + (Selected == DayUpgrade.Energy ? 1 : 0);
+    // Legacy callers and saves retain this API, but energy upgrades no longer have an effect.
+    public int EnergyCapacityFor(int baseline) => baseline;
     public double Duration => DaySession.DurationSeconds;
     public int CashReward => 50;
 
-    public void Offer(int day = 2, bool musicUnlocked = false)
+    public void Offer(int day = 2, bool musicUnlocked = false, bool training = false)
     {
+        _training = training;
         Day = Math.Max(2, day);
         MusicUnlocked = musicUnlocked;
         Pending = true;
@@ -33,6 +36,7 @@ public sealed class DayUpgradeSession
 
     public void Reset(bool preserveCategories = false)
     {
+        _training = false;
         Pending = false;
         Selected = DayUpgrade.None;
         // preserveCategories is intentionally ignored: category bonuses no longer stack.
@@ -40,8 +44,7 @@ public sealed class DayUpgradeSession
 
     public static int Cost(DayUpgrade upgrade) => upgrade switch
     {
-        DayUpgrade.Cash => 35,
-        DayUpgrade.Energy => 10,
+        DayUpgrade.Cash => 0,
         DayUpgrade.Atelier => 15,
         DayUpgrade.Music => 25,
         DayUpgrade.AtelierPrice => 10,
@@ -74,8 +77,9 @@ public sealed class DayUpgradeSession
     {
         Day = Math.Max(2, day);
         MusicUnlocked = musicUnlocked;
+        _training = false;
         // Permanent bonuses in legacy saves do not carry over to the new day-only system.
-        Selected = Enum.IsDefined(selected) && selected != DayUpgrade.Time ? selected : DayUpgrade.None;
+        Selected = selected is DayUpgrade.Cash or DayUpgrade.AtelierPrice or DayUpgrade.MusicPrice ? selected : DayUpgrade.None;
         if (!MusicUnlocked && (Selected is DayUpgrade.Music or DayUpgrade.MusicPrice)) Selected = DayUpgrade.None;
         Pending = pending && Selected == DayUpgrade.None;
     }
@@ -90,21 +94,12 @@ public sealed class DayUpgradeSession
             : baseline;
     }
 
-    public int Weight(string workshop, string rarity, int baseline, int commonBaseline)
+    public double CraftDuration(string workshop, double baseline)
     {
-        bool boosted = (workshop == "atelier" && Selected == DayUpgrade.Atelier) ||
-                       (workshop == "music" && Selected == DayUpgrade.Music);
-        if (!boosted) return baseline;
-        int transfer = Math.Min(12, Math.Max(0, commonBaseline - 1));
-        int first = transfer * 6 / 12;
-        int exclusive = transfer * 4 / 12;
-        return baseline + (rarity switch
-        {
-            "common" => -transfer,
-            "first_class" => first,
-            "exclusive" => exclusive,
-            "unique" => transfer - first - exclusive,
-            _ => 0
-        });
+        if (!double.IsFinite(baseline) || baseline <= 0) throw new ArgumentOutOfRangeException(nameof(baseline));
+        return baseline;
     }
+
+    // Kept for save/runtime compatibility; selected-item crafting no longer rolls rarity.
+    public int Weight(string workshop, string rarity, int baseline, int commonBaseline) => baseline;
 }

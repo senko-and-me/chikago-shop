@@ -18,6 +18,59 @@ public partial class ProjectTest
         try
         {
             game.NewGame();
+            var navigation = game.GetNode<WorldCamera>("Camera2D");
+            navigation.SetProcess(false);
+            void Press(Vector2 point, bool pressed) => Root.PushInput(new InputEventMouseButton {
+                Position = point, GlobalPosition = point, ButtonIndex = MouseButton.Left,
+                Pressed = pressed, ButtonMask = pressed ? MouseButtonMask.Left : 0 }, true);
+            void Move(Vector2 point, Vector2 relative) => Root.PushInput(new InputEventMouseMotion {
+                Position = point, GlobalPosition = point, Relative = relative,
+                ButtonMask = MouseButtonMask.Left }, true);
+            foreach (var cover in covers)
+            {
+                navigation.Zoom = Vector2.One * 0.8f;
+                navigation.Position = cover.GlobalPosition + cover.Size / 2;
+                navigation.ForceUpdateScroll();
+                await ToSignal(this, SignalName.ProcessFrame);
+                Vector2 point = cover.GetGlobalTransformWithCanvas() * (cover.Size * new Vector2(0.35f, 0.4f));
+                MoveButtonPointer(point);
+                int money = game.Score;
+                Vector2 before = navigation.Position;
+                Press(point, true);
+                Check(navigation.IsDragging, $"LMB on {cover.GetParent().Name} curtain must start camera drag: point={point}, hover={Root.GuiGetHoveredControl()?.GetPath()}, filter={cover.MouseFilter}, locked={navigation.NavigationLocked}, paused={Paused}, focus={navigation.IsFocusing}");
+                Vector2 delta = new Vector2(35, 20);
+                Move(point + delta, delta);
+                Check(navigation.Position.DistanceTo(before) > 1 && game.Score == money && cover.Visible,
+                    "Curtain drag must move camera without buying or opening the room");
+                Press(point + delta, false);
+                before = navigation.Position;
+                Move(point + delta * 2, delta);
+                Check(!navigation.IsDragging && navigation.Position == before, "Release must stop curtain drag");
+                navigation.NavigationLocked = true;
+                Press(point, true);
+                Check(!navigation.IsDragging, "Tutorial lock must block curtain navigation");
+                Press(point, false);
+                navigation.NavigationLocked = false;
+                Paused = true;
+                Press(point, true);
+                Check(!navigation.IsDragging, "Pause must block curtain navigation");
+                Press(point, false);
+                Paused = false;
+            }
+            var purchase = covers[0].GetNode<Button>("UnlockPanel/Content/UnlockButton");
+            navigation.Position = covers[0].GlobalPosition + covers[0].Size / 2;
+            navigation.ForceUpdateScroll();
+            game.Score = 10000;
+            game.RefreshItemButtons();
+            await ToSignal(this, SignalName.ProcessFrame);
+            Vector2 purchasePoint = ScreenBounds(purchase).GetCenter();
+            MoveButtonPointer(purchasePoint);
+            Press(purchasePoint, true);
+            Check(!navigation.IsDragging && purchase.ButtonPressed,
+                "Purchase button must retain GUI input without starting camera drag");
+            Press(purchasePoint, false);
+            Check(game.MusicWorkshopUnlocked, "An actual purchase click must still unlock the workshop");
+            game.NewGame();
             foreach (var cover in covers)
             {
                 var room = cover.GetParent();

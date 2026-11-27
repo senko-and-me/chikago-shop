@@ -7,20 +7,153 @@ using ChikagoShop.Domain.Days;
 // Subsystem checks share the ProjectTest runner and fixture helpers.
 public partial class ProjectTest
 {
+    private async Task TestPosterNavigation()
+    {
+        // Exercise real viewport dispatch and Area2D picking with the authored poster.
+        var authored = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate();
+        var poster = authored.GetNode<TradingRoomPosterHotspot>("World/TradingRoom/ShowPoster");
+        poster.GetParent().RemoveChild(poster);
+        authored.Free();
+        var scene = new Node2D();
+        var bounds = new Sprite2D
+        {
+            Texture = GD.Load<Texture2D>("res://art/rooms/room_layout.jpg"),
+            Centered = false, Scale = Vector2.One * 4
+        };
+        scene.AddChild(bounds);
+        poster.Position = bounds.GetRect().Size * bounds.Scale / 2 - new Vector2(55.5f, 83);
+        scene.AddChild(poster);
+        var camera = new WorldCamera { BoundsSource = bounds };
+        scene.AddChild(camera);
+        Root.AddChild(scene);
+        camera.SetProcess(false);
+        camera.Zoom = Vector2.One * 0.7f;
+        camera.ClampToBounds();
+        camera.ForceUpdateScroll();
+        var overlay = poster.GetNode<Control>("PosterOverlay/Root");
+        async Task Pick()
+        {
+            await ToSignal(this, SignalName.PhysicsFrame);
+            await ToSignal(this, SignalName.PhysicsFrame);
+            await ToSignal(this, SignalName.ProcessFrame);
+        }
+        void Move(Vector2 point, Vector2 relative, MouseButtonMask mask = 0) =>
+            Root.PushInput(new InputEventMouseMotion { Position = point, GlobalPosition = point,
+                Relative = relative, ButtonMask = mask }, true);
+        void Left(Vector2 point, bool pressed) => Root.PushInput(new InputEventMouseButton
+        {
+            Position = point, GlobalPosition = point, ButtonIndex = MouseButton.Left,
+            Pressed = pressed, ButtonMask = pressed ? MouseButtonMask.Left : 0
+        }, true);
+        Vector2 PosterPoint() => poster.GetGlobalTransformWithCanvas() * new Vector2(55.5f, 83);
+        try
+        {
+            await Pick();
+            foreach (bool returnToStart in new[] { false, true })
+            {
+                Vector2 point = PosterPoint();
+                Move(point, Vector2.Zero);
+                await Pick();
+                Vector2 before = camera.Position;
+                Left(point, true);
+                await Pick();
+                Check(!overlay.Visible && !Paused, "Pressing the poster must leave LMB camera navigation available");
+                Vector2 offset = new(40, 20);
+                Move(point + offset, offset, MouseButtonMask.Left);
+                await Pick();
+                Check(camera.Position.DistanceTo(before) > 1 && !overlay.Visible && !Paused,
+                    "Dragging from the poster must move the real camera without opening or pausing");
+                if (returnToStart)
+                {
+                    Move(point, -offset, MouseButtonMask.Left);
+                    await Pick();
+                }
+                Left(returnToStart ? point : point + offset, false);
+                await Pick();
+                Check(!overlay.Visible && !Paused, "Releasing a drag must not open the poster, even after returning to the press point");
+            }
+            Vector2 click = PosterPoint();
+            Move(click, Vector2.Zero);
+            await Pick();
+            Left(click, true);
+            await Pick();
+            Left(click + new Vector2(100, 0), false);
+            await Pick();
+            Check(!overlay.Visible && !Paused, "A distant release must cancel the click even without a motion event");
+            Left(click, false);
+            await Pick();
+            Check(!overlay.Visible && !Paused, "Releasing over the poster without a press must not open it");
+            Left(click, true);
+            await Pick();
+            Paused = true;
+            await Pick();
+            Paused = false;
+            Left(click, false);
+            await Pick();
+            Check(!overlay.Visible && !Paused, "Pause must cancel a pending poster click");
+
+            Left(click, true);
+            await Pick();
+            Check(!overlay.Visible && !Paused, "A simple press must wait for release");
+            Move(click + new Vector2(2, 0), new Vector2(2, 0), MouseButtonMask.Left);
+            Left(click + new Vector2(2, 0), false);
+            await Pick();
+            Check(overlay.Visible && Paused, "A simple LMB click must open and pause on release");
+            Root.PushInput(new InputEventKey { Keycode = Key.Escape, Pressed = true }, true);
+            await ToSignal(CreateTimer(0.25, true), SceneTreeTimer.SignalName.Timeout);
+            Check(!overlay.Visible && !Paused, "Escape must still close the poster and resume navigation");
+        }
+        finally
+        {
+            Paused = false;
+            scene.QueueFree();
+            await ToSignal(this, SignalName.ProcessFrame);
+        }
+    }
+
     private async Task TestRoomTitles()
     {
         Vector2I originalSize = Root.Size;
         string originalLocale = TranslationServer.GetLocale();
         var game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
         game.SavePath = "";
+        Check(game.GetNode<Label>("World/MusicWorkshop/NameLabel").Text == "МАСТЕРСКАЯ",
+            "The designer's new second-room name must be stored in the scene");
+        foreach (var workshop in EconomyConfigProvider.Load().Workshops)
+        {
+            string room = workshop.Id == "atelier" ? "Atelier" : "MusicWorkshop";
+            string preview = game.GetNode<Label>($"World/{room}/GetItemButton/PriceHint/Label").Text;
+            Check(preview == $"Выбор предмета  •  от {WorkshopItemCatalog.CraftCost(workshop.Id)}$",
+                "The authored price preview must match the default single-item economy before Ready");
+        }
+        var tradePanel = game.GetNode<Control>("World/TradingRoom/Item/TradePanel");
+        Check(tradePanel.ZIndex == 125 && !tradePanel.ZAsRelative, "The trade panel's initial drawing layer must be authored in the scene");
+        tradePanel.ZIndex = 127;
+        var unlockPanel = game.GetNode<MusicWorkshopUnlockPanel>("World/MusicWorkshop/LockedOverlay/UnlockPanel");
+        var authoredPaper = (StyleBoxTexture)unlockPanel.GetThemeStylebox("panel").Duplicate();
+        authoredPaper.ContentMarginLeft = 47;
+        unlockPanel.AddThemeStyleboxOverride("panel", authoredPaper);
+        var authoredButton = (StyleBoxTexture)unlockPanel.GetNode<Button>("Content/UnlockButton").GetThemeStylebox("normal").Duplicate();
+        authoredButton.ModulateColor = new Color(0.81f, 0.82f, 0.83f);
+        unlockPanel.GetNode<Button>("Content/UnlockButton").AddThemeStyleboxOverride("normal", authoredButton);
+        var glass = game.GetNode<Node2D>("World/ShowroomLeft/Showcases").GetChild(0).GetNode<ColorRect>("Glass");
+        var authoredGlass = new Color(0.2f, 0.3f, 0.4f, 0.5f);
+        glass.Color = authoredGlass;
+        game.GetNode<Control>("World/ShowroomLeft/ShowroomHeader").Hide();
+        var customTitle = game.GetNode<Label>("World/ShowroomLeft/ShowroomLabel");
+        customTitle.Text = "ПОЛКИ";
+        customTitle.Position += new Vector2(7, 3);
         var entries = new[] { "Atelier", "MusicWorkshop", "ShowroomLeft", "Showroom" }.Select(room =>
         {
             var node = game.GetNode("World/" + room);
             var plate = node.GetNodeOrNull<Control>("Header") ?? node.GetNode<Control>("ShowroomHeader");
             var title = node.GetNodeOrNull<Label>("NameLabel") ?? node.GetNode<Label>("ShowroomLabel");
-            var subtitle = node.GetNodeOrNull<Control>("HintLabel") ?? node.GetNode<Control>("ShowroomHint");
-            return (Room: room, Plate: plate, Title: title, Subtitle: subtitle,
-                Width: plate.Size.X * plate.Scale.X, Center: plate.Position + plate.Size * plate.Scale / 2);
+            Check(!node.HasNode("HintLabel") && !node.HasNode("ShowroomHint"),
+                "Obsolete room descriptions must be absent from the authored scene, not hidden at runtime");
+            return (Room: room, Plate: plate, Title: title, Text: title.Text,
+                PlateVisible: plate.Visible,
+                PlatePosition: plate.Position, PlateSize: plate.Size, PlateScale: plate.Scale,
+                TitlePosition: title.Position, TitleSize: title.Size, TitleScale: title.Scale);
         }).ToArray();
         Root.AddChild(game);
         game.SetProcess(false);
@@ -33,7 +166,7 @@ public partial class ProjectTest
             await Frame();
             game.EndDay();
             game.Score = 10000;
-            game.TryUnlockMusicWorkshop();
+            UnlockMusicForFixture(game);
             foreach (Vector2I size in new[] { new Vector2I(960, 540), new Vector2I(1280, 720), new Vector2I(1000, 800) })
             foreach (string language in new[] { "ru", "en" })
             {
@@ -42,8 +175,8 @@ public partial class ProjectTest
                 await Frame();
                 camera.ResetToOverview();
                 await Frame();
-                Check(entries.All(entry => !entry.Plate.Visible && !entry.Title.Visible && !entry.Subtitle.Visible),
-                    "The real maximum overview must hide all room headings, plates and subtitles in every viewport");
+                Check(entries.All(entry => !entry.Plate.Visible && !entry.Title.Visible),
+                    "The real maximum overview must hide authored room headings and plates in every viewport");
                 if (size.X == 1280 && language == "ru") using (await CapturePresentation("room-titles-overview")) { }
                 camera.Zoom = Vector2.One * camera.OverviewZoom * 1.2f;
                 ui.UpdateForZoom(camera.Zoom.X);
@@ -51,7 +184,7 @@ public partial class ProjectTest
                     "Titles must stay hidden through twenty percent zoom above overview");
                 camera.Zoom = Vector2.One * camera.OverviewZoom * 1.4f;
                 ui.UpdateForZoom(camera.Zoom.X);
-                Check(entries.All(entry => entry.Title.Visible && entry.Title.Modulate.A > 0 && entry.Title.Modulate.A < 1 && !entry.Subtitle.Visible),
+                Check(entries.All(entry => entry.Title.Visible && entry.Title.Modulate.A > 0 && entry.Title.Modulate.A < 1),
                     "Only titles and plates must smoothly fade in between the relative zoom thresholds");
                 foreach (var entry in entries)
                 {
@@ -64,16 +197,21 @@ public partial class ProjectTest
                     Rect2 titleRect = entry.Title.GetTransform() * new Rect2(Vector2.Zero, entry.Title.Size);
                     float textWidth = entry.Title.GetThemeFont("font").GetStringSize(entry.Title.Tr(entry.Title.Text),
                         fontSize: entry.Title.GetThemeFontSize("font_size")).X;
-                    Check(entry.Title.Visible && Mathf.IsEqualApprox(entry.Title.Modulate.A, 1) && !entry.Subtitle.Visible &&
-                        plateRect.Size.X <= entry.Width * 0.66f && plateRect.Size.Y <= 161 &&
-                        plateRect.GetCenter().DistanceTo(entry.Center) < 0.1f && plateRect.Encloses(titleRect) && textWidth <= entry.Title.Size.X,
-                        $"The compact {entry.Room} plate must retain its center and fit its {language} title without a subtitle at {size}");
+                    Check(entry.Title.Visible && Mathf.IsEqualApprox(entry.Title.Modulate.A, 1) &&
+                        entry.Plate.Visible == entry.PlateVisible &&
+                        entry.Plate.Position == entry.PlatePosition && entry.Plate.Size == entry.PlateSize && entry.Plate.Scale == entry.PlateScale &&
+                        entry.Title.Position == entry.TitlePosition && entry.Title.Size == entry.TitleSize && entry.Title.Scale == entry.TitleScale &&
+                        entry.Title.Text == entry.Text && plateRect.Encloses(titleRect) && textWidth <= entry.Title.Size.X,
+                        $"The authored {entry.Room} geometry and name must survive startup, zoom, {language} and {size}");
                     if (size.X == 1280)
                         using (await CapturePresentation($"room-title-{entry.Room}-{language}")) { }
                 }
                 game.RefreshDayPresentation();
                 await Frame();
-                Check(entries.All(entry => !entry.Subtitle.Visible), "Game state refresh must not reveal removed subtitles");
+                Check(ReferenceEquals(unlockPanel.GetThemeStylebox("panel"), authoredPaper) &&
+                    ReferenceEquals(unlockPanel.UnlockButton.GetThemeStylebox("normal"), authoredButton) && glass.Color == authoredGlass &&
+                    tradePanel.ZIndex == 127,
+                    "Startup and game/locale refresh must preserve designer-authored paper, button styles and glass tint");
             }
         }
         finally
@@ -84,7 +222,7 @@ public partial class ProjectTest
             TranslationServer.SetLocale(originalLocale);
             await Frame();
         }
-        GD.Print("ROOM_TITLE_CHECKS_PASS: compact centered titles, no subtitles, overview/fade/closeup, RU/EN and three viewports");
+        GD.Print("ROOM_TITLE_CHECKS_PASS: authored titles/geometry/styles/tint, no description nodes, zoom, RU/EN and three viewports");
     }
 
     private async Task TestRoomDoubleClickFocus()
@@ -230,16 +368,21 @@ public partial class ProjectTest
             Check(rarity.Popup.IsVisibleInTree() && Root.GetVisibleRect().Encloses(ScreenBounds(rarity.Popup)),
                 "Rarity popup placement must work after removing the pause-button obstacle");
             rarity.Hide();
+            if (!game.DayStarted) game.EndDay();
             var crafting = game.GetNode<EmbroideryGame>("EmbroideryGame");
             crafting.Open();
             Check(crafting.IsOpen, "Crafting fixture must open");
             await PressEscapeForTest();
-            Check(!crafting.IsOpen && !Paused && !overlay.Visible,
-                "Escape cancelling crafting must not also open pause");
+            Check(crafting.IsOpen && Paused && overlay.Visible, "Escape must pause without cancelling craft");
+            await PressEscapeForTest();
+            Check(crafting.IsOpen && Paused && !overlay.Visible, "Escape must return to the same craft screen");
+            crafting.Close();
             game.DayUpgrades.Offer(2);
             var card = game.GetNode<DayTransitionCard>("DayTransitionCard");
             card.Open(1, 2, game.DayUpgrades.Options, game.Score);
+            await WaitForDayCardAnimation(card);
             await PressEscapeForTest();
+            await WaitForDayCardAnimation(card);
             Check(!card.IsOpen && !Paused && !overlay.Visible,
                 "Escape skipping day cards must not also open pause");
         }

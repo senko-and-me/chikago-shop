@@ -37,7 +37,6 @@ public partial class ProjectTest
             game.GetItemFromMusicWorkshop();
             game.GetNode<EmbroideryGame>("EmbroideryGame").Open();
             game.GetNode<EmbroideryGame>("PolishingGame").Open();
-            game.TryUnlockMusicWorkshop();
             game.SelectInventoryItem(0);
             game.SelectedInventoryIndex = 0; // Even a stale selection must not bypass the action adapter.
             game.PlaceItemInShowcase(0);
@@ -69,13 +68,18 @@ public partial class ProjectTest
             }
             gate.Dismiss();
             await ClickControl(game, "World/MusicWorkshop/LockedOverlay/UnlockPanel/Content/UnlockButton");
-            Check(notice.Visible && !game.MusicWorkshopUnlocked && game.Score == money, "Unlock clicks must show the same notice without spending money");
+            Check(!game.MusicWorkshopUnlocked && game.Score == money && !game.DayStarted,
+                "The locked-room notice must not sell access before the first-week conversation");
             gate.Dismiss();
             await ClickControl(game, "World/ShowroomLeft/Showcases/Slot1");
             Check(notice.Visible && game.StoredItems.Length == 1, "Even a disabled display must explain why a pre-start click cannot act");
             gate.Dismiss();
             var item = inventory.Container.GetChild<SlotUI>(0);
-            await ClickControl(game, item.GetPath().ToString().Replace(game.GetPath() + "/", ""));
+            Vector2 inventoryPoint = ScreenBounds(item).GetCenter();
+            Root.PushInput(new InputEventMouseButton { Position = inventoryPoint, GlobalPosition = inventoryPoint,
+                ButtonIndex = MouseButton.Left, Pressed = true }, true);
+            Root.PushInput(new InputEventMouseButton { Position = inventoryPoint, GlobalPosition = inventoryPoint,
+                ButtonIndex = MouseButton.Left, Pressed = false }, true);
             Check(notice.Visible && inventory.SelectedIndex == -1 && game.SelectedInventoryIndex == -1 &&
                 item._GetDragData(Vector2.Zero).VariantType == Variant.Type.Nil,
                 "Click, selection and drag must not transfer an inventory item before Start");
@@ -128,14 +132,14 @@ public partial class ProjectTest
             game.SelectInventoryItem(0);
             game.PlaceItemInShowcase(0);
             Check(game.StoredItems.Length == 0 && game.ShowcaseItems[0] == 0, "Placing inventory items must work normally after Start");
-            game.TryUnlockMusicWorkshop();
-            Check(game.MusicWorkshopUnlocked, "Unlocking must work normally after Start");
+            Check(!game.MusicWorkshopUnlocked && game.Score == money,
+                "Starting the day must preserve funds and keep story-gated rooms closed");
             game.PersistProgress();
             await Reload();
             Check(game.DayStarted, "Reload of a running day must not reapply the waiting-day gate");
             game.GetItemFromAtelier();
             Check(game.CraftMiniGameOpen, "Crafting must open normally after Start");
-            await PressEscapeForTest();
+            await ClickControl(game, "CraftCatalog/Root/Center/Panel/Margin/Content/Back");
             AdvanceDayForTest(game);
             Check(!game.DayStarted, "The next day must require Start again");
             game.GetItemFromAtelier();

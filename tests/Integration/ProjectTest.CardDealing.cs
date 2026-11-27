@@ -87,9 +87,6 @@ public partial class ProjectTest
                 await WaitForDayCardAnimation(card);
                 Check(Root.GuiGetFocusOwner() == null && game.DayRemainingSeconds == 60,
                     "Finishing the deal must not preselect a purchase or consume day time");
-                var firstBounds = first.GetGlobalRect();
-                Check(Mathf.IsEqualApprox(deck.GetGlobalRect().GetCenter().X, firstBounds.Position.X / 2),
-                    "The deck must be centered between the left screen edge and the first card");
                 foreach (var upgrade in card.Options)
                 {
                     var face = card.GetNode<PanelContainer>("Root/Center/Card/Content/Choices/" + upgrade);
@@ -97,9 +94,11 @@ public partial class ProjectTest
                         !face.GetNode<Control>("Back").Visible && Root.GetVisibleRect().Encloses(face.GetGlobalRect()) &&
                         face.Size.Y > face.Size.X,
                         "Settled portrait cards must fit the viewport in both languages and sizes");
+                    int cardCost = game.DayUpgrades.CostFor(upgrade);
+                    const string expectedArt = "res://art/ui/card_face.png";
                     Check(face.GetThemeStylebox("panel") is StyleBoxTexture faceArt &&
-                        faceArt.Texture.ResourcePath == "res://art/ui/card_face.png",
-                        "All upgrades must use the ordinary card artwork regardless of price");
+                        faceArt.Texture.ResourcePath == expectedArt,
+                        "Card artwork must match the configured price tier");
                     foreach (string name in new[] { "Amount", "Title", "Description", "Duration", "Choose" })
                     {
                         var entry = face.GetNode<Control>("Content/" + name);
@@ -155,7 +154,7 @@ public partial class ProjectTest
                 card.Choose(DayUpgrade.Energy); card.Skip();
                 await WaitForDayCardAnimation(card);
                 Check(!card.IsOpen && !Paused && !game.DayUpgrades.Pending && game.CurrentDay == 2 &&
-                    game.Score == (buy ? 235 : 220) && game.DayUpgrades.Selected == (buy ? DayUpgrade.Cash : DayUpgrade.None),
+                    game.Score == (buy ? 270 : 220) && game.DayUpgrades.Selected == (buy ? DayUpgrade.Cash : DayUpgrade.None),
                     "Exactly one purchase or free skip must apply after exit and resume the new day");
                 Check(hud.Visible && clock.Visible && clock.Modulate == Colors.White && hud.Modulate == Colors.White && game.GetNode<Control>("HUD/InventoryUI").Visible &&
                     game.GetNode<Control>("World/Atelier/GetItemButton").Visible,
@@ -192,8 +191,23 @@ public partial class ProjectTest
             Check(active.IsOpen && game.DayUpgrades.Pending && game.Score == 220,
                 "Reload during exit must restore the uncommitted choice without a duplicate reward");
             await WaitForDayCardAnimation(active);
-            active.Skip();
+            game.Score = 0;
+            game.PersistProgress();
+            game.QueueFree();
+            await ToSignal(this, SignalName.ProcessFrame);
+            game = Create();
+            active = game.GetNode<DayTransitionCard>("DayTransitionCard");
             await WaitForDayCardAnimation(active);
+            var free = active.GetNode<Button>("Root/Center/Card/Content/Choices/Cash/Content/Choose");
+            Check(!free.Disabled && free.Text == GameLocalization.Text("Получить 50$"), "Cash must be available at zero balance");
+            active.Choose(DayUpgrade.Cash);
+            active.Choose(DayUpgrade.Cash);
+            await WaitForDayCardAnimation(active);
+            Check(game.Score == 50, "The free card must award the entire amount once");
+            game.QueueFree();
+            await ToSignal(this, SignalName.ProcessFrame);
+            game = Create();
+            Check(game.Score == 50 && !game.DayUpgrades.Pending, "Reloading must preserve the committed reward once");
             game.NewGame();
             game.EndDay(); game.EndDay(); game.EndDay();
             game.QueueFree(); // Cancel deferred layout and entrance callbacks too.

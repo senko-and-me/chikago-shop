@@ -14,12 +14,19 @@ public sealed class PolishingSession : ICraftSession
 {
     public const int CellSize = 7;
     public const double BrushRadius = 34;
+    private const double ReferenceArea = 42000;
+    private const double Step = 7;
+    private const double MaximumSweep = 34;
+    public int MaskArea { get; }
+    public double Radius { get; }
+    public double CleaningStrength { get; }
     private readonly byte[] _mask;
     private readonly int _width, _height;
     private readonly PolishingCell[] _cells;
     private readonly int _insideCount;
     private bool _drag, _farOutside, _hasPoint, _hasDirection;
     private double _lastX, _lastY, _dirX, _dirY, _elapsed, _lastPenalty = -1;
+    private double _distanceSinceWipe, _wipeX, _wipeY, _timeSinceWipe, _reversalReach;
     public IReadOnlyList<PolishingCell> Cells { get; }
     public int Columns { get; }
     public int Rows { get; }
@@ -34,14 +41,25 @@ public sealed class PolishingSession : ICraftSession
         + RemainingSeconds / Duration * 4 - Misses * 4.5), 0, 100);
     public string Rank => Quality >= 92 ? "S" : Quality >= 78 ? "A" : Quality >= 63 ? "B" : Quality >= 42 ? "C" : "D";
 
-    public PolishingSession(byte[] alphaMask, int width = 600, int height = 480, double duration = 10)
+    public PolishingSession(byte[] alphaMask, int width = 600, int height = 480, double duration = 10,
+        double radiusCorrection = 1, double strengthCorrection = 1)
     {
         if (!double.IsFinite(duration) || duration <= 0) throw new ArgumentOutOfRangeException(nameof(duration));
+        if (!double.IsFinite(radiusCorrection) || radiusCorrection <= 0)
+            throw new ArgumentOutOfRangeException(nameof(radiusCorrection));
+        if (!double.IsFinite(strengthCorrection) || strengthCorrection <= 0)
+            throw new ArgumentOutOfRangeException(nameof(strengthCorrection));
         Duration = RemainingSeconds = duration;
         if (width <= 0 || height <= 0 || alphaMask.Length != checked(width * height))
             throw new ArgumentException("Mask dimensions must match its pixel data.");
         _width = width; _height = height;
         _mask = (byte[])alphaMask.Clone();
+        MaskArea = _mask.Count(alpha => alpha > 128);
+        // The mask is already fitted to the playfield. Let both the reach and the real
+        // removal rate absorb part of the area difference.
+        double relativeArea = MaskArea / ReferenceArea;
+        Radius = BrushRadius * Math.Clamp(Math.Pow(relativeArea, .22) * radiusCorrection, .8, 1.2);
+        CleaningStrength = Math.Clamp(Math.Pow(relativeArea, .45) * strengthCorrection, .5, 2.5);
         Columns = (width + CellSize - 1) / CellSize;
         Rows = (height + CellSize - 1) / CellSize;
         _cells = new PolishingCell[Columns * Rows];
@@ -98,7 +116,8 @@ public sealed class PolishingSession : ICraftSession
         _drag = true; _hasDirection = false;
         _farOutside = !Near(x,y);
         if (_farOutside) RecordMiss();
-        _hasPoint = Inside(x,y); _lastX=x; _lastY=y;
+        _hasPoint = Inside(x,y);
+        ResetSweep(x, y);
     }
 
     public void EndRub() { _drag = false; _hasPoint = false; _hasDirection = false; _farOutside = false; }
@@ -111,7 +130,8 @@ public sealed class PolishingSession : ICraftSession
         if (far && !_farOutside) RecordMiss();
         _farOutside = far;
         if (!Inside(x,y)) { _hasPoint = false; _hasDirection = false; return; }
-        if (_hasPoint) Wipe(x,y,elapsedMilliseconds);
+        if (_hasPoint) SampleSweep(x, y, elapsedMilliseconds);
+        else ResetSweep(x, y);
         _lastX=x; _lastY=y; _hasPoint=true;
     }
 
@@ -121,33 +141,82 @@ public sealed class PolishingSession : ICraftSession
         _lastPenalty = _elapsed; Misses++;
     }
 
-    private void Wipe(double x, double y, double milliseconds)
+    private void ResetSweep(double x, double y)
     {
-        double dx=x-_lastX, dy=y-_lastY, distance=Math.Sqrt(dx*dx+dy*dy);
-        if (distance < 1.9) return;
-        double energy=Math.Clamp((distance/Math.Max(7,milliseconds)-.22)/1.65,0,1);
-        bool flip=_hasDirection && dx/distance*_dirX+dy/distance*_dirY < -.43;
-        _dirX=dx/distance; _dirY=dy/distance; _hasDirection=true;
-        double strength=Math.Min(.071,(.010+.051*energy+(flip?.024:0))*.616);
-        double ratio=Math.Min(1,34/distance), fromX=x-dx*ratio, fromY=y-dy*ratio;
+        _lastX = _wipeX = x;
+        _lastY = _wipeY = y;
+        _distanceSinceWipe = _timeSinceWipe = _reversalReach = 0;
+    }
+
+    private void SampleSweep(double x, double y, double milliseconds)
+    {
+        double dx = x - _lastX, dy = y - _lastY;
+        double distance = Math.Sqrt(dx * dx + dy * dy);
+        if (distance < 0.000001)
+        {
+            _timeSinceWipe += milliseconds;
+            return;
+        }
+
+        double directionX = dx / distance, directionY = dy / distance;
+        double start = Math.Max(0, distance - MaximumSweep);
+        // A large jump may affect only the end of the sweep, as before.
+        if (start > 0) ResetSweep(x - directionX * MaximumSweep, y - directionY * MaximumSweep);
+        if (_hasDirection && directionX * _dirX + directionY * _dirY < -.43)
+            _reversalReach = 2 * Step;
+        _dirX = directionX;
+        _dirY = directionY;
+        _hasDirection = true;
+
+        double travelled = 0;
+        double usable = distance - start;
+        double timePerUnit = milliseconds / distance;
+        double originX = _lastX, originY = _lastY;
+        // Use spatial steps so input batching does not grant extra cleaning.
+        while (usable - travelled + _distanceSinceWipe >= Step - 0.00001 &&
+            State == EmbroideryState.Playing)
+        {
+            double next = Step - _distanceSinceWipe;
+            travelled += next;
+            _timeSinceWipe += next * timePerUnit;
+            double px = originX + travelled * directionX, py = originY + travelled * directionY;
+            if (Inside(px, py))
+                Wipe(px, py, _timeSinceWipe, _reversalReach > 0);
+            _wipeX = px;
+            _wipeY = py;
+            _reversalReach = Math.Max(0, _reversalReach - Step);
+            _distanceSinceWipe = _timeSinceWipe = 0;
+        }
+        double tail = Math.Max(0, usable - travelled);
+        _distanceSinceWipe += tail;
+        _timeSinceWipe += tail * timePerUnit;
+    }
+
+    private void Wipe(double x, double y, double milliseconds, bool flip)
+    {
+        double energy = Math.Clamp((Step / Math.Max(Step / 2, milliseconds) - .22) / 1.65, 0, 1);
+        double strength = Math.Min(.071, (.010 + .051 * energy + (flip ? .024 : 0)) * .616) * CleaningStrength;
+        double dirtRemaining = Math.Sqrt(1 - strength);
+        double fromX = _wipeX, fromY = _wipeY;
         // Layer one must be removed locally before the final satin film starts clearing.
         int atX=Math.Clamp((int)(x/CellSize),0,Columns-1), atY=Math.Clamp((int)(y/CellSize),0,Rows-1);
         foreach(var cell in _cells)
         {
             if (!cell.Inside) continue;
             double d=SegmentDistanceSquared(cell.X,cell.Y,fromX,fromY,x,y);
-            if(d>BrushRadius*BrushRadius) continue;
-            cell.Dirt *= 1-strength;
-            if(Squared(cell.X-x,cell.Y-y)<=BrushRadius*BrushRadius) cell.Dirt *= 1-strength;
+            if(d>Radius*Radius) continue;
+            cell.Dirt *= dirtRemaining;
+            if(Squared(cell.X-x,cell.Y-y)<=Radius*Radius) cell.Dirt *= dirtRemaining;
         }
         if (_cells[atY*Columns+atX].Dirt < 125.0/209)
         foreach(var cell in _cells)
         {
             if(!cell.Inside) continue;
-            double radius=BrushRadius*.89, filmStrength=Math.Max(.006,strength*.85);
+            double radius=Radius*.89;
+            double filmRemaining = Math.Sqrt(1 - Math.Max(.006 * CleaningStrength, strength * .85));
             if(SegmentDistanceSquared(cell.X,cell.Y,fromX,fromY,x,y)>radius*radius) continue;
-            cell.Film *= 1-filmStrength;
-            if(Squared(cell.X-x,cell.Y-y)<=radius*radius) cell.Film *= 1-filmStrength;
+            cell.Film *= filmRemaining;
+            if(Squared(cell.X-x,cell.Y-y)<=radius*radius) cell.Film *= filmRemaining;
         }
         double dirt=0,film=0;
         foreach(var cell in _cells) if(cell.Inside) { dirt+=1-cell.Dirt; film+=1-cell.Film; }

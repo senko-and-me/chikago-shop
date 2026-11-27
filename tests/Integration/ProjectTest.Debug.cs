@@ -12,6 +12,7 @@ public partial class ProjectTest
         var game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
         // Keep this fixture independent of unrelated editor overrides in the scene.
         game.StartingMoney = 220; game.FirstQuota = 250; game.SecondQuota = 450; game.SavePath = save;
+        game.GetNode<FirstTradeTutorial>("FirstTradeTutorial").ProgressPath = "";
         async Task Press(Key key, bool echo = false, bool shift = false)
         {
             Root.PushInput(new InputEventKey { Keycode = key, Pressed = true, Echo = echo, ShiftPressed = shift }, true);
@@ -24,6 +25,8 @@ public partial class ProjectTest
             Root.AddChild(game);
             game.SetProcess(false);
             game.NewGame();
+            game.EndDay();
+            double initialSeconds = game.DayRemainingSeconds;
             Check(game.HasNode("DebugHotkeys"), "Debug scene must attach the test input controller");
             await Press(Key.F6);
             Check(game.Score == 320 && game.GetNode<Label>("HUD/Root/ScorePanel/ScoreLabel").Text.Contains("320"),
@@ -34,9 +37,9 @@ public partial class ProjectTest
             Check(game.Score == 320, "Repeat and modified keys must not grant money");
             await Press(Key.F7);
             await Press(Key.F7);
-            Check(game.DayRemainingSeconds == 150 && game.GetNode<Label>("HUD/DayClock/Root/DayTimer").Text == "150",
+            Check(game.DayRemainingSeconds == initialSeconds + 60 && game.GetNode<Label>("HUD/DayClock/Root/DayTimer").Text == (initialSeconds + 60).ToString("0"),
                 "Time grants must stack and update the HUD immediately");
-            game._Process(150);
+            game._Process(initialSeconds + 60);
             Check(game.DayClosed, "Timer fixture must expire");
             await Press(Key.F7);
             Check(!game.DayClosed && game.CurrentDay == 1 && game.DayRemainingSeconds == 30,
@@ -60,9 +63,11 @@ public partial class ProjectTest
             foreach (bool good in new[] { false, true })
             {
                 game.NewGame();
-                if (music) game.TryUnlockMusicWorkshop();
+                if (music) { game.Score = 10000; UnlockMusicForFixture(game); }
+                if (!game.DayStarted) game.EndDay();
                 var craft = game.GetNode<EmbroideryGame>(music ? "PolishingGame" : "EmbroideryGame");
                 craft.Open();
+                Check(game.Crafting.Select(music ? "guitar" : "hat"), "Debug fixture must explicitly select its item");
                 craft.SetProcess(false);
                 int balance = game.Score, energy = game.EnergyRemaining, count = game.StoredItems.Length;
                 if (good) craft.Activate(); // Cover Ready and already Playing shortcuts.
@@ -70,8 +75,8 @@ public partial class ProjectTest
                 Check(craft.IsOpen && craft.ActiveSession.State == EmbroideryState.Finished &&
                     craft.ActiveSession.Quality == (good ? 100 : 0) && craft.ActiveSession.Complete == good,
                     "F8/F9 must finish either minigame with the chosen visible result");
-                Check(craft.GetNode<Label>("Surface/Quality").Text == (good ? "100%" : "0%") &&
-                    game.Score == balance - (music ? 50 : 25) && game.EnergyRemaining == energy - 1 &&
+                Check(craft.GetNode<Label>("Surface/Panel/Quality").Text == (good ? "100%" : "0%") &&
+                    game.Score == balance - (music ? 30 : 20) && game.EnergyRemaining == energy &&
                     game.StoredItems.Length == count + 1,
                     "Debug completion must charge and acquire exactly once using normal craft behavior");
                 await Press(good ? Key.F8 : Key.F9);
@@ -80,7 +85,7 @@ public partial class ProjectTest
                 double seconds = game.DayRemainingSeconds;
                 await Press(Key.F6);
                 await Press(Key.F7);
-                Check(game.Score == balance - (music ? 50 : 25) + 100 && game.DayRemainingSeconds == seconds + 30,
+                Check(game.Score == balance - (music ? 30 : 20) + 100 && game.DayRemainingSeconds == seconds + 30,
                     "Resource hotkeys must remain usable inside a paused crafting overlay");
                 craft.Activate();
                 Check(!craft.IsOpen && !Paused, "The normal collect action must close the skipped craft");

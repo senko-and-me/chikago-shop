@@ -31,8 +31,10 @@ public static class WeekBalanceSimulator
         EconomyConfigValidator.Validate(config);
         var atelier = config.Workshops.Single(workshop => workshop.Id == "atelier");
         var music = config.Workshops.Single(workshop => workshop.Id == "music");
+        int MinimumCost(string room) => config.Items.Where(item => item.Workshop == room)
+            .Min(item => config.CraftCosts[item.Id]);
         int firstDeadline = config.Quotas.Min(quota => quota.DeadlineDay);
-        int commonWeight = config.Rarities.Single(rarity => rarity.Id == "common").Weight;
+
         int firstPassed = 0, won = 0, items = 0;
         var cashAtFinal = new int[runs];
         for (int run = 0; run < runs; run++)
@@ -45,6 +47,8 @@ public static class WeekBalanceSimulator
             bool unlocked = false;
             for (int day = 1; day <= config.Days.TotalDays; day++)
             {
+                // Assume the first-quota story is completed before week two.
+                unlocked = day > firstDeadline;
                 upgrades.Reset(preserveCategories: true);
                 if (day > 1)
                 {
@@ -53,10 +57,10 @@ public static class WeekBalanceSimulator
                     if (profile.BuyUpgrades)
                     {
                         var priorities = new[] { DayUpgrade.Cash,
-                            unlocked ? DayUpgrade.Music : DayUpgrade.Atelier,
+                            unlocked ? DayUpgrade.MusicPrice : DayUpgrade.AtelierPrice,
                             unlocked ? DayUpgrade.MusicPrice : DayUpgrade.AtelierPrice };
                         choice = priorities.FirstOrDefault(option => upgrades.Options.Contains(option) &&
-                            cash - DayUpgradeSession.Cost(option) >= (unlocked ? music.SpinCost : atelier.SpinCost) * 2 &&
+                            cash - DayUpgradeSession.Cost(option) >= MinimumCost(unlocked ? music.Id : atelier.Id) * 2 &&
                             (option == DayUpgrade.Cash || day < config.Days.TotalDays));
                     }
                     if (choice != DayUpgrade.None && upgrades.TryPurchase(choice, cash, out int balance))
@@ -66,10 +70,6 @@ public static class WeekBalanceSimulator
                     }
                     else upgrades.TrySkip();
                 }
-                // Delay the investment until the second day and retain money to craft.
-                if (profile.Produce && profile.UnlockMusic && !unlocked && day >= 2 && cash >= music.UnlockCost + music.SpinCost + 25)
-                { cash -= music.UnlockCost; unlocked = true; }
-                int energy = upgrades.EnergyCapacityFor(unlocked ? config.Days.EnergyAfterMusicUnlock : config.Days.EnergyBeforeMusicUnlock);
                 double remaining = config.Days.DurationSeconds + (unlocked ? 30 : 0);
                 double duration = remaining;
                 void Observe(double stock = 0)
@@ -80,26 +80,23 @@ public static class WeekBalanceSimulator
                         quota.DeadlineDay, 1 - remaining / duration, quota.Amount, profile.HiddenBalance);
                 }
                 Observe();
-                while (profile.Produce && energy > 0)
+                while (profile.Produce && remaining > 0)
                 {
-                    var workshop = unlocked && cash >= music.SpinCost ? music : atelier;
+                    var workshop = unlocked && profile.UnlockMusic && cash >= MinimumCost(music.Id) ? music : atelier;
                     double cycle = profile.CycleSeconds;
-                    if (cash < workshop.SpinCost || remaining < cycle) break;
+                    if (!double.IsFinite(cycle) || cycle <= 0 || remaining < cycle) break;
                     Observe();
-                    var weights = config.Rarities.ToDictionary(rarity => rarity.Id,
-                        rarity => upgrades.Weight(workshop.Id, rarity.Id, rarity.Weight, commonWeight));
-                    InvisibleHandDirector.ApplyRarityShift(weights, hand.RarityShift(weights.Values.Sum(), 5));
-                    var table = new WeightedItemTable(config.Rarities.Select((rarity, index) => (index, weights[rarity.Id])));
+                    var selected = config.Items.Where(item => item.Workshop == workshop.Id && config.CraftCosts[item.Id] <= cash)
+                        .OrderByDescending(item => item.BasePrice - config.CraftCosts[item.Id]).FirstOrDefault();
+                    if (selected == null) break;
                     remaining -= cycle;
-                    cash -= workshop.SpinCost;
-                    energy--;
+                    cash -= config.CraftCosts[selected.Id];
                     items++;
-                    var rarity = config.Rarities[table.Select(rng.Next(table.TotalWeight))];
-                    int basePrice = upgrades.Price(workshop.Id, rarity.BasePrices[workshop.Id]);
+                    int basePrice = upgrades.Price(workshop.Id, selected.BasePrice);
                     Observe(basePrice);
                     int percent = hand.AdjustInitialOffer(TradeOfferRules.InitialPercent(rng.Next(61)), 3);
                     double buyerRemaining = RunRewardRules.BuyerWaitDuration - Math.Max(0, cycle - 10);
-                    int rerolls = rarity.Rerolls;
+                    int rerolls = selected.Rerolls;
                     while (profile.Reroll && percent < 5 &&
                         BuyerPatienceRules.CanReroll(true, false, rerolls, buyerRemaining))
                     {

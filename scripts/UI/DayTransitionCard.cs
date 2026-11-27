@@ -18,9 +18,7 @@ public partial class DayTransitionCard : CanvasLayer
     private DayCardDealAnimator _animation = null!;
     private DayCardSceneTransition _sceneTransition = null!;
     private Label _title = null!;
-    private Label _tutorialExplanation = null!;
-    public string TutorialExplanation { get; set; } = "";
-    private float CardHeight => string.IsNullOrEmpty(TutorialExplanation) ? 460 : 420;
+    private const float CardHeight = 460;
     private enum Phase { Closed, Framing, Dealing, Choosing, Leaving }
     private Phase _phase;
     private int _generation;
@@ -32,6 +30,14 @@ public partial class DayTransitionCard : CanvasLayer
     private Button _skip = null!;
     private int _balance;
     private bool _ownsPause;
+    private bool _instructionLocked;
+
+    internal void SetInstructionLocked(bool locked)
+    {
+        if (_instructionLocked == locked) return;
+        _instructionLocked = locked;
+        if (_phase == Phase.Choosing) LockActions(locked);
+    }
     public bool IsOpen => _root?.Visible ?? false;
     private int Cost(DayUpgrade upgrade) => (GetParent() as TradeScene)?.DayUpgrades.CostFor(upgrade)
         ?? DebugBalanceSettings.CardRules.Cost(upgrade);
@@ -42,16 +48,6 @@ public partial class DayTransitionCard : CanvasLayer
         _panel = GetNode<PanelContainer>("Root/Center/Card");
         _route = GetNode<Label>("Root/Center/Card/Content/Route");
         _title = GetNode<Label>("Root/Center/Card/Content/Title");
-        _tutorialExplanation = new Label
-        {
-            Name = "TutorialExplanation", Visible = false,
-            AutowrapMode = TextServer.AutowrapMode.WordSmart,
-            HorizontalAlignment = HorizontalAlignment.Center,
-            MouseFilter = Control.MouseFilterEnum.Ignore
-        };
-        _tutorialExplanation.AddThemeColorOverride("font_color", new Color("eeeeee"));
-        _title.GetParent().AddChild(_tutorialExplanation);
-        _title.GetParent().MoveChild(_tutorialExplanation, _title.GetIndex() + 1);
         _choices = GetNode<Control>("Root/Center/Card/Content/Choices");
         _skip = GetNode<Button>("Root/Center/Card/Content/Skip");
         _shade = GetNode<ColorRect>("Root/Shade");
@@ -75,16 +71,11 @@ public partial class DayTransitionCard : CanvasLayer
         panel.GetNode<Label>("Content/Duration").Text = duration;
         int cost = Cost(upgrade);
         var button = panel.GetNode<Button>("Content/Choose");
-        button.Text = GameLocalization.Format("Купить за {0}$", cost);
+        button.Text = upgrade == DayUpgrade.Cash ? GameLocalization.Text("Получить 50$")
+            : GameLocalization.Format("Купить за {0}$", cost);
         button.Disabled = _balance < cost;
         button.Pressed += () => Choose(upgrade);
         return button;
-    }
-
-    public override void _Notification(int what)
-    {
-        if (what == NotificationTranslationChanged && IsNodeReady())
-            _tutorialExplanation.Text = GameLocalization.Text(TutorialExplanation);
     }
 
     private void Layout()
@@ -96,10 +87,6 @@ public partial class DayTransitionCard : CanvasLayer
         _route.AddThemeFontSizeOverride("font_size", (int)(22 * _layoutScale));
         _title.AddThemeFontSizeOverride("font_size", (int)(30 * _layoutScale));
         _skip.CustomMinimumSize = new Vector2(252 * _layoutScale, 45 * _layoutScale);
-        _tutorialExplanation.Visible = !string.IsNullOrEmpty(TutorialExplanation);
-        _tutorialExplanation.Text = GameLocalization.Text(TutorialExplanation);
-        _tutorialExplanation.AddThemeFontSizeOverride("font_size", Math.Max(12, (int)(18 * _layoutScale)));
-        _tutorialExplanation.CustomMinimumSize = new Vector2(0, 40 * _layoutScale);
         _choices.CustomMinimumSize = new Vector2(0, CardHeight * _layoutScale);
         _deck.Size = new Vector2(100, 144) * _layoutScale;
         _deck.Position = new Vector2(_deck.Position.X, _root.Size.Y - _deck.Size.Y - 28);
@@ -201,10 +188,7 @@ public partial class DayTransitionCard : CanvasLayer
         {
             var button = upgrade switch
             {
-                DayUpgrade.Cash => AddChoice(_choices, upgrade, "Оборотные средства", "+50$", "Получить 50$ при выборе перед новым днём.", "СРАЗУ"),
-                DayUpgrade.Energy => AddChoice(_choices, upgrade, "Второе дыхание", "+1", "Добавить 1 энергию к следующему дню.", "ЭНЕРГИЯ · НА ОДИН ДЕНЬ"),
-                DayUpgrade.Atelier => AddChoice(_choices, upgrade, "Мастерство портного", "↑", "Повысить шанс редкой одежды на следующий день.", "ОДЕЖДА · НА ОДИН ДЕНЬ"),
-                DayUpgrade.Music => AddChoice(_choices, upgrade, "Мастерство мастера", "↑", "Повысить шанс редких инструментов на следующий день.", "ИНСТРУМЕНТЫ · НА ОДИН ДЕНЬ"),
+                DayUpgrade.Cash => AddChoice(_choices, upgrade, "Оборотные средства", "+50$", "Получить 50$ перед новым днём", "СРАЗУ"),
                 DayUpgrade.AtelierPrice => AddChoice(_choices, upgrade, "Имя на этикетке", "+20%", "+20% к базовой цене одежды на следующий день.", "ОДЕЖДА · НА ОДИН ДЕНЬ"),
                 DayUpgrade.MusicPrice => AddChoice(_choices, upgrade, "Коллекционный звук", "+20%", "+20% к базовой цене инструментов на следующий день.", "ИНСТРУМЕНТЫ · НА ОДИН ДЕНЬ"),
                 _ => throw new ArgumentOutOfRangeException(nameof(options))
@@ -229,13 +213,13 @@ public partial class DayTransitionCard : CanvasLayer
 
     public void Choose(DayUpgrade upgrade)
     {
-        if (_phase != Phase.Choosing || !Options.Contains(upgrade) || _balance < Cost(upgrade)) return;
+        if (_phase != Phase.Choosing || _instructionLocked || !Options.Contains(upgrade) || _balance < Cost(upgrade)) return;
         Leave(_cards[Options.ToList().IndexOf(upgrade)], () => Chosen?.Invoke(upgrade));
     }
 
     public void Skip()
     {
-        if (_phase == Phase.Choosing) Leave(null, () => Skipped?.Invoke());
+        if (_phase == Phase.Choosing && !_instructionLocked) Leave(null, () => Skipped?.Invoke());
     }
 
     private void Leave(PanelContainer selected, Action action)
@@ -259,6 +243,7 @@ public partial class DayTransitionCard : CanvasLayer
         _animation.Cancel();
         _sceneTransition.Restore();
         _phase = Phase.Closed;
+        _instructionLocked = false;
         _root.Hide();
         if (_ownsPause) GetTree().Paused = false;
         _ownsPause = false;
@@ -266,7 +251,7 @@ public partial class DayTransitionCard : CanvasLayer
 
     public override void _Input(InputEvent @event)
     {
-        if (!IsOpen || @event is not InputEventKey { Pressed: true } key) return;
+        if (!IsOpen || _instructionLocked || @event is not InputEventKey { Pressed: true } key) return;
         if (_phase != Phase.Choosing)
         {
             GetViewport().SetInputAsHandled();

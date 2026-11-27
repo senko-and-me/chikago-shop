@@ -34,6 +34,7 @@ public partial class PolishingSurface : Control
 	private int _pointer = -2;
 	private Vector2 _cloth;
 	private ulong _lastMove;
+	private bool _previousInputAccumulation;
 	private int _lastMisses;
 	private ulong _missAt;
 	private Vector2 _missPoint;
@@ -80,8 +81,6 @@ void fragment() {
 			float scale = Math.Min(
 				600f / source.GetWidth(),
 				480f / source.GetHeight());
-			// Shrink the playable silhouette with the art so the drum takes less rubbing.
-			if (kind == "drum") scale *= 0.7f;
 
 			int width = Math.Max(
 				1, Mathf.RoundToInt(source.GetWidth() * scale));
@@ -116,7 +115,9 @@ void fragment() {
 		for (int i = 0; i < alpha.Length; i++)
 			alpha[i] = rgba[i * 4 + 3];
 
-		Session = new PolishingSession(alpha, duration: duration);
+		Session = new PolishingSession(alpha, duration: duration,
+			radiusCorrection: DebugBalanceSettings.Number($"polish.{kind}.radius"),
+			strengthCorrection: DebugBalanceSettings.Number($"polish.{kind}.strength"));
 		_coatingImage = Image.CreateEmpty(
 			Session.Columns, Session.Rows,
 			false, Image.Format.Rgba8);
@@ -187,7 +188,9 @@ void fragment() {
 	{
 		_pointer = pointer;
 		_cloth = local;
-		_lastMove = Time.GetTicksMsec();
+		_lastMove = Time.GetTicksUsec();
+		_previousInputAccumulation = Input.UseAccumulatedInput;
+		Input.UseAccumulatedInput = false;
 
 		Vector2 logical = ToLogical(local);
 		Session.BeginRub(logical.X, logical.Y);
@@ -238,10 +241,10 @@ void fragment() {
 		_cloth = local;
 
 		Vector2 logical = ToLogical(local);
-		ulong now = Time.GetTicksMsec();
+		ulong now = Time.GetTicksUsec();
 
 		Session.MoveRub(
-			logical.X, logical.Y, now - _lastMove);
+			logical.X, logical.Y, (now - _lastMove) / 1000.0);
 
 		_lastMove = now;
 		UpdateMiss(local);
@@ -262,10 +265,13 @@ void fragment() {
 
 	public void EndPointer()
 	{
+		if (_pointer != -2) Input.UseAccumulatedInput = _previousInputAccumulation;
 		_pointer = -2;
 		Session?.EndRub();
 		QueueRedraw();
 	}
+
+	public override void _ExitTree() => EndPointer();
 
 	public override void _Notification(int what)
 	{

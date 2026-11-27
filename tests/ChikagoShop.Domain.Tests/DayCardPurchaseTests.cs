@@ -5,8 +5,7 @@ namespace ChikagoShop.Domain.Tests;
 
 public sealed class DayCardPurchaseTests
 {
-    [TestCase(DayUpgrade.Cash, 2, false, 35)]
-    [TestCase(DayUpgrade.Energy, 2, false, 10)]
+    [TestCase(DayUpgrade.Cash, 2, false, 0)]
     [TestCase(DayUpgrade.Atelier, 3, false, 15)]
     [TestCase(DayUpgrade.Music, 4, true, 25)]
     [TestCase(DayUpgrade.AtelierPrice, 4, false, 10)]
@@ -32,17 +31,18 @@ public sealed class DayCardPurchaseTests
         Assert.That(session.TrySkip(), Is.False);
     }
 
-    [Test]
-    public void RetiredTimeCardCannotBePurchasedOrOffered()
+    [TestCase(DayUpgrade.Energy)]
+    [TestCase(DayUpgrade.Time)]
+    public void RetiredCardsCannotBePurchasedOrOffered(DayUpgrade retired)
     {
         var session = new DayUpgradeSession();
         for (int day = 2; day <= 14; day++)
         {
             session.Offer(day, musicUnlocked: true);
-            Assert.That(session.Options, Does.Not.Contain(DayUpgrade.Time));
-            Assert.That(session.TryPurchase(DayUpgrade.Time, 1000, out _), Is.False);
+            Assert.That(session.Options, Does.Not.Contain(retired));
+            Assert.That(session.TryPurchase(retired, 1000, out _), Is.False);
         }
-        Assert.Throws<ArgumentOutOfRangeException>(() => DayUpgradeSession.Cost(DayUpgrade.Time));
+        Assert.Throws<ArgumentOutOfRangeException>(() => DayUpgradeSession.Cost(retired));
     }
 
     [Test]
@@ -60,17 +60,18 @@ public sealed class DayCardPurchaseTests
     }
 
     [Test]
-    public void OneEnergyBoostWorksForEitherRoomButExpiresNextDay()
+    public void LegacyEnergySelectionHasNoBonusAndCannotBePurchased()
     {
         foreach (int baseline in new[] { 3, 6 })
         {
             var session = new DayUpgradeSession();
             session.Offer(2);
-            Assert.That(session.TryPurchase(DayUpgrade.Energy, 10, out int balance), Is.True);
-            Assert.That(balance, Is.Zero);
-            Assert.That(session.EnergyCapacityFor(baseline), Is.EqualTo(baseline + 1));
+            Assert.That(session.TryPurchase(DayUpgrade.Energy, 10, out int balance), Is.False);
+            Assert.That(balance, Is.EqualTo(10));
+            Assert.That(session.EnergyCapacityFor(baseline), Is.EqualTo(baseline));
             session.Restore(false, DayUpgrade.Energy);
-            Assert.That(session.EnergyCapacityFor(baseline), Is.EqualTo(baseline + 1));
+            Assert.That(session.Selected, Is.EqualTo(DayUpgrade.None));
+            Assert.That(session.EnergyCapacityFor(baseline), Is.EqualTo(baseline));
             session.Reset(preserveCategories: true);
             Assert.That(session.EnergyCapacityFor(baseline), Is.EqualTo(baseline));
         }

@@ -31,12 +31,10 @@ public partial class ProjectTest
             var body = tutorial.GetNode<Label>("Root/Panel/Content/Body");
             TranslationServer.SetLocale("en");
             await Frame();
-            bool english = body.Tr(body.Text).Contains("clothing or a musical instrument") &&
-                body.Tr(body.Text).Contains("clothing from the atelier");
+            bool english = body.Tr(body.Text).Contains("clothing from the atelier");
             TranslationServer.SetLocale("ru");
             await Frame();
-            return english && body.Text.Contains("одежду или музыкальный инструмент") &&
-                body.Text.Contains("Сейчас этому покупателю нужна одежда из ателье") &&
+            return english && body.Text.Contains("ищет одежду из ателье") &&
                 tutorial.GetNode<Button>("Root/Panel/Content/Actions/Done").Visible;
         }
         void CheckEmptyTutorialCounter()
@@ -118,16 +116,25 @@ public partial class ProjectTest
             await Frame();
             await Create();
         }
+        const string skipPath = "Root/Skip";
         void CheckSkipPlacement()
         {
-            var skip = tutorial.GetNode<Button>("Root/Skip");
-            var panel = tutorial.GetNode<Control>("Root/Panel");
+            var skip = tutorial.GetNode<Button>(skipPath);
+            string language = GameLocalization.Language == "en" ? "en" : "ru";
             Rect2 screen = Root.GetVisibleRect(), bounds = skip.GetGlobalRect();
-            Check(skip.IsVisibleInTree() && !panel.IsAncestorOf(skip) &&
-                !tutorial.HasNode("Root/Panel/Content/Actions/Skip") && screen.Encloses(bounds) &&
-                Mathf.IsEqualApprox(screen.End.X - bounds.End.X, 20) &&
+            Check(skip.GetThemeStylebox("normal") is StyleBoxTexture { Texture.ResourcePath: "res://art/ui/panel_small.png" } &&
+                skip.Tr(skip.Text) == (language == "en" ? "Skip tutorial" : "Пропустить обучение") &&
+                screen.Encloses(bounds) && Mathf.IsEqualApprox(screen.End.X - bounds.End.X, 20) &&
                 Mathf.IsEqualApprox(screen.End.Y - bounds.End.Y, 20),
-                "Skip must stay outside hint windows, twenty pixels from the bottom-right screen corner");
+                "The handwritten tutorial skip button must stay at the bottom right in both languages");
+        }
+        bool HasHalo(Control control)
+        {
+            var material = (ShaderMaterial)tutorial.GetNode<TutorialSpotlight>("Spotlight").Material;
+            Vector2 expected = ScreenBounds(control).GetCenter();
+            int count = material.GetShaderParameter("accessory_count").AsInt32();
+            return material.GetShaderParameter("accessories").AsVector4Array().Take(count)
+                .Any(area => new Vector2(area.X, area.Y).DistanceTo(expected) < 8);
         }
         void Step(FirstTradeTutorial.Step expected)
         {
@@ -186,46 +193,17 @@ public partial class ProjectTest
         }
         void Highlight()
         {
-            var outline = tutorial.GetNode<Control>("Root/Highlight");
-            Rect2 target = tutorial.Target.GetGlobalTransformWithCanvas() * new Rect2(Vector2.Zero, tutorial.Target.Size);
-            Check(outline.Visible && Root.GetVisibleRect().Encloses(outline.GetGlobalRect()) &&
-                outline.GetGlobalRect().Intersects(target), "The highlight must follow the actual screen-space target without capturing clicks");
-            Check(outline.MouseFilter == Control.MouseFilterEnum.Ignore && tutorial.GetNode<Control>("Root").MouseFilter == Control.MouseFilterEnum.Ignore,
-                "Tutorial highlights and full-screen root must leave gameplay input available");
+            var spotlight = tutorial.GetNode<TutorialSpotlight>("Spotlight");
+            Check(tutorial.Target != null && spotlight.MouseFilter == Control.MouseFilterEnum.Ignore &&
+                !tutorial.HasNode("Root/Highlight"), "Soft focus must follow the current target and leave input available");
         }
-        async Task CheckYellowHighlight(string name)
+        async Task CheckGlow(string name)
         {
-            var outline = tutorial.GetNode<Control>("Root/Highlight");
-            using (var image = await CapturePresentation(name))
-            {
-                Vector2 scale = new Vector2(image.GetWidth(), image.GetHeight()) / Root.GetVisibleRect().Size;
-                Rect2 rect = ScreenBounds(outline);
-                int yellow = 0;
-                for (int y = (int)(rect.Position.Y * scale.Y); y < (int)(rect.End.Y * scale.Y); y++)
-                for (int x = (int)(rect.Position.X * scale.X); x < (int)(rect.End.X * scale.X); x++)
-                {
-                    Color pixel = image.GetPixel(x, y);
-                    if (pixel.R > 0.8f && pixel.G > 0.6f && pixel.B < 0.25f) yellow++;
-                }
-                Check(yellow > 10, "The tutorial frame must keep its authored yellow border");
-                CheckRenderedGray(image, ScreenBounds(outline),
-                    ScreenBounds(game.GetNode<Control>("HUD/Root/EnergyPanel/EnergyBulbs")));
-            }
-            // The clock already preserves its original color; use the pack to isolate the new frame exception.
-            if (tutorial.Target.Name != "ProgressToggleButton") return;
-            var probe = new ColorRect { Color = Colors.Red, Size = new Vector2(12, 12),
-                Position = outline.Size / 2 - new Vector2(6, 6), MouseFilter = Control.MouseFilterEnum.Ignore };
-            outline.AddChild(probe);
-            using (var image = await CapturePresentation())
-            {
-                Vector2 scale = new Vector2(image.GetWidth(), image.GetHeight()) / Root.GetVisibleRect().Size;
-                Vector2 center = ScreenBounds(probe).GetCenter() * scale;
-                Color pixel = image.GetPixel((int)center.X, (int)center.Y);
-                Check(HasChroma(pixel) && pixel.R > 0.8f && pixel.G < 0.2f,
-                    "The hollow tutorial highlight must leave source colors unchanged without a screen filter");
-            }
-            probe.QueueFree();
-            await Frame();
+            await ToSignal(CreateTimer(.25), SceneTreeTimer.SignalName.Timeout);
+            using var image = await CapturePresentation(name);
+            var glow = tutorial.GetNode<TutorialSpotlight>("Spotlight");
+            Check(glow.Visible && ((ShaderMaterial)glow.Material).GetShaderParameter("darkness").AsSingle() > 0,
+                "The rendered tutorial must use the feathered spotlight on this step");
         }
         try
         {
@@ -364,7 +342,15 @@ public partial class ProjectTest
             focusCamera.SetProcess(false);
             Check(!tutorial.HasNode("Root/Panel/Content/Navigation"), "Later steps must not repeat manual navigation instructions");
             Highlight();
-            await CheckYellowHighlight("tutorial-yellow-start");
+            var startCaption = game.GetNode<Button>("HUD/DayClock/Root/DayTimer/StartButton");
+            foreach (string language in new[] { "en", "ru" })
+            {
+                TranslationServer.SetLocale(language);
+                await Frame();
+                Check(startCaption.Tr(startCaption.Text) == (language == "en" ? "Start" : "Начать"),
+                    "The start clock caption must be readable in both locales");
+            }
+            await CheckGlow("tutorial-glow-start");
             Check(!Paused && !game.DayStarted && game.Score == game.StartingMoney && game.StoredItems.Length == 0,
                 "Starting the tutorial must not pause gameplay, spend money or generate items");
             int firstBuyerArrivals = 0;
@@ -380,46 +366,68 @@ public partial class ProjectTest
             await CheckCameraLocked();
             Highlight();
             using (var image = await CapturePresentation("tutorial-craft")) { }
+            await CameraSettled();
+            var rarity = game.GetNode<RarityPanel>("World/Atelier/RarityPanel");
+            MoveButtonPointer(ScreenBounds(game.GetNode<Control>("World/Atelier/GetItemButton/RarityHotspot")).GetCenter());
+            await Frame();
+            Check(rarity.Popup.IsVisibleInTree() && rarity.Popup.GetParent<CanvasLayer>().Layer > tutorial.Layer &&
+                HasHalo(rarity.Popup),
+                "The rarity popup must glow and render above the dimmer while hovering the question mark");
+            MoveButtonPointer(new Vector2(6, 350));
+            await Frame();
+            Check(!rarity.Popup.IsVisibleInTree(), "The rarity popup must still close on pointer exit");
             await ClickControl(game, "World/Atelier/GetItemButton");
             await Frame();
-            Check(game.CraftMiniGameOpen && !tutorial.IsShowing, "Tutorial must hide during the crafting modal");
-            var guidedCraft = game.GetNode<EmbroideryGame>("EmbroideryGame");
-            guidedCraft.SetProcess(false);
-            async Task CheckEmbroideryHint(string instruction)
-            {
-                foreach (var craftSize in new[] { new Vector2I(960, 540), new Vector2I(1280, 720) })
-                foreach (string language in new[] { "en", "ru" })
-                {
-                    Root.Size = craftSize;
-                    TranslationServer.SetLocale(language);
-                    await Frame();
-                    guidedCraft._Process(0);
-                    await Frame();
-                    var hint = guidedCraft.GetNode<Label>("Surface/Hint");
-                    var workSurface = guidedCraft.GetNode<EmbroiderySurface>("Surface");
-                    Check(hint.IsVisibleInTree() && hint.Text == GameLocalization.Text(instruction) &&
-                        workSurface.PanelRect.Encloses(hint.GetRect()) &&
-                        hint.GetThemeFont("font").GetStringSize(hint.Text, fontSize: hint.GetThemeFontSize("font_size")).X <= hint.Size.X,
-                        "The in-window embroidery guide must show the current action, localized and fitted to the panel");
-                    if (language == "en") Check(hint.Text != instruction, "The craft guide needs an actual English translation");
-                }
-            }
-            await CheckEmbroideryHint("Нажмите «Начать», чтобы приступить к вышивке.");
-            await ClickControl(game, "EmbroideryGame/Surface/Action");
-            Check(guidedCraft.ActiveSession.State == ChikagoShop.Domain.Crafting.EmbroideryState.Playing,
-                "The guided Start button must begin embroidery");
-            await CheckEmbroideryHint("Нажимайте на подсвечивающиеся точки по очереди.");
-            Vector2 stitchPoint = guidedCraft.GetNode<EmbroiderySurface>("Surface").ScreenPoint(0);
-            MoveButtonPointer(stitchPoint);
+            Step(FirstTradeTutorial.Step.CraftSelection);
+            Check(game.Crafting.IsCatalogOpen && tutorial.Target == game.Crafting.Catalog.ItemButton("hat") &&
+                tutorial.Layer > game.Crafting.Catalog.Layer, "Tutorial must highlight the hat in the actual catalog");
+            await ClickControl(game, game.GetPathTo(game.Crafting.Catalog.ItemButton("hat")).ToString());
             await Frame();
-            MouseButtonAt(stitchPoint, MouseButton.Left, true);
-            MouseButtonAt(stitchPoint, MouseButton.Left, false);
-            Check(guidedCraft.Session.Stitches == 1, "Clicking the guided highlighted point must make a stitch");
-            guidedCraft.FinishForTesting(true);
-            await CheckEmbroideryHint("Нажмите «Забрать», чтобы вернуться в магазин.");
-            await ClickControl(game, "EmbroideryGame/Surface/Action");
-            Check(!guidedCraft.IsOpen && !Paused, "Guided Collect must return to the shop and resume the tutorial");
-            guidedCraft.SetProcess(true);
+            Step(FirstTradeTutorial.Step.EmbroideryStart);
+            var embroidery = game.GetNode<EmbroideryGame>("EmbroideryGame");
+            var spotlight = tutorial.GetNode<TutorialSpotlight>("Spotlight");
+            Check(game.CraftMiniGameOpen && tutorial.Target == embroidery.StartButton &&
+                tutorial.Layer > embroidery.Layer && spotlight.MouseFilter == Control.MouseFilterEnum.Ignore,
+                "The ready lesson must highlight only the actual Start button above the modal");
+            Check(embroidery.GetNode<Label>("Surface/Panel/Hint").Text.Length == 0,
+                "The regular ready screen must not repeat the tutorial instruction");
+            TranslationServer.SetLocale("en");
+            await Frame();
+            var embroideryBody = tutorial.GetNode<Label>("Root/Panel/Content/Body");
+            Check(embroideryBody.Tr(embroideryBody.Text) == "Click Start to begin embroidering.",
+                "The embroidery lesson must be translated");
+            TranslationServer.SetLocale("ru");
+            foreach (Vector2I viewport in new[] { new Vector2I(1280, 720), new Vector2I(1920, 1080) })
+            {
+                Root.Size = viewport;
+                await ToSignal(CreateTimer(0.25), SceneTreeTimer.SignalName.Timeout);
+                using var image = await CapturePresentation($"tutorial-embroidery-spotlight-{viewport.X}");
+                Rect2 button = ScreenBounds(embroidery.StartButton);
+                var material = (ShaderMaterial)spotlight.Material;
+                Vector2 center = material.GetShaderParameter("focus_center").AsVector2();
+                float darkness = material.GetShaderParameter("darkness").AsSingle();
+                Check(image.GetSize() == viewport && center.DistanceTo(button.GetCenter()) < 1 &&
+                    Mathf.IsEqualApprox(darkness, 0.50f), "The visible spotlight must settle over Start at both resolutions");
+            }
+            Root.Size = new Vector2I(1280, 720);
+            await ClickControl(game, "EmbroideryGame/Surface/Panel/Buttons/Action");
+            await Frame();
+            var craftHint = embroidery.GetNode<Label>("Surface/Panel/Hint");
+            Check(!tutorial.IsShowing && craftHint.Text == GameLocalization.Text("Нажимайте на подсвечивающиеся точки по очереди."),
+                "Clicking Start must finish the spotlight lesson and reveal the stitch instruction");
+            var sewingSurface = embroidery.GetNode<EmbroiderySurface>("Surface");
+            for (int stitch = 0; stitch < 2; stitch++)
+            {
+                Vector2 point = sewingSurface.ScreenPoint(stitch);
+                MouseButtonAt(point, MouseButton.Left, true);
+                MouseButtonAt(point, MouseButton.Left, false);
+            }
+            Check(embroidery.Session.Stitches == 2, "Two real clicks must sew the first textured stitch");
+            using (var image = await CapturePresentation("tutorial-stitch")) { }
+            embroidery.FinishForTesting(true);
+            Check(string.IsNullOrEmpty(craftHint.Text),
+                "The craft result must only show the Collect button");
+            await ClickControl(game, "EmbroideryGame/Surface/Panel/Buttons/Action");
             await Frame();
             Step(FirstTradeTutorial.Step.Select);
             await CheckCameraLocked();
@@ -467,6 +475,12 @@ public partial class ProjectTest
             Check(game.DayRemainingSeconds == 180 && !game.DayClosed,
                 "A legacy tutorial without the training-clock marker must receive180 seconds once");
             await CameraSettled();
+            var inventory = game.GetNode<InventoryUI>("HUD/InventoryUI");
+            MoveButtonPointer(ScreenBounds(inventory.Container.GetChild<Control>(0)).GetCenter());
+            await Frame();
+            Check(inventory.ItemPopup.IsVisibleInTree() && inventory.ItemPopup.GetParent<CanvasLayer>().Layer > tutorial.Layer &&
+                HasHalo(inventory.ItemPopup),
+                "The complete item tooltip must glow and render above the dimmer");
             var slots = game.GetNode<InventoryUI>("HUD/InventoryUI").Container;
             await ClickControl(game, "HUD/InventoryUI/ScrollContainer/HBoxContainer/" + slots.GetChild(0).Name);
             await Frame();
@@ -539,39 +553,19 @@ public partial class ProjectTest
             Check(game.GetNode<TextureRect>(iconPath).Texture.ResourcePath == "res://art/ui/buyer_wish_atelier.png",
                 "The first request must show the real clothing icon before the example");
             await ClickControl(game, continueInstruction);
-            Step(FirstTradeTutorial.Step.MusicBuyerRequest);
-            Check(game.GetNode<TextureRect>(iconPath).Texture.ResourcePath == "res://art/ui/buyer_wish_music.png" &&
-                tutorial.Target == game.GetNode<Control>(thought),
-                "The music example must replace the visible category icon and highlight its bubble");
-            TranslationServer.SetLocale("en");
             await Frame();
-            var musicMessage = tutorial.GetNode<Label>("Root/Panel/Content/Body");
-            Check(musicMessage.Tr(musicMessage.Text) == "This customer wants an instrument from the music workshop.",
-                "The music icon example must have an English explanation");
-            TranslationServer.SetLocale("ru");
-            await Frame();
-            game._Process(1); game.AcceptTrade(); game.RerollCustomer();
-            Check(game.CustomerIndex == originalBuyer && game.ItemIndex == originalItem && game.Score == originalCash &&
-                game.BuyerWaitRemaining == heldTime && game.RerollsRemaining == rerolls && !game.MusicWorkshopUnlocked,
-                "The visual example must freeze actions/time without replacing the buyer/item or unlocking music");
-            game.PersistProgress();
-            await Reload();
-            Step(FirstTradeTutorial.Step.MusicBuyerRequest);
-            Check(game.GetNode<TextureRect>(iconPath).Texture.ResourcePath == "res://art/ui/buyer_wish_music.png",
-                "Reload must preserve the musical request demonstration");
-            await ClickControl(game, continueInstruction);
             Step(FirstTradeTutorial.Step.Offer);
             Check(game.GetNode<TextureRect>(iconPath).Texture.ResourcePath == "res://art/ui/buyer_wish_atelier.png" &&
                 game.CustomerIndex == originalBuyer && game.ItemIndex == originalItem && game.Score == originalCash,
-                "Continuing must restore the actual clothing request and the unchanged first deal");
+                "The introductory tutorial must progress directly to the offer with the real clothing request");
             await Reload();
             Step(FirstTradeTutorial.Step.Offer);
             await CheckTutorialEndBlocked();
             await CheckCameraLocked();
             Highlight();
             var buyerHint = tutorial.GetNode<Label>("Root/Panel/Content/Body");
-            Check(buyerHint.Text.Contains("✓") && buyerHint.Text.Contains("×") && !buyerHint.Text.Contains("Скорость"),
-                "Offer instructions must identify buttons by their visible symbols, without relying on color");
+            Check(buyerHint.Text.Contains("✓") && !buyerHint.Text.Contains("×"),
+                "The first offer instruction must describe only the sale");
             const string tradeButtons = "World/TradingRoom/Item/TradePanel/Content/Buttons/";
             var accept = game.GetNode<Button>(tradeButtons + "AcceptButton");
             var reject = game.GetNode<Button>(tradeButtons + "DeclineButton");
@@ -591,32 +585,67 @@ public partial class ProjectTest
                 game.BuyerWaitRemaining == explanationBuyerTime && game.DayRemainingSeconds == explanationDayTime,
                 "Offer reading must freeze both clocks and block mouse, F and direct trading calls");
             await ClickControl(game, continueInstruction);
-            Step(FirstTradeTutorial.Step.Offer);
-            Check(!tutorial.GetNode<Control>("Root/Panel").Visible &&
-                tutorial.GetNode<Control>("Root/Highlight").Visible && !accept.Disabled && !reject.Disabled,
-                "Next must hide only the hint window, keep the yellow trade outline and enable trading");
-            game._Process(0.5);
-            Check(System.Math.Abs(game.BuyerWaitRemaining - (explanationBuyerTime - 0.5)) < 0.001 &&
-                System.Math.Abs(game.DayRemainingSeconds - (explanationDayTime - 0.5)) < 0.001,
-                "Buyer and day clocks must resume after acknowledging the offer explanation");
+            await Frame();
+            Check(tutorial.Target == reject && buyerHint.Text.Contains("×") && !buyerHint.Text.Contains(" F"),
+                "The reroll lesson must highlight the button and omit the keyboard shortcut");
+            game.PersistProgress();
+            await Reload();
+            Check(tutorial.Target == game.GetNode<Button>(tradeButtons + "DeclineButton"),
+                "Reloading must restore the current offer instruction");
+            await ClickControl(game, continueInstruction);
+            await Frame();
+            Check(tutorial.Target.Name == "OfferLabel", "The quality lesson must highlight the offer");
+            await ClickControl(game, continueInstruction);
+            await Frame();
+            Step(FirstTradeTutorial.Step.TimedSale);
+            Check(!game.GetNode<Button>(tradeButtons + "AcceptButton").Disabled &&
+                !game.GetNode<Button>(tradeButtons + "DeclineButton").Disabled, "Acknowledging the offer must enable the timed sale");
+            game._Process(game.BuyerWaitRemaining + 1);
+            Check(game.BuyerWaitRemaining == 1 && TradeScene.SpeedBonus(game.BuyerWaitRemaining, game.BuyerWaitInitial) > 0,
+                "The first lesson must reserve one second and a real speed bonus");
             game.PersistProgress(); await Reload();
-            Step(FirstTradeTutorial.Step.Offer);
-            Check(!tutorial.GetNode<Control>("Root/Panel").Visible &&
-                !game.GetNode<Button>(tradeButtons + "AcceptButton").Disabled,
-                "Reload must retain acknowledged trading practice without bringing back the hint");
+            Step(FirstTradeTutorial.Step.TimedSale);
+            async Task CheckSaleGlow()
+            {
+                await CameraSettled();
+                await CheckGlow("tutorial-glow-" + tutorial.CurrentStep);
+                Check(tutorial.Target.Name == "ThoughtBubble" &&
+                    HasHalo(game.GetNode<Control>("World/TradingRoom/Item/TradePanel")),
+                    "Both timed sales must illuminate the thought bubble and the sale panel");
+            }
+            await CheckSaleGlow();
             int offerChangesBeforePractice = game.RerollsRemaining;
-            await ClickControl(game, tradeButtons + "DeclineButton");
-            Check(game.TradeActive && game.RerollsRemaining == offerChangesBeforePractice - 1 &&
-                !tutorial.GetNode<Control>("Root/Panel").Visible,
-                "A real rejection during practice must change the offer without restoring the explanation");
-            Highlight();
-            int cash = game.Score, offer = game.OfferedPrice + TradeScene.SpeedBonus(game.BuyerWaitRemaining, game.BuyerWaitInitial) +
+            Root.PushInput(new InputEventKey { Keycode = Key.F, Pressed = true }, true);
+            Root.PushInput(new InputEventKey { Keycode = Key.F, Pressed = false }, true);
+            Check(game.RerollsRemaining == offerChangesBeforePractice - 1 && game.BuyerWaitRemaining == 1,
+                "Reroll may change the offer but not the remaining time");
+            int cash = game.Score, payout = game.OfferedPrice + TradeScene.SpeedBonus(game.BuyerWaitRemaining, game.BuyerWaitInitial) +
                 TradeScene.QualityBonus(game.ActiveTradeQualityRank);
-            await ClickControl(game, "World/TradingRoom/Item/TradePanel/Content/Buttons/AcceptButton");
+            await ClickControl(game, tradeButtons + "AcceptButton");
+            Check(game.Score == cash + payout && game.Accepted == 1, "The first sale must pay its real bonus");
+            if (game.StoredItems.Length == 0)
+            {
+                game.GetItemFromAtelier();
+                FinishEmbroidery(game);
+            }
+            game.SelectInventoryItem(0);
+            game.PlaceItemInShowcase(0);
+            game._Process(0);
+            await Frame();
+            Step(FirstTradeTutorial.Step.LateSale);
+            await CheckSaleGlow();
+            Check(game.GetNode<Button>(tradeButtons + "AcceptButton").Disabled, "The second sale must wait for zero");
+            game._Process(game.BuyerWaitRemaining + 1);
+            await Frame();
+            Check(game.TradeActive && game.BuyerWaitRemaining == 0 && !game.GetNode<Button>(tradeButtons + "AcceptButton").Disabled &&
+                TradeScene.SpeedBonus(game.BuyerWaitRemaining, game.BuyerWaitInitial) == 0, "The expired buyer must remain able to buy with no speed bonus");
+            cash = game.Score;
+            payout = game.OfferedPrice;
+            await ClickControl(game, tradeButtons + "AcceptButton");
             await Frame();
             Step(FirstTradeTutorial.Step.Summary);
             await CheckCameraLocked();
-            Check(game.Score == cash + offer && game.Accepted == 1, "The guided sale must apply exactly the normal reward once");
+            Check(game.Score == cash + payout && game.Accepted == 2, "The second sale must pay exactly its late offer");
             CheckEmptyTutorialCounter();
             var pack = game.GetNode<ProgressPanel>("HUD/Root/ProgressPanel");
             var toggle = game.GetNode<Control>("HUD/Root/ProgressToggleButton");
@@ -625,16 +654,20 @@ public partial class ProjectTest
             Check(!pack.Expanded && tutorial.Target == toggle,
                 "Summary must highlight the pack without automatically opening it");
             Check(!tutorial.GetNode<Button>("Root/Panel/Content/Actions/Done").Visible &&
-                !tutorial.GetNode<Control>("Root/Panel/Content/Actions").Visible &&
+                tutorial.GetNode<Button>(skipPath).Visible &&
                 tutorial.GetNode<Label>("Root/Panel/Content/Title").Text == "Дни и квоты" &&
                 !tutorial.GetNode<Label>("Root/Panel/Content/Body").Text.Contains("улучшение"),
                 "Days and quotas must wait for pack hover without Next or the card-selection sentence");
             Highlight();
-            await CheckYellowHighlight("tutorial-yellow-pack");
+            await CheckGlow("tutorial-glow-pack");
             Vector2 packPoint = ScreenBounds(toggle).GetCenter();
             Root.PushInput(new InputEventMouseMotion { Position = packPoint, GlobalPosition = packPoint }, true);
             await ToSignal(CreateTimer(0.6), SceneTreeTimer.SignalName.Timeout);
             Check(pack.Expanded, "Only the player's real hover must reveal the tutorial pack information");
+            var packShader = (ShaderMaterial)tutorial.GetNode<TutorialSpotlight>("Spotlight").Material;
+            await CheckGlow("tutorial-glow-cigarettes");
+            Check(packShader.GetShaderParameter("focus_half_size").AsVector2().X * 2 > pack.CigaretteBounds().Size.X - 20,
+                "The spotlight must follow the entire revealed cigarette strip");
             Check(tutorial.CurrentStep == FirstTradeTutorial.Step.Summary &&
                 !game.GetNode<DayTransitionCard>("DayTransitionCard").IsOpen,
                 "Hovering for less than one second must not show the introduction or open cards");
@@ -644,37 +677,10 @@ public partial class ProjectTest
             await ToSignal(CreateTimer(0.6), SceneTreeTimer.SignalName.Timeout);
             Check(tutorial.CurrentStep == FirstTradeTutorial.Step.Summary,
                 "Leaving the pack must reset the one-second hover delay");
-            await ToSignal(CreateTimer(0.55), SceneTreeTimer.SignalName.Timeout);
-            Step(FirstTradeTutorial.Step.UpgradeIntroduction);
-            Check(!game.GetNode<DayTransitionCard>("DayTransitionCard").IsOpen,
-                "After the hover delay only the ordinary tutorial introduction should appear");
-            foreach (var introSize in new[] { new Vector2I(960, 540), new Vector2I(1280, 720) })
-            foreach (string language in new[] { "en", "ru" })
-            {
-                Root.Size = introSize;
-                TranslationServer.SetLocale(language);
-                await Frame();
-                var introPanel = tutorial.GetNode<Control>("Root/Panel");
-                var introBody = tutorial.GetNode<Label>("Root/Panel/Content/Body");
-                var openUpgrades = tutorial.GetNode<Button>("Root/Panel/Content/Actions/Done");
-                Check(introPanel.IsVisibleInTree() && Root.GetVisibleRect().Encloses(introPanel.GetGlobalRect()) &&
-                    introPanel.GetGlobalRect().Encloses(openUpgrades.GetGlobalRect()) &&
-                    openUpgrades.Tr(openUpgrades.Text) == (language == "en" ? "Open upgrade menu" : "Открыть окно улучшений") &&
-                    introBody.Tr(introBody.Text).Contains(language == "en" ? "You can also buy" : "Также между днями"),
-                    "The ordinary introduction must localize and fit with its explicit open-menu button");
-            }
-            await Reload();
-            Step(FirstTradeTutorial.Step.UpgradeIntroduction);
-            Check(!game.GetNode<DayTransitionCard>("DayTransitionCard").IsOpen,
-                "Reload must retain the introduction and still wait for the explicit button");
-            await ClickControl(game, "FirstTradeTutorial/Root/Panel/Content/Actions/Done");
-            Check(tutorial.CurrentStep == FirstTradeTutorial.Step.UpgradeChoice && !tutorial.IsShowing &&
-                game.GetNode<DayTransitionCard>("DayTransitionCard").IsOpen,
-                "Only the open-menu button must launch the cards and hide the introduction");
+            await ToSignal(CreateTimer(1.0), SceneTreeTimer.SignalName.Timeout);
             await WaitForDayCardAnimation(game);
             var trainingCards = game.GetNode<DayTransitionCard>("DayTransitionCard");
-            int upgradeLessonDay = game.CurrentDay, upgradeLessonCash = game.Score, upgradeLessonEnergy = game.EnergyRemaining;
-            double upgradeLessonTime = game.DayRemainingSeconds;
+            int upgradeLessonDay = game.CurrentDay, upgradeLessonCash = game.Score;
             foreach (var upgradeSize in new[] { new Vector2I(960, 540), new Vector2I(1280, 720) })
             foreach (string language in new[] { "en", "ru" })
             {
@@ -682,10 +688,12 @@ public partial class ProjectTest
                 TranslationServer.SetLocale(language);
                 await Frame();
                 await WaitForDayCardAnimation(game);
-                var explanation = trainingCards.GetNode<Label>("Root/Center/Card/Content/TutorialExplanation");
+                Step(FirstTradeTutorial.Step.CardExplanation);
+                var explanation = tutorial.GetNode<Label>("Root/Panel/Content/Body");
                 Check(explanation.IsVisibleInTree() && Root.GetVisibleRect().Encloses(explanation.GetGlobalRect()) &&
-                    explanation.Text == GameLocalization.Text("Выберите карту или нажмите «Пропустить»."),
-                    "The card menu must contain only the short choose-or-skip instruction in both languages");
+                    explanation.Tr(explanation.Text).Contains(language == "en" ? "Some upgrades cost money" : "Некоторые улучшения стоят денег") &&
+                    !trainingCards.Options.Contains(ChikagoShop.Domain.Days.DayUpgrade.Cash),
+                    "The training hand must localize and contain only next-day cards");
                 foreach (var upgrade in trainingCards.Options)
                     Check(Root.GetVisibleRect().Encloses(trainingCards.GetNode<Control>(
                         "Root/Center/Card/Content/Choices/" + upgrade).GetGlobalRect()),
@@ -695,20 +703,22 @@ public partial class ProjectTest
             await Reload();
             await WaitForDayCardAnimation(game);
             trainingCards = game.GetNode<DayTransitionCard>("DayTransitionCard");
-            Check(trainingCards.IsOpen && tutorial.CurrentStep == FirstTradeTutorial.Step.UpgradeChoice,
+            Check(trainingCards.IsOpen,
                 "Reloading a pending tutorial choice must reopen its card menu");
+            await Frame();
+            Step(FirstTradeTutorial.Step.CardExplanation);
+            await ClickControl(game, continueInstruction);
+            await ClickControl(game, continueInstruction);
             var learnedUpgrade = trainingCards.Options.First(option => game.DayUpgrades.CostFor(option) <= game.Score);
             int learnedPrice = game.DayUpgrades.CostFor(learnedUpgrade);
             await ClickControl(game, "DayTransitionCard/Root/Center/Card/Content/Choices/" + learnedUpgrade + "/Content/Choose");
             await WaitForDayCardAnimation(game);
             await Frame();
-            int learnedBalance = upgradeLessonCash - learnedPrice +
-                (learnedUpgrade == ChikagoShop.Domain.Days.DayUpgrade.Cash ? game.DayUpgrades.CashReward : 0);
+            int learnedBalance = upgradeLessonCash - learnedPrice;
             Check(!trainingCards.IsOpen && !Paused && game.Score == learnedBalance &&
-                game.DayUpgrades.Selected == learnedUpgrade && game.CurrentDay == upgradeLessonDay && !game.DayClosed &&
-                game.DayRemainingSeconds == upgradeLessonTime &&
-                game.EnergyRemaining == upgradeLessonEnergy + (learnedUpgrade == ChikagoShop.Domain.Days.DayUpgrade.Energy ? 1 : 0),
-                "A tutorial purchase must apply the real cost/reward once without advancing the day or spending lesson time");
+                game.DayUpgrades.Selected == learnedUpgrade && game.CurrentDay == upgradeLessonDay + 1 &&
+                !game.DayStarted && !game.DayClosed && game.DayRemainingSeconds == DayCycleController.TutorialDuration,
+                "A tutorial purchase must pay the real cost and prepare the following day");
             trainingCards.Choose(learnedUpgrade);
             Check(game.Score == learnedBalance, "Repeated input after a tutorial purchase must not charge again");
             async Task CompleteNotebookLesson(bool reload)
@@ -728,8 +738,8 @@ public partial class ProjectTest
                         !tutorial.GetNode<Button>("Root/Panel/Content/Actions/Done").Visible &&
                         tutorial.GetNode<Label>("Root/Panel/Content/Body").Tr(
                             tutorial.GetNode<Label>("Root/Panel/Content/Body").Text) ==
-                            (language == "en" ? "Hover over the notebook to see your current tasks and upgrades." :
-                                "Наведитесь на блокнот, чтобы увидеть текущие задания и улучшения."),
+                            (language == "en" ? "Hover over the notebook on the right to open it." :
+                                "Наведите курсор на блокнот справа, чтобы открыть его."),
                         "Notebook instruction must localize, highlight the real page and wait for hover without Next");
                     Highlight();
                 }
@@ -744,16 +754,16 @@ public partial class ProjectTest
                 Vector2 point = new(tab.Position.X + 17, tab.GetCenter().Y);
                 MoveButtonPointer(point);
                 await ToSignal(CreateTimer(0.6), SceneTreeTimer.SignalName.Timeout);
-                Check(notebook.Expanded && tutorial.CurrentStep == FirstTradeTutorial.Step.Notebook,
-                    "Actual hover must open the notebook and leave a full second to read it");
-                MoveButtonPointer(new Vector2(20, 300));
-                await ToSignal(CreateTimer(0.6), SceneTreeTimer.SignalName.Timeout);
-                MoveButtonPointer(point);
-                await ToSignal(CreateTimer(0.6), SceneTreeTimer.SignalName.Timeout);
-                Step(FirstTradeTutorial.Step.Notebook);
-                await ToSignal(CreateTimer(0.55), SceneTreeTimer.SignalName.Timeout);
+                Step(FirstTradeTutorial.Step.NotebookContents);
+                Check(notebook.Expanded &&
+                    (notebook.GetNode<Label>("Page/Notes/BuffDetails").Text != "Нет") ==
+                        (game.DayUpgrades.Selected != ChikagoShop.Domain.Days.DayUpgrade.None),
+                    "The open notebook must display the actual selected upgrade");
+                await CheckGlow("tutorial-glow-notebook");
+                await ClickControl(game, continueInstruction);
+                await Frame();
                 Step(FirstTradeTutorial.Step.Summary);
-                Check(tutorial.GetNode<Label>("Root/Panel/Content/Title").Text == "Музыкальная мастерская",
+                Check(tutorial.GetNode<Label>("Root/Panel/Content/Title").Text == "Пауза и сохранение",
                     "A full uninterrupted notebook hover must continue the existing guide");
                 CheckEmptyTutorialCounter();
                 MoveButtonPointer(new Vector2(20, 300));
@@ -764,6 +774,8 @@ public partial class ProjectTest
             skipLesson.Load(progress);
             skipLesson.SetValue("tutorial", "summary_page", 0);
             skipLesson.SetValue("tutorial", "upgrade_lesson_pending", true);
+            skipLesson.SetValue("tutorial", "upgrade_lesson_day", game.CurrentDay);
+            skipLesson.SetValue("tutorial", "notebook_lesson_done", false);
             skipLesson.Save(progress);
             game.Score = 0; game.PersistProgress();
             await Reload();
@@ -775,13 +787,13 @@ public partial class ProjectTest
             await WaitForDayCardAnimation(game);
             await Frame();
             Step(FirstTradeTutorial.Step.Notebook);
-            Check(!trainingCards.IsOpen && !Paused && game.Score == 0 && game.CurrentDay == upgradeLessonDay &&
+            Check(!trainingCards.IsOpen && !Paused && game.Score == 0 && game.CurrentDay == upgradeLessonDay + 2 &&
                 !game.DayUpgrades.Pending && game.DayUpgrades.Selected == ChikagoShop.Domain.Days.DayUpgrade.None,
-                "Skipping must be free, close the menu and continue the same tutorial day");
+                "Skipping must be free, close the menu and continue to the next tutorial day");
             await CompleteNotebookLesson(false);
-            Check(tutorial.GetNode<Label>("Root/Panel/Content/Title").Text == "Музыкальная мастерская" &&
+            Check(tutorial.GetNode<Label>("Root/Panel/Content/Title").Text == "Пауза и сохранение" &&
                 tutorial.GetNode<Button>("Root/Panel/Content/Actions/Done").Visible && tutorial.Target == null,
-                "Completing the card choice must continue to the workshop lesson and restore Next there");
+                "Completing the card choice must continue to pause and saving");
             pack = game.GetNode<ProgressPanel>("HUD/Root/ProgressPanel");
             toggle = game.GetNode<Control>("HUD/Root/ProgressToggleButton");
             Root.PushInput(new InputEventMouseMotion { Position = new Vector2(800, 400), GlobalPosition = new Vector2(800, 400) }, true);
@@ -807,15 +819,15 @@ public partial class ProjectTest
             var summaryBody = tutorial.GetNode<Label>("Root/Panel/Content/Body");
             TranslationServer.SetLocale("en");
             await Frame();
-            Check(summaryTitle.Tr(summaryTitle.Text) == "Music workshop" && summaryBody.Tr(summaryBody.Text).Contains("hold the left mouse button"),
-                "Reload must resume the localized workshop page and explain polishing");
-            await ClickControl(game, summaryButton);
-            Check(summaryTitle.Tr(summaryTitle.Text) == "Pause and saving" && summaryBody.Tr(summaryBody.Text).Contains("return to a checkpoint"),
+            Check(summaryTitle.Tr(summaryTitle.Text) == "Pause and saving" && summaryBody.Tr(summaryBody.Text).Contains("checkpoint"),
                 "The last page must cover pause and persistence");
             TranslationServer.SetLocale("ru");
             await Frame();
+            int completionEvents = 0;
+            tutorial.Finished += () => completionEvents++;
             await ClickControl(game, summaryButton);
             Check(!tutorial.IsActive && !tutorial.IsShowing, "Acknowledging the summary must complete onboarding");
+            Check(completionEvents == 1, "Natural tutorial completion must notify the startup sequence exactly once");
             CheckFreshRun();
             Check(game.GetNode<WorldCamera>("Camera2D").IsReturningToOverview, "Completing onboarding must fly back to the initial overview");
             await CameraSettled();
@@ -859,7 +871,23 @@ public partial class ProjectTest
             game.NewGame();
             await Frame();
             Step(FirstTradeTutorial.Step.Camera);
-            await ClickControl(game, "FirstTradeTutorial/Root/Skip");
+            var skipButton = tutorial.GetNode<Button>(skipPath);
+            Vector2 skipPoint = skipButton.GetGlobalRect().GetCenter();
+            Vector2 outsideSkip = new(6, Root.GetVisibleRect().Size.Y - 6);
+            Rect2 inputRect = skipButton.GetGlobalRect();
+            MoveButtonPointer(skipPoint);
+            await ToSignal(CreateTimer(.15), SceneTreeTimer.SignalName.Timeout);
+            Check(ButtonFeedbackController.Instance.FaceScale(skipButton).X > 1 && skipButton.GetGlobalRect() == inputRect,
+                "Hover animation must only change drawing, not the hitbox");
+            MouseButtonAt(skipPoint, MouseButton.Left, true);
+            await ToSignal(CreateTimer(.15), SceneTreeTimer.SignalName.Timeout);
+            Check(ButtonFeedbackController.Instance.FaceScale(skipButton).Y < 1, "Press must compress the art vertically");
+            MoveButtonPointer(outsideSkip);
+            MouseButtonAt(outsideSkip, MouseButton.Left, false);
+            await ToSignal(CreateTimer(.15), SceneTreeTimer.SignalName.Timeout);
+            Check(ButtonFeedbackController.Instance.FaceScale(skipButton).IsEqualApprox(Vector2.One) && !tutorial.IsSkipConfirmationOpen,
+                "Pointer exit must restore the neutral face and cancel the press");
+            await ClickControl(game, "FirstTradeTutorial/" + skipPath);
             Check(tutorial.IsActive && tutorial.IsSkipConfirmationOpen && Paused,
                 "The first skip click must open confirmation and pause the world without finishing onboarding");
             var pending = new ConfigFile();
@@ -886,7 +914,7 @@ public partial class ProjectTest
             Step(FirstTradeTutorial.Step.Camera);
             Check(!tutorial.IsSkipConfirmationOpen && !Paused,
                 "Cancel must resume the same tutorial step and release only the confirmation's pause");
-            await ClickControl(game, "FirstTradeTutorial/Root/Skip");
+            await ClickControl(game, "FirstTradeTutorial/" + skipPath);
             Root.PushInput(new InputEventKey { Pressed = true, Keycode = Key.Escape }, true);
             Root.PushInput(new InputEventKey { Pressed = false, Keycode = Key.Escape }, true);
             await Frame();
@@ -897,14 +925,14 @@ public partial class ProjectTest
             game.GetItemFromAtelier();
             FinishEmbroidery(game);
             await Frame();
-            Check(game.DayStarted && game.Score < game.StartingMoney && game.StoredItems.Length > 0 &&
-                game.EnergyRemaining < game.EnergyCapacity, "Skip must be tested after real paid practice has changed the run");
+            Check(game.DayStarted && game.Score < game.StartingMoney && game.StoredItems.Length > 0,
+                "Skip must be tested after real paid practice has changed the run");
             int scoreBeforeCancel = game.Score;
-            await ClickControl(game, "FirstTradeTutorial/Root/Skip");
+            await ClickControl(game, "FirstTradeTutorial/" + skipPath);
             await ClickControl(game, "FirstTradeTutorial/Root/SkipConfirmation/Center/Panel/Content/Actions/Cancel");
             Check(game.Score == scoreBeforeCancel && game.DayStarted && game.StoredItems.Length > 0,
                 "Cancelling skip must preserve the current practice day and its items");
-            await ClickControl(game, "FirstTradeTutorial/Root/Skip");
+            await ClickControl(game, "FirstTradeTutorial/" + skipPath);
             await ClickControl(game, "FirstTradeTutorial/Root/SkipConfirmation/Center/Panel/Content/Actions/Confirm");
             Check(!tutorial.IsActive && !tutorial.IsSkipConfirmationOpen && !Paused,
                 "Only explicit confirmation must finish the tutorial and unpause gameplay");
@@ -924,12 +952,12 @@ public partial class ProjectTest
                 "A new run must reset a previous skip and both camera-practice flags");
             Check(tutorial.CameraPanProgress == 0 && tutorial.CameraZoomProgress == 0 && CameraBar().Value == 0,
                 "A new run must clear both fractional camera progress values and the displayed percentage");
-            await ClickControl(game, "FirstTradeTutorial/Root/Skip");
+            await ClickControl(game, "FirstTradeTutorial/" + skipPath);
             game.NewGame();
             await Frame();
             Check(tutorial.IsActive && !tutorial.IsSkipConfirmationOpen && !Paused,
                 "Restarting a run while confirmation is open must release its pause and reset onboarding");
-            await ClickControl(game, "FirstTradeTutorial/Root/Skip");
+            await ClickControl(game, "FirstTradeTutorial/" + skipPath);
             await Reload();
             Check(tutorial.IsActive && !tutorial.IsSkipConfirmationOpen && !Paused,
                 "Exiting with confirmation open must not leak its pause or persist an unconfirmed skip");
@@ -955,4 +983,69 @@ public partial class ProjectTest
         await Frame();
         System.GC.KeepAlive(retainedFullscreenScript);
     }
+    private async Task TestWorkshopTutorial()
+    {
+        const string save = "user://workshop_tutorial_test.json";
+        const string profile = save + ".tutorial.cfg";
+        const string next = "FirstTradeTutorial/Root/Panel/Content/Actions/Done";
+        TradeScene game = null;
+        async Task<FirstTradeTutorial> ReloadWorkshop()
+        {
+            if (game != null)
+            {
+                game.QueueFree();
+                await ToSignal(this, SignalName.ProcessFrame);
+            }
+            game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
+            game.SavePath = save;
+            Root.AddChild(game);
+            game.SetProcess(false);
+            await ToSignal(this, SignalName.ProcessFrame);
+            await ToSignal(this, SignalName.ProcessFrame);
+            return game.GetNode<FirstTradeTutorial>("FirstTradeTutorial");
+        }
+        try
+        {
+            var config = new ConfigFile();
+            config.SetValue("tutorial", "finished", true);
+            Check(config.Save(profile) == Error.Ok, "Workshop test profile must save");
+            ProgressSaveStore.Save(save, new ChikagoShop.Domain.Persistence.ProgressData
+            {
+                SaveVersion = ChikagoShop.Domain.Persistence.ProgressJson.CurrentVersion,
+                Day = 8, QuotaStage = 1, Score = 1000, DayStarted = false, EnergyRemaining = 2,
+                QuotaVisit = ChikagoShop.Domain.Persistence.QuotaVisitStage.Rewarded,
+                CheckpointQuotaVisit = ChikagoShop.Domain.Persistence.QuotaVisitStage.Rewarded,
+                CheckpointDay = 8
+            });
+            var tutorial = await ReloadWorkshop();
+            Check(tutorial.IsShowing && tutorial.CurrentStep == FirstTradeTutorial.Step.MusicWorkshop &&
+                game.MusicWorkshopUnlocked && game.Score == 1000 && !game.DayStarted &&
+                !game.GetNode<ModularCustomer>("World/TradingRoom/Customer").Visible,
+                "A completed story migrated from an older save must introduce the workshop free and keep an empty counter");
+            await ClickControl(game, next);
+            Check(tutorial.Target == null, "The polishing explanation has no fixed target");
+            await ClickControl(game, next);
+            Check(tutorial.Target == game.GetNode<Control>("World/Showroom/Showcases/Slot4"),
+                "The third workshop explanation must point at a music display");
+            await ClickControl(game, "FirstTradeTutorial/Root/Skip");
+            Check(tutorial.IsSkipConfirmationOpen, "Workshop instruction must offer skipping");
+            await ClickControl(game, "FirstTradeTutorial/Root/SkipConfirmation/Center/Panel/Content/Actions/Confirm");
+            tutorial = await ReloadWorkshop();
+            Check(!tutorial.IsShowing && !tutorial.IsActive && game.MusicWorkshopUnlocked && game.CurrentDay == 8 &&
+                !game.DayStarted && game.Score == 1000 && !game.GetNode<WorldCamera>("Camera2D").NavigationLocked,
+                "Skipping the workshop lesson must persist without resetting or locking the campaign");
+            game.EndDay();
+            Check(game.DayStarted && game.GetNode<ModularCustomer>("World/TradingRoom/Customer").Visible,
+                "The regular buyer can arrive after Start");
+        }
+        finally
+        {
+            game?.QueueFree();
+            Paused = false;
+            foreach (string file in new[] { save, profile })
+                if (FileAccess.FileExists(file)) DirAccess.RemoveAbsolute(file);
+        }
+        await ToSignal(this, SignalName.ProcessFrame);
+    }
+
 }

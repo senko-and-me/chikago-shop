@@ -87,7 +87,8 @@ public partial class ProgressPanel : Control
     {
         if (_captions == null) return;
         var config = EconomyConfigProvider.Load();
-        int deadline = _game.QuotaStage == 0 ? config.Quotas.Single(quota => quota.Id == "first").DeadlineDay : config.Days.TotalDays;
+        string quotaId = _game.QuotaStage == 0 ? "first" : "final";
+        int deadline = config.Quotas.Single(quota => quota.Id == quotaId).DeadlineDay;
         int days = Math.Max(0, deadline - _game.CurrentDay + 1);
         string day = GameLocalization.Format("День {0}", _game.CurrentDay);
         string quota = _game.Completed ? GameLocalization.Text("Все квоты выплачены") :
@@ -129,6 +130,14 @@ public partial class ProgressPanel : Control
             _slide.TweenProperty(_sticks[i], "position:x", expanded ? OpenX : ClosedX, SlideSeconds)
                 .SetDelay((expanded ? i : _sticks.Length - 1 - i) * StaggerSeconds);
         _slide.Chain().TweenCallback(Callable.From(() => { _slide = null; _content.Hide(); }));
+    }
+
+    internal Rect2 CigaretteBounds()
+    {
+        Rect2 bounds = TutorialSpotlight.TargetBounds(_sticks[0]);
+        for (int i = 1; i < _sticks.Length; i++)
+            bounds = bounds.Merge(TutorialSpotlight.TargetBounds(_sticks[i]));
+        return bounds;
     }
 
     public override void _ExitTree()

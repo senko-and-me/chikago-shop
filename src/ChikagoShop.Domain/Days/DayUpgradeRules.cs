@@ -2,27 +2,29 @@ namespace ChikagoShop.Domain.Days;
 
 public sealed class DayUpgradeRules
 {
-    // Keep the legacy Time enum value for old saves, but never offer that card.
+    // Keep retired Energy and Time enum values for old saves, but never offer those cards.
     private static readonly DayUpgrade[] Available =
     [
-        DayUpgrade.Cash, DayUpgrade.Energy, DayUpgrade.Atelier,
-        DayUpgrade.Music, DayUpgrade.AtelierPrice, DayUpgrade.MusicPrice
+        DayUpgrade.Cash, DayUpgrade.AtelierPrice, DayUpgrade.MusicPrice
     ];
 
     public IReadOnlyDictionary<DayUpgrade, int> Costs { get; init; } = new Dictionary<DayUpgrade, int>();
     public IReadOnlyDictionary<DayUpgrade, int> Weights { get; init; } = new Dictionary<DayUpgrade, int>();
     public bool WeightedSelection { get; init; }
     public int Seed { get; init; } = 1;
-    public int Cost(DayUpgrade upgrade) => Costs.TryGetValue(upgrade, out int cost) ? cost : DayUpgradeSession.Cost(upgrade);
+    public int Cost(DayUpgrade upgrade) => upgrade == DayUpgrade.Cash ? 0
+        : Costs.TryGetValue(upgrade, out int cost) ? cost : DayUpgradeSession.Cost(upgrade);
 
     // Fixed day/seed retains a pending hand on Continue; locked-room cards cannot appear.
-    public IReadOnlyList<DayUpgrade> Options(int day, bool musicUnlocked = false)
+    public IReadOnlyList<DayUpgrade> Options(int day, bool musicUnlocked = false, bool training = false)
     {
-        var eligible = Available.Where(card => musicUnlocked || card is not (DayUpgrade.Music or DayUpgrade.MusicPrice)).ToArray();
-        if (!WeightedSelection)
-            return Enumerable.Range(0, 3).Select(offset => eligible[(day - 2 + offset) % eligible.Length]).ToArray();
-
+        var eligible = Available.Where(card => (!training || card != DayUpgrade.Cash) &&
+            (musicUnlocked || card is not (DayUpgrade.Music or DayUpgrade.MusicPrice))).ToArray();
         var pool = eligible.Where(card => Weight(card) > 0).ToList();
+        if (!WeightedSelection || training && pool.Count == 0)
+            return Enumerable.Range(0, Math.Min(3, eligible.Length))
+                .Select(offset => eligible[((Math.Max(2, day) - 2) % eligible.Length + offset) % eligible.Length]).ToArray();
+
         var random = new Random(unchecked(Seed * 397 ^ day));
         var result = new List<DayUpgrade>();
         while (result.Count < 3 && pool.Count > 0)

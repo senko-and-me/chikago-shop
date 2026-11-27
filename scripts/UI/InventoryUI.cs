@@ -71,6 +71,7 @@ public partial class InventoryUI : Control
 
 	public void Initialize(TradeScene tradeScene)
 	{
+		_itemPopup.Tutorial = tradeScene.GetNodeOrNull<FirstTradeTutorial>("FirstTradeTutorial");
 		_tradeScene = tradeScene;
 
 		foreach (string room in new[]

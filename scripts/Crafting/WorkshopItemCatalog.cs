@@ -37,9 +37,7 @@ public static class WorkshopItemCatalog
             var profile = DebugBalanceSettings.Profile;
             _items = System.Array.AsReadOnly(BaselineItems.Select(item =>
             {
-                var rarity = Config.Rarities.Single(entry => entry.Id == profile.ItemRarities.GetValueOrDefault(item.Kind, item.RarityId));
-                return item with { BasePrice = (int)profile.Number($"item.{item.Kind}.price", item.BasePrice),
-                    RarityId = rarity.Id, Rarity = rarity.Name, Rerolls = rarity.Rerolls };
+                return item with { BasePrice = (int)profile.Number($"item.{item.Kind}.price", item.BasePrice), Rerolls = (int)profile.Number($"item.{item.Kind}.rerolls", item.Rerolls) };
             }).ToArray());
             _revision = revision;
             return _items;
@@ -72,7 +70,20 @@ public static class WorkshopItemCatalog
             .Sum(rarity => RarityWeight(workshop, rarity.Id, upgrades));
     public static int TotalWeight(string workshop, DayUpgradeSession upgrades = null, int hiddenShift = 0) =>
         Table(workshop, upgrades, hiddenShift).TotalWeight;
-    public static int CraftCost(string workshop) => Config.Workshops.Single(entry => entry.Id == workshop).SpinCost;
+    public static int IndexOf(string kind)
+    {
+        for (int i = 0; i < Items.Count; i++) if (Items[i].Kind == kind) return i;
+        return -1;
+    }
+    public static int ItemCraftCost(int index)
+    {
+        var item = Items[index];
+        if (!Config.CraftCosts.TryGetValue(item.Kind, out int cost) || cost <= 0)
+            throw new InvalidOperationException($"Missing positive craft cost for {item.Kind}");
+        return cost;
+    }
+    public static int CraftCost(string workshop) => Items.Select((item, index) => (item, index))
+        .Where(entry => entry.item.WorkshopId == workshop).Min(entry => ItemCraftCost(entry.index));
     public static int DayDurationSeconds => Config.Days.DurationSeconds;
     public static int Roll(string workshop, int ticket, DayUpgradeSession upgrades = null, int hiddenShift = 0) =>
         Table(workshop, upgrades, hiddenShift).Select(ticket);
@@ -90,7 +101,8 @@ public static class WorkshopItemCatalog
     private static CraftItem Item(string workshop, string rarityId, string kind, string name)
     {
         var rarity = EconomyConfigProvider.Baseline.Rarities.Single(entry => entry.Id == rarityId);
-        return new CraftItem(rarity.BasePrices[workshop], rarityId, rarity.Name, kind, name,
-            $"res://art/items/{kind}.png", workshop, rarity.Rerolls);
+        var item = EconomyConfigProvider.Baseline.Items.Single(entry => entry.Id == kind);
+        return new CraftItem(item.BasePrice, rarityId, rarity.Name, kind, name,
+            $"res://art/items/{kind}.png", item.Workshop, item.Rerolls);
     }
 }

@@ -171,20 +171,24 @@ public partial class ProjectTest
                         game.NewGame(); game.Score = 1000; game.TryUnlockMusicWorkshop();
                         Check(game.DayRemainingSeconds == 90, "Unlocking music must not change the ninety-second baseline");
                     }
-                    Check(game.GetNode<Label>($"World/{room}/HintLabel").Text.Contains(cost.ToString()) &&
+                    Check(!game.HasNode($"World/{room}/HintLabel") &&
                           game.GetNode<Label>($"World/{room}/GetItemButton/PriceHint/Label").Text.Contains(cost.ToString()),
                         "RU/EN crafting labels must show the configured single-item cost");
                     game.Score = cost - 1; game.RefreshItemButtons();
                     var button = game.GetNode<Button>($"World/{room}/GetItemButton");
                     Check(button.Text == string.Empty,
                         "Illustrated craft buttons must not duplicate their image lettering after RU/EN changes");
-                    Check(button.Disabled, "Crafting must be unavailable one dollar below the real cost");
+                    Check(!button.Disabled, "The catalog must remain available to explain unaffordable items");
                     if (workshop == "atelier") game.GetItemFromAtelier(); else game.GetItemFromMusicWorkshop();
                     var mini = game.GetNode<EmbroideryGame>(workshop == "atelier" ? "EmbroideryGame" : "PolishingGame");
                     Check(!mini.IsOpen, "The minigame must use the new affordability threshold too");
+                    string kind = workshop == "atelier" ? "hat" : "guitar";
+                    Check(game.Crafting.IsCatalogOpen && !game.Crafting.Select(kind), "Catalog must reject unaffordable selection");
+                    game.Crafting.Catalog.Close();
                     game.Score = cost; game.RefreshItemButtons();
                     Check(!button.Disabled, "Exact funds must enable single-item crafting");
                     button.EmitSignal(Button.SignalName.Pressed);
+                    Check(game.Crafting.Select(kind), "Exact funds must allow selecting the cheapest room item");
                     Check(mini.IsOpen, "The real craft button must open the minigame at the configured cost");
                     int items = game.StoredItems.Length, energy = game.EnergyRemaining;
                     mini.Activate(); mini.Activate();

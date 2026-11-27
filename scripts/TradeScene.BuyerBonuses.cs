@@ -78,7 +78,7 @@ public partial class TradeScene
 
         // The timer belongs to the customer and follows them into the offer.
         bool wasExpired = BuyerPatienceRules.IsExpired(_buyerWaitRemaining);
-        _buyerWaitRemaining = Math.Max(0, _buyerWaitRemaining - delta);
+        _buyerWaitRemaining = Math.Max(TradeActive && _tutorial.HoldTrainingBuyer ? 1 : 0, _buyerWaitRemaining - delta);
         bool justExpired = !wasExpired && BuyerPatienceRules.IsExpired(_buyerWaitRemaining);
         if (_buyerWaitWidget != null)
             _buyerWaitWidget.SetState(_waitingBuyer ? _waitingBuyerMusic :
@@ -104,6 +104,7 @@ public partial class TradeScene
         // Each new customer independently chooses a desired category, 50/50.
         // Before the music workshop is unlocked, only atelier requests are playable.
         // Do not bias the choice toward the current showcase inventory.
+        _returnedOfferPercent = null;
         _waitingBuyerMusic = MusicWorkshopUnlocked && _rng.Randf() < 0.5f;
         CustomerIndex = _rng.RandiRange(0, _customer.GetAppearanceCount() - 1);
         _waitingBuyer = true;
@@ -131,28 +132,6 @@ public partial class TradeScene
         if (!TradeActive) _customer.Visible = false;
     }
 
-    private bool TryServeWaitingBuyer()
-    {
-        if (!_waitingBuyer || !_dayCycle.CanReceiveBuyers) return false;
-        if (DismissBuyerWithoutSupply()) return false;
-        var matching = new List<int>();
-        for (int i = 0; i < ShowcaseCapacity; i++)
-        {
-            int index = _showcaseItems[i];
-            if (index >= 0 && (Items[index].WorkshopId == "music") == _waitingBuyerMusic)
-                matching.Add(i);
-        }
-        if (matching.Count == 0) return false;
-
-        _activeShowcaseIndex = matching[_rng.RandiRange(0, matching.Count - 1)];
-        ItemIndex = _showcaseItems[_activeShowcaseIndex];
-        _activeTradeGrade = NormalizeRank(_showcaseGrades[_activeShowcaseIndex]);
-        _showcaseItems[_activeShowcaseIndex] = -1;
-        _showcaseGrades[_activeShowcaseIndex] = "D";
-        StartBuyerOffer();
-        return true;
-    }
-
     private bool DeferTutorialBuyerArrival()
     {
         if (_tutorial?.DefersBuyerArrival != true) return false;
@@ -164,8 +143,7 @@ public partial class TradeScene
         return true;
     }
 
-    private bool CanSupplyWaitingBuyer() => BuyerAvailabilityRules.CanWait(
-        EnergyRemaining, _storedItems.Count > 0, Array.Exists(_showcaseItems, index => index >= 0));
+    private bool CanSupplyWaitingBuyer() => BuyerAvailabilityRules.CanWait(DayClosed);
 
     private bool DismissBuyerWithoutSupply()
     {
@@ -184,7 +162,7 @@ public partial class TradeScene
 
     private void RefreshClosedBuyerOffer()
     {
-        if (TradeActive && DayClosed) RefreshOffer();
+        if (TradeActive && DayClosed && !CraftMiniGameOpen) RefreshOffer();
     }
 
     private bool CanRerollCurrentBuyer => BuyerPatienceRules.CanReroll(

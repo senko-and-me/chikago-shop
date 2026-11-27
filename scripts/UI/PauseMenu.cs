@@ -8,8 +8,12 @@ public partial class PauseMenu : CanvasLayer
 	private Button _resume = null!;
 	private Button _lastHoveredMenuButton;
 	private FullscreenToggle _fullscreen = null!;
+    private PanelContainer _panel = null!;
+    private StyleBoxTexture _pauseBackdrop = null!, _settingsBackdrop = null!;
 	private Button _russian = null!, _english = null!;
 	private bool _ownsPause;
+    private Control _previousFocus;
+    public bool IsOpen => _overlay?.Visible == true;
 
 	public override void _Ready()
 	{
@@ -33,7 +37,7 @@ public partial class PauseMenu : CanvasLayer
 		_overlay.AddChild(center);
 		center.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
 		// Reuse the main menu's dark hand-drawn settings backdrop.
-		var panel = new PanelContainer { Name = "Panel", CustomMinimumSize = new Vector2(630, 0) };
+		_panel = new PanelContainer { Name = "Panel", CustomMinimumSize = new Vector2(630, 0) };
 		var style = new StyleBoxTexture
 		{
 			Texture = GD.Load<Texture2D>("res://art/ui/settings_panel.png")
@@ -42,10 +46,15 @@ public partial class PauseMenu : CanvasLayer
 		style.ContentMarginRight = 42;
 		style.ContentMarginTop = 32;
 		style.ContentMarginBottom = 32;
-		panel.AddThemeStyleboxOverride("panel", style);
-		center.AddChild(panel);
+		_pauseBackdrop = style;
+        _settingsBackdrop = (StyleBoxTexture)style.Duplicate();
+        _settingsBackdrop.SetExpandMargin(Side.Left, 32);
+        _settingsBackdrop.SetExpandMargin(Side.Right, 32);
+        _settingsBackdrop.SetExpandMargin(Side.Bottom, 54);
+		_panel.AddThemeStyleboxOverride("panel", _pauseBackdrop);
+		center.AddChild(_panel);
 		var content = new VBoxContainer { Name = "Content" };
-		panel.AddChild(content);
+		_panel.AddChild(content);
 		_menu = new VBoxContainer { Name = "Menu" };
 		_menu.AddThemeConstantOverride("separation", 14);
 		content.AddChild(_menu);
@@ -54,27 +63,18 @@ public partial class PauseMenu : CanvasLayer
 		AddButton(_menu, "SettingsButton", "Настройки", ShowSettings);
 		AddButton(_menu, "CheckpointButton", "Начать с чекпоинта", () =>
 		{
+            DismissCraft();
 			GetParent<TradeScene>().ReturnToCheckpoint();
 			Close();
 		});
 		AddButton(_menu, "NewGameButton", "Начать заново", () =>
 		{
+            DismissCraft();
 			GetParent<TradeScene>().NewGame();
 			Close();
 		});
 		AddButton(_menu, "TutorialButton", "Повторить обучение", ReplayTutorial);
-		AddButton(_menu, "MainMenuButton", "В главное меню", () =>
-		{
-			var tree = GetTree();
-			_ownsPause = false;
-			tree.Paused = false;
-			var error = tree.ChangeSceneToFile("res://scenes/main_menu.tscn");
-			if (error != Error.Ok)
-			{
-				Open();
-				GD.PushError($"Не удалось открыть главное меню: {error}");
-			}
-		});
+		AddButton(_menu, "MainMenuButton", "В главное меню", ReturnToMainMenu);
 
 		_settings = new VBoxContainer { Name = "Settings", Visible = false };
 		_settings.AddThemeConstantOverride("separation", 14);
@@ -82,6 +82,19 @@ public partial class PauseMenu : CanvasLayer
 		AddTitle(_settings, "НАСТРОЙКИ");
 		_fullscreen = GD.Load<PackedScene>("res://scenes/UI/FullscreenToggle.tscn").Instantiate<FullscreenToggle>();
 		_settings.AddChild(_fullscreen);
+        var fullscreenArtwork = new ShaderMaterial
+        {
+            Shader = GD.Load<Shader>("res://shaders/pause_fullscreen_toggle.gdshader")
+        };
+        _fullscreen.Material = fullscreenArtwork;
+        void UpdateFullscreenArtwork()
+        {
+            Vector2 image = _fullscreen.TextureNormal.GetSize();
+            Vector2 button = _fullscreen.Size;
+            fullscreenArtwork.SetShaderParameter("artwork_width_ratio", (image.X / image.Y) * button.Y / Mathf.Max(1, button.X));
+        }
+        _fullscreen.Resized += UpdateFullscreenArtwork;
+        UpdateFullscreenArtwork();
 		var volume = GD.Load<PackedScene>("res://scenes/UI/MusicVolumeControl.tscn").Instantiate<MusicVolumeControl>();
 		volume.PlainStyle = true;
 		_settings.AddChild(volume);
@@ -116,6 +129,7 @@ public partial class PauseMenu : CanvasLayer
 
 	private void ReplayTutorial()
 	{
+        DismissCraft();
 		Close();
 		GetParent<TradeScene>().GetNode<FirstTradeTutorial>("FirstTradeTutorial").Restart();
 	}
@@ -226,10 +240,35 @@ public partial class PauseMenu : CanvasLayer
 		return button;
 	}
 
+	private async void ReturnToMainMenu()
+	{
+		var tree = GetTree();
+		if (SceneTransition.IsActive(tree)) return;
+		_ownsPause = false;
+		tree.Paused = false;
+		Error error = Error.Ok;
+		bool changed = await SceneTransition.Run(this, () =>
+		{
+			error = tree.ChangeSceneToFile("res://scenes/main_menu.tscn");
+			return System.Threading.Tasks.Task.FromResult(error == Error.Ok);
+		});
+		if (!changed && GodotObject.IsInstanceValid(this) && IsInsideTree())
+		{
+			_overlay.Hide();
+			Open();
+			if (error != Error.Ok) GD.PushError($"Не удалось открыть главное меню: {error}");
+		}
+	}
+
 	public void Open()
 	{
-		if (GetParent<TradeScene>().CraftMiniGameOpen || GetParent<TradeScene>().DayTransitionOpen) return;
-		GetParent<TradeScene>().PersistProgress();
+        var game = GetParent<TradeScene>();
+        if (IsOpen || game.DayTransitionOpen ||
+            game.GetNode<FirstTradeTutorial>("FirstTradeTutorial").IsSkipConfirmationOpen) return;
+        Layer = game.CraftMiniGameOpen ? 115 : 100;
+        _previousFocus = GetViewport().GuiGetFocusOwner();
+        game.GetNode<EmbroideryGame>("PolishingGame").SuspendPolishingInput();
+        game.PersistProgress();
 		_ownsPause = true;
 		GetTree().Paused = true;
 		_overlay.Show();
@@ -239,9 +278,20 @@ public partial class PauseMenu : CanvasLayer
 	public void Close()
 	{
 		_ownsPause = false;
-		GetTree().Paused = false;
+		GetTree().Paused = GetParent<TradeScene>().CraftMiniGameOpen;
 		_overlay.Hide();
+        if (GodotObject.IsInstanceValid(_previousFocus) && _previousFocus.IsVisibleInTree())
+            _previousFocus.GrabFocus();
+        _previousFocus = null;
 	}
+
+    private void DismissCraft()
+    {
+        GetParent<TradeScene>().Crafting.Catalog.CloseForReset();
+        GetParent<TradeScene>().Crafting.CancelPreparation();
+        GetParent().GetNode<EmbroideryGame>("EmbroideryGame").Dismiss();
+        GetParent().GetNode<EmbroideryGame>("PolishingGame").Dismiss();
+    }
 
 	private void ShowSettings()
 	{
@@ -249,12 +299,14 @@ public partial class PauseMenu : CanvasLayer
 		_fullscreen.RefreshState();
 		_menu.Hide();
 		_settings.Show();
+        _panel.AddThemeStyleboxOverride("panel", _settingsBackdrop);
 		_fullscreen.GrabFocus();
 	}
 
 	private void ShowMenu()
 	{
 		_settings.Hide();
+        _panel.AddThemeStyleboxOverride("panel", _pauseBackdrop);
 		_menu.Show();
 		var selected = _lastHoveredMenuButton;
 		if (selected == null || !GodotObject.IsInstanceValid(selected) || selected.Disabled) selected = _resume;
@@ -263,8 +315,14 @@ public partial class PauseMenu : CanvasLayer
 
 	public override void _Input(InputEvent @event)
 	{
-		if (GetParent<TradeScene>().CraftMiniGameOpen || GetParent<TradeScene>().DayTransitionOpen) return;
+		if (SceneTransition.IsActive(GetTree()))
+		{
+			GetViewport().SetInputAsHandled();
+			return;
+		}
 		if (@event is not InputEventKey { Pressed: true, Echo: false, Keycode: Key.Escape }) return;
+        var game = GetParent<TradeScene>();
+        if (game.DayTransitionOpen || game.GetNode<FirstTradeTutorial>("FirstTradeTutorial").IsSkipConfirmationOpen) return;
 		if (!_overlay.Visible) Open();
 		else if (_settings.Visible) ShowMenu();
 		else Close();

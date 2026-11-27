@@ -134,7 +134,7 @@ public sealed class ProgressMigrationTests
             MusicWorkshopUnlocked = true, CheckpointMusicWorkshopUnlocked = true,
             StoredItems = [0, 4, 9], CheckpointItems = [2, 3], ShowcaseItems = [1, -1, 8],
             CheckpointShowcaseItems = [-1, 7], TradeActive = true, ItemIndex = 8,
-            CustomerIndex = 3, RerollsRemaining = 1, ActiveShowcaseIndex = 2, BuyerWaitRemaining = 12.5, BuyerWaitInitial = 18,
+            CustomerIndex = 3, RerollsRemaining = 1, ActiveShowcaseIndex = 2, BuyerWaitRemaining = 12.5,
             DayRemainingSeconds = 35.5, UpgradePending = true, SelectedUpgrade = (int)DayUpgrade.Energy,
             AtelierUpgradeLevel = 2, MusicUpgradeLevel = 3, AtelierPriceLevel = 4, MusicPriceLevel = 5,
             CheckpointAtelierUpgradeLevel = 1, CheckpointMusicUpgradeLevel = 2,
@@ -143,12 +143,12 @@ public sealed class ProgressMigrationTests
         string json = ProgressJson.Serialize(data);
         var restored = ProgressJson.Deserialize(json, 3)!;
         Assert.That(ProgressJson.Serialize(restored), Is.EqualTo(json));
-        Assert.That(restored.BuyerWaitInitial, Is.EqualTo(18));
         using var doc = JsonDocument.Parse(json);
         Assert.That(doc.RootElement.GetProperty("save_version").GetInt32(), Is.EqualTo(ProgressJson.CurrentVersion));
         Assert.That(doc.RootElement.GetProperty("checkpoint_music_price_level").GetInt32(), Is.EqualTo(4));
         Assert.That(doc.RootElement.GetProperty("day_remaining_seconds").GetDouble(), Is.EqualTo(35.5));
         string[] fields = [
+            "deferred_display_items", "checkpoint_deferred_display_items", "showcase_rerolls", "checkpoint_showcase_rerolls", "returned_offer_percent",
             "save_version", "upgrade_pending", "selected_upgrade", "atelier_price_level", "music_price_level",
             "checkpoint_atelier_price_level", "checkpoint_music_price_level", "atelier_upgrade_level",
             "music_upgrade_level", "checkpoint_atelier_upgrade_level", "checkpoint_music_upgrade_level",

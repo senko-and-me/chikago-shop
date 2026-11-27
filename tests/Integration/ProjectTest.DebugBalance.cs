@@ -106,8 +106,20 @@ public partial class ProjectTest
             panel.Editor("cards.weighted").Text = (1).ToString(System.Globalization.CultureInfo.InvariantCulture);
             foreach (var card in DebugBalanceSettings.Cards)
                 panel.Editor($"card.{card}.weight").Text = (card == DayUpgrade.Cash ? 1 : 0).ToString(System.Globalization.CultureInfo.InvariantCulture);
-            panel.Editor("card.Cash.cost").Text = (17).ToString(System.Globalization.CultureInfo.InvariantCulture);
+            panel.Editor("card.Energy.cost").Text = (17).ToString(System.Globalization.CultureInfo.InvariantCulture);
+            var board = new PolishingSurface();
+            Root.AddChild(board);
+            var originalPolish = board.Begin("guitar");
+            panel.Editor("polish.guitar.radius").Text = "1.11";
+            panel.Editor("polish.guitar.strength").Text = "0.83";
             await ClickControl(panel, content + "/Actions/Apply");
+            Check(DebugBalanceSettings.Reload(out _), "Polishing coefficients must reload from the profile");
+            var revisedPolish = board.Begin("guitar");
+            Check(revisedPolish.MaskArea == originalPolish.MaskArea &&
+                Math.Abs(revisedPolish.Radius / originalPolish.Radius - 1.11) < .001 &&
+                Math.Abs(revisedPolish.CleaningStrength / originalPolish.CleaningStrength - .83 / .67) < .001,
+                "F10 edits must independently change the physical brush radius and strength on the next game");
+            board.QueueFree();
             Check(FileAccess.FileExists(profilePath) && DebugBalanceSettings.Number("start.cash") == 555,
                 $"Apply must commit focused typed input and persist the profile to disk: {DebugBalanceSettings.Number("start.cash")}, {panel.GetNode<Label>(content + "/Status").Text}");
             Check(game.Score == cash && game.EnergyRemaining == energy && Math.Abs(game.DayRemainingSeconds - (remaining + 180 - EconomyConfigProvider.Baseline.Days.DurationSeconds)) < 0.1,
@@ -161,12 +173,13 @@ public partial class ProjectTest
             await WaitForDayCardAnimation(game);
             Check(game.DayUpgrades.Options.SequenceEqual(new[] { DayUpgrade.Cash }), "Edited card weights must determine the actual dealt cards");
             var choose = game.GetNode<Button>("DayTransitionCard/Root/Center/Card/Content/Choices/Cash/Content/Choose");
-            Check(choose.Text.Contains("17"), "Card UI must display the edited purchase price");
+            Check(choose.Text == GameLocalization.Text("Получить 50$") && game.DayUpgrades.CostFor(DayUpgrade.Energy) == 17,
+                "Cash must be free while other costs remain editable");
             await ClickControl(game, "DayTransitionCard/Root/Center/Card/Content/Choices/Cash/Content/Choose");
-            Check(game.Score == 555 - 17 + 50, "The real card purchase must charge the same edited cost exactly once");
+            Check(game.Score == 555 + 50, "The real card purchase must charge the same edited cost exactly once");
             Check(DebugBalanceSettings.Reload(out _), "A recreated configuration must read the saved debug profile");
             game.QueueFree(); await Frame(); await Create();
-            Check(game.StartingMoney == 555 && game.Score == 588 && game.DayRemainingSeconds == 180 &&
+            Check(game.StartingMoney == 555 && game.Score == 605 && game.DayRemainingSeconds == 180 &&
                 TradeScene.GetItemBasePrice(0) == 123, "Reload must retain both the saved profile and the current gameplay save");
 
             var pause = game.GetNode<PauseMenu>("PauseMenu"); pause.Open();
@@ -191,7 +204,7 @@ public partial class ProjectTest
             await ClickControl(panel, content + "/Actions/Defaults");
             await ClickControl(panel, content + "/Actions/Apply");
             Check(TradeScene.GetItemBasePrice(0) == 25 && WorkshopItemCatalog.Items[0].RarityId == "common" &&
-                DebugBalanceSettings.CardRules.Cost(DayUpgrade.Cash) == 35, "Applying defaults must clear item and card overrides");
+                DebugBalanceSettings.CardRules.Cost(DayUpgrade.Cash) == 0 && DebugBalanceSettings.CardRules.Cost(DayUpgrade.Energy) == 10, "Applying defaults must clear item and card overrides");
             await Press(Key.F10);
             int revision = DebugBalanceSettings.Revision;
             DebugBalanceSettings.StoragePath = "user://missing_balance_folder/profile.json";

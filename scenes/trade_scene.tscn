@@ -25,7 +25,6 @@
 [ext_resource type="PackedScene" path="res://scenes/UI/FirstTradeTutorial.tscn" id="30_tutorial"]
 [ext_resource type="PackedScene" path="res://scenes/UI/CraftButton.tscn" id="31_craft_button"]
 [ext_resource type="PackedScene" path="res://scenes/UI/CigaretteProgress.tscn" id="32_cigarette_progress"]
-[ext_resource type="PackedScene" uid="uid://wged5cxnn4t5" path="res://scenes/UI/EnergyPanel.tscn" id="33_energy_panel"]
 [ext_resource type="Script" uid="uid://dc8nesm1ehm43" path="res://scripts/Presentation/RoomCurtainPresentation.cs" id="34_curtain"]
 [ext_resource type="PackedScene" path="res://scenes/UI/PulloutNotebook.tscn" id="34_notebook"]
 [ext_resource type="Script" uid="uid://bb6netwd3fjho" path="res://scripts/Presentation/TradingRoomPosterHotspot.cs" id="35_poster_hotspot"]
@@ -145,10 +144,10 @@ texture = ExtResource("11_atelier")
 centered = false
 
 [node name="Header" type="NinePatchRect" parent="World/Atelier" unique_id=2009831738]
-offset_left = 480.0
-offset_top = 165.0
-offset_right = 2400.0
-offset_bottom = 605.0
+offset_left = 800.0
+offset_top = 195.0
+offset_right = 1440.0
+offset_bottom = 515.0
 scale = Vector2(0.5, 0.5)
 texture = SubResource("InvertedHeaderTexture")
 patch_margin_left = 160
@@ -159,24 +158,15 @@ axis_stretch_horizontal = 1
 axis_stretch_vertical = 1
 
 [node name="NameLabel" type="Label" parent="World/Atelier" unique_id=641788103]
-offset_left = 550.0
-offset_top = 207.0
-offset_right = 1370.0
-offset_bottom = 285.0
+offset_left = 840.0
+offset_top = 236.0
+offset_right = 1080.0
+offset_bottom = 314.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 52
 text = "АТЕЛЬЕ"
 horizontal_alignment = 1
-
-[node name="HintLabel" type="Label" parent="World/Atelier" unique_id=2000485422]
-offset_left = 550.0
-offset_top = 285.0
-offset_right = 1370.0
-offset_bottom = 335.0
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 24
-text = "Одежда  •  25$ + 1 энергия за предмет"
-horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="GetItemButton" parent="World/Atelier" unique_id=1127177850 instance=ExtResource("31_craft_button")]
 offset_left = 735.0
@@ -199,11 +189,12 @@ theme_override_styles/panel = SubResource("HudSmallPanelStyle")
 layout_mode = 2
 theme_override_colors/font_color = Color(0.196274, 0.196274, 0.196274, 1)
 theme_override_font_sizes/font_size = 24
-text = "3 предмета  •  90$"
+text = "Выбор предмета  •  от 20$"
 horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="RarityPanel" parent="World/Atelier" unique_id=1554035197 instance=ExtResource("19_rarity_panel")]
+visible = false
 layout_mode = 3
 anchors_preset = 0
 offset_left = 1130.0
@@ -247,10 +238,10 @@ texture = ExtResource("4_pi35y")
 centered = false
 
 [node name="Header" type="NinePatchRect" parent="World/MusicWorkshop" unique_id=2056955034]
-offset_left = 480.0
-offset_top = 159.0
-offset_right = 2400.0
-offset_bottom = 599.0
+offset_left = 745.0
+offset_top = 189.0
+offset_right = 1605.0
+offset_bottom = 509.0
 scale = Vector2(0.5, 0.5)
 texture = SubResource("InvertedHeaderTexture")
 patch_margin_left = 160
@@ -261,24 +252,15 @@ axis_stretch_horizontal = 1
 axis_stretch_vertical = 1
 
 [node name="NameLabel" type="Label" parent="World/MusicWorkshop" unique_id=596996175]
-offset_left = 550.0
-offset_top = 201.0
-offset_right = 1370.0
-offset_bottom = 279.0
+offset_left = 785.0
+offset_top = 230.0
+offset_right = 1135.0
+offset_bottom = 308.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 52
-text = "МУЗ. ШТУКИ"
+text = "МАСТЕРСКАЯ"
 horizontal_alignment = 1
-
-[node name="HintLabel" type="Label" parent="World/MusicWorkshop" unique_id=733533201]
-offset_left = 550.0
-offset_top = 279.0
-offset_right = 1370.0
-offset_bottom = 329.0
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 24
-text = "Инструменты  •  50$ + 1 энергия за предмет"
-horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="GetItemButton" parent="World/MusicWorkshop" unique_id=2006804839 instance=ExtResource("31_craft_button")]
 offset_left = 735.0
@@ -301,11 +283,12 @@ theme_override_styles/panel = SubResource("HudSmallPanelStyle")
 layout_mode = 2
 theme_override_colors/font_color = Color(0.196274, 0.196274, 0.196274, 1)
 theme_override_font_sizes/font_size = 24
-text = "3 предмета  •  110$"
+text = "Выбор предмета  •  от 30$"
 horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="RarityPanel" parent="World/MusicWorkshop" unique_id=922423804 instance=ExtResource("19_rarity_panel")]
+visible = false
 layout_mode = 3
 anchors_preset = 0
 offset_left = 50.0
@@ -357,7 +340,7 @@ texture = ExtResource("background_6_2e12l")
 expand_mode = 1
 stretch_mode = 6
 
-[node name="UnlockPanel" parent="World/MusicWorkshop/LockedOverlay" unique_id=1338460370 instance=ExtResource("36_unlock_panel")]
+[node name="UnlockPanel" parent="World/MusicWorkshop/LockedOverlay" unique_id=1319952408 instance=ExtResource("36_unlock_panel")]
 layout_mode = 1
 
 [node name="Showroom" type="Node2D" parent="World" unique_id=1166953855]
@@ -365,10 +348,10 @@ position = Vector2(3250.1052, 1638.3158)
 scale = Vector2(0.538816, 0.507602)
 
 [node name="ShowroomHeader" type="NinePatchRect" parent="World/Showroom" unique_id=1324160784]
-offset_left = 289.0
-offset_top = 80.0
-offset_right = 2969.0
-offset_bottom = 520.0
+offset_left = 769.0
+offset_top = 110.0
+offset_right = 1529.0
+offset_bottom = 430.0
 scale = Vector2(0.5, 0.5)
 texture = SubResource("InvertedHeaderTexture")
 patch_margin_left = 160
@@ -379,14 +362,15 @@ axis_stretch_horizontal = 1
 axis_stretch_vertical = 1
 
 [node name="ShowroomLabel" type="Label" parent="World/Showroom" unique_id=829535363]
-offset_left = 339.0
-offset_top = 136.0
-offset_right = 1579.0
-offset_bottom = 216.0
+offset_left = 809.0
+offset_top = 151.0
+offset_right = 1109.0
+offset_bottom = 229.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 48
 text = "ВИТРИНЫ"
 horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="ShowroomBackground" type="Sprite2D" parent="World/Showroom" unique_id=685989829]
 z_index = -1
@@ -394,16 +378,6 @@ position = Vector2(-3.7118425, -25.610617)
 scale = Vector2(1.0019332, 1.0237135)
 texture = ExtResource("9_bkxpd")
 centered = false
-
-[node name="ShowroomHint" type="Label" parent="World/Showroom" unique_id=1385495807]
-offset_left = 339.0
-offset_top = 201.0
-offset_right = 1579.0
-offset_bottom = 251.0
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 23
-text = "Выберите предмет в инвентаре и свободную витрину"
-horizontal_alignment = 1
 
 [node name="Showcases" type="Node2D" parent="World/Showroom" unique_id=405288968]
 position = Vector2(-1, 1)
@@ -474,10 +448,10 @@ position = Vector2(1421.0526, 1638.3158)
 scale = Vector2(0.544079, 0.507602)
 
 [node name="ShowroomHeader" type="NinePatchRect" parent="World/ShowroomLeft" unique_id=1817932225]
-offset_left = 289.0
-offset_top = 80.0
-offset_right = 2969.0
-offset_bottom = 520.0
+offset_left = 769.0
+offset_top = 110.0
+offset_right = 1529.0
+offset_bottom = 430.0
 scale = Vector2(0.5, 0.5)
 texture = SubResource("InvertedHeaderTexture")
 patch_margin_left = 160
@@ -488,14 +462,15 @@ axis_stretch_horizontal = 1
 axis_stretch_vertical = 1
 
 [node name="ShowroomLabel" type="Label" parent="World/ShowroomLeft" unique_id=1358958244]
-offset_left = 339.0
-offset_top = 136.0
-offset_right = 1579.0
-offset_bottom = 216.0
+offset_left = 809.0
+offset_top = 151.0
+offset_right = 1109.0
+offset_bottom = 229.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 48
 text = "ВИТРИНЫ"
 horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="ShowroomBackground" type="Sprite2D" parent="World/ShowroomLeft" unique_id=1095207837]
 z_index = -1
@@ -503,16 +478,6 @@ position = Vector2(0, -25.610617)
 scale = Vector2(1.0019145, 1.0237135)
 texture = ExtResource("9_bkxpd")
 centered = false
-
-[node name="ShowroomHint" type="Label" parent="World/ShowroomLeft" unique_id=1145854215]
-offset_left = 339.0
-offset_top = 201.0
-offset_right = 1579.0
-offset_bottom = 251.0
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 23
-text = "Выберите предмет в инвентаре и свободную витрину"
-horizontal_alignment = 1
 
 [node name="Showcases" type="Node2D" parent="World/ShowroomLeft" unique_id=1414100772]
 
@@ -569,16 +534,16 @@ scale = Vector2(1.0052866, 1.0237135)
 texture = ExtResource("12_cashier")
 centered = false
 
-[node name="ShowPoster" type="Node2D" parent="World/TradingRoom" unique_id=275296243]
+[node name="ShowPoster" type="Node2D" parent="World/TradingRoom" unique_id=1763909312]
 position = Vector2(480, 392)
 script = ExtResource("35_poster_hotspot")
 
-[node name="PosterSprite" type="Sprite2D" parent="World/TradingRoom/ShowPoster" unique_id=600730508]
+[node name="PosterSprite" type="Sprite2D" parent="World/TradingRoom/ShowPoster" unique_id=478556557]
 centered = false
 
-[node name="HitArea" type="Area2D" parent="World/TradingRoom/ShowPoster" unique_id=596969445]
+[node name="HitArea" type="Area2D" parent="World/TradingRoom/ShowPoster" unique_id=1726070392]
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="World/TradingRoom/ShowPoster/HitArea" unique_id=1705847714]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="World/TradingRoom/ShowPoster/HitArea" unique_id=806218342]
 position = Vector2(55.5, 83)
 shape = SubResource("ShowPosterShape")
 
@@ -603,6 +568,8 @@ position = Vector2(676, 651)
 
 [node name="TradePanel" type="PanelContainer" parent="World/TradingRoom/Item" unique_id=703097951]
 visible = false
+z_index = 125
+z_as_relative = false
 custom_minimum_size = Vector2(320, 200)
 offset_left = -137.0
 offset_top = -416.0
@@ -797,6 +764,7 @@ centered = false
 
 [node name="TimeOfDayDay" type="Sprite2D" parent="World" unique_id=1385586684]
 z_index = -9
+position = Vector2(31, 42)
 scale = Vector2(1.2631578, 1.2631578)
 texture = ExtResource("background_2_31fg5")
 centered = false
@@ -805,11 +773,11 @@ centered = false
 position = Vector2(2880, 1620.6316)
 zoom = Vector2(0.39583334, 0.39583334)
 script = ExtResource("23_world_camera")
-BoundsSource = NodePath("../World/RoomLayout")
 ReferenceSize = Vector2(4560, 2565)
 NavigationRegion = Rect2(429, 563, 3662, 1440)
 OverviewSize = Vector2(2560, 1440)
 CloseupSize = Vector2(1036, 583)
+BoundsSource = NodePath("../World/RoomLayout")
 
 [node name="HUD" type="CanvasLayer" parent="." unique_id=1744648689]
 
@@ -843,9 +811,6 @@ text = "Счёт: 220$"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="EnergyPanel" parent="HUD/Root" unique_id=1670076939 instance=ExtResource("33_energy_panel")]
-layout_mode = 1
-
 [node name="ProgressPanel" type="Control" parent="HUD/Root" unique_id=1016591818]
 anchors_preset = 0
 offset_top = 24.0
@@ -854,7 +819,7 @@ offset_bottom = 232.0
 mouse_filter = 2
 script = ExtResource("22_progress")
 
-[node name="Visual" parent="HUD/Root/ProgressPanel" unique_id=1825059871 instance=ExtResource("32_cigarette_progress")]
+[node name="Visual" parent="HUD/Root/ProgressPanel" unique_id=31563484 instance=ExtResource("32_cigarette_progress")]
 anchors_preset = 0
 
 [node name="Content" type="VBoxContainer" parent="HUD/Root/ProgressPanel" unique_id=1283382676]
@@ -925,7 +890,7 @@ theme_override_styles/pressed = SubResource("DeclinePressed")
 theme_override_styles/hover = SubResource("DeclineHover")
 text = "Начать заново"
 
-[node name="PulloutNotebook" parent="HUD/Root" unique_id=1632579697 instance=ExtResource("34_notebook")]
+[node name="PulloutNotebook" parent="HUD/Root" unique_id=1687974006 instance=ExtResource("34_notebook")]
 anchors_preset = 0
 offset_left = 950.0
 offset_top = 204.0
@@ -945,7 +910,7 @@ theme_override_styles/hover = SubResource("ProgressEmpty")
 theme_override_styles/disabled = SubResource("ProgressEmpty")
 flat = true
 
-[node name="ClockActionButton" type="Button" parent="HUD/Root" unique_id=1605090605 groups=["button_feedback_local"]]
+[node name="ClockActionButton" type="Button" parent="HUD/Root" unique_id=872319228 groups=["button_feedback_local"]]
 visible = false
 layout_mode = 0
 mouse_default_cursor_shape = 2
@@ -957,6 +922,7 @@ theme_override_styles/focus = SubResource("ProgressEmpty")
 flat = true
 
 [node name="InventoryUI" parent="HUD" unique_id=1583018025 instance=ExtResource("9_cppqn")]
+visible = false
 offset_top = -3.0
 offset_bottom = -3.0
 metadata/_edit_use_anchors_ = true

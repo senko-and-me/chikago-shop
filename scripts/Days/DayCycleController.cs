@@ -6,7 +6,6 @@ using Godot;
 public sealed class DayCycleController
 {
 	private static int TotalDays => EconomyConfigProvider.Load().Days.TotalDays;
-	private static int FirstQuotaDay => EconomyConfigProvider.Load().Quotas.Find(quota => quota.Id == "first").DeadlineDay;
 	public DaySession Session { get; } = new(5, 3630);
 	public bool Started { get; private set; }
 	private bool _advanceWhenClosed;
@@ -150,7 +149,6 @@ public sealed class DayCycleController
 		Started = true;
 		_actionGate.Dismiss();
 		_game.RecalculateInvisibleHand();
-		_announcements.Observe(Session.RemainingSeconds, Session.Duration, false, _game.CurrentDay, TotalDays, FirstQuotaDay);
 		RefreshTimer();
 		_game.SynchronizeDayState();
 	}
@@ -159,7 +157,6 @@ public sealed class DayCycleController
 	{
 		if (!OS.IsDebugBuild() || _game.Failed || _game.Completed || Upgrades.Pending) return;
 		Session.AddTimeForTesting(30);
-		_announcements.Observe(Session.RemainingSeconds, Session.Duration, Session.IsClosed, _game.CurrentDay, TotalDays, FirstQuotaDay);
 		RefreshTimer();
 		UpdateDayNightBackground();
 		_game.SynchronizeDayState();
@@ -168,7 +165,7 @@ public sealed class DayCycleController
 	public void Tick(double delta)
 	{
 		bool crafting = _game.CraftMiniGameOpen;
-		if (!Started || Upgrades.Pending || (_game.GetTree().Paused && !crafting) || _game.Failed || _game.Completed) return;
+		if (!Started || Upgrades.Pending || (_game.GetTree().Paused && !_game.CraftClockRunning) || _game.Failed || _game.Completed) return;
 		// Expiry closes trading immediately, then advances once the current interaction is finished.
 		// Manual closure follows the same transition; never put cards over a craft window.
 		if (_advanceWhenClosed && Session.IsClosed && !_game.TradeActive && !crafting)
@@ -184,7 +181,6 @@ public sealed class DayCycleController
 		}
 		else closed = Session.Tick(delta);
 		if (closed) _advanceWhenClosed = true;
-		_announcements.Observe(Session.RemainingSeconds, Session.Duration, Session.IsClosed, _game.CurrentDay, TotalDays, FirstQuotaDay);
 		UpdateDayNightBackground();
 		bool secondChanged = RefreshTimer();
 		if (closed) _game.SynchronizeDayState();
@@ -200,7 +196,6 @@ public sealed class DayCycleController
 		{
 			case EndDayAction.Closed:
 				_advanceWhenClosed = true;
-				_announcements.Observe(Session.RemainingSeconds, Session.Duration, Session.IsClosed, _game.CurrentDay, TotalDays, FirstQuotaDay);
 				RefreshTimer();
 				UpdateDayNightBackground();
 				_game.SynchronizeDayState();
@@ -226,7 +221,6 @@ public sealed class DayCycleController
 	public void Reset(bool preserveCategories = false)
 	{
 		_tutorialUpgradeFinished = null;
-		_card.TutorialExplanation = "";
 		_restoredTutorialRemaining = null;
 		_actionGate.Dismiss();
 		_advanceWhenClosed = false;
@@ -235,7 +229,7 @@ public sealed class DayCycleController
 		Upgrades.Reset(preserveCategories);
 		Session.Reset(ExpectedDuration);
 		Started = false;
-		_announcements.BeginDay();
+		_announcements.Dismiss();
 		RefreshTimer();
 		UpdateDayNightBackground();
 	}
@@ -256,13 +250,12 @@ public sealed class DayCycleController
 		// Recover saves made in the closed-day state, including before this fix.
 		_advanceWhenClosed = Session.IsClosed;
 		Started = started || Session.IsClosed;
-		if (Started) _announcements.Restore(Session.RemainingSeconds, Session.Duration);
-		else _announcements.BeginDay();
+		_announcements.Dismiss();
 		RefreshTimer();
 		UpdateDayNightBackground();
 	}
 
-	private void ShowMafiaNotice() => _mafia.Open(
+	private void ShowMafiaNotice() => _mafia.OpenWithTransition(
 		_game.CurrentDay >= TotalDays || _game.QuotaStage == 2
 			? _game.SecondQuota : _game.FirstQuota,
 		_game.Score, !_game.Failed, _game.Completed);
@@ -282,12 +275,17 @@ public sealed class DayCycleController
 			_game.ResumeQuotaVisit();
 			return;
 		}
-		if (Upgrades.Pending && !Session.IsClosed && _game.CurrentDay >= 2 && _game.CurrentDay <= TotalDays)
+		if (Upgrades.Pending && !Session.IsClosed && _game.CurrentDay >= 2 && _game.CurrentDay <= TotalDays &&
+			!_game.GetNode<FirstTradeTutorial>("FirstTradeTutorial").HasPendingUpgradeLesson())
 			_card.Open(_game.CurrentDay - 1, _game.CurrentDay, Upgrades.Options, _game.Score);
 	}
 
-	public void FinishQuotaVisit() =>
+	public void FinishQuotaVisit()
+	{
+		// The pending day-eight hand can now include the newly available room.
+		if (Upgrades.Pending) Upgrades.Offer(_game.CurrentDay, _game.MusicWorkshopUnlocked);
 		_announcements.ShowReward(GameLocalization.Format("Получено {0}$", TradeScene.QuotaGift), ResumeUpgradeChoice);
+	}
 
 	public void CaptureCheckpointUpgrades()
 	{
@@ -308,40 +306,47 @@ public sealed class DayCycleController
 		switch (upgrade)
 		{
 			case DayUpgrade.Cash: _game.Score += Upgrades.CashReward; break;
-			case DayUpgrade.Energy: _game.EnergyRemaining++; break;
 		}
+		if (FinishTutorialUpgradeChoice()) return;
 		RefreshTimer();
 		UpdateDayNightBackground();
 		_game.RefreshDayPresentation();
 		_card.Close();
-		FinishTutorialUpgradeChoice();
 	}
 
 	private void SkipUpgrade()
 	{
 		if (!Upgrades.TrySkip()) return;
+		if (FinishTutorialUpgradeChoice()) return;
 		_game.RefreshDayPresentation();
 		_card.Close();
-		FinishTutorialUpgradeChoice();
 	}
 
 	public bool OpenTutorialUpgradeChoice(Action finished)
 	{
 		if (!TutorialActive || _game.TradeActive || TransitionOpen || _game.GetTree().Paused) return false;
 		_tutorialUpgradeFinished = finished;
-		if (!Upgrades.Pending) Upgrades.Offer(_game.CurrentDay + 1, _game.MusicWorkshopUnlocked);
-		_card.TutorialExplanation = "Выберите карту или нажмите «Пропустить».";
+		// Reconstruct the same practice hand when a pending choice is loaded.
+		Upgrades.Offer(_game.CurrentDay + 1, _game.MusicWorkshopUnlocked, training: true);
 		_game.PersistProgress();
 		_card.Open(_game.CurrentDay, _game.CurrentDay + 1, Upgrades.Options, _game.Score);
 		return _card.IsOpen;
 	}
 
-	private void FinishTutorialUpgradeChoice()
+	private bool FinishTutorialUpgradeChoice()
 	{
 		var finished = _tutorialUpgradeFinished;
+		if (finished == null) return false;
 		_tutorialUpgradeFinished = null;
-		_card.TutorialExplanation = "";
-		finished?.Invoke();
+		_card.Close();
+		Session.Reset(ExpectedDuration);
+		Started = false;
+		_advanceWhenClosed = false;
+		_game.AdvanceTrainingDay();
+		RefreshTimer();
+		UpdateDayNightBackground();
+		finished();
+		return true;
 	}
 
 	public void SynchronizeTutorialClock(bool restart)
@@ -355,8 +360,7 @@ public sealed class DayCycleController
 		Session.Restore(remaining, false, TutorialDuration);
 		_restoredTutorialRemaining = null;
 		_advanceWhenClosed = false;
-		if (Started) _announcements.Restore(Session.RemainingSeconds, Session.Duration);
-		else _announcements.BeginDay();
+		_announcements.Dismiss();
 		RefreshTimer();
 		UpdateDayNightBackground();
 	}
@@ -434,7 +438,7 @@ public sealed class DayCycleController
 	private void LayoutTimer()
 	{
 		// Six inventory slots leave less room at narrow window sizes.
-		float inventoryLeft = _inventoryStrip.GetGlobalRect().Position.X;
+		float inventoryLeft = _inventoryStrip.IsVisibleInTree() ? _inventoryStrip.GetGlobalRect().Position.X : 192;
 		float size = Mathf.Min(Mathf.Clamp(inventoryLeft - 24, 64, 180) * 1.15f, Mathf.Max(64, inventoryLeft - 12));
 		_timer.OffsetLeft = 6;
 		_timer.OffsetRight = 6 + size;

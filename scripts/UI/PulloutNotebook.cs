@@ -25,9 +25,11 @@ public partial class PulloutNotebook : Control
     private Tween? _slide;
     private bool _expanded;
     private float _targetX = float.NaN;
+    internal bool HoldOpenForLesson { get; set; }
     public bool Expanded => _expanded;
     private bool _pinned;
     private bool _tabArmed = true;
+    private const double LeaveDelay = 0.18;
     private double _leaveTime;
     private Vector2? _pointer;
     private string _lastSignature = string.Empty;
@@ -98,33 +100,40 @@ public partial class PulloutNotebook : Control
         Vector2 cursor = _pointer.HasValue
             ? GetGlobalTransformWithCanvas().AffineInverse() * _pointer.Value
             : GetLocalMousePosition();
-        Control? hovered = GetViewport().GuiGetHoveredControl();
-        bool unobstructed = hovered == null || hovered == _page || _page.IsAncestorOf(hovered);
         bool onClosedTab = ClosedHoverBounds.HasPoint(cursor);
         if (!onClosedTab) _tabArmed = true;
-        // Only the moving page owns the pointer until its slide has settled.
-        if (_slide?.IsRunning() == true) return;
-        bool wanted = _pinned || unobstructed &&
-            (_expanded ? OpenHoverBounds.HasPoint(cursor) : _tabArmed && onClosedTab);
-        _leaveTime = wanted ? 0 : _leaveTime + delta;
-        if (wanted)
-            SetExpanded(true);
-        else if (_expanded && _leaveTime > 0.22)
+        if (_expanded)
         {
-            // A pointer left in the old tab must leave it before reopening.
-            _tabArmed = !onClosedTab;
-            SetExpanded(false);
+            // Keep the page open across the gap between its right side and the window edge.
+            if (_pinned || HoldOpenForLesson || OpenHoverBounds.HasPoint(cursor))
+                _leaveTime = 0;
+            else if (_slide?.IsRunning() != true && (_leaveTime += delta) >= LeaveDelay)
+            {
+                _tabArmed = !onClosedTab;
+                SetExpanded(false);
+            }
+        }
+        else if (_slide?.IsRunning() != true && (_pinned || _tabArmed && onClosedTab && CanHoverTab()))
+        {
+            _leaveTime = 0;
+            SetExpanded(true);
         }
     }
 
-    private Rect2 ClosedHoverBounds => ExtendHoverLeft(new Rect2(ClosedX, 0, 56, _page.Size.Y));
-    private Rect2 OpenHoverBounds => ExtendHoverLeft(_page.GetRect());
+    private bool CanHoverTab()
+    {
+        Control? hovered = GetViewport().GuiGetHoveredControl();
+        return hovered == null || hovered == _page || _page.IsAncestorOf(hovered);
+    }
+
+    private Rect2 ClosedHoverBounds => ExtendToRightEdge(new Rect2(ClosedX, 0, 56, _page.Size.Y).GrowIndividual(56 * 0.2f, 0, 0, 0));
+    private Rect2 OpenHoverBounds => ExtendToRightEdge(_page.GetRect().Grow(8));
     public Rect2 HoverBounds => _expanded ? OpenHoverBounds : ClosedHoverBounds;
 
-    private static Rect2 ExtendHoverLeft(Rect2 bounds)
+    private Rect2 ExtendToRightEdge(Rect2 bounds)
     {
-        var extra = new Vector2(bounds.Size.X * 0.2f, 0);
-        return new Rect2(bounds.Position - extra, bounds.Size + extra);
+        float right = (GetGlobalTransformWithCanvas().AffineInverse() * GetViewportRect().End).X;
+        return new Rect2(bounds.Position, new Vector2(Mathf.Max(bounds.End.X, right) - bounds.Position.X, bounds.Size.Y));
     }
 
     private void SetExpanded(bool expand, bool immediate = false, bool suppressed = false)
@@ -183,9 +192,6 @@ public partial class PulloutNotebook : Control
         _buffsTitle.Text = english ? "DAY BUFFS" : "БАФФЫ ДНЯ";
         string activeBuff = selected switch
         {
-            DayUpgrade.Energy => english ? "+1 energy today" : "+1 энергия сегодня",
-            DayUpgrade.Atelier => english ? "Rare clothing chance ↑" : "Шанс редкой одежды ↑",
-            DayUpgrade.Music => english ? "Rare instruments chance ↑" : "Шанс редких инструментов ↑",
             DayUpgrade.AtelierPrice => english ? "+20% clothing prices" : "+20% к цене одежды",
             DayUpgrade.MusicPrice => english ? "+20% instrument prices" : "+20% к цене инструментов",
             // Cash is received immediately, not a lasting day buff.

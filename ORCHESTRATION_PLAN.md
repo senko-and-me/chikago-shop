@@ -9,310 +9,354 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
-### POL-34 — сохранить и опубликовать polishing
+### SC226 — затемнение диалога Кастелло
 
-Статус: `DONE`; /root coordinator/executor; 2026-11-23; POL33DONE. CP: .local/checks/pol34-publish-polishing/CP-POL-34.md.
-Task POL-34; recommended REVIEW → accepted DONE. Changed: all approved POL33 integration committed as 62947ef and pushed with accumulated earlier polishing commits to origin/polishing; ls-remote confirmed62947ef equals local HEAD and clean status. main untouched. Scene additionally contained35 new null export overrides that broke poster resource paths and counter contact; original preserved in local trade_scene-before.tscn. Removed only null assignments, kept harmless BoundsSource editor ordering.
-Checks: git diff --check PASS; previous POL33 build/domain220 and8 rendered modes PASS; latest scene --counter-item-checks FAIL with null overrides (empty poster path, displaced contact), PASS exit0 after repair, only known certificate warning. Evidence .local/checks/pol34-publish-polishing/{scene-before,scene-before-errors,scene-fixed,scene-fixed-errors}.log. Read-set exception: new scene serialization diagnosed before publication, within user-authorized all-changes scope. Risks/blocker: none. Next: test published polishing; this publication record is committed/pushed separately. No main writes or exports.
-### POL-33 — объединить меню и тени мастерских из архива
+SC226 DONE; /root; CP `.local/checks/sc226/CP-SC226.md`; SC225 DONE. Последнее уточнение пользователя: только Кастелло. Общий чёрный переход при входе/выходе разговора после первой квоты; длительность как у меню. Разговор сына и финальные экраны вне scope.
 
-Статус: `DONE`; /root coordinator/executor; 2026-11-23; POL32DONE. CP: .local/checks/pol33-archive-integration/CP-POL-33.md.
+```text
+Task: SC226
+Recommended status: REVIEW -> accepted DONE; gate PASSED 27.11.2026
+Changed: MafiaQuotaNotice uses shared SceneTransition for nonterminal Castello entry/Continue/Escape exit; DayCycle calls animated entry. Common helper opt-in retains explicit destination pause for in-place story modals; existing scene changes retain previous semantics. Transition revision cancels stale entry after silent reset. Quota integration tests assert opaque swap, paused entry/dialogue, real Continue, repeat Escape ignored, single acknowledgement and no premature gift. Immediate Close API retained for resets/fixtures.
+Checks: solution build PASS0warnings/errors; rendered quota-visit, scene-transition, campaign-balance PASS exit0/stderr empty (.local/checks/sc226/). Scoped diffcheck PASS. Shared0.22s out/0.25s in, input cover layer1000; dialogue appears only at opacity>=0.99. Existing story reward/reload/checkpoint and both endings regressions pass.
+Acceptance: first-quota Castello scene enters/leaves through full black; pause remains while speaking and releases on return; son and terminal presentation unchanged.
+Read-set exception: bounded search for scene-transition runner located existing Menu suite; no source/.
+Risks/blocker: none scoped; no commit/push.
+Next: user preview Castello transition.
+```
 
-Task: POL-33
-Recommended status: REVIEW → accepted DONE
-Changed: approved selective integration of ChikagoShop_Menu_And_Workshop_Shadows_FULL.zip onto polishing717b47d; exact scope in CP and integration-review.txt. Import menu/map/workshop/control shadows, reserved-sale item shadow, tilted glass-fitted instruments, random clothing10–20s/music15–25s, proportional tips and optional saved initial patience, buyer ticking during both craft overlays. Retain current tutorial, category preview, offer gates,180s repeating practice clock, upgrade/notebook lessons, bottom-right Skip, reduced counter items/drum mask and white cards/deck layout. Update localized wait hint, documentation and targeted/domain tests. No replacement by old archive snapshot.
-Checks: dotnet build ChikagoShop.sln --no-restore PASS zero warnings/errors; domain PASS220/220 (DOTNET_ROLL_FORWARD=Major); rendered --timed-trades-shadows-checks, --interface-fixes-checks, --tutorial-checks, --buyer-arrival-checks, --buyer-patience-checks, --counter-item-checks, --polishing-start-checks, --card-dealing-checks PASS exit0. git diff --check PASS. Only known root certificate store warning in isolated Godot stderr. Evidence .local/checks/pol33-archive-integration/{manifest.csv,integration-review.txt,build.log,domain.log,*-checks logs}; actual runtime log names use the mode without -checks.
-Acceptance: all four user decisions implemented; real pause freezes clocks, craft overlays tick once, initial/remaining duration survive save and reroll, expiry still forces half price, shadows do not intercept input, instrument fit720p/1080p, complete current guide and purchase/skip/card regressions pass. User saves untouched; optional save field without schema-number change as archive. Balance report explicitly historical; no new Monte Carlo calibration claim.
-Read-set exception: exact serialized-field list in ProgressMigrationTests inspected after new approved optional field made legacy assertion fail; updated test exercises non-null roundtrip and exact field list. Test fixture retains Fullscreen Script through repeated reloads as existing tutorial fixture. Both extensions recorded in CP. source/ not read.
-Risks/blocker: none for approved integration; no additional player-facing decisions found. Next: user tests polishing in editor. No commit/push/export; main untouched.
-### POL-32 — сохранить polishing и включить обновления main
+### SC225 — кнопка открытия и подсказка мастерской
 
-Статус: `DONE`; /root coordinator/executor; 2026-11-23; POL31DONE. CP: .local/checks/pol32-commit-main/CP-POL-32.md.
+SC225 DONE; /root; CP `.local/checks/sc225/CP-SC225.md`; SC224 DONE. Активная сценовая кнопка «Открыть» вместо постоянного пояснения. Клик показывает временную подсказку о первой неделе тем же механизмом, что предупреждение начала дня. Разблокировка остаётся сюжетной; существующие пользовательские изменения сохранены.
 
-Task POL-32; recommended REVIEW → accepted DONE. Changed: accumulated UI/tutorial work saved in polishing commit 007e39b; merge origin/main at 28b8060. Five conflicts reported immediately; user explicitly chose our tutorial/interface/localization plus incoming item sizes and 10-second buyer patience. Kept both plan histories, current tutorial and tests, notebook/card steps and 180-second training clock; incorporated main counter sizes, smaller drum art/playable mask, reward timing and corresponding checks. English wait hint adjusted to 10 seconds. Existing monochrome-card checks retained alongside incoming test fixture corrections. main and remote branches untouched.
+```text
+Task: SC225
+Recommended status: REVIEW -> accepted DONE; gate PASSED 27.11.2026
+Changed: MusicWorkshopUnlockPanel script/scene; DayStartGate reusable timed message; EN localization; quota integration assertions; plan. Enabled Open button shows week-unlock message for3.5seconds using existing nonblocking notice. No transaction or domain changes.
+Checks: solution build PASS0warnings/errors; rendered quota-visit and poster-navigation PASS exit0/stderr empty (.local/checks/sc225/). Real RU/EN clicks before/after day Start, timeout, unchanged money/access, replacement with normal day-start warning, dialogue completion/free unlock pass. Scoped diffcheck PASS.
+Acceptance: short enabled button; explanation appears on request, localized and timed; story still grants access. Input outside button remains unchanged.
+Read-set exception: attempted historical day-start-gate suite fails before exercising notice because it requires retired inventory fixture; documented rather than changing unrelated coverage. Current quota suite directly covers normal gate before/after day Start. No source/.
+Risks/blocker: no scoped blockers; historical inventory gate suite not claimed green. User changes and SC224 retained; no commit/push.
+Next: user preview Open-button notice.
+```
 
-Checks: dotnet build ChikagoShop.sln --no-restore PASS 0 warnings/errors; domain tests PASS 215/215 with DOTNET_ROLL_FORWARD=Major (installed runtime is newer than target net8); rendered --tutorial-checks, --buyer-arrival-checks, --buyer-patience-checks, --counter-item-checks, --polishing-start-checks all PASS exit0. Root certificate store warning only in isolated Godot runs. Evidence .local/checks/pol32-commit-main/{build-merged,domain,tutorial,buyer-arrival,buyer-patience,counter-item,polishing-start}.log and corresponding stderr logs. Read-set exception: incoming affected test/config files required for merge validation, authorized in CP. Acceptance: user-selected combination built and verified in isolated copy; ordinary arrivals10s/expiry50%/no-reroll, compact drum and full tutorial preserved. Risks/blocker: none. Next: test merged polishing in editor; no push or exports requested.
-### POL-31 — блокнот после учебных карточек
+### SC224 — разговор отца и сына
 
-Статус: `DONE`; /root coordinator/executor; 2026-11-22; POL30DONE. CP: .local/checks/pol31-notebook-lesson/CP-POL-31.md.
+SC224 DONE; /root; CP `.local/checks/sc224/CP-SC224.md`. M223 DONE. Короткий разговор об открытии мастерской: сын обращается к отцу как к отцу, оба отвечают друг другу; подарок и сюжетный триггер сохранены. RU/EN и существующая quota-проверка входят в scope. Пользовательские изменения TradeScene.cs и новые UID сохранены; source/ и публикация вне scope.
 
-Handoff: Task POL-31; recommended REVIEW → accepted DONE. Changed: scripts/UI/FirstTradeTutorial.cs, localization/en.tres, tests/Integration/ProjectTest.Tutorial.cs, этот план. После покупки/пропуска карточки жёлтая рамка выделяет реальную страницу блокнота, обычное окно просит навести мышь для просмотра заданий/улучшений. Непрерывное реальное наведение 1s продолжает гайд к музыкальной мастерской; уход сбрасывает таймер. Непрочитанный/пройденный шаг сохраняется optional-флагом tutorial.cfg. Блокнот не открывается автоматически и не перемещается.
+```text
+Task: SC224
+Recommended status: REVIEW -> accepted DONE; gate PASSED 27.11.2026
+Changed: dialogue/quota_visitor.ru.json; localization/en.tres; tests/Integration/ProjectTest.QuotaVisit.cs; ORCHESTRATION_PLAN.md. Six alternating lines replace two businesslike monologues; father/son address, familiar teasing, practical support and breakfast. English updated.
+Checks: solution build PASS0warnings/errors; rendered quota-visit PASS exit0/stderr empty (.local/checks/sc224/). New assertions confirm alternating speakers and translation of every line; existing cancellation, reload, gift once, checkpoint/free unlock pass. Scoped diffcheck PASS.
+Acceptance: father speaks too; son says Dad, not Frankie; short family exchange, unchanged reward transaction.
+Read-set exception: bounded DialoguePlayer/session diagnosis for speaker and pagination compatibility; no source/.
+Risks/blocker: none scoped; user's TradeScene.cs edits and generated UID files untouched, no commit/push.
+Next: user preview revised workshop conversation.
+```
 
-Checks: dotnet build ChikagoShop.sln --no-restore → PASS (0 warnings/errors); rendered Godot --tutorial-checks → PASS exit0 TUTORIAL_CHECKS_PASS (покупка/пропуск, реальное открытие блокнота, задержка/сброс, reload, подсветка, RU/EN, 960x540/1280x720 и весь остальной гайд); git diff --check → PASS. Evidence: .local/checks/pol31-notebook-lesson/build.log, tutorial.log, tutorial-errors.log. В stderr только существующее предупреждение root certificate store. Read-set exception: нет. Risks/blocker: нет. Next: пользовательская проверка расположения подсказки. Commit/push/export не выполнялись; прежние изменения сохранены.
+### M223 — последовательное объединение main и new-update
 
-### POL-30 — пауза и пояснение перед учебными карточками
+Пользователь разрешил два последовательных объединения. Решения: сохранить выбор10предметов, пять узоров и две сценовые миниигры; принять витрины вместо инвентаря, ручную продажу/возврат Goodmornee; удалить редкости и улучшения времени (явный ответ пользователя); оставить автоматическое бесплатное открытие после диалога, подарок1000$, обучение→пролог→игра, затемнения, приоритет перемещения и правый триггер блокнота.
 
-Статус: `DONE`; /root coordinator/executor;2026-11-22;POL29DONE. CP: .local/checks/pol30-upgrade-intro/CP-POL-30.md.
-Task: POL-30
-Recommended status: REVIEW → принято координатором, DONE
-Changed: FirstTradeTutorial continuous pack-hover1s then UpgradeIntroduction ordinary panel with explicit Открыть окно улучшений; separate optional saved intro flag, reset on replay/leave and actual purchase/skip. DayCycleController card hint shortened to choose-or-skip only; RU/EN translations; Tutorial regression tests; ORCHESTRATION_PLAN.md. All prior dirty edits retained.
-Checks: build PASS0warnings/errors; final rendered --tutorial-checks PASS: subsecond hover no popup/cards, leave resets delay,1s displays normal intro while cards stay closed, intro/button fit and translate960x540/1280x720, reload intro still requires button, explicit click launches actual cards, short menu hint, pending menu reload/purchase/zero-money skip/next-guide and prior regressions PASS. git diff-check PASS. Evidence .local/checks/pol30-upgrade-intro/{build,tutorial-final,tutorial-final-errors}.log.
-Acceptance: hover pack→one-second pause→normal Also-between-days explanation→open-menu button→cards with only choose-or-skip text. No automatic immediate card opening. Existing purchase/skip/continuation preserved; optional tutorial config flag only, no game schema change.
-Read-set exception: PauseMenu.cs83/FullscreenToggle.cs inspected after internal SwapGCHandleForType errors in two long reload test runs. Fixture retains fullscreen Script resource via strong reference and GC.KeepAlive; final fresh-process run clean except known certificate warning. Product pause/fullscreen code not changed, no claim of fixing engine internals. source/ not read.
-Risks/blocker: none for feature/final checks; initial engine-handle logs retained as evidence. No commit/push/exports.
-Next: user checks delayed intro and explicit upgrade menu button.
-### POL-29 — учебный выбор улучшения после пачки
+| Задача | Статус | Исполнитель | CP |
+| --- | --- | --- | --- |
+| M223-BASE | DONE | /root | .local/checks/merge223/CP-M223-BASE.md |
+| M223-INTEGRATION | DONE | /root | .local/checks/merge223/CP-M223-INTEGRATION.md |
 
-Статус: `DONE`; /root coordinator/executor;2026-11-22;POL28DONE. CP: .local/checks/pol29-upgrade-lesson/CP-POL-29.md.
-Task: POL-29
-Recommended status: REVIEW → принято координатором, DONE
-Changed: FirstTradeTutorial queues UpgradeChoice after pack hover, saves optional pending lesson flag, resumes pending menu on load and continues Summary music page after choice. DayCycleController opens same DayTransitionCard with existing Upgrades rules and buy/skip transactions, invokes lesson callback after close; TradeScene only forwarding method. DayTransitionCard optional RU/EN explanation label, compact420px tutorial-only card height vs normal460, live explanation translation. Tutorial integration coverage and localization; ORCHESTRATION_PLAN.md. Previous dirty work preserved.
-Checks: build PASS0warnings/errors; full rendered --tutorial-checks PASS: actual pack hover opens real animated card menu and hides tutorial panel; RU/EN explanation/card bounds fit960x540/1280x720, pending reload restores menu, actual purchase applies cost/reward once without advancing day/time, duplicate input no charge, zero-funds skip free and continues Music workshop, resolved choice stays resolved on reload, later guide/skip/replay and prior behavior pass. --card-dealing-checks PASS ordinary animated deal/flip/buy/skip/cancel/resize, white card art and centered deck. git diff-check PASS. Evidence .local/checks/pol29-upgrade-lesson/{build,tutorial,card-dealing}.log.
-Acceptance: after quota pack lesson player receives actual between-day cards with explanation, can buy one or skip; only then returns to rest of tutorial. Training day/resources are not reset or advanced; existing cost/effect logic used. Pending tutorial metadata optional, no game schema change; normal between-day menu unaffected.
-Read-set exception: none; domain/scene assets read-only, source/ not read.
-Risks/blocker: none; existing certificate warning only. No commit/push/exports.
-User refinement: explanation now starts Также между днями..., matching EN You can also...; text-only, source/translation key match and diff-check PASS. Next: user plays pack→cards→choose/skip→rest of guide.
-### POL-28 — оставить в Дни и квоты только наведение на пачку
+BASE: исправить два устаревших теста, проверить и опубликовать нашу версию в main с отдельным merge. Затем отдельная integration/new-update от main: объединить ancestry Goodmornee, адаптировать его витрины/миграции к нашему каталогу, проверить и выполнить второй merge. Резервная ссылка перед интеграцией обязательна; source/ не читается. Общие сцены, save schema и план принадлежат root.
 
-Статус: `DONE`; /root coordinator/executor;2026-11-22;POL27DONE. CP: .local/checks/pol28-quota-copy/CP-POL-28.md.
-Task: POL-28
-Recommended status: REVIEW → принято координатором, DONE
-Changed: FirstTradeTutorial Summary first page and matching EN remove shop-closing sentence; ORCHESTRATION_PLAN.md. Prior dirty edits retained.
-Checks: source/key equality PASS; diff-check PASS. Copy-only, no new tests/runtime rerun.
-Acceptance: Days/quotas body only says Наведите мышь на пачку сигарет, чтобы узнать день, сумму и срок квоты. Hover progression unchanged.
-Read-set exception: none. Risks/blocker: none. No source/assets/commit/push/exports.
-Next: view shortened quota lesson.
-### POL-27 — убрать предложение про облачко из запроса покупателя
+BASE gate PASSED: main2b8543a опубликован, feature434956f; domain224PASS, build0warnings/errors. Backup backup/pre-integration-20261127 указывает на0724734. Второй merge строится от ours с явным переносом согласованных витрин/миграций Goodmornee; его откаты камеры, startup и переходов не входят в итоговое поведение.
 
-Статус: `DONE`; /root coordinator/executor;2026-11-22;POL26DONE. CP: .local/checks/pol27-request-copy/CP-POL-27.md.
-Task: POL-27
-Recommended status: REVIEW → принято координатором, DONE
-Changed: BuyerRequestMessage and matching English translation removed thought-bubble sentence; ORCHESTRATION_PLAN.md. Prior dirty edits retained.
-Checks: source/translation key equality PASS; diff-check PASS. Text-only; existing request tests still assert retained category and atelier request phrases, no new tests/build needed.
-Acceptance: only general clothing/instrument categories and current customer's atelier request remain. Preview/Next/UI behavior untouched.
-Read-set exception: none. Risks/blocker: none. No source/assets/commit/push/exports.
-Next: view shortened buyer-request hint.
-### POL-26 — сократить подсказку запроса инструмента
+M223-INTEGRATION gate OPEN → PASSED, /root, 27.11.2026.
 
-Статус: `DONE`; /root coordinator/executor;2026-11-22;POL25DONE. CP: .local/checks/pol26-music-copy/CP-POL-26.md.
-Task: POL-26
-Recommended status: REVIEW → принято координатором, DONE
-Changed: MusicRequestMessage now only Такому покупателю нужен инструмент из музыкальной мастерской; matching English entry and existing tutorial text assertion updated; ORCHESTRATION_PLAN.md. Previous dirty work retained.
-Checks: RU/EN key matches source PASS, existing English assertion matches revised translation, diff-check PASS. Copy-only, no behavior change/new tests/full runtime rerun.
-Acceptance: introductory sentence about icon appearance removed; actual icon demonstration/Next unchanged.
-Read-set exception: none. Risks/blocker: none; no source/assets/commit/push/exports.
-Next: view shortened instrument-request hint.
-### POL-25 — продолжить Дни и квоты наведением на пачку
+```text
+Task: M223-INTEGRATION
+Recommended status: REVIEW -> accepted DONE
+Changed: chosen-item crafting reserves matching room display/D at paid start; exact result replaces grade. Goodmornee display/manual-sale/return flow adapted in TradeScene.Showcases, no random substitution. No active inventory, rarity or duration-card UI/rules. Explicit per-item base price/rerolls; v20 migration preserves old stock, overflow, active reserved trades and distinct same-kind grades. Tutorial uses catalog/display/manual sales; free first-quota room/gift, startup/fades/poster/notebook retained. RU/EN/debug settings updated.
+Checks: domain226/226PASS; solution build0warnings/errors. Eight rendered suites PASS exit0/stderr empty: merged-crafting, tutorial, quota-visit, poster-navigation, notebook-hover, scene-transition, intro-latency, campaign-balance. Final merged-crafting rerun PASS including screenshots, actual return click, paid expiry, F10 all tabs. Scoped diffcheck PASS. Evidence .local/checks/merge223/ and domain-results/m223-final.trx. Catalog EN960 screenshots visually reviewed. Simulator1000runs/profile confirms feasibility with unchanged prices/quotas, explicit per-item costs; matching buyer availability/timing assumed, not human win-rate evidence.
+Acceptance: all10GUI selections,5patterns/instrument masks, exact one debit/D on disk, free cancel/full slots/resources, pause/day end, manual category sales/return/rerolls, old inventory/checkpoint/active-trade migration and reload, complete new tutorial and story unlock pass. MainMenu/camera/fade changes retained from first merge. Both parent histories preserved through pending two-parent merge.
+Read-set exception: bounded helper/legacy-test/tooltip/debug diagnosis; no source/ access. Write-set expansions recorded in CP.
+Risks/blocker: none scoped. Legacy wire fields, inert rarity metadata and hidden inventory helpers retained for backward compatibility; historical inventory-specific suites are not claimed green. No human full-campaign playtest; fixed-timing balance is feasibility only.
+Next: publish integration/new-update, then second merge into main and verify both ancestries.
+```
 
-Статус: `DONE`; /root coordinator/executor;2026-11-22;POL24DONE. CP: .local/checks/pol25-pack-lesson/CP-POL-25.md.
-Task: POL-25
-Recommended status: REVIEW → принято координатором, DONE
-Changed: FirstTradeTutorial first Summary page hides Done/Actions, advances via actual ProgressPanel hover+expanded to next summary page once and saves progress; removes upgrade-selection sentence RU/EN. Tutorial integration assertions/flow updated; ORCHESTRATION_PLAN.md. Prior dirty edits retained.
-Checks: build PASS0warnings/errors; full rendered --tutorial-checks PASS: idle first page no Next/no emptyrow/no automatic pack opening, actual hover opens pack and advances exactly one page, next page has Next, leaving pack retracts it, reload resumes workshop page and doesn't open pack, later summary pages/finish/skip persist, prior180/time/offer/first-sale/no-buyers regressions PASS. git diff-check PASS. Evidence .local/checks/pol25-pack-lesson/{build,tutorial}.log.
-Acceptance: Days/quotas continues by hovering actual pack; explanatory text about day upgrades removed. Later Next/Understood and corner skip remain, no pack auto-expansion or domain changes.
-Read-set exception: none; no source/assets/schema/ProgressPanel edits.
-Risks/blocker: none; existing certificate warning only. No commit/push/exports.
-Next: user hovers the pack to advance the quota lesson.
-### POL-24 — подсказки внутри учебной вышивки
+### SC-222 — область наведения блокнота до правого края
 
-Статус: `DONE`; /root coordinator/executor;2026-11-22;POL23DONE. CP: .local/checks/pol24-craft-guide/CP-POL-24.md.
-Task: POL-24
-Recommended status: REVIEW → принято координатором, DONE
-Changed: EmbroideryGame uses tutorial-only stateful in-modal Hint (18px): Ready clickStart, Playing highlighted points in order, Finished clickCollect; normal embroidery/polishing keep their existing16px hints. RU/EN entries; Tutorial integration tests actual start/stitch/collect; EmbroideryTarget fixture starts day; ORCHESTRATION_PLAN.md. Prior dirty edits preserved.
-Checks: build PASS0warnings/errors; rendered --tutorial-checks PASS: three localized hints fit panel960x540/1280x720, actual Start begins play, actual highlighted point increments stitch, Collect unpauses and returns guide to Select; all prior tutorial/time/request/offer/skip/reload behavior PASS. Rendered --embroidery-target-checks PASS after fixing pre-existing day-start fixture; target contrast/positions and actual clicks, STITCH_AUDIO_CHECKS_PASS mouse/touch/3variants/silentmiss PASS. git diff-check PASS. Evidence .local/checks/pol24-craft-guide/{build,tutorial,embroidery-target}.log.
-Acceptance: tutorial instructions are visible inside the crafting modal while main tutorial panel hides; prompts follow ready/play/result and do not appear in ordinary crafting. Mechanics/costs/timers/input unchanged.
-Read-set exception: SoundEffects.cs read-only diagnostics for failed old target fixture; coordinator expanded CP write-set to EmbroideryTarget test one line starting day before Open (previously no modal opened due existing day gate). No product audio change; source/ not read.
-Risks/blocker: none; existing certificate warning only. No commit/push/exports.
-Next: user checks Create→Start→highlighted dots→Collect in tutorial.
-### POL-23 — пояснить досрочное завершение дня по часам
+| Задача | Статус | Исполнитель | CP |
+| --- | --- | --- | --- |
+| SC-222 | DONE | /root | .local/checks/sc222/CP-SC-222.md |
 
-Статус: `DONE`; /root coordinator/executor;2026-11-22;POL22DONE. CP: .local/checks/pol23-start-hint/CP-POL-23.md.
-Task: POL-23
-Recommended status: REVIEW → принято координатором, DONE
-Changed: FirstTradeTutorial Start hint and matching EN localization; ORCHESTRATION_PLAN.md. Previous dirty edits retained.
-Checks: RU/EN key matches source PASS; git diff-check PASS. Text-only, no redundant tests/build.
-Acceptance: appended После начала дня можно нажать на часы, чтобы завершить день досрочно. Existing click/end behavior and training end-day guard unchanged; explains normal gameplay action as requested.
-Read-set exception: none. Risks/blocker: none. No assets/source/commit/push/exports.
-Next: view expanded Start tutorial hint.
-### POL-22 — уточнить стоимость создания предмета в подсказке
+SC221 DONE; область наведения закрытого и открытого блокнота продлевается до правого края viewport с сохранением вертикальных границ и левого отступа. Один исполнитель; остальные локальные изменения сохранены, source/ и публикация вне scope.
 
-Статус: `DONE`; /root coordinator/executor;2026-11-22;POL21DONE. CP: .local/checks/pol22-craft-hint/CP-POL-22.md.
-Task: POL-22
-Recommended status: REVIEW → принято координатором, DONE
-Changed: FirstTradeTutorial Craft copy and matching localization/en.tres entry; ORCHESTRATION_PLAN.md. Prior dirty edits retained.
-Checks: RU/EN source key equality PASS; git diff-check PASS. Text-only change, no new tests or redundant full runtime suite.
-Acceptance: Создание предмета тратит деньги и одну энергию за раз. Removed Нажимайте на светящиеся точки from tutorial Craft hint. Create button and rarity explanation remain; mini-game hint/mechanics unchanged.
-Read-set exception: none. Risks/blocker: none. No source/assets/commit/push/exports.
-Next: view revised crafting tutorial hint.
-### POL-21 — убрать надпись при наведении на часы в обучении
+```text
+Task: SC-222
+Recommended status: REVIEW -> accepted DONE; gate OPEN -> PASSED 27.11.2026
+Changed: PulloutNotebook extends both hover rectangles to viewport right in local canvas coordinates; no extra input-blocking control. Resize follows current viewport. Quota test geometry assertion updated; dedicated notebook-hover runner and regression added.
+Checks: build PASS0warnings/errors; rendered notebook-hover PASS exit0/stderr empty at960/1280/1920 widths. Real mouse motion opens from far right, holds unpinned page over the visible gap, closes above bounds and outside window, reopens on return. Original left margin preserved. Scoped diffcheck PASS.
+Acceptance: full right-side gap is part of the trigger in closed/open states; vertical limits and exit behavior retained.
+Read-set exception: bounded search of notebook hover assertions to locate affected quota fixture; no source access.
+Risks/blocker: none scoped; pending SC221 changes preserved, no commit/push.
+Next: user preview right-edge notebook hover.
+```
 
-Статус: `DONE`; /root coordinator/executor;2026-11-22;POL20DONE. CP: .local/checks/pol21-clock-hover/CP-POL-21.md.
-Task: POL-21
-Recommended status: REVIEW → принято координатором, DONE
-Changed: DayCycleController suppresses tutorial end caption/tooltip on clock, removes obsolete notice countdown; retains manual-end guard. Tutorial regression asserts numeric clock and no caption/tooltip after actual hover/click; ORCHESTRATION_PLAN.md. All prior dirty changes retained.
-Checks: build PASS0warnings/errors; rendered --tutorial-checks PASS all first-sale/navigation/music/request/180s-loop/skip/reload regressions, including actual clock hover/click remains numeric and cannot end training. --closed-reroll-checks PASS ordinary manual/automatic closure. git diff-check PASS. Evidence .local/checks/pol21-clock-hover/{build,tutorial,closed-reroll}.log.
-Acceptance: Завершите обучение no longer replaces training clock digits or appears as hover tooltip. Ordinary end-day hover unchanged; Start clock action and infinite180 training preserved.
-Read-set exception: none. Risks/blocker: none; existing certificate warning only. No source/assets/schema/economy/commit/push/exports.
-Next: user checks hovering the training clock.
-### POL-20 — запрос одежды и пустая касса после учебной продажи
+### SC-221 — бесплатная мастерская после первой недели
 
-Статус: `DONE`; /root coordinator/executor;2026-11-22;POL19DONE. CP: .local/checks/pol20-tutorial-counter/CP-POL-20.md.
-Task: POL-20
-Recommended status: REVIEW → принято координатором, DONE
-Changed: FirstTradeTutorial BuyerRequest appends current buyer wants atelier clothing, RU/EN; DefersBuyerArrival extends existing tutorial gate through post-sale Summary using observed sale and live Accepted count; BuyerBonuses adapter renamed property; Tutorial tests; ORCHESTRATION_PLAN.md. All prior dirty edits retained.
-Checks: build PASS0warnings/errors; rendered --tutorial-checks PASS including localized current clothing request, post-sale old figure/thought hidden, no next arrival event/bell even with energy, stock/resources preserved, injected legacy Summary waiting buyer normalized away on reload. Full guide/music demo/Next/180s loop/skip/replay regressions PASS. --buyer-arrival-checks PASS ordinary immediate arrival/availability/patience. git diff-check PASS. Evidence .local/checks/pol20-tutorial-counter/{build,tutorial,buyer-arrival}.log.
-Acceptance: request hint ends “Сейчас этому покупателю нужна одежда из ателье.” Existing FinishTrade removes sold customer; tutorial gate prevents replacement throughout remaining guide, including before tutorial observes Accepted change and after save/reload. Standard buyers outside tutorial unaffected.
-Read-set exception: none. No source/assets/schema/economy changes. Risks/blocker: none; existing certificate warning only. No commit/push/exports.
-Next: user checks request text and empty counter after tutorial sale.
-### POL-19 — бесконечный учебный день по180секунд
+| Задача | Статус | Исполнитель | CP |
+| --- | --- | --- | --- |
+| SC-221 | DONE | /root | .local/checks/sc221/CP-SC-221.md |
 
-Статус: `DONE`; /root coordinator/executor;2026-11-22;POL18DONE. CP: .local/checks/pol19-training-clock/CP-POL-19.md.
-Task: POL-19
-Recommended status: REVIEW → принято координатором, DONE
-Changed: DaySession.TickRepeating generic practice clock; DaySessionTests; DayCycleController tutorial180 duration/sync/restore retention/repeating ticks; FirstTradeTutorial init/restart sync and optional training_clock_duration marker; TradeScene.cs only forwarding call; Tutorial integration checks; ORCHESTRATION_PLAN.md. All previous dirty edits retained.
-Checks: build PASS0warnings/errors; DaySessionTests PASS32/32 including exact/overshoot/repeated180 expiry, invalid delta, energy and ordinary expiry. Rendered --tutorial-checks PASS: start180, nearzero remainsopen, reset180 and repeat through gameplay/craft adapter without changing day/resources/items/guide,172.75s reload preserved despite normal duration clamp, old tutorial marker missing gets180 once; full Offer/request/music/camera/pause/skip/replay/firstsale guide and normal timer after finish/skip pass. --closed-reroll-checks PASS ordinary timeout/manual closure. --buyer-arrival-checks PASS ordinary arrivals/availability/patience. git diff-check PASS. Evidence .local/checks/pol19-training-clock/{build,domain,tutorial,closed-reroll,buyer-arrival}.log.
-Acceptance: active tutorial day never closes naturally: countdown180 refills180, no upgrades/newday/state reset. Normal60/90 outside tutorial unchanged. Tutorial reading holds clocks as POL18; buyer patience remains its existing independent20s. Old training migrates once via optional config marker; remaining time then restores accurately. Game schema unchanged.
-Read-set exception: none; no source/assets/economy configuration changes.
-Risks/blocker: none; prior certificate warning only. No commit/push/exports.
-Next: user checks three-minute repeating training clock.
-### POL-18 — подтверждение инструкции первой продажи
+SC220 DONE; пользователь запросил бесплатное сюжетное открытие музыкальной мастерской после первой недели. Разблокировка по завершении разговора посетителя после первой квоты; существующий подарок1000$ остаётся на закупку инструментов. Цена покупки и ручная кнопка открытия больше не действуют. Сценарий Google Docs прочитан (вкладка «Сценарий»): есть пролог, готовой сцены мастерской нет; короткие реплики пишутся в его стиле. Совместимость сохранений, checkpoint, обучение и RU/EN входят в приёмку; source/, внешние записи/публикация вне scope. Один владелец всех файлов.
 
-Статус: `DONE`; /root coordinator/executor;2026-11-22;POL17DONE. CP: .local/checks/pol18-offer-confirm/CP-POL-18.md.
-Task: POL-18
-Recommended status: REVIEW → принято координатором, DONE
-Changed: FirstTradeTutorial _offerInstructionRead and optional tutorial-config persistence; BlocksFirstOffer extends across Offer instruction until Next, then hides only hint panel; Next visible on unread Offer. RU/EN copy removes speed sentence portion, quality bonus retained. tests/Integration/ProjectTest.Tutorial.cs and ORCHESTRATION_PLAN.md. Prior dirty edits preserved.
-Checks: build PASS0warnings/errors; rendered --tutorial-checks PASS: reading freezes buyer/day clocks and blocks mouse✓/×, keyboardF and direct API calls; Next hides Panel, retains yellow Highlight and corner skip; real0.5s tick resumes both timers; reload preserves hidden hint/enabled practice; actual rejection spends one attempt and keeps hint hidden; sale resumes Summary with correct payout. Existing request/music demo, camera retention, localization/replay/skip/reload pass. --buyer-arrival-checks PASS ordinary arrivals/patience/availability; git diff-check PASS. Evidence .local/checks/pol18-offer-confirm/{build,tutorial,buyer-arrival}.log.
-Acceptance: no trading or running time while offer instruction is visible. After Next, normal trading and buyer clock with yellow frame continue until accepted, then guide continues. New tutorial config key defaults unread for old config; game schema/economy/speed bonus calculation unchanged, only explanatory speed text removed.
-Read-set exception: none; no source/assets/scenes changes. Risks/blocker: none; existing certificate warning only. No commit/push/exports.
-User refinement: удалена также фраза про надбавку за качество из Offer и matching EN. Только текст, расчёт наград не менялся; проверены совпадение ключа перевода и diff-check. Next: user checks the instruction→Next→trade→guide flow.
-### POL-17 — пояснение кнопок и окончания времени в первой продаже
+SC221 gate `OPEN → PASSED`, принято /root 27.11.2026.
 
-Статус: `DONE`; /root coordinator/executor;2026-11-22;POL16DONE. CP: .local/checks/pol17-offer-hint/CP-POL-17.md.
-Task: POL-17
-Recommended status: REVIEW → принято координатором, DONE
-Changed: FirstTradeTutorial Offer text and matching localization/en.tres entry; ORCHESTRATION_PLAN.md. Prior dirty edits retained.
-Checks: build PASS0warnings/errors; RU/EN key matches source and requested new copy PASS; git diff-check PASS. Evidence .local/checks/pol17-offer-hint/build.log. Existing symbol/flow tests unchanged; no behavior change warrants new tests.
-Acceptance: click ✓ accepts offer; × changes customer; parentheses explain remaining changes; timeout means accepting reduced price. Red-bar/old countdown paragraph removed from Offer lesson. Speed/quality bonus sentence retained verbatim; EN updated equivalently.
-Read-set exception: none. Risks/blocker: none. No gameplay/layout/assets/schema/source/exports/commit/push changes.
-Next: inspect revised first-sale instruction in game.
-### POL-16 — пример иконки запроса инструмента
+```text
+Task: SC-221
+Recommended status: REVIEW -> accepted DONE
+Changed: music unlock cost0; paid click removed; scene-authored disabled story notice in two readable lines; two concise Son lines inspired by supplied Scenario tab, RU/EN. Existing first-quota completion now grants room+checkpoint without cash debit, preserving the one-time1000supplies gift. Pending day8 cards include music. Legacy rewarded/old no-visitor saves migrate access free without reward replay; paid access retained. Tutorial covers migrated opens. Retired F10 unlock price discarded; simulator opens free from week2. TradeScene.cs only removes prior paid logic/wiring; story transaction remains owned by QuotaVisit. Non-story test setups use an explicit private fixture helper; quota suite exercises real flow.
+Checks: build PASS0warnings/errors. Focused domain25PASS incl9story migration cases; full domain224=222PASS,2same documented Cash-price/wire-list failures. Eleven rendered isolated suites PASS exit0, final stderr empty: quota-visit, selective-crafting, energy-removal, craft-session, craft-localization, room-title, debug-hotkey, day-start-gate, day-expiry, campaign-balance, tutorial. New quota assertions cover week1 direct action, cancel, reload mid-dialogue, zero cash completion, legacy rewarded zero cash save, checkpoint/reload/idempotence. RU/EN dialogue and locked-room screenshots reviewed, in .local/checks/sc221/. Diffcheck PASS; six previously external user files unchanged vs HEAD97a231d. Domain budget2120final with music/base sales,490without gift using atelier only; money/quotas/sale/craft prices unchanged.
+Acceptance: locked until first quota conversation completes; free access and all displays/inventory upgrade retained across save/checkpoint; no duplicate gift/charge; new game resets; completed migration gets polishing lesson. Scene owns notice text/font/geometry.
+Read-set exception: bounded diagnostic PulloutNotebook inspection exposed stale hover assertion; updated test to current8px margin and reset real pointer hover deterministically. Broader historical save/portrait tests inspected only; no source/ or Doc writes. Captures copied from test helper temp path.
+Risks/blocker: no scoped blockers. One transient Mono GCHandle log in day-expiry had exit0; independent rerun passed stderr empty. Additional historical save-compatibility suite fails initial v1aggregate assertion; broad portrait suite fails null prologue because fixture expects NewGame to skip tutorial (before reaching visitor); neither claimed green or repaired here. Two known domain failures remain. No commit/push requested/performed.
+Next: user playtest week1-to-week2 story transition in feature/selective-crafting.
+```
 
-Статус: `DONE`; /root coordinator/executor;2026-11-22;POL15DONE. CP: .local/checks/pol16-music-request/CP-POL-16.md.
-Task: POL-16
-Recommended status: REVIEW → принято координатором, DONE
-Changed: FirstTradeTutorial new MusicBuyerRequest step between BuyerRequest and Offer, RU/EN explanation, optional music_request_example tutorial-config bool for reload, preview reset on restart/finish; BuyerWaitWidget temporary category visual override preserving real category; tests/Integration/ProjectTest.Tutorial.cs; localization/en.tres; ORCHESTRATION_PLAN.md. All previous dirty edits retained.
-Checks: build PASS0warnings/errors; rendered --tutorial-checks PASS including real first Next switches clothing→music artwork, highlighted actual bubble, localized music explanation, time/actions blocked, buyer/item/cash/rerolls/music-unlock unchanged, reload stays on example, second Next restores clothing icon and actual offer, ordinary first sale then skip/replay/reload regressions. Rendered --buyer-arrival-checks PASS normal categories/arrival/patience/availability. git diff-check PASS. Evidence .local/checks/pol16-music-request/{build,tutorial,buyer-arrival}.log.
-Acceptance: user sees short example of musical instrument request after general buyer request explanation; pressing Next returns actual clothing request and normal trading. Demonstration changes icon only, without rerolling customer or creating instrument demand/stock. Timer and transaction remain held until both instructions acknowledged. Actual game save schema unchanged; old tutorial config defaults no example.
-Read-set exception: none; source/ not read. Risks/blocker: none; existing certificate warning only. No commit/push/exports.
-Next: user checks the extra music icon example during first-sale tutorial.
-### POL-15 — покупатель появляется на уроке запроса
+### SC-220 — удаление механики энергии
 
-Статус: `DONE`; /root coordinator/executor;2026-11-22;POL14DONE. CP: .local/checks/pol15-tutorial-buyer/CP-POL-15.md.
-Task: POL-15
-Recommended status: REVIEW → принято координатором, DONE
-Changed: FirstTradeTutorial.DefersFirstBuyerArrival holds first buyer until navigation complete and showcase stock present; TradeScene.BuyerBonuses.DeferTutorialBuyerArrival defers spawning and cleans legacy waiting state; TradeScene.cs only two helper forwarding calls; tests/Integration/ProjectTest.Tutorial.cs; ORCHESTRATION_PLAN.md. Prior dirty edits preserved.
-Checks: build PASS0warnings/errors; rendered --tutorial-checks PASS all existing steps plus no figure/thought during Craft/Select/Place/WaitBuyer, zero arrival on Start, exactly one figure+thought+arrival event with full20s at BuyerRequest, cleanup legacy early-waiting save, unread request reload keeps buyer20s, Next/firstsale/replay/skip regressions. Rendered --buyer-arrival-checks PASS including availability/patience/normal immediate spawn and reloading. git diff-check PASS. Evidence .local/checks/pol15-tutorial-buyer/{build,tutorial,buyer-arrival}.log.
-Acceptance: tutorial buyer appears after first item placed, on request lesson; initialStart no buyer/sound. Waiting legacy buyer removed without consuming stock, resetting new arrival to20s. Regular gameplay unchanged. Request reading continues freezing first offer actions/time until Next.
-Read-set exception: scripts/UI/BuyerWaitWidget.cs read to correct test visibility assertion: EndTrade hides ThoughtBubble child while container remains visible, so assertions now check actual visible artwork. No widget change. source/ not read.
-Risks/blocker: none; prior certificate warning only. No commit/push/exports or save schema changes.
-Next: user verifies first tutorial buyer appears together with request instruction.
-### POL-14 — порядок подсказки: наведение, затем выбор предмета
+Пользователь отменил энергию; SC219 DONE. План: убрать ограничения/расход крафта, энергетическую панель, бонус открытия мастерской и карту энергии, подсказки и debug-поля. Старые поля сохранений/числовые enum сохраняются как инертная совместимость; деньги и время дня остаются ограничениями, цены/квоты не меняются.
 
-Статус: `DONE`; /root coordinator/executor;2026-11-22;POL13DONE. CP: .local/checks/pol14-select-hint/CP-POL-14.md.
-Task: POL-14
-Recommended status: REVIEW → принято координатором, DONE
-Changed: scripts/UI/FirstTradeTutorial.cs Select hint; localization/en.tres matching English entry; ORCHESTRATION_PLAN.md. Prior dirty edits preserved.
-Checks: build PASS0warnings/errors; RU/EN translation key matches source PASS; existing Select->Place branch and tutorial regression already verified POL13, no behavior change here; git diff-check PASS. Evidence .local/checks/pol14-select-hint/build.log.
-Acceptance: first hover to inspect price/rarity/quality, then click to select. Existing selection automatically advances to Place; no extra confirmation or mandatory-hover gate added.
-Read-set exception: none. Risks/blocker: none; text-only update, no new tests or exports/commit/push.
-Next: inspect revised tutorial hint in game.
-### POL-13 — отдельная кнопка пропуска справа внизу
+| Задача | Статус | Исполнитель | CP |
+| --- | --- | --- | --- |
+| ENERGY-DOMAIN | DONE | domain agent | .local/checks/sc220/CP-ENERGY-DOMAIN.md |
+| ENERGY-UI | DONE | UI agent | .local/checks/sc220/CP-ENERGY-UI.md |
+| ENERGY-TEST | DONE | test agent | .local/checks/sc220/CP-ENERGY-TEST.md |
+| ENERGY-ROOT | DONE | /root | .local/checks/sc220/CP-ENERGY-ROOT.md |
 
-Статус: `DONE`; /root coordinator/executor;2026-11-22;POL12DONE. CP: .local/checks/pol13-tutorial-skip/CP-POL-13.md.
-Task: POL-13
-Recommended status: REVIEW → принято координатором, DONE
-Changed: scenes/UI/FirstTradeTutorial.tscn Skip moved from panel Actions to Root/Skip, bottom/right anchored20px; scripts/UI/FirstTradeTutorial.cs binding updated and empty Actions row hidden; tests/Integration/ProjectTest.Tutorial.cs placement and all real click paths updated; ORCHESTRATION_PLAN.md. Prior POL09–12 edits retained.
-Checks: build PASS0warnings/errors; rendered D3D12 --tutorial-checks PASS full onboarding incl camera retention POL12, actual skip/cancel/Esc/confirm, completion/replay/reload. New assertions all tutorial steps: Skip visible, outside hint panel, no old skip child, screen containment and fixed20px bottom/right. Resize960x540/1280x720 and RU/EN checked. git diff-check PASS. Evidence .local/checks/pol13-tutorial-skip/{build,tutorial,tutorial-errors}.log.
-Acceptance: Skip no longer appears inside instructional windows; fixed viewport placement on tutorial hints, only Next/Understood in applicable panels. Prior pause/craft/transition hiding and confirmation behavior preserved; no new modal interruption behavior requested or added.
-Read-set exception: none; no source/assets/economy edits.
-Risks/blocker: none; existing certificate warning only. No commit/push/exports.
-Next: user verifies persistent corner position across tutorial hints.
-### POL-12 — сохранить камеру после двойного клика в обучении
+CP готовы, write-set непересекаются; root единственный владелец trade_scene.tscn/плана. Ветка feature/selective-crafting; source/, несвязанные правки и публикация вне scope.
 
-Статус: `DONE`; /root coordinator/executor;2026-11-22;POL11DONE. CP: .local/checks/pol12-tutorial-camera/CP-POL-12.md.
-Task: POL-12
-Recommended status: REVIEW → принято координатором, DONE
-Changed: scripts/UI/FirstTradeTutorial.cs SetStep skip overview checkpoint and unlock manual navigation for Start after completed camera practice while day open; tests/Integration/ProjectTest.Tutorial.cs; ORCHESTRATION_PLAN.md. Supplied POL09 and POL10/11 dirty changes retained.
-Checks: dotnet build ChikagoShop.sln --no-restore PASS0warnings/errors after correcting duplicate local test variable; rendered D3D12 --tutorial-checks PASS full tutorial (camera practice/flights, first sale, UI clicks/highlight, pause/localization, skip/replay/reload). New assertions: no overview flight as double-click focus finishes, position/zoom stable beyond old transition duration, Start navigation unlocked and actual wheel-down changes zoom. Existing guided Craft and later checkpoint flights remain tested. git diff-check PASS. Evidence .local/checks/pol12-tutorial-camera/{build,tutorial,tutorial-errors}.log.
-Acceptance: RoomFocus→Start no longer auto-zooms out or moves selected view; player can zoom/drag manually. Other guided steps/modal restrictions/end-of-tutorial reset unchanged; closed-day retry excluded.
-Read-set exception: none. No scene/assets/domain changes or source/ reads.
-Risks/blocker: none; existing certificate warning. No commit/push/exports.
-Next: user verifies view stays in the double-clicked room before starting the day.
-### POL-11 — плакат левее между проёмом и персонажем
+SC220 gate `OPEN → PASSED`, принято координатором /root 26.11.2026 после handoff и интеграции.
 
-Статус: `DONE`; /root coordinator/executor;2026-11-22;POL10DONE. CP: .local/checks/pol11-poster/CP-POL-11.md.
-Task: POL-11
-Recommended status: REVIEW → принято координатором, DONE
-Changed: scenes/trade_scene.tscn only ShowPoster.position X496→480, Y392 unchanged (после уточнения пользователя:460 слишком влево, поправлено на20 вправо); ORCHESTRATION_PLAN.md. All previous dirty files retained.
-Checks: isolated rendered D3D12 scene load PASS; POSTER_POSITION_CHECK_PASS verifies исходный проверочный parent460/392; после пользовательской коррекции координата480/392 and unchanged child collision55.5/83; screenshot reviewed confirms poster between left arch and keeper, with clearance both sides. git diff-check PASS. Evidence .local/checks/pol11-poster/{preview,preview-errors}.log and .local/checks/pol09-interface-import/poster-preview.png.
-Acceptance: poster moved16 local units left from original496 (20 right from first revision460) without changing size/Y. Sprite and click area move together via parent. No code/assets/behavior changes or unnecessary unit tests.
-Read-set exception: none; cashier_closed.jpg inspected visually, no image editing/source/ reads.
-Risks/blocker: none; existing certificate warning only. No commit/push/exports.
-Next: пользовательская проверка уточнённого положения480/392; размер/высота/collision остаются прежними.
-### POL-10 — колода по центру левого промежутка и единые карты
+```text
+Task: SC-220 / ENERGY-ROOT (accepted DOMAIN/UI/TEST handoffs)
+Recommended status: REVIEW -> accepted DONE
+Changed: energy removed from craft gate/debit, HUD scene, room hints, catalog, training, notebook, day reward, debug settings and balance tooling. Retired Energy card excluded from offers/purchases/restored selection; training fallback returns two unique eligible cards. Buyers wait independently of legacy energy/stock until day closes. Old enum IDs and save fields retained inert; money, prices, quotas, time and inventory schema unchanged. Legacy debug overrides discarded. Domain/config and GUI regression cases updated; new energy-removal suite.
+Checks: build PASS zero warnings/errors. Full domain215:213PASS,2knownFAIL (same Cash-edited-cost and v13wire-list failures reproduced in SC218 clean HEAD baseline). Focused energy domain32PASS. Eleven rendered isolated suites PASS exit0/stderr empty: energy-removal, selective-crafting, tutorial, craft-session, craft-localization, room-title, debug-hotkey, day-start-gate, day-expiry, timed-trades-shadows, campaign-balance. Scoped diffcheck PASS; protected5external files SHA256 unchanged. Evidence .local/checks/sc220/, domain-results/sc220.trx; reviewed1280catalog screenshot with money-only prices and no energy HUD.
+Acceptance: old v18zero-energy save playable; seven paid crafts without energy consumption/cap; all10selected items, quality/save D/duplicates, free cancel, money/day/room gates, pause, expiry and campaign pass. Old purchased Energy becomes None; no energy UI/cost copy RU/EN. Conservative time-based budget funds both quotas with/without music. Training completes with retired card absent. Earlier user/feature changes preserved.
+Read-set exception: coordinator bounded search of runtime energy consumers, affected test/config and clean-baseline failure evidence; root CP expanded to BalanceProfileTests/EconomyConfigTests because affected selection probability/energy validator assertions required updating. No source access.
+Risks/blocker: no scoped blockers. Two pre-existing domain failures remain; entire historical integration runner not claimed green. Unreferenced historical energy presentation assets/utilities retained, no live energy consumers. No commit/push.
+Next: user playtest energy-free crafting in feature/selective-crafting.
+```
 
-Статус: `DONE`; /root coordinator/executor;2026-11-22;POL09DONE. CP: .local/checks/pol10-cards/CP-POL-10.md.
-Task: POL-10
-Recommended status: REVIEW → принято координатором, DONE
-Changed: scripts/UI/DayTransitionCard.cs; tests/Integration/ProjectTest.CardDealing.cs; ORCHESTRATION_PLAN.md. Все предыдущие POL09 dirty files сохранены.
-Checks: dotnet build ChikagoShop.sln --no-restore PASS0warnings/errors; isolated rendered D3D12 --card-dealing-checks PASS: центр колоды относительно первого слота, единая обычная текстура лица/кнопок/контраст pressed, RU/EN960x540/1280x720, dealing/flip/purchase/skip/cancel/resize. Screenshot ready-ru-1280 reviewed: белые карты и колода в середине левого промежутка. git diff-check PASS. Evidence .local/checks/pol10-cards/{build,cards,cards-errors}.log, screenshot TEMP/chikago-hf90-ready-ru-1280.png.
-Acceptance: X колоды рассчитывается после layout от фактического левого края первой карты; Y/размер сохраняются. Все стоимости используют исходный DayUpgradeCard style (card_face.png, panel_small.png), удалены gold/silver face/button overrides и premium ink. Стоимость/описания/эффекты/выбор/RNG не менялись.
-Read-set exception: нет. Art assets не редактировались и не удалялись, source/ не читался.
-Risks/blocker: нет; прежний root certificate warning тестовой среды. Без commit/push/exports.
-Next: пользовательская проверка экрана выбора улучшений в polishing.
-### POL-09 — перенос Interface_Fixes_FULL в polishing
+### SC-219 — оформление каталога предметов
 
-Статус: `DONE`; /root coordinator/executor; 2026-11-22. CP: .local/checks/pol09-interface-import/CP-POL-09.md.
-Task: POL-09
-Recommended status: REVIEW → принято координатором, DONE
-Changed:9изменённых+2новых source files из C:/Users/artem/Downloads/ChikagoShop_Interface_Fixes_FULL/chikago-shop-main перенесены в C:/Users/artem/Projects/Chicago/chikago-shop на polishing. Остальные618 совпадали; absent tracked0. Точные пути/хеши manifest.json; прежняя версия c683d05 сохранена в previous-project.zip. Служебные кэши/source/exports не копировались, исходный Downloads не менялся.
-Checks: SHA256 всех629 файлов совпали после копирования; после журнала628 неслужебных файлов всё ещё совпадают, исключение только этот plan. dotnet build ChikagoShop.sln --no-restore PASS0warnings/errors. Изолированный rendered D3D12 --interface-fixes-checks PASS: инструменты на витринах,10циклов пачки без смещения, неподвижный указатель/блокнот, все кнопки паузы720p/1080p. git diff-check PASS. Evidence .local/checks/pol09-interface-import/{manifest.json,build.log,interface.log,interface-errors.log}.
-Acceptance: актуальная рабочая версия в обычном Projects репозитории точно соответствует выбранному пользователем Interface_Fixes_FULL (кроме записи плана); branch polishing. Новые правки интерфейса/обучения сохранены как предоставлены; дополнительных доменных изменений не вносилось. main, GitHub, EXE/ZIP билды и player saves не менялись. Предыдущий stash локальных scene/theme правок сохранён.
-Read-set exception: нет; обход manifest пропускал source/ до рекурсии, supplied tests прочитаны для штатной проверки, cache только собственного Projects для isolated runtime.
-Risks/blocker: блокеров нет; sandbox root certificate warning в тесте, функциональные проверки PASS. Без commit/push.
-Next: работать с проектом в Projects/polishing; перезапустить текущую Godot сессию для новых скриптов.
-### HF-211 — размеры предметов и десятисекундное ожидание покупателя
+Статус: `DONE`; принято координатором `/root`; исполнитель `/root`; 2026-11-26; SC218 DONE. CP `.local/checks/sc219/CP-SC-219.md`. Компактное окно, облегчённые карточки, выравнивание и контрастные состояния кнопок.
 
-Статус: `DONE`; принято координатором после проверок; координатор/исполнитель `/root`; HF210 DONE; CP `.local/checks/hf211/CP-HF-211.md`; exact write-set `.local/checks/hf211/write-set.txt`. User screenshot8–10: smaller ordinary clothing/drum at counter, smaller drum polishing mask, buyer10s. Приёмка: сохранён контакт со столом/размер Matteo, реальная площадь полировки уменьшена, reward максимум5 сохранён, oldsave clamp/RUEN/build/domain/rendered PASS. Source/ вне scope.
+```text
+Task: SC-219
+Recommended status: REVIEW -> accepted DONE
+Changed: CraftCatalog and Card scenes author centered paper window, restrained1px borders, larger144px artwork, fixed name rows, muted rarity, clear price, aligned dark choices, outlined Back and distinct hover/focus/disabled styles. Empty reason rows hidden; meaningful disabled reasons retained. CraftCatalog fits window height to actual grid content within authored bounds and resets scroll on opening. Presentation-only changes; item/economy/save behavior retained.
+Checks: build PASS0warnings/errors; rendered selective-crafting and full tutorial suites PASS exit0, stderr empty. New assertions cover compact window/outer margins, no large lower void, full visibility of single row, aligned choices, contrasting enabled/disabled styling and meaningful unavailable reasons. All10 real selections/polish/stitch/debit/save checks retained. RU/EN both rooms960/1280 and disabled screenshots reviewed; scoped diffcheck PASS.6external user file SHA256 unchanged.
+Acceptance: cleaner compact catalog, readable hierarchy, consistent card/button geometry and functional selection/return/tutorial spotlight. Scene-owned visual properties remain editable. Evidence .local/checks/sc219/, including catalog-atelier-after.png/catalog-music-after.png.
+Read-set exception: rendered screenshots in system temp read/copied from existing test helper; no source/ or bitmap asset edits.
+Risks/blocker: none scoped. Existing SC218/user changes retained; no commit/push.
+Next: user preview updated catalog in game.
+```
+
+### SC-218 — выбор предмета и две миниигры крафта
+
+SC01 решения `PASSED` 2026-11-26: пользователь утвердил каталог5+5, две общие сцены, пять фиксированных узоров, полировку выбранного инструмента; цены70% с округлением5$,1энергия, фиксированная редкость, качествоS–D; D сохраняется на старте, улучшения дают+20%времени на день. Предыдущие предложения HF217 заменены этими решениями.
+
+| Задача | Статус | Исполнитель | CP / write-set |
+| --- | --- | --- | --- |
+| SC-DOMAIN | DONE | domain agent | .local/checks/sc218/CP-SC-DOMAIN.md;2domain files+2tests |
+| SC-UI | DONE | minigame UI agent | .local/checks/sc218/CP-SC-UI.md;EmbroideryGame,splitSurface,2newscenes |
+| SC-ROOT | DONE | /root | .local/checks/sc218/CP-SC-ROOT.md;catalog/coordinator/explicit craft extraction/integration/tests/docs |
+| SC-TEST | DONE | test agent | .local/checks/sc218/CP-SC-TEST.md;new ProjectTest.SelectiveCrafting.cs only |
+| SC-BALANCE | DONE | domain agent | SC-ROOT CP expansion;new SelectiveCraftBalanceTests.cs only |
+| SC-LEGACY | DONE | minigame UI agent | SC-UI CP extension;ProjectTest.Crafting.cs only transferred from root |
+
+Принято координатором `/root` 2026-11-26 после handoff исполнителей и интеграционной проверки. Ворота SC218 `OPEN → PASSED` по scoped acceptance: выбранный крафт, две сценовые миниигры, обучение, совместимость сохранений, баланс. Все зависимости — утверждённый SC01; write-set не пересекались, после handoff интеграционные исправления принадлежат root. Ветка feature/selective-crafting; source/ и несвязанные локальные изменения сохранены; commit/push не выполнялись. Новый dependency-satisfied фронт не назначен: утверждённый пользовательский план выполнен полностью.
+
+```text
+Task: SC-218 / SC-ROOT (coordinator acceptance of SC-DOMAIN/UI/TEST/BALANCE/LEGACY)
+Recommended status: REVIEW -> accepted DONE
+Changed: catalog5+5 with scene-authored cards and disabled reasons; Kind-based selection, exact-item CraftCoordinator with one debit/energy, immediately saved D and per-copy result update; no roll can replace chosen item. Explicitly extracted acquisition adapter into TradeScene.Crafting; TradeScene.cs only wiring/removed old acquisition/UI availability seams. Five deterministic silhouette patterns; common scene-authored embroidery/polishing shells, selected instrument artwork/mask. Prices config20/30/55/80/135 and30/50/80/125/205, per-item F10 editing; retired random-craft settings filtered from legacy debug profiles. Day upgrades +20% time using preserved enum IDs/costs. Catalog/ready/result pause day; playing advances it; pause freezes both. Updated tutorial catalog spotlight, notebook/cards/rarity-price help, RU/EN, fixture tests and GAMEPLAY.
+Checks: build PASS0warnings/errors. Full domain218 tests:216PASS,2FAIL; both failures reproduced identically from clean HEAD0724734 archive (BalanceProfile edited Cash cost; ProgressMigration exact wire list missing buyer_wait_initial). Focused domain pattern/duration/budget tests PASS35. Rendered isolated selective-crafting, tutorial, craft-contrast, craft-session, polishing-start, polishing-reward, day-start-gate, day-expiry, timed-trades-shadows, campaign-balance, craft-localization, room-title, debug-hotkey suites PASS exit0, final stderr empty. Scoped diffcheck PASS(cr-at-eol). Reviewed RU/EN catalog/ready screenshots960/1280 and contrast image. External6file SHA256 unchanged; DayCycle task-start user edits preserved exactly except single authorized clock predicate.
+Acceptance: real clicks select/produce all10items; five complete distinct stitch patterns and actual rubbing on five instruments; free back, one charge/energy, no early/duplicate quality commit; identical copies retain distinct S/D across reload; unpaid and paid state, blocked funds/energy/day/room, pause/catalog/checkpoint/language changes and expiry tested. Historical v13/v18 inventory and grades preserved; saved category upgrade now12s. Deterministic conservative budget pays both quotas with atelier only and optional music unlock, without extra sale bonuses; not a full customer simulation.
+Read-set exception: bounded discovery of craft/schema/helper files; Resources localized-button test added to root write-set; exact panel_inverted/panel_small/camera_frame textures inspected for alpha bounds, no asset edits/source access. Root integration fixes after UI handoff include authored geometry preservation, cropped ink atlas and separated footer; stale timed-shadow fixture now previews skip decoration independently of tutorial-first startup.
+Risks/blocker: no scoped blockers. Two pre-existing domain failures remain documented with clean-baseline TRX evidence; no claim that the entire historical integration runner passes. Existing external menu null music overrides untouched. Runtime EmbroideryGame user pointer behavior retained (112px cloth, shown only playing); original snapshot kept. No commit/push.
+Next: user playtest catalog and item-specific patterns in feature/selective-crafting.
+```
+
+### HF-217 — ветка и план выборочного крафта
+
+Статус: `DONE`; принято координатором `/root`; исполнитель `/root`; 2026-11-26; HF216 DONE. CP `.local/checks/hf217/CP-HF-217.md`. От `main` (`0724734`) создана и выбрана локальная ветка `feature/selective-crafting`. Текущая задача — подготовка плана; реализация ниже ещё не начата.
+
+```text
+Task: HF-217
+Recommended status: REVIEW -> accepted DONE
+Changed: local feature/selective-crafting branch from main0724734; implementation outline and DRAFT task graph below.
+Checks: branch/base readback PASS; all8pre-existing dirty files SHA256 unchanged; scoped diffcheck PASS. Runtime unchanged, no runtime test required.
+Acceptance: isolated branch selected, chosen-item flow/per-item architecture and tentative10mechanics documented with balance decisions and staged acceptance.
+Read-set exception: bounded crafting filename/search diagnostics before CP; no source/ access.
+Risks/blocker: design/balance questions recorded for SC01; no branch/planning blocker. No commit/push.
+Next: SC01 rules and minigame design before implementation.
+```
+
+Требования пользователя: игрок выбирает любой конкретный предмет для изготовления; у каждого предмета своя миниигра. Предварительный поток: кнопка крафта в комнате → каталог её предметов → выбор предмета → правила и стоимость → запуск соответствующей миниигры → выбранный предмет с полученным качеством в инвентаре. Каталог показывает название, изображение, стоимость, энергию и причину недоступности. Доступ к музыкальным предметам предварительно сохраняет существующее открытие мастерской.
+
+Текущее основание: WorkshopItemCatalog содержит10предметов и стабильные индексы; сейчас предмет определяется случайным Roll, а EmbroideryGame объединяет вышивку и полировку. Уже есть ICraftSession для состояния/ранга. При выборе предмета случайный Roll не должен подменять выбранный Kind; качество зависит от результата миниигры. Исторические индексы предметов сохраняем для совместимости инвентаря и сохранений.
+
+Предлагаемая архитектура: отдельный координатор крафта хранит выбранный предмет и жизненный цикл попытки; реестр связывает стабильный Kind с определением миниигры (сцена, сессия, параметры, правила). Общий хост отвечает за вход/выход, паузу, таймер, результат и единственную выдачу награды. Каждая игра получает собственную сцену и контроллер; интерфейс и постоянная разметка хранятся в .tscn. ICraftSession адаптируем только там, где текущего контракта недостаточно. TradeScene остаётся местом подключения; новая доменная логика туда не добавляется. Извлечение существующего списания/выдачи требует отдельного явно указанного write-set.
+
+Правила транзакции для реализации: выбор и просмотр бесплатны; подтверждение старта проверяет день, доступ к комнате, деньги, энергию и отсутствие другой активной попытки; списание выполняется ровно один раз. Результат относится к выбранному предмету, повторное подтверждение не создаёт дубликат. Отмена до старта бесплатна. Поведение прерывания после старта, провала и загрузки фиксируется до реализации транзакции; нельзя допустить бесплатные повторные попытки или потерю оплаты без определённого результата. Текущий отсчёт игрового дня во время активного крафта сохраняем до отдельного решения.
+
+Предварительные идеи отдельных игр (механики ещё не утверждены):
+
+| Предмет | Возможная миниигра |
+| --- | --- |
+| Шляпка | Сформировать поля по контуру |
+| Жилетка | Соединить детали выкройки швами |
+| Перчатки | Выполнить точный шов вокруг пальцев |
+| Шляпа Маттео | Закрепить ленту и украшение в нужных местах |
+| Лорнет | Собрать оправу и совместить линзы |
+| Гитара | Настроить струны по высоте звука с визуальной подсказкой |
+| Барабан | Натянуть мембрану, уравняв зоны натяжения |
+| Банджо | Повторить ритмический рисунок |
+| Скрипка | Вести смычок, удерживая направление и давление |
+| Туба | Собрать трубки и клапаны по схеме |
+
+Порядок работ; нижние задачи имеют статус `DRAFT`, не `READY`: перед каждой создаются CP, точные read/write-set, наблюдаемая приёмка и команды проверок. Ветка для всех этапов — `feature/selective-crafting`.
+
+| Этап | Зависимости | Результат и приёмка |
+| --- | --- | --- |
+| SC-01: правила и дизайн | HF217 | Утверждены стоимость/редкость, доступность,10механик, отмена/провал/загрузка; нет неоднозначного списания |
+| SC-02: выбранный предмет и транзакция | SC-01 | Выбор фиксирует Kind, ресурсы списываются один раз, выдача не дублируется; доменные тесты |
+| SC-03: каталог и общий хост | SC-02 | Сцена выбора, реестр/хост, сначала один вертикальный срез; реальный клик выдаёт именно выбранный предмет, отмена бесплатна |
+| SC-04: отдельные игры | SC-03 | По одной задаче/CP на предмет; уникальная механика, сцена, качество и тесты; все10Kind покрыты реестром |
+| SC-05: интеграция и баланс | SC-04 | Обучение, локализация, улучшения и редкость согласованы; проверены пауза/конец дня/сохранение, оба цеха и отсутствие случайной подмены |
+
+Решения перед SC-02: выбор любого предмета отменяет прежний смысл вероятностей редкости, поэтому нужно определить роль редкости и улучшений на шанс выпадения; стоимость оставить общей для комнаты или назначить по предметам; «любой предмет» доступен сразу в открытой комнате или требует рецепта. Предлагаемый старт для обсуждения: в открытой комнате доступны все её предметы; редкость остаётся свойством предмета, качество определяется навыком; цены задаются данными по предмету. Точные цены и замена бонусов вероятности — отдельная балансировка, а не неявное изменение при подключении UI.
+
+### HF-216 — публикация переходов, оформления сцен и перемещения по шторке
+
+Статус: `DONE`; принято координатором `/root`; исполнитель `/root`; 2026-11-26; HF213–215 DONE. Пользователь просит push. CP `.local/checks/hf215/CP-HF-216.md`. Опубликован `80e8419`: завершённые исправления HF213–215; восемь несвязанных пользовательских файлов сохранены локально.
+
+```text
+Task: HF-216
+Recommended status: REVIEW -> accepted DONE
+Changed: 80e84191c59bfa491ac8ef6231db4590f9859f93, exact19-file HF213–215 manifest published to origin/main; this follow-up records evidence.
+Checks: fetch divergence0/0; exact staged manifest and staged diffcheck PASS(cr-at-eol); existing HF213–215 build/runtime evidence retained; normal push PASS; ls-remote main matches HEAD80e8419. All8external SHA256 match HF214 baseline.
+Acceptance: completed changes available on server, external modifications excluded and preserved.
+Read-set exception: external hash manifest only; no source/ access.
+Risks/blocker: no publication blockers; existing menu null audio exports and renderer shutdown diagnostic remain documented in previous handoffs.
+Next: pull main on other machines.
+```
+
+### HF-215 — перемещение ЛКМ по закрытым шторкам
+
+Статус: `DONE`; принято координатором `/root`; исполнитель `/root`; 2026-11-26; HF214 DONE. CP `.local/checks/hf215/CP-HF-215.md`. Обе шторки передают жест перемещения камере, сохраняя кнопку покупки и ограничения навигации.
+
+```text
+Task: HF-215
+Recommended status: REVIEW -> accepted DONE
+Changed: WorldCamera forwards LMB presses on Stop/Pass locked-room covers into drag or double-click focus; purchase buttons retain GUI ownership. RoomCurtains regression adds real viewport press/motion/release on both curtains, pause/lock rejection, unchanged money/curtain state, actual purchase click.
+Checks: build PASS0warnings/errors; regression RED on original WorldCamera (Showroom cover consumes press), GREEN after fix; isolated rendered room-curtain/room-focus/camera-limits PASS, exit0; scoped diffcheck PASS(cr-at-eol).
+Acceptance: dragging from a locked curtain moves camera; release stops it; button purchase works without camera drag; six-room double-click focus and GUI/pause/navigation guards retained.
+Read-set exception: helper assertion/pointer lookup for diagnostics, no source/ access. Existing HF214 isolated scene fixture reused.
+Risks/blocker: curtain suite reports1TextureStorage/2Texture RID renderer shutdown diagnostic, functional checks PASS; focus/camera stderr empty. No scoped blocker; previous/user changes preserved; no commit/push.
+Next: user smoke-test LMB drag on the curtain in game.
+```
+
+### HF-214 — постоянное оформление комнат хранится в сценах
+
+Статус: `DONE`; принято координатором `/root`; исполнитель `/root`; 2026-11-26; HF-213 DONE. CP `.local/checks/hf214/CP-HF-214.md`. Устаревшие описания удалены, постоянная геометрия/стили перенесены в сцены, пользовательское «МАСТЕРСКАЯ» сохранено, аудит других дублей записан в GAMEPLAY.md. TradeScene.cs только удаление UI-ссылок/статических записей, новая доменная логика/source/ и несвязанные пользовательские изменения вне scope.
+
+```text
+Task: HF-214
+Recommended status: REVIEW -> accepted DONE
+Changed: trade_scene removes4obsolete description nodes; authors compact RU/EN-fitting header geometry and title centering; retains user's МАСТЕРСКАЯ and adds WORKSHOP translation; fixes single-item hover-price previews25/50 and authors trade-panel layer125. Unlock-panel paper/button styles and title are scene-owned Theme Overrides; removed Ready style builder/texture exports. Showcase glass tint0.58 baked into slot scene. Removed obsolete hidden-label/static tint assignments and array from TradeScene (no new logic). ZoomResponsiveUi keeps zoom visibility/compensation, preserves authored hidden headers, no longer rewrites static title rectangles or sale layer. Updated related fixtures and audit documentation.
+Checks: build PASS0warnings/errors; isolated rendered room-title, buyer-arrival(including patience/unlock panel), craft-localization, camera-limits, campaign-balance suites PASS, stderr empty. Room-title regression covers exact authored geometry/text across RU/EN/3sizes, absent subtitle nodes, custom title position/text, explicit hidden plate, custom card styles/glass tint/sale layer, initial price previews. Atelier RU and Workshop EN screenshots reviewed. Scoped diffcheck PASS(cr-at-eol);8external file SHA256 unchanged;95unrelated authored trade-scene node blocks byte-identical to task-start snapshot.
+Acceptance: room editor preview reflects permanent runtime presentation; runtime refresh does not undo these designer edits; new room name preserved. Dynamic data/zoom states retained.
+Read-set exception: bounded script/test searches to trace obsolete nodes; InterfaceFixes header assertion read to preserve flat titles. Font metrics read only from explicitly listed art/fonts/game.ttf via local diagnostic. No source/ access.
+Risks/blocker: no scoped blockers. Audit also identifies constructor-generated clock, MainMenu choice/skip and PauseMenu tree for a separate UI-structure migration; no claim of an entire UI rewrite. Existing external menu/music/editor edits and previous HF213 changes preserved. No commit/push.
+Next: user edit room labels/layout and unlock card styles directly in scenes.
+```
+
+### HF-213 — одинаковый ритм переходов как из меню в обучение
+
+Статус: `DONE`; принято координатором `/root` по scoped acceptance; исполнитель `/root`; 2026-11-26; HF-212 DONE. CP `.local/checks/hf213/CP-HF-213.md`. Общий профиль первого перехода сохраняется; музыкальное затухание полного/пропущенного пролога синхронизировано с ним, чтобы убрать отдельную долгую паузу на чёрном экране. Сцены, source/, TradeScene.cs и пользовательские правки вне scope.
+
+```text
+Task: HF-213
+Recommended status: REVIEW -> accepted DONE
+Changed: MainMenu requests prologue exit audio fade using shared SceneTransition.FadeOutSeconds (0.22s) for natural finish and skip. IntroMusicDirector accepts an explicit duration without mutating Inspector defaults. Shared sine0.22s out/0.25s in unchanged. Updated regression and full/skip timing coverage, GAMEPLAY.md.
+Checks: build PASS0warnings/errors; music regression RED before fix (natural exit still audible after shared fade window), GREEN after; isolated rendered music/startup/latency/fade functional suites PASS. Latency skip0.821/0.855s, natural finish0.772/0.805s, no1.5s black hold. Scoped diffcheck(cr-at-eol) and5external file SHA256 PASS.
+Acceptance: existing scene handoffs now follow the first transition's common visual/audio rhythm; startup/reset/pause/input/cancel checks preserved.
+Read-set exception: local HF211 isolated fixture reused with initial-menu snapshot because known external null audio exports are out of scope. No source/ access.
+Risks/blocker: same renderer TextureStorage/Texture RID shutdown diagnostic in dedicated fade suite as HF211; functional PASS, remaining suites stderr empty. Current external menu null music overrides untouched. No commit/push.
+Next: user preview transition rhythm.
+```
+
+### HF-212 — публикация исправлений плаката, запуска и переходов
+
+Статус: `DONE`; принято координатором `/root`; исполнитель `/root`; 2026-11-26; HF209–211 DONE; пользователь явно просит push. CP `.local/checks/hf212/CP-HF-212.md`. Опубликован `e66d30f` (13файлов): приоритет перемещения на плакате, обучение→пролог→свежая игра, чёрные переходы. Локальные правки project/menu/theme/DayCycle/Embroidery и source/ вне scope.
+
+```text
+Task: HF-212
+Recommended status: REVIEW -> accepted DONE
+Changed: e66d30fb2d31215911904c93ff4cfe6192a3e936 published to origin/main; exact13file manifest in CP. This follow-up records publication evidence only.
+Checks: precommit fetch divergence0/0; exact stagedmanifest and staged diffcheck PASS (cr-at-eol); HF209-211 runtime/test evidence unchanged; normal push PASS; ls-remote main=e66d30fb2d31215911904c93ff4cfe6192a3e936 matches local HEAD; all5external file SHA256 unchanged.
+Acceptance: all requested fixes published; unrelated/local edits preserved and excluded from commits.
+Read-set exception: git diff of5excluded files to confirm boundary; source/ not read.
+Risks/blocker: existing current-menu null music exports and minor fade-suite renderer exit diagnostics remain documented in HF210/211; neither introduced nor published by this push.
+Next: pull main on other machines.
+```
+
+### HF-211 — чёрное затухание между сценами
+
+Статус: `DONE`; принято координатором `/root` по scoped acceptance; исполнитель `/root`; 2026-11-26; HF-210 DONE. CP `.local/checks/hf211/CP-HF-211.md`. Переходы меню/обучение/пролог/игра/возврат в меню через чёрный экран; ввод заблокирован до конца появления, исходящая симуляция приостановлена до смены содержимого. Сцены, source/, TradeScene.cs и пользовательские правки вне scope.
 
 ```text
 Task: HF-211
 Recommended status: REVIEW -> accepted DONE
-Changed: ordinary hat/vest/gloves counter scale75%, drum65%, bottom-center contact preserved; Matteo and other variants unchanged. Drum polishing raster and actual alpha mask70% (about49% area), same brush/duration. Shared buyer duration10s, same maximum5-dollar speed reward over five2s bands; RU/EN tutorial/docs/simulation assumptions updated. Existing persistence clamp handles old remaining12/20s. Updated focused timer/presentation fixtures and independent save assertion; report regenerated10000runs/profile.
-Checks: root/isolated build PASS0warnings/errors; domain205/205 PASS; rendered6suites PASS: counter-item (all10 silhouettes/zooms/resize), polishing-start (compact drum actual cells/rubbing + mouse/locales/resize), buyer-arrival (includes availability/patience, pause/craft/reroll/reload/expiry), canonical-migration (old12s ->10s and real-save copy), tutorial, campaign-balance. Screenshots counter hat/drum + compact drum reviewed. Final root/candidate exact-byte audit PASS; git diffcheck PASS; origin/main unchanged before commit.
-Acceptance: screenshot items8-10 implemented; size changes affect actual drum work area; game prices/quality/quota rules untouched. Economy model reflects shorter patience: ordinary first-quota26.7%, both0.1%; careful50.8%/3.1% (model, not human playtest). Sample size in existing rare-win regression expanded1000 ->10000 for ordinary profile rather than weakening its victory assertion.
-Read-set exception: EconomyBalanceTests.cs + simulation/tool report diagnosed after shorter timer made rare win absent in1000runs; coordinator expanded exact write-set for test sample and updated report/docs. Source/ never inspected.
-Risks/blocker: shorter patience intentionally makes model outcomes harder; unrelated historical general-runner fixture mismatch remains out of scope. No focused blocker. ZIP untouched.
-Next: publish verified main commit and read back remote reference; use root project.godot.
+Changed: new root-owned SceneTransition CanvasLayer1000 with sine fade-out0.22s/fade-in0.25s and full-viewport black cover. Content changes only at alpha1; root overlay survives ChangeSceneToNode. Outgoing scene pauses through fade-out/black, destination initializes in its normal pause state and retains modal pause ownership. Input is blocked throughout, including always-processing PauseMenu and MainMenu skip polling. Wired menu->training, training->prologue, prologue->game, Continue, prologue cancel->menu and pause->menu; audio and visual fade run together. Cancellation/failed changes release locks. Updated GAMEPLAY.md and focused tests.
+Checks: build PASS0warnings/errors; isolated rendered --scene-transition-checks functional PASS (intermediate alpha, black pixels center/corners at1280/960, frozen outgoing timer, duplicate/input rejection, replacement survival, incoming Escape lock, pause->menu, failure, destination modal pause, owner cancellation). Full --intro-transition-checks PASS; --intro-music-checks PASS with initial-menu snapshot; --intro-latency-checks PASS, first gameplay frame0.819s/0.840s including visual fade. Scoped diffcheck PASS (cr-at-eol). Five external/user files SHA256 unchanged.
+Acceptance: requested black transitions implemented throughout startup and return-to-menu, without changing startup order or fresh-run reset. Modal pause is preserved; no stuck black cover or late transition after cancellation.
+Read-set exception: reuse/copy of HF210 local isolated scene snapshot and runtime junctions for test packaging; no source/ access.
+Risks/blocker: dedicated rendered fade suite exits0 with PASS but D3D12 reports1TextureStorage RID/2Texture RIDs at engine shutdown; other3focused suites stderr empty. Functional acceptance passes; no claim of a diagnostic-free renderer exit. Known external main_menu null music exports from HF210 remain untouched; isolated music test uses initial menu scene. No commit/push.
+Next: user smoke-test fades in the editor.
 ```
-### HF-210 — интеграция проверенных interface fixes
 
-Статус: `DONE`; принято координатором; координатор/исполнитель `/root`; HF209 DONE; user explicitly approves main integration; CP `.local/checks/hf210/CP-HF-210.md`; exact write-set `.local/checks/hf210/write-set.txt`. Приёмка: approved11files + obsolete UI fixtures, build/domain/focused suites, main merge/push/readback. Баланс/каталог/save schema/cloud/source/ и ZIP removal вне scope.
+### HF-210 — обучение перед прологом, затем обычная игра с нуля
+
+Статус: `DONE`; принято координатором `/root` по scoped acceptance; исполнитель `/root`; 2026-11-26; HF-209 DONE. CP `.local/checks/hf210/CP-HF-210.md`. Новое требование: Главное меню → Новая игра → обучение/подтверждённый skip → пролог → обычная свежая партия без повторного обучения. Continue сохраняет текущую партию. Write-set: MainMenu.cs, FirstTradeTutorial.cs, Menu/Tutorial/IntroMusic tests и entrypoint, GAMEPLAY.md, plan/local evidence. TradeScene.cs, source/, сцены и пользовательские правки вне scope.
 
 ```text
 Task: HF-210
-Recommended status: REVIEW
-Changed: approved11 archive files selectively applied on integration/interface-fixes, keeping main orchestration/economy/schema/catalogue/cloud. Added tutorial reload-before-acknowledge + frozen-day-clock assertion. Updated button fixture for valid Atelier card, current affordability and authored Back Scale mode; colored premium card art is not subjected to an obsolete global grayscale assertion (controller grayscale tests remain). Progress fixture covers pack geometry/captions/hover/pause/keyboard/reload with current quota; removed retired hidden-action clicks and duplicated outdated campaign assertions, independently verified by campaign suite.
-Checks: root/isolated build PASS0warnings/errors; root domain204/204 PASS.10 focused rendered suites PASS (7HF209 acceptance suites + updated tutorial rerun, button-feedback, progress-toggle, campaign-balance; tutorial counted once). Final root candidate byte-equality for every runtime/test change PASS; diffcheck PASS; fetched origin/main unchanged before integration.
-Acceptance: UI fixes preserve canonical catalogue/save format/economy/fullscreen/story overlap; both old failing UI suites now pass; tutorial blocks sale/reroll and both timers across reload until acknowledgment. No extra art/doc EOL churn or archived plan copied. ZIP untouched/untracked.
-Read-set exception: scenes/main_menu.tscn, scripts/MainMenu.cs and domain DayUpgradeSession/Rules read to diagnose old test expectations; no edits there. Source/ not inspected.
-Risks/blocker: known unrelated general-runner layout fixture mismatch from HF206 remains; full suite not claimed PASS. No focused blocker.
-Final: integration/interface-fixes=815964f fast-forwarded to main and published; remote reference verified. Next: use canonical root project.godot; ZIP remains untouched outside tracked changes.
+Recommended status: REVIEW -> accepted DONE (startup flow)
+Changed: MainMenu owns the training scene until FirstTradeTutorial.Finished, then removes it and begins prologue. Prologue finish/skip enters a fresh configured scene via ChangeSceneToNode with initial tutorial suppressed. Tutorial cfg adds prologue_pending; Continue restores unfinished practice or pending prologue, while ordinary and older saves retain their previous behavior. Pause-menu replay has no startup subscriber and stays local. Queued deletion cancels asynchronous transitions. Updated focused startup/music fixtures, natural-completion event check and GAMEPLAY.md.
+Checks: build PASS 0warnings/errors; isolated rendered startup matrix PASS (fresh training, repeat-input guard, confirmed skip, restored final-page real completion, prologue finish/skip/cancel/resume, override/fallback, reset resources and stock, ordinary Continue). Full rendered tutorial suite PASS including actual two sales, completion notification, skip/replay/reload. Original-menu scene snapshot: startup/music/latency PASS; skip-to-first-game-frame 0.524s cold / 0.511s after reading. Post-training prologue screenshot reviewed. Scoped git -c core.whitespace=cr-at-eol diff --check PASS. Three pre-existing dirty file hashes unchanged.
+Acceptance: requested order implemented; practice state does not leak into ordinary day1; tutorial does not repeat after prologue. Player userdata untouched by startup tests (isolated ChikagoShopStartupSmoke* directories).
+Read-set exception: local Godot API XML; diagnostic script CurrentScene search; opaque scenes copy into local fixture. Initial override-only isolation was rejected by the test guard before writes; direct isolated project settings used afterward. source/ never read.
+Risks/blocker: during work external/editor edits appeared in scenes/main_menu.tscn and themes/game_theme.tres. Current main_menu serializes MusicDirector properties/streams as null; music contract FAIL on this current scene, PASS on initial HEAD scene with identical changed code. Both external files preserved; no all-current-worktree music PASS claim. Existing project.godot/DayCycleController.cs/EmbroideryGame.cs SHA256 preserved. No commit/push.
+Next: user verify new startup sequence; repair external null music overrides separately if desired.
 ```
-### HF-209 — review ChikagoShop_Interface_Fixes_FULL.zip
 
-Статус: `DONE` (review); принято координатором; координатор/исполнитель `/root`; HF208 DONE; CP `.local/checks/hf209/CP-HF-209.md`. Write-set plan и isolated review evidence; runtime/архив/публикация вне scope этого review. Exact read-set `.local/checks/hf209/manifest.json`:610same/17different/2new; source/ и binaries исключены. Приёмка: review функциональных diff, build/domain/focused checks и оценка сохранности последних исправлений.
+### HF-209 — приоритет перемещения ЛКМ над открытием плаката
+
+Статус: `DONE`; принято координатором `/root`; исполнитель `/root`; 2026-11-26; HF-208 DONE. CP: `.local/checks/hf209/CP-HF-209.md`. Write-set: TradingRoomPosterHotspot.cs, ProjectTest.Camera.cs, ProjectTest.cs (focused entrypoint), plan/local evidence. Приёмка: обычный клик открывает плакат при отпускании, перетаскивание ЛКМ перемещает камеру без открытия/паузы. source/, сцены и пользовательские изменения вне scope.
 
 ```text
 Task: HF-209
-Recommended status: REVIEW -> review accepted DONE
-Changed: plan + .local/checks/hf209/{CP,manifest,incoming,candidate,diffs,logs,REVIEW.txt}. Root runtime untouched; ZIP preserved.
-Checks: isolated build0warnings/errors, domain204/204, clean import retry PASS. Rendered7suites PASS: interface-fixes, tutorial, canonical-migration, buyer-arrival(+availability/patience), day-expiry, music-settings/fullscreen, dialogue-portraits/shared layout. Showcase/tutorial screenshots reviewed. Additional2legacy suites FAIL: button-feedback grayscale check rejects existing gold cash card; progress-toggle hardcodes quota250 rather than750. Detailed paths/evidence in REVIEW.txt.
-Acceptance: all functional changes inspected;11meaningful files (9existing+2new), no missing tracked files. Current balance/catalogue/schema/cloud retained; no focused functional blocker. Selective integration recommended with fixture maintenance, not wholesale replacement.
-Read-set exception: ProjectTest.Presentation.cs/Ui.cs/Helpers.cs, DayTransitionCard.cs and TradeScene.BuyerBonuses.cs for necessary failed-test/timer diagnosis; coordinator authorized diagnostic read, no root edits there.
-Risks/blocker: extra legacy test assumptions above; no all-suite PASS claim. No merge/push/archive removal requested explicitly in this turn or performed.
-Next: selective integration of reviewed UI changes, preserving canonical project and fixing obsolete test expectations.
+Recommended status: REVIEW -> accepted DONE
+Changed: poster records LMB press without opening or consuming it; release opens only within 8 screen pixels. Moving past threshold permanently cancels the click, including a return to start. Pause/focus loss/navigation lock cancel pending clicks. Added real viewport + authored Area2D + standalone camera regression.
+Checks: dotnet build ChikagoShop.csproj PASS (0 warnings/errors); --poster-navigation-checks FAIL before fix, PASS after (press, drag, return drag, distant/no-press release, pause, click jitter, open/close); rendered --camera-limits-checks PASS (bounds, zoom, resize, GUI isolation, pause). git -c core.whitespace=cr-at-eol diff --check PASS (existing tests are tracked CRLF). Evidence .local/checks/hf209/*.log.
+Acceptance: LMB drag starting on poster moves camera; poster stays closed and game runs. Ordinary click opens on release; Escape closes/resumes.
+Read-set exception: diagnostic input search/RarityPanel/docs before assignment; ProjectTest.CameraLimits.cs and first26 lines of ProjectTest.Presentation.cs to diagnose screenshot wait in headless mode. Initial headless camera suite stopped because CapturePresentation requires rendered FramePostDraw; rerun rendered PASS. No source/ access.
+Risks/blocker: none for scoped acceptance; pre-existing user edits in project.godot, DayCycleController.cs and EmbroideryGame.cs preserved. No commit/push.
+Next: user smoke-test LMB dragging from cashier poster.
 ```
+
 ### HF-208 — скрыть нижний край персонажей за облачком диалога
 
 Статус: `DONE`; принято координатором; координатор/исполнитель `/root`; HF207 DONE; CP `.local/checks/hf208/CP-HF-208.md`. Write-set shared StoryDialogueLayout, composition test, plan/local evidence. Приёмка: спрайты немного опущены и перекрыты облачком; текст читаем; rendered720p/1080p, portraits/motion и build PASS; source/ вне scope.

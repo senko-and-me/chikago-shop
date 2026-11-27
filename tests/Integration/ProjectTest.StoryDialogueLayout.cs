@@ -12,6 +12,16 @@ public partial class ProjectTest
         Node fixture = null;
         try
         {
+            async Task CheckSpeaking(Control speaker, Control listener = null)
+            {
+                await ToSignal(CreateTimer(0.52), SceneTreeTimer.SignalName.Timeout);
+                Check(speaker.Scale.IsEqualApprox(Vector2.One * 1.06f) &&
+                    speaker.PivotOffset.IsEqualApprox(speaker.Size / 2) &&
+                    (listener == null || listener.Scale.IsEqualApprox(Vector2.One)),
+                    $"Incorrect speaking portrait {speaker.Name}: scale={speaker.Scale}, pivot={speaker.PivotOffset}, size={speaker.Size}, listener={listener?.Scale}");
+                Check(Root.GetVisibleRect().Encloses(ScreenBounds(speaker)),
+                    "The animated portrait must stay on screen");
+            }
             foreach (var size in new[] { new Vector2I(1280, 720), new Vector2I(1920, 1080) })
             {
                 Root.Size = size;
@@ -22,8 +32,14 @@ public partial class ProjectTest
                 menu.GetNode<TextureButton>("MainMenuContainer/Menu/NewGameButton").EmitSignal(BaseButton.SignalName.Pressed);
                 TranslationServer.SetLocale("ru");
                 var prologue = menu.ActiveDialogue;
-                await ToSignal(CreateTimer(0.8), SceneTreeTimer.SignalName.Timeout);
+                var customer = prologue.GetNode<TextureRect>("Characters/Customer");
+                await CheckSpeaking(customer, prologue.GetNode<TextureRect>("Characters/Frankie"));
+                await ToSignal(CreateTimer(0.57), SceneTreeTimer.SignalName.Timeout);
                 prologue.RestorePage(0, true);
+                await ToSignal(CreateTimer(0.46), SceneTreeTimer.SignalName.Timeout);
+                Check(customer.Scale.IsEqualApprox(Vector2.One * 1.06f), "The speaker stays in focus until the handoff");
+                prologue.Advance();
+                await CheckSpeaking(prologue.GetNode<TextureRect>("Characters/Castello"), customer);
                 using (var frame = await CapturePresentation($"story-prologue-{size.X}"))
                     Check(frame.GetSize() == size, $"Expected a native {size} screenshot, got {frame.GetSize()}");
                 CheckStoryComposition(prologue, "Panel", "Castello", "Customer", "Frankie");
@@ -43,10 +59,12 @@ public partial class ProjectTest
                     Check(left.Texture.ResourcePath.EndsWith("_open.png") &&
                           !right.Texture.ResourcePath.EndsWith("_open.png"),
                         "Only Castello must speak in the quota notices");
+                    await CheckSpeaking(left, right);
                     notice._Process(5);
                     Check(left.Texture.ResourcePath.EndsWith("_closed.png"),
                         "Castello must close his mouth when the quota speech is fully visible");
-                    await ToSignal(CreateTimer(0.32), SceneTreeTimer.SignalName.Timeout);
+                    await ToSignal(CreateTimer(0.46), SceneTreeTimer.SignalName.Timeout);
+                    Check(left.Scale.IsEqualApprox(Vector2.One), "The notice portrait must shrink when the line completes");
                     using (await CapturePresentation($"story-{ending.Item1}-{size.X}")) { }
                     CheckStoryComposition(notice.GetNode<Control>("StoryRoot"), "Speech", "Castello", "Frankie");
                     var actions = notice.GetNode<Control>("StoryRoot/Speech/Content/Actions");
@@ -67,7 +85,9 @@ public partial class ProjectTest
                 son.DialoguePath = "res://dialogue/quota_visitor.ru.json";
                 Root.AddChild(son);
                 await ToSignal(this, SignalName.ProcessFrame);
+                await CheckSpeaking(son.GetNode<TextureRect>("Characters/Son"));
                 son.RestorePage(0, true);
+                await ToSignal(CreateTimer(0.46), SceneTreeTimer.SignalName.Timeout);
                 using (await CapturePresentation($"story-son-{size.X}")) { }
                 CheckStoryComposition(son, "Panel", "Son");
                 Check(son.GetNode<TextureRect>("Characters/Son").GetGlobalRect().GetCenter().X > son.Size.X * 0.65f,

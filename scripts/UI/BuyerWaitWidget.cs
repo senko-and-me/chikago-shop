@@ -100,6 +100,9 @@ public partial class BuyerWaitWidget : Control
         Show();
     }
 
+    internal Rect2 TimerBounds() =>
+        TutorialSpotlight.TargetBounds(_seconds).Merge(TutorialSpotlight.TargetBounds(_waitBar));
+
     public void SetState(bool music, double remaining, double initial)
     {
         if (!Visible) Show();

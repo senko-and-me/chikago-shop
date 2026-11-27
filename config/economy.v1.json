@@ -2,12 +2,22 @@
   "schema_version": 1,
   "is_provisional": true,
   "starting_money": 220,
+  "craft_costs": {
+    "hat": 20,
+    "vest": 30,
+    "gloves": 55,
+    "matteo_hat": 80,
+    "lorgnette": 135,
+    "guitar": 30,
+    "drum": 50,
+    "banjo": 80,
+    "violin": 125,
+    "tuba": 205
+  },
   "days": {
     "total_days": 14,
     "tutorial_day": 1,
     "duration_seconds": 60,
-    "energy_before_music_unlock": 3,
-    "energy_after_music_unlock": 6,
     "items_per_craft": 1
   },
   "workshops": [
@@ -19,7 +29,7 @@
     {
       "id": "music",
       "spin_cost": 50,
-      "unlock_cost": 1000
+      "unlock_cost": 0
     }
   ],
   "rarities": [
@@ -101,6 +111,68 @@
       "id": "final",
       "deadline_day": 14,
       "amount": 1500
+    }
+  ],
+  "items": [
+    {
+      "id": "hat",
+      "workshop": "atelier",
+      "base_price": 25,
+      "rerolls": 3
+    },
+    {
+      "id": "vest",
+      "workshop": "atelier",
+      "base_price": 45,
+      "rerolls": 2
+    },
+    {
+      "id": "gloves",
+      "workshop": "atelier",
+      "base_price": 75,
+      "rerolls": 2
+    },
+    {
+      "id": "matteo_hat",
+      "workshop": "atelier",
+      "base_price": 115,
+      "rerolls": 1
+    },
+    {
+      "id": "lorgnette",
+      "workshop": "atelier",
+      "base_price": 195,
+      "rerolls": 1
+    },
+    {
+      "id": "guitar",
+      "workshop": "music",
+      "base_price": 40,
+      "rerolls": 3
+    },
+    {
+      "id": "drum",
+      "workshop": "music",
+      "base_price": 70,
+      "rerolls": 2
+    },
+    {
+      "id": "banjo",
+      "workshop": "music",
+      "base_price": 115,
+      "rerolls": 2
+    },
+    {
+      "id": "violin",
+      "workshop": "music",
+      "base_price": 175,
+      "rerolls": 1
+    },
+    {
+      "id": "tuba",
+      "workshop": "music",
+      "base_price": 295,
+      "rerolls": 1
     }
   ]
 }

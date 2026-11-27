@@ -43,8 +43,8 @@ public partial class ProjectTest
             game.EndDay();
             Check(customer.Visible && !game.TradeActive && arrivals == 1 && game.BuyerWaitRemaining == game.BuyerWaitInitial,
                 "Start must bring exactly one customer even with empty displays");
-            Check(game.GetNode<DayAnnouncementOverlay>("DayAnnouncements").IsShowing &&
-                !game.HasNode("DayAnnouncements/BuyerArrival"), "Only the existing day announcement should show at Start");
+            Check(!game.GetNode<DayAnnouncementOverlay>("DayAnnouncements").IsShowing &&
+                !game.HasNode("DayAnnouncements/BuyerArrival"), "Start must not display an announcement");
 
             foreach (var band in new[] { (0d, 0), (0.01d, 1), (4d, 1), (4.01d, 2), (8d, 2),
                 (8.01d, 3), (12d, 3), (12.01d, 4), (16d, 4), (16.01d, 5), (20d, 5), (21d, 5) })
@@ -69,14 +69,14 @@ public partial class ProjectTest
             polish.SetProcess(false);
             polish._Process(1);
             game._Process(5);
-            Check(game.BuyerWaitRemaining == half - 1 && bar.Value == half + 1, "Crafting must advance the customer timer exactly once");
-            await PressEscapeForTest();
-            Check(!polish.IsOpen && !Paused, "Escape must return from the crafting modal");
+            Check(game.BuyerWaitRemaining == half && bar.Value == half, "Crafting must hold the customer timer");
+            await ClickControl(game, "PolishingGame/Surface/Cancel");
+            Check(!polish.IsOpen && !Paused, "Back must leave the crafting modal");
 
             game.PersistProgress();
             await Reload();
             customer = game.GetNode<ModularCustomer>(customerPath);
-            Check(customer.Visible && game.BuyerWaitInitial == initial && game.BuyerWaitRemaining == half - 1, "Reload must restore a waiting customer and the remaining time");
+            Check(customer.Visible && game.BuyerWaitInitial == initial && game.BuyerWaitRemaining == half, "Reload must restore a waiting customer and the remaining time");
             game.GetItemFromAtelier();
             var embroidery = game.GetNode<EmbroideryGame>("EmbroideryGame");
             embroidery.FinishForTesting(true);
@@ -84,13 +84,13 @@ public partial class ProjectTest
             game.SelectInventoryItem(0);
             game.PlaceItemInShowcase(0);
             game._Process(0);
-            Check(game.TradeActive && game.BuyerWaitInitial == initial && game.BuyerWaitRemaining == half - 1, "Serving starts a deal with the existing timer");
+            Check(game.TradeActive && game.BuyerWaitInitial == initial && game.BuyerWaitRemaining == half, "Serving starts a deal with the existing timer");
             var offerLabel = game.GetNode<Label>("World/TradingRoom/Item/TradePanel/Content/OfferLabel");
             int price = game.OfferedPrice;
             int bonus = TradeScene.QualityBonus(game.ActiveTradeQualityRank);
-            Check(offerLabel.Text == GameLocalization.Format("Получим: {0}$", price + bonus + TradeScene.SpeedBonus(half - 1, initial)),
+            Check(offerLabel.Text == GameLocalization.Format("Получим: {0}$", price + bonus + TradeScene.SpeedBonus(half, initial)),
                 "The live offer must include the current speed band and the item quality");
-            game._Process(half - 2);
+            game._Process(half - 1);
             Check(offerLabel.Text == GameLocalization.Format("Получим: {0}$", price + bonus + 1),
                 "Crossing a time band must update the live total");
             game.RerollsRemaining = 3;
@@ -162,14 +162,14 @@ public partial class ProjectTest
         game.GetNode<DayAnnouncementOverlay>("DayAnnouncements").Dismiss();
         game.Score = price - 1;
         game.RefreshDayPresentation();
-        Check(button.Disabled && button.Text == $"Открыть за {price}$" && title.Tr(title.Text) == "Музыкальная мастерская",
+        Check(button.Disabled && button.Text == $"Открыть за {price}$" && title.Tr(title.Text) == "МАСТЕРСКАЯ",
             "Insufficient funds must disable a readable, correctly priced Russian button");
         TranslationServer.SetLocale("en");
-        Check(button.Text == $"Unlock for ${price}" && title.Tr(title.Text) == "Music workshop",
+        Check(button.Text == $"Unlock for ${price}" && title.Tr(title.Text) == "WORKSHOP",
             "The title and configured price must update live in English");
-        Check(button.GetThemeStylebox("normal") is StyleBoxTexture normal && normal.Texture == panel.ButtonTexture &&
+        Check(button.GetThemeStylebox("normal") is StyleBoxTexture normal && normal.Texture.ResourcePath == "res://art/ui/panel_small.png" &&
             button.GetThemeStylebox("hover") is StyleBoxTexture hover && hover.ModulateColor.R > normal.ModulateColor.R &&
-            panel.GetThemeStylebox("panel") is StyleBoxTexture paper && paper.Texture == panel.PanelTexture,
+            panel.GetThemeStylebox("panel") is StyleBoxTexture paper && paper.Texture.ResourcePath == "res://art/ui/panel_large.png",
             "The separate artwork slots must be used for the panel and for hover feedback");
 
         var camera = game.GetNode<WorldCamera>("Camera2D");

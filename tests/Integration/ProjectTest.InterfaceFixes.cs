@@ -5,6 +5,120 @@ using Godot;
 
 public partial class ProjectTest
 {
+    private async Task TestRevisionUi()
+    {
+        var original = Root.Size;
+        string locale = TranslationServer.GetLocale();
+        var game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
+        game.SavePath = "";
+        Root.AddChild(game);
+        game.SetProcess(false);
+        var camera = game.GetNode<WorldCamera>("Camera2D");
+        camera.SetProcess(false);
+        const string roomPath = "World/TradingRoom";
+        var room = game.GetNode<Node2D>(roomPath);
+        var item = room.GetNode<Node2D>("Item");
+        var sale = item.GetNode<Control>("TradePanel");
+        var widget = room.GetNode<BuyerWaitWidget>("BuyerWaitingThought");
+        var bubble = widget.GetNode<Control>("ThoughtBubble");
+        var settings = game.GetNode<PauseMenu>("PauseMenu");
+        var zoomUi = game.GetNode<ZoomResponsiveUi>("ZoomResponsiveUi");
+        try
+        {
+            item.Show();
+            sale.Show();
+            widget.SetState(false, 0, 15);
+            foreach (Vector2I viewport in new[] { new Vector2I(1280, 720), new Vector2I(1920, 1080) })
+            {
+                Root.Size = viewport;
+                await ToSignal(this, SignalName.ProcessFrame);
+                foreach (float scale in new[] { 0.4f, 0.72f, 1f })
+                {
+                    camera.Zoom = Vector2.One * scale;
+                    camera.Position = room.ToGlobal(new Vector2(800, 380));
+                    camera.ForceUpdateScroll();
+                    zoomUi.UpdateForZoom(scale);
+                    await ToSignal(this, SignalName.ProcessFrame);
+                    Rect2 offerBounds = ScreenBounds(sale), bubbleBounds = ScreenBounds(bubble);
+                    Check(Root.GetVisibleRect().Encloses(offerBounds) &&
+                        Root.GetVisibleRect().Encloses(bubbleBounds) && !offerBounds.Intersects(bubbleBounds),
+                        $"Trade elements must fit without overlap at {viewport}, zoom {scale}: {offerBounds}, {bubbleBounds}");
+                    Check(sale.ZIndex >= 125 && bubble.ZIndex > sale.ZIndex &&
+                        !sale.ZAsRelative && !bubble.ZAsRelative, "Both trade controls must draw above the room textures");
+                }
+                camera.Zoom = Vector2.One * 0.52f;
+                camera.ForceUpdateScroll();
+                zoomUi.UpdateForZoom(0.52f);
+                using (var frame = await CapturePresentation($"v131-sale-{viewport.X}")) { }
+
+                foreach (string language in new[] { "ru", "en" })
+                {
+                    TranslationServer.SetLocale(language);
+                    await ToSignal(this, SignalName.ProcessFrame);
+                    await ToSignal(this, SignalName.ProcessFrame);
+                    string Caption(string key) =>
+                        game.GetNode<Label>($"HUD/Root/ProgressPanel/Visual/{key}/Caption").Text;
+                    Check(Caption("Day") == (language == "ru" ? "День 1" : "Day 1") &&
+                        Caption("Quota").StartsWith(language == "ru" ? "Следующая квота:" : "Next quota:") &&
+                        Caption("Deadline") == (language == "ru" ? "До квоты: 7 дней" : "Quota due in 7 days"),
+                        "Cigarette captions must use valid Russian and English strings");
+                }
+                bool russianArtwork = viewport.X == 1280;
+                TranslationServer.SetLocale(russianArtwork ? "ru" : "en");
+                settings.Open();
+                settings.GetNode<Button>("Root/Overlay/Center/Panel/Content/Menu/SettingsButton")
+                    .EmitSignal(Button.SignalName.Pressed);
+                var row = settings.GetNode<FullscreenToggle>("Root/Overlay/Center/Panel/Content/Settings/FullscreenButton");
+                await ToSignal(this, SignalName.ProcessFrame);
+                await ToSignal(this, SignalName.ProcessFrame);
+                var material = (ShaderMaterial)row.Material;
+                float ratio = material.GetShaderParameter("artwork_width_ratio").AsSingle();
+                Check(ratio > 0 && ratio < 1 && Mathf.IsEqualApprox(ratio * row.Size.X, row.Size.Y * 4000 / 600),
+                    "Fullscreen artwork must retain an isotropic scale on the switch region");
+                Check(settings.GetNode<PanelContainer>("Root/Overlay/Center/Panel").GetThemeStylebox("panel")
+                    is StyleBoxTexture soft && soft.GetExpandMargin(Side.Bottom) > 0,
+                    "Settings must extend the painted backdrop past the last button");
+                row.SetProcess(false);
+                foreach (bool on in new[] { false, true })
+                {
+                    row.TextureNormal = russianArtwork
+                        ? (on ? row.RussianOn : row.RussianOff)
+                        : (on ? row.EnglishOn : row.EnglishOff);
+                    using var frame = await CapturePresentation($"v131-settings-{viewport.X}-{on}");
+                }
+                row.SetProcess(true);
+                settings.Close();
+
+                var notebook = game.GetNode<PulloutNotebook>("HUD/Root/PulloutNotebook");
+                Rect2 tabBounds = notebook.GetGlobalTransformWithCanvas() * notebook.HoverBounds;
+                Vector2 tab = new(tabBounds.Position.X + 17, tabBounds.GetCenter().Y);
+                Vector2 away = new(300, 650);
+                MoveButtonPointer(tab);
+                await ToSignal(this, SignalName.ProcessFrame);
+                MoveButtonPointer(away);
+                await ToSignal(CreateTimer(.95), SceneTreeTimer.SignalName.Timeout);
+                Check(!notebook.Expanded, "A quick pass over the tab must let the notebook retract");
+                MoveButtonPointer(tab);
+                await ToSignal(CreateTimer(.55), SceneTreeTimer.SignalName.Timeout);
+                Rect2 page = ScreenBounds(notebook.GetNode<Control>("Page"));
+                MoveButtonPointer(page.GetCenter());
+                await ToSignal(CreateTimer(.45), SceneTreeTimer.SignalName.Timeout);
+                Check(notebook.Expanded, "Moving onto the open page must keep the notebook readable");
+                MoveButtonPointer(away);
+                await ToSignal(CreateTimer(.65), SceneTreeTimer.SignalName.Timeout);
+                Check(!notebook.Expanded, "Leaving the page must close it at either resolution");
+            }
+        }
+        finally
+        {
+            settings.Close();
+            game.QueueFree();
+            Root.Size = original;
+            TranslationServer.SetLocale(locale);
+        }
+        await ToSignal(this, SignalName.ProcessFrame);
+    }
+
     private async Task TestInterfaceFixes()
     {
         const string save = "user://interface_fixes_test.json";
@@ -172,6 +286,18 @@ public partial class ProjectTest
             Check(!panel.Expanded && ScreenBounds(pack) == packBounds && sticks.Select(ScreenBounds).SequenceEqual(rest),
                 $"Pack retraction {i + 1} must return to exactly the initial visible bounds");
         }
+
+        var tradePanel = game.GetNode<Control>("World/TradingRoom/Item/TradePanel");
+        var zoomUi = game.GetNode<ZoomResponsiveUi>("ZoomResponsiveUi");
+        zoomUi.UpdateForZoom(1);
+        Vector2 pivot = new(tradePanel.Size.X / 2, tradePanel.Size.Y);
+        Vector2 bottom = tradePanel.GetTransform() * pivot;
+        Vector2 normalScale = tradePanel.Scale;
+        zoomUi.UpdateForZoom(0.4f);
+        Check(tradePanel.Scale.X > normalScale.X * 2 &&
+            (tradePanel.GetTransform() * pivot).IsEqualApprox(bottom),
+            "Sale panel must grow when zooming out and retain its bottom-center anchor");
+        zoomUi.UpdateForZoom(game.GetNode<WorldCamera>("Camera2D").Zoom.X);
 
         var notebook = game.GetNode<PulloutNotebook>("HUD/Root/PulloutNotebook");
         var page = notebook.GetNode<Control>("Page");

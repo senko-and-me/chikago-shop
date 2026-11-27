@@ -5,6 +5,48 @@ namespace ChikagoShop.Domain.Tests;
 
 public sealed class EmbroiderySessionTests
 {
+    private static readonly string[] ItemKinds = ["hat", "vest", "gloves", "matteo_hat", "lorgnette"];
+
+    [TestCaseSource(nameof(ItemKinds))]
+    public void SelectedItemHasDeterministicBoundedAndCompletableContour(string kind)
+    {
+        var session = new EmbroiderySession(kind);
+        Assert.That(session.Points, Is.EqualTo(new EmbroiderySession(kind).Points));
+        Assert.That(session.Points.Count, Is.InRange(10, 24));
+        Assert.That(session.Points.All(p => p.X >= 25 && p.X <= 815 && p.Y >= 25 && p.Y <= 455), Is.True);
+        Assert.That(session.Points.Max(p => p.X) - session.Points.Min(p => p.X), Is.GreaterThan(200));
+        Assert.That(session.Points.Max(p => p.Y) - session.Points.Min(p => p.Y), Is.GreaterThan(100));
+        session.Start();
+        foreach (var point in session.Points)
+        {
+            session.Tick(0.25);
+            Assert.That(session.Hit(point.X, point.Y), Is.True);
+        }
+        Assert.That(session.Complete, Is.True);
+        Assert.That(session.State, Is.EqualTo(EmbroideryState.Finished));
+        Assert.That(session.Rank, Is.EqualTo("S"));
+    }
+
+    [Test]
+    public void EveryItemHasItsOwnGeometryAndUnknownKindsAreRejected()
+    {
+        for (int i = 0; i < ItemKinds.Length; i++)
+        for (int j = i + 1; j < ItemKinds.Length; j++)
+            Assert.That(new EmbroiderySession(ItemKinds[i]).Points,
+                Is.Not.EqualTo(new EmbroiderySession(ItemKinds[j]).Points));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new EmbroiderySession("unknown"));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new EmbroiderySession((string)null!));
+        foreach (double invalid in new[] { 0, -1, double.NaN, double.PositiveInfinity })
+            Assert.Throws<ArgumentOutOfRangeException>(() => new EmbroiderySession("hat", invalid));
+        var boosted = new EmbroiderySession("hat", 12);
+        Assert.That(boosted.Duration, Is.EqualTo(12));
+        boosted.Start();
+        boosted.Tick(10);
+        Assert.That(boosted.State, Is.EqualTo(EmbroideryState.Playing));
+        boosted.Tick(2);
+        Assert.That(boosted.State, Is.EqualTo(EmbroideryState.Finished));
+    }
+
     [TestCase(0)] [TestCase(1)] [TestCase(2)] [TestCase(3)]
     public void OnlyOrderedHitsCompletePatternAndFinishIsTerminal(int pattern)
     {

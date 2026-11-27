@@ -15,8 +15,6 @@ public partial class ProjectTest
         const string tradeButtons = "World/TradingRoom/Item/TradePanel/Content/Buttons/";
         var scene = GD.Load<PackedScene>("res://scenes/trade_scene.tscn");
         var originalSize = Root.Size;
-        // Retain the script while repeatedly recreating pause menus in this fixture.
-        var retainedFullscreenScript = GD.Load<Script>("res://scripts/UI/FullscreenToggle.cs");
         TradeScene game = null;
         MainMenu menu = null;
 
@@ -129,34 +127,48 @@ public partial class ProjectTest
                 var craft = game.GetNode<EmbroideryGame>(music ? "PolishingGame" : "EmbroideryGame");
                 craft.SetProcess(false);
                 craft.Open();
+                Check(game.Crafting.Select(music ? "guitar" : "hat"), "Select a concrete item before preparing craft");
                 Check(craft.IsOpen && Paused, "The pre-start crafting menu must be open");
                 double dayTime = game.DayRemainingSeconds;
                 craft._Process(1);
                 game._Process(1);
-                Check(game.BuyerWaitRemaining == time - 1 && game.DayRemainingSeconds == dayTime - 1,
-                    "The craft menu must tick both clocks once, at their usual rate");
+                double elapsed = bar.Value;
+                Check(game.BuyerWaitRemaining == time && game.DayRemainingSeconds == dayTime,
+                    "Preparation must freeze both day and buyer clocks");
                 craft.Activate();
+                double craftTime = craft.ActiveSession.RemainingSeconds;
+                await PressEscapeForTest();
+                Check(pause.IsOpen, "Escape during craft must open the pause menu");
                 craft._Process(2);
                 game._Process(2);
-                Check(game.BuyerWaitRemaining == time - 3 && game.DayRemainingSeconds == dayTime - 3,
-                    "Playing either minigame must tick both clocks once");
+                Check(game.DayRemainingSeconds == dayTime && craft.ActiveSession.RemainingSeconds == craftTime &&
+                    game.BuyerWaitRemaining == time && bar.Value == elapsed, "Esc pause must freeze all three timers");
+                pause.Close();
+                craft._Process(2);
+                game._Process(2);
+                Check(game.BuyerWaitRemaining == time && game.DayRemainingSeconds == dayTime - 2 &&
+                    craft.ActiveSession.RemainingSeconds == craftTime - 2 && bar.Value == elapsed,
+                    "Playing either minigame must tick only the day and craft clocks");
                 craft.FinishForTesting(true);
+                craft._Process(1);
+                Check(game.DayRemainingSeconds == dayTime - 2 && game.BuyerWaitRemaining == time && bar.Value == elapsed,
+                    "The result screen must also keep the buyer clock frozen");
                 craft.Activate();
-                Check(!craft.IsOpen && !Paused && game.BuyerWaitRemaining == time - 3,
-                    "Opening, playing and closing craft must not roll a new waiting duration");
+                Check(!craft.IsOpen && !Paused && game.BuyerWaitRemaining == time,
+                    "Opening, playing and closing craft must not change the waiting duration");
 
                 game.RerollsRemaining = 3;
                 game.RerollCustomer();
                 Check(game.RerollsRemaining == 2 && game.BuyerWaitInitial == data.BuyerWaitInitial &&
-                    game.BuyerWaitRemaining == time - 3 && ShadowGeometry() == geometry,
+                    game.BuyerWaitRemaining == time && ShadowGeometry() == geometry,
                     "Reroll changes the offer while preserving the timer and the one reserved shadow");
                 game.PersistProgress();
                 await Reload();
-                Check(game.BuyerWaitInitial == data.BuyerWaitInitial && game.BuyerWaitRemaining == time - 3 &&
+                Check(game.BuyerWaitInitial == data.BuyerWaitInitial && game.BuyerWaitRemaining == time &&
                     ShadowGeometry() == geometry, "Active sale, both timer values and originating shadow must restore exactly");
                 Check(game.ShowcaseItems[ music ? 3 : 0 ] == -1 && game.StoredItems.Length == 1,
                     "Loading a reserved trade must not duplicate the sold item");
-                game._Process(time - 3);
+                game._Process(time);
                 Check(game.TradeActive && game.BuyerWaitRemaining == 0 &&
                     game.GetNode<ProgressBar>(barPath).Ratio == 1 &&
                     !game.GetNode<Button>(tradeButtons + "AcceptButton").Disabled,
@@ -195,7 +207,7 @@ public partial class ProjectTest
                 pause.Close();
 
                 var card = game.GetNode<DayTransitionCard>("DayTransitionCard");
-                card.Open(1, 2, new[] { DayUpgrade.Cash, DayUpgrade.Energy, DayUpgrade.Atelier }, 2000);
+                card.Open(1, 2, new[] { DayUpgrade.Cash, DayUpgrade.AtelierPrice, DayUpgrade.Atelier }, 2000);
                 await WaitForDayCardAnimation(card);
                 foreach (var purchase in card.FindChildren("Choose", "Button", true, false).OfType<Button>())
                 {
@@ -223,8 +235,10 @@ public partial class ProjectTest
                 foreach (string name in new[] { "NewGameButton", "ContinueButton", "ChoiceBackButton" })
                     CheckButtonShadow(menu.GetNode<TextureButton>("MainMenuContainer/Menu/" + name));
                 using (await CapturePresentation($"choice-button-shadows-{size.X}")) { }
-                await ClickControl(menu, "MainMenuContainer/Menu/NewGameButton");
+                // Preview this decoration independently: New Game now enters training before prologue.
+                menu.GetNode<CanvasLayer>("IntroSkipLayer").Visible = true;
                 var skip = menu.GetNode<TextureButton>("IntroSkipLayer/SkipButton");
+                skip.Show();
                 CheckButtonShadow(skip);
                 await ToSignal(this, SignalName.ProcessFrame);
                 await ToSignal(this, SignalName.ProcessFrame);
@@ -245,7 +259,6 @@ public partial class ProjectTest
             if (FileAccess.FileExists(save)) DirAccess.RemoveAbsolute(save);
         }
         await ToSignal(this, SignalName.ProcessFrame);
-        System.GC.KeepAlive(retainedFullscreenScript);
     }
 
     private async Task CheckShadowButtonInput(BaseButton button, string capture)

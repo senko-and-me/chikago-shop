@@ -53,18 +53,19 @@ public sealed class BalanceProfileTests
     public void WeightedCardsAreStableWithoutDuplicatesAndPurchaseUsesEditedCost()
     {
         var weights = Enum.GetValues<DayUpgrade>().Where(card => card != DayUpgrade.None)
-            .ToDictionary(card => card, card => card == DayUpgrade.Cash ? 1 : 0);
+            .ToDictionary(card => card, card => card == DayUpgrade.AtelierPrice ? 1 : 0);
         var rules = new DayUpgradeRules { WeightedSelection = true, Weights = weights,
-            Costs = new Dictionary<DayUpgrade, int> { [DayUpgrade.Cash] = 17 } };
+            Costs = new Dictionary<DayUpgrade, int> { [DayUpgrade.AtelierPrice] = 17 } };
         var session = new DayUpgradeSession { Rules = rules };
         session.Offer(2);
-        Assert.AreEqual(new[] { DayUpgrade.Cash }, session.Options);
-        Assert.IsFalse(session.TryPurchase(DayUpgrade.Cash, 16, out _));
-        Assert.IsTrue(session.TryPurchase(DayUpgrade.Cash, 100, out int cash));
+        Assert.AreEqual(new[] { DayUpgrade.AtelierPrice }, session.Options);
+        Assert.IsFalse(session.TryPurchase(DayUpgrade.AtelierPrice, 16, out _));
+        Assert.IsTrue(session.TryPurchase(DayUpgrade.AtelierPrice, 100, out int cash));
         Assert.AreEqual(83, cash);
         var many = new DayUpgradeRules { WeightedSelection = true, Seed = 71 };
         Assert.AreEqual(many.Options(3), new DayUpgradeRules { WeightedSelection = true, Seed = 71 }.Options(3));
-        Assert.AreEqual(3, many.Options(3).Distinct().Count());
+        Assert.AreEqual(2, many.Options(3).Distinct().Count());
+        CollectionAssert.DoesNotContain(many.Options(3), DayUpgrade.Energy);
     }
 
     [Test]
@@ -74,8 +75,8 @@ public sealed class BalanceProfileTests
         {
             WeightedSelection = true, Seed = seed,
             Weights = new Dictionary<DayUpgrade, int> { [DayUpgrade.Cash] = weight }
-        }.Options(2)[0] == DayUpgrade.Cash);
-        Assert.IsTrue(Count(100) > Count(1) * 3);
+        }.Options(2, musicUnlocked: true)[0] == DayUpgrade.Cash);
+        Assert.IsTrue(Count(100) > Count(1) * 2);
     }
 
     [Test]
