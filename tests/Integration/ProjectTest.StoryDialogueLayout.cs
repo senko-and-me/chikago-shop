@@ -97,7 +97,7 @@ public partial class ProjectTest
                         Check(notice.StoryFinished && notice.IsOpen && Paused &&
                             notice.GetNode<Control>("StoryRoot/Speech/Content/Actions/Restart").Visible &&
                             notice.GetNode<Control>("StoryRoot/Speech/Content/Actions/MainMenu").Visible &&
-                            notice.GetNode<Control>("StoryRoot/Speech/Content/Actions/Checkpoint").Visible == !ending.Item2,
+                            !notice.HasNode("StoryRoot/Speech/Content/Actions/Checkpoint"),
                             "Both endings must reach their result actions without closing or unpausing the scene");
                         for (int i = 1; i < seen.Length; i++) Check(seen[i] > 0, "No ending bubble may be lost");
                         notice.Close();
@@ -152,6 +152,9 @@ public partial class ProjectTest
         foreach (string name in portraits)
         {
             var portrait = root.GetNode<TextureRect>("Characters/" + name);
+            float centerX = (portrait.AnchorLeft + portrait.AnchorRight) / 2;
+            Check(Mathf.Abs(centerX - (name == "Castello" ? 0.325f : 0.6475f)) < 0.001f,
+                "Both portraits must sit closer to the center in every dialogue composition");
             Rect2 slot = portrait.GetGlobalRect();
             Vector2 texture = portrait.Texture.GetSize();
             float fit = Mathf.Min(slot.Size.X / texture.X, slot.Size.Y / texture.Y);

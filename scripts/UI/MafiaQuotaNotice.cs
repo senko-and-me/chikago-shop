@@ -9,7 +9,6 @@ public partial class MafiaQuotaNotice : CanvasLayer
 {
     public event Action Dismissed;
     public event Action RestartRequested;
-    public event Action CheckpointRequested;
     public event Action MainMenuRequested;
 
     private Control _root = null!;
@@ -19,7 +18,6 @@ public partial class MafiaQuotaNotice : CanvasLayer
     private Label _message = null!;
     private TextureButton _skipDialogue = null!;
     private Button _restart = null!;
-    private Button _checkpoint = null!;
     private Button _mainMenu = null!;
     private StoryPortraitController _portraits = null!;
     private StorySpeakerFocus _speakerFocus = null!;
@@ -28,7 +26,6 @@ public partial class MafiaQuotaNotice : CanvasLayer
     private bool _ownsPause;
     private bool _terminal;
     private bool _storyFinished;
-    private bool _canCheckpoint;
     private bool _transitioning;
     private int _transitionRevision;
     private DialogueSession _conversation;
@@ -82,9 +79,9 @@ public partial class MafiaQuotaNotice : CanvasLayer
         _root.AddChild(characters);
         characters.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         StoryDialogueLayout.AddPortrait(characters, "Castello",
-            GD.Load<Texture2D>("res://art/dialogue/castello.png"), 0.225f);
+            GD.Load<Texture2D>("res://art/dialogue/castello.png"), 0.325f);
         StoryDialogueLayout.AddPortrait(characters, "Frankie",
-            GD.Load<Texture2D>("res://art/dialogue/frankie.png"), 0.7475f, top: 0.245f, bottom: 0.785f);
+            GD.Load<Texture2D>("res://art/dialogue/frankie.png"), 0.6475f, top: 0.245f, bottom: 0.785f);
 
         var castello = characters.GetNode<TextureRect>("Castello");
         var frankie = characters.GetNode<TextureRect>("Frankie");
@@ -127,11 +124,6 @@ public partial class MafiaQuotaNotice : CanvasLayer
         _root.AddChild(_skipDialogue);
         StoryDialogueLayout.StyleSkipButton(_skipDialogue);
         _skipDialogue.Pressed += CloseWithTransition;
-        _checkpoint = MakeAction(actions, "Checkpoint", () =>
-        {
-            CloseCore(false);
-            CheckpointRequested?.Invoke();
-        });
         _restart = MakeAction(actions, "Restart", () =>
         {
             CloseCore(false);
@@ -202,7 +194,6 @@ public partial class MafiaQuotaNotice : CanvasLayer
         bool english = GameLocalization.Language == "en";
         _terminal = !succeeded || final;
         _storyFinished = false;
-        _canCheckpoint = !succeeded;
         _heading.Text = succeeded
             ? final ? (english ? "VICTORY" : "ПОБЕДА")
                 : (english ? "WEEK TWO" : "НЕДЕЛЯ ВТОРАЯ")
@@ -213,11 +204,9 @@ public partial class MafiaQuotaNotice : CanvasLayer
         DialogueLine line = _conversation.Current;
         ShowLine(line);
         StoryDialogueLayout.StyleSkipButton(_skipDialogue);
-        _checkpoint.Text = english ? "From checkpoint" : "С чекпоинта";
         _restart.Text = english ? "New game" : "Начать заново";
         _mainMenu.Text = english ? "Main menu" : "Главное меню";
         _skipDialogue.Show();
-        _checkpoint.Hide();
         _restart.Hide();
         _mainMenu.Hide();
         _ownsPause = !GetTree().Paused;
@@ -322,7 +311,6 @@ public partial class MafiaQuotaNotice : CanvasLayer
         _portraits.ShowSpeech(null, lineComplete: true);
         _speakerFocus.SetSpeaker(null);
         _skipDialogue.Hide();
-        _checkpoint.Visible = _canCheckpoint;
         _restart.Show();
         _mainMenu.Show();
         _restart.GrabFocus();

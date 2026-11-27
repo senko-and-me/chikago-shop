@@ -9,6 +9,36 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### SC240 — убрать кнопку контрольной точки
+
+SC240 DONE; /root; CP `.local/checks/sc240/CP-SC240.md`; SC239 DONE. Кнопка «С чекпоинта» и её UI callback/subscription удалены; после поражения остаются «Начать заново» и «Главное меню».
+
+```text
+Task: SC240
+Recommended status: REVIEW -> accepted DONE; gate PASSED 28.11.2026
+Changed: MafiaQuotaNotice button/label/callback removed, DayCycleController dead subscription removed, ending layout assertion checks absence, plan.
+Checks: build PASS zero warnings/errors; rendered dialogue-portraits PASS exit0/stderr empty (.local/checks/sc240/); diffcheck PASS.
+Acceptance: no Checkpoint node exists in ending actions, full play/skip both reach Restart/MainMenu; underlying checkpoint persistence/API untouched.
+Read-set exception: DayCycleController subscription found by focused diagnostic search and included in CP. Prior and user changes preserved.
+Risks/blocker: none.
+Next: user review; no push requested.
+```
+
+### SC239 — портреты ближе к центру
+
+SC239 DONE; /root; CP `.local/checks/sc239/CP-SC239.md`; SC238 DONE. Кастелло сдвинут вправо и Френки влево на10% ширины экрана в прологе и аналогичных диалогах квот; размеры/высота сохранены.
+
+```text
+Task: SC239
+Recommended status: REVIEW -> accepted DONE; gate PASSED 28.11.2026
+Changed: scenes/UI/DialoguePlayer.tscn portrait anchors; MafiaQuotaNotice portrait centers; StoryDialogueLayout center-position regression; plan.
+Checks: build PASS zero warnings/errors; rendered dialogue-portraits PASS exit0/stderr empty (.local/checks/sc239/); screenshot reviewed at1280x720; diffcheck PASS.
+Acceptance: portrait centers now32.5% and64.75% across prologue/quota/endings, each moved10% inward. Existing text, dimensions, animation and real-world family composition preserved.
+Read-set exception: none. User trade_scene edits preserved.
+Risks/blocker: none.
+Next: user review; no push requested.
+```
+
 ### SC238 — финальные диалоги и редактура сценария
 
 SC238 DONE; /root; CP `.local/checks/sc238/CP-SC238.md`; SC237 DONE. Победа/поражение реализованы, действия результата появляются после диалога; текущие и предыдущие пользовательские сценарии вычитаны, большие реплики разделены на облачка. Возможные пожары/газета вне scope.
