@@ -112,5 +112,67 @@
       "deadline_day": 14,
       "amount": 1500
     }
+  ],
+  "items": [
+    {
+      "id": "hat",
+      "workshop": "atelier",
+      "base_price": 25,
+      "rerolls": 3
+    },
+    {
+      "id": "vest",
+      "workshop": "atelier",
+      "base_price": 45,
+      "rerolls": 2
+    },
+    {
+      "id": "gloves",
+      "workshop": "atelier",
+      "base_price": 75,
+      "rerolls": 2
+    },
+    {
+      "id": "matteo_hat",
+      "workshop": "atelier",
+      "base_price": 115,
+      "rerolls": 1
+    },
+    {
+      "id": "lorgnette",
+      "workshop": "atelier",
+      "base_price": 195,
+      "rerolls": 1
+    },
+    {
+      "id": "guitar",
+      "workshop": "music",
+      "base_price": 40,
+      "rerolls": 3
+    },
+    {
+      "id": "drum",
+      "workshop": "music",
+      "base_price": 70,
+      "rerolls": 2
+    },
+    {
+      "id": "banjo",
+      "workshop": "music",
+      "base_price": 115,
+      "rerolls": 2
+    },
+    {
+      "id": "violin",
+      "workshop": "music",
+      "base_price": 175,
+      "rerolls": 1
+    },
+    {
+      "id": "tuba",
+      "workshop": "music",
+      "base_price": 295,
+      "rerolls": 1
+    }
   ]
 }

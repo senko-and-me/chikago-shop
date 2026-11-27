@@ -4,6 +4,17 @@ using Godot;
 // Observes gameplay during practice and resets the practice run through the existing NewGame action on exit.
 public partial class FirstTradeTutorial : CanvasLayer
 {
+    private bool _displayInspected;
+    internal void OnShowcaseInspected(int slot)
+    {
+        if (!IsActive || CurrentStep != Step.Select || Target != _game.DisplayControl(slot)) return;
+        _displayInspected = true;
+        Save(false);
+        Refresh();
+    }
+
+    internal bool CanSelectDisplay(int slot) => !IsActive || CurrentStep == Step.Place && Target == _game.DisplayControl(slot);
+
     public enum Step { Camera, Start, Craft, Select, Place, WaitBuyer, Offer, Summary, CameraZoom, RoomFocus, BuyerRequest, UpgradeChoice, Notebook, NotebookContents, EmbroideryStart, TimedSale, LateSale, MusicWorkshop, CardExplanation, CraftSelection }
     private const string BuyerRequestMessage = "Облачко показывает, что покупатель ищет одежду из ателье.";
     private const string NotebookMessage = "Наведите курсор на блокнот справа, чтобы открыть его.";
@@ -158,6 +169,7 @@ public partial class FirstTradeTutorial : CanvasLayer
         RoomFocusDone = restored && config.GetValue("tutorial", "room_focus_done", _cameraHandoffDone).AsBool();
         _cameraHandoffDone &= RoomFocusDone;
         _initialized = true;
+        _displayInspected = restored && config.GetValue("tutorial", "display_inspected", false).AsBool();
         // Also covers older saves migrated from paid to story-based room access.
         _musicLessonPending |= _game.MusicWorkshopUnlocked && !_musicLessonDone;
         if (SkipOnInitialize)
@@ -238,6 +250,7 @@ public partial class FirstTradeTutorial : CanvasLayer
     {
         if (_finishing || !_initialized) return;
         _musicLessonPending = _musicLessonDone = _cardLessonDone = false;
+        _displayInspected = false;
         _musicPage = _cardPage = 0;
         if (IsActive || !string.IsNullOrEmpty(ProgressPath)) Restart();
     }
@@ -396,6 +409,7 @@ public partial class FirstTradeTutorial : CanvasLayer
         config.SetValue("tutorial", "upgrade_lesson_pending", _upgradeLessonPending);
         config.SetValue("tutorial", "upgrade_lesson_day", _upgradeLessonDay);
         config.SetValue("tutorial", "offer_page", _offerPage);
+        config.SetValue("tutorial", "display_inspected", _displayInspected);
         config.SetValue("tutorial", "notebook_lesson_done", _notebookLessonDone);
         config.SetValue("tutorial", "buyer_request_read", _buyerRequestRead);
         config.SetValue("tutorial", "embroidery_started", _embroideryStarted);
@@ -581,18 +595,11 @@ public partial class FirstTradeTutorial : CanvasLayer
         else if (!_game.DayStarted) SetStep(Step.Start,
             "Нажмите «Начать» на часах, чтобы открыть магазин. Часы показывают, сколько времени осталось до закрытия.",
             _game.GetNode<Control>("HUD/DayClock/Root/DayTimer/StartButton"));
-        else if (_game.ShowcaseItems.Any(item => item >= 0)) SetStep(Step.WaitBuyer,
-            "Красная полоска над покупателем показывает, сколько времени осталось для надбавки за скорость.",
-            _game.GetNode<Control>("World/ShowroomLeft/Showcases/Slot1"));
-        else if (_game.StoredItems.Length > 0)
-        {
-            if (_game.SelectedInventoryIndex < 0) SetStep(Step.Select,
-                "Наведите курсор на предмет, чтобы узнать его цену, редкость и качество. Нажмите на него, чтобы выбрать.",
-                _game.GetNode<InventoryUI>("HUD/InventoryUI").Container.GetChild<Control>(0));
-            else SetStep(Step.Place,
-                "Нажмите на свободную витрину слева или перетащите туда предмет.",
-                _game.GetNode<Control>("World/ShowroomLeft/Showcases/Slot1"));
-        }
+        else if (_game.FirstDisplayedItem("atelier") is int slot && slot >= 0)
+            SetStep(_displayInspected ? Step.Place : Step.Select,
+                _displayInspected ? "Нажмите на предмет, чтобы выбрать его для продажи." :
+                    "Предмет автоматически занял свободную витрину. Наведите курсор, чтобы узнать цену и качество.",
+                _game.DisplayControl(slot));
         else SetStep(Step.Craft,
             "Нажмите „Создать предметы“, чтобы выбрать предмет в каталоге. Для создания нужны деньги.",
             _game.GetNode<Control>("World/Atelier/GetItemButton"));
@@ -761,7 +768,7 @@ public partial class FirstTradeTutorial : CanvasLayer
         {
             0 => "Мастерская открывает новые инструменты и витрины. Выберите инструмент в каталоге: его цена указана на карточке.",
             1 => "В полировке удерживайте ЛКМ и водите тряпочкой по инструменту.",
-            2 => "Положите инструмент на свободную витрину. Покупатели придут после открытия магазина.",
+            2 => "Готовый инструмент сам займёт свободную витрину. Наведите курсор для просмотра, нажмите для продажи.",
             _ => "Сверяйтесь с облачком покупателя. Надбавка за скорость доступна 10–20 секунд для одежды и 15–25 секунд для инструментов."
         };
         Control focus = _musicPage switch

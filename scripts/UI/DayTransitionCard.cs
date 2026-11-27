@@ -189,8 +189,6 @@ public partial class DayTransitionCard : CanvasLayer
             var button = upgrade switch
             {
                 DayUpgrade.Cash => AddChoice(_choices, upgrade, "Оборотные средства", "+50$", "Получить 50$ перед новым днём", "СРАЗУ"),
-                DayUpgrade.Atelier => AddChoice(_choices, upgrade, "Мастерство портного", "+20%", "+20% времени на вышивку на следующий день.", "ОДЕЖДА · НА ОДИН ДЕНЬ"),
-                DayUpgrade.Music => AddChoice(_choices, upgrade, "Мастерство мастера", "+20%", "+20% времени на полировку на следующий день.", "ИНСТРУМЕНТЫ · НА ОДИН ДЕНЬ"),
                 DayUpgrade.AtelierPrice => AddChoice(_choices, upgrade, "Имя на этикетке", "+20%", "+20% к базовой цене одежды на следующий день.", "ОДЕЖДА · НА ОДИН ДЕНЬ"),
                 DayUpgrade.MusicPrice => AddChoice(_choices, upgrade, "Коллекционный звук", "+20%", "+20% к базовой цене инструментов на следующий день.", "ИНСТРУМЕНТЫ · НА ОДИН ДЕНЬ"),
                 _ => throw new ArgumentOutOfRangeException(nameof(options))

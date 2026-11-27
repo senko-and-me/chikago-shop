@@ -15,10 +15,25 @@
 
 | Задача | Статус | Исполнитель | CP |
 | --- | --- | --- | --- |
-| M223-BASE | IN_PROGRESS | /root | .local/checks/merge223/CP-M223-BASE.md |
-| M223-INTEGRATION | WAITING | /root | после BASE gate |
+| M223-BASE | DONE | /root | .local/checks/merge223/CP-M223-BASE.md |
+| M223-INTEGRATION | DONE | /root | .local/checks/merge223/CP-M223-INTEGRATION.md |
 
 BASE: исправить два устаревших теста, проверить и опубликовать нашу версию в main с отдельным merge. Затем отдельная integration/new-update от main: объединить ancestry Goodmornee, адаптировать его витрины/миграции к нашему каталогу, проверить и выполнить второй merge. Резервная ссылка перед интеграцией обязательна; source/ не читается. Общие сцены, save schema и план принадлежат root.
+
+BASE gate PASSED: main2b8543a опубликован, feature434956f; domain224PASS, build0warnings/errors. Backup backup/pre-integration-20261127 указывает на0724734. Второй merge строится от ours с явным переносом согласованных витрин/миграций Goodmornee; его откаты камеры, startup и переходов не входят в итоговое поведение.
+
+M223-INTEGRATION gate OPEN → PASSED, /root, 27.11.2026.
+
+```text
+Task: M223-INTEGRATION
+Recommended status: REVIEW -> accepted DONE
+Changed: chosen-item crafting reserves matching room display/D at paid start; exact result replaces grade. Goodmornee display/manual-sale/return flow adapted in TradeScene.Showcases, no random substitution. No active inventory, rarity or duration-card UI/rules. Explicit per-item base price/rerolls; v20 migration preserves old stock, overflow, active reserved trades and distinct same-kind grades. Tutorial uses catalog/display/manual sales; free first-quota room/gift, startup/fades/poster/notebook retained. RU/EN/debug settings updated.
+Checks: domain226/226PASS; solution build0warnings/errors. Eight rendered suites PASS exit0/stderr empty: merged-crafting, tutorial, quota-visit, poster-navigation, notebook-hover, scene-transition, intro-latency, campaign-balance. Final merged-crafting rerun PASS including screenshots, actual return click, paid expiry, F10 all tabs. Scoped diffcheck PASS. Evidence .local/checks/merge223/ and domain-results/m223-final.trx. Catalog EN960 screenshots visually reviewed. Simulator1000runs/profile confirms feasibility with unchanged prices/quotas, explicit per-item costs; matching buyer availability/timing assumed, not human win-rate evidence.
+Acceptance: all10GUI selections,5patterns/instrument masks, exact one debit/D on disk, free cancel/full slots/resources, pause/day end, manual category sales/return/rerolls, old inventory/checkpoint/active-trade migration and reload, complete new tutorial and story unlock pass. MainMenu/camera/fade changes retained from first merge. Both parent histories preserved through pending two-parent merge.
+Read-set exception: bounded helper/legacy-test/tooltip/debug diagnosis; no source/ access. Write-set expansions recorded in CP.
+Risks/blocker: none scoped. Legacy wire fields, inert rarity metadata and hidden inventory helpers retained for backward compatibility; historical inventory-specific suites are not claimed green. No human full-campaign playtest; fixed-timing balance is feasibility only.
+Next: publish integration/new-update, then second merge into main and verify both ancestries.
+```
 
 ### SC-222 — область наведения блокнота до правого края
 

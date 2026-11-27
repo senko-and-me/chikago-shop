@@ -133,15 +133,6 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 8
 
-[node name="Редкости" type="ScrollContainer" parent="Root/Inset/Panel/Content/Tabs"]
-layout_mode = 2
-horizontal_scroll_mode = 0
-
-[node name="Rows" type="VBoxContainer" parent="Root/Inset/Panel/Content/Tabs/Редкости"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/separation = 8
-
 [node name="Предметы" type="ScrollContainer" parent="Root/Inset/Panel/Content/Tabs"]
 layout_mode = 2
 horizontal_scroll_mode = 0

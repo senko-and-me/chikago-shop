@@ -438,7 +438,7 @@ public sealed class DayCycleController
 	private void LayoutTimer()
 	{
 		// Six inventory slots leave less room at narrow window sizes.
-		float inventoryLeft = _inventoryStrip.GetGlobalRect().Position.X;
+		float inventoryLeft = _inventoryStrip.IsVisibleInTree() ? _inventoryStrip.GetGlobalRect().Position.X : 192;
 		float size = Mathf.Min(Mathf.Clamp(inventoryLeft - 24, 64, 180) * 1.15f, Mathf.Max(64, inventoryLeft - 12));
 		_timer.OffsetLeft = 6;
 		_timer.OffsetRight = 6 + size;

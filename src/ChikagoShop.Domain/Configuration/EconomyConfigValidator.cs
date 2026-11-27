@@ -12,6 +12,10 @@ public static class EconomyConfigValidator
         if (config.CraftCosts == null || config.CraftCosts.Count != craftKinds.Length ||
             craftKinds.Any(kind => !config.CraftCosts.TryGetValue(kind, out int cost) || cost <= 0))
             throw new EconomyConfigException("Every craftable item requires a positive explicit cost.");
+        if (config.Items == null || config.Items.Count != craftKinds.Length ||
+            config.Items.Select(item => item.Id).Distinct().Count() != craftKinds.Length ||
+            config.Items.Any(item => !craftKinds.Contains(item.Id) || item.Workshop is not ("atelier" or "music") || item.BasePrice <= 0 || item.Rerolls < 0))
+            throw new EconomyConfigException("The ten selected items require explicit prices, rooms and reroll limits.");
         if (config.Days.TotalDays <= 0 || config.Days.TutorialDay < 1 || config.Days.TutorialDay > config.Days.TotalDays)
             throw new EconomyConfigException("Day configuration is invalid.");
         if (config.Days.DurationSeconds <= 0 || config.Days.DurationSeconds > 3600 ||

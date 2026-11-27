@@ -47,11 +47,7 @@ public partial class DebugBalancePanel : CanvasLayer
 			editor.TextChanged += _ => Preview();
 			if (!field.Key.StartsWith("item.")) continue;
 			string kind = field.Key.Split('.')[1];
-			var rarity = row.GetNode<OptionButton>("Rarity");
-			rarity.Show();
-			foreach (var definition in EconomyConfigProvider.Baseline.Rarities) rarity.AddItem(definition.Name);
-			_rarities.Add(kind, rarity);
-			rarity.ItemSelected += _ => Preview();
+			row.GetNode<OptionButton>("Rarity").Hide();
 		}
 		Preview();
 	}
@@ -104,7 +100,7 @@ public partial class DebugBalancePanel : CanvasLayer
 	private void Fill(BalanceProfile profile)
 	{
 		foreach (var field in DebugBalanceSettings.Fields) _numbers[field.Key].Text = profile.Number(field.Key, field.Default).ToString(System.Globalization.CultureInfo.InvariantCulture);
-		foreach (var item in WorkshopItemCatalog.BaselineItems)
+		foreach (var item in WorkshopItemCatalog.BaselineItems.Where(item => _rarities.ContainsKey(item.Kind)))
 		{
 			string id = profile.ItemRarities.GetValueOrDefault(item.Kind, item.RarityId);
 			_rarities[item.Kind].Select(EconomyConfigProvider.Baseline.Rarities.FindIndex(rarity => rarity.Id == id));
@@ -150,15 +146,7 @@ public partial class DebugBalancePanel : CanvasLayer
 	{
 		if (_preview == null || _numbers.Count != DebugBalanceSettings.Fields.Count) return;
 		string tab = GetNode<TabContainer>(Content + "/Tabs").GetCurrentTabControl().Name;
-		if (tab == "Редкости")
-		{
-			var rarities = EconomyConfigProvider.Baseline.Rarities;
-			double sum = rarities.Sum(rarity => Number($"rarity.{rarity.Id}.weight"));
-			_preview.Text = "Вес 0 исключает редкость. При наличии всех категорий: " + string.Join(" · ", rarities.Select(rarity =>
-				$"{rarity.Name} {(sum > 0 ? Number($"rarity.{rarity.Id}.weight") / sum * 100 : 0):0.#}%")) +
-				". Пустые категории исключаются, остальные шансы нормируются внутри мастерской.";
-		}
-		else if (tab == "Карты")
+		if (tab == "Карты")
 		{
 			double sum = DebugBalanceSettings.Cards.Sum(card => Number($"card.{card}.weight"));
 			_preview.Text = "В режиме 1 выбираются до трёх разных карт без повторов. Шанс первого выбора: " +

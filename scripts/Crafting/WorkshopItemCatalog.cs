@@ -37,9 +37,7 @@ public static class WorkshopItemCatalog
             var profile = DebugBalanceSettings.Profile;
             _items = System.Array.AsReadOnly(BaselineItems.Select(item =>
             {
-                var rarity = Config.Rarities.Single(entry => entry.Id == profile.ItemRarities.GetValueOrDefault(item.Kind, item.RarityId));
-                return item with { BasePrice = (int)profile.Number($"item.{item.Kind}.price", item.BasePrice),
-                    RarityId = rarity.Id, Rarity = rarity.Name, Rerolls = rarity.Rerolls };
+                return item with { BasePrice = (int)profile.Number($"item.{item.Kind}.price", item.BasePrice), Rerolls = (int)profile.Number($"item.{item.Kind}.rerolls", item.Rerolls) };
             }).ToArray());
             _revision = revision;
             return _items;
@@ -103,7 +101,8 @@ public static class WorkshopItemCatalog
     private static CraftItem Item(string workshop, string rarityId, string kind, string name)
     {
         var rarity = EconomyConfigProvider.Baseline.Rarities.Single(entry => entry.Id == rarityId);
-        return new CraftItem(rarity.BasePrices[workshop], rarityId, rarity.Name, kind, name,
-            $"res://art/items/{kind}.png", workshop, rarity.Rerolls);
+        var item = EconomyConfigProvider.Baseline.Items.Single(entry => entry.Id == kind);
+        return new CraftItem(item.BasePrice, rarityId, rarity.Name, kind, name,
+            $"res://art/items/{kind}.png", item.Workshop, item.Rerolls);
     }
 }

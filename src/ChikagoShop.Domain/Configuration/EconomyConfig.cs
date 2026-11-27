@@ -7,6 +7,7 @@ public sealed class EconomyConfig
     public int StartingMoney { get; init; }
     public DayConfig Days { get; init; } = new();
     public List<WorkshopConfig> Workshops { get; init; } = [];
+    public List<ItemConfig> Items { get; init; } = [];
     public Dictionary<string, int> CraftCosts { get; init; } = new()
     {
         ["hat"] = 20, ["vest"] = 30, ["gloves"] = 55, ["matteo_hat"] = 80, ["lorgnette"] = 135,
@@ -33,6 +34,14 @@ public sealed class WorkshopConfig
     public string Id { get; init; } = string.Empty;
     public int SpinCost { get; init; }
     public int UnlockCost { get; init; }
+}
+
+public sealed class ItemConfig
+{
+    public string Id { get; init; } = string.Empty;
+    public string Workshop { get; init; } = string.Empty;
+    public int BasePrice { get; init; }
+    public int Rerolls { get; init; }
 }
 
 public sealed class RarityConfig

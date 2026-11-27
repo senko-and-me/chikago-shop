@@ -79,7 +79,7 @@ public sealed class DayUpgradeSession
         MusicUnlocked = musicUnlocked;
         _training = false;
         // Permanent bonuses in legacy saves do not carry over to the new day-only system.
-        Selected = Enum.IsDefined(selected) && selected is not (DayUpgrade.Time or DayUpgrade.Energy) ? selected : DayUpgrade.None;
+        Selected = selected is DayUpgrade.Cash or DayUpgrade.AtelierPrice or DayUpgrade.MusicPrice ? selected : DayUpgrade.None;
         if (!MusicUnlocked && (Selected is DayUpgrade.Music or DayUpgrade.MusicPrice)) Selected = DayUpgrade.None;
         Pending = pending && Selected == DayUpgrade.None;
     }
@@ -97,9 +97,7 @@ public sealed class DayUpgradeSession
     public double CraftDuration(string workshop, double baseline)
     {
         if (!double.IsFinite(baseline) || baseline <= 0) throw new ArgumentOutOfRangeException(nameof(baseline));
-        bool boosted = (workshop == "atelier" && Selected == DayUpgrade.Atelier) ||
-                       (workshop == "music" && Selected == DayUpgrade.Music);
-        return boosted ? baseline * 1.2 : baseline;
+        return baseline;
     }
 
     // Kept for save/runtime compatibility; selected-item crafting no longer rolls rarity.

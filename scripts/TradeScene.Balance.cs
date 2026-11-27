@@ -15,8 +15,9 @@ public partial class TradeScene
 		int quota = QuotaStage == 0 ? FirstQuota : SecondQuota;
 		double unsold = 0;
 		foreach (int item in _storedItems) unsold += GetItemPrice(item);
+        foreach (var stock in _deferredStock) unsold += GetItemPrice(stock.Item);
 		foreach (int item in _showcaseItems) if (item >= 0) unsold += GetItemPrice(item);
-		if (ItemIndex >= 0 && (TradeActive || _activeShowcaseIndex >= 0))
+		if (ItemIndex >= 0 && TradeActive && _activeShowcaseIndex < 0)
 			unsold += GetItemPrice(ItemIndex);
 		double elapsed = _dayCycle.Session.Duration <= 0 ? 0 :
 			1 - _dayCycle.Session.RemainingSeconds / _dayCycle.Session.Duration;

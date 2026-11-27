@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Godot;
 using ChikagoShop.Domain.Persistence;
 
@@ -13,6 +14,11 @@ public partial class TradeScene
 		var data = new ProgressData
 		{
 			SaveVersion = ProgressJson.CurrentVersion,
+            DeferredDisplayItems = _deferredStock.ToArray(),
+            CheckpointDeferredDisplayItems = _checkpointStock.ToArray(),
+            ShowcaseRerolls = (int[])_showcaseRerolls.Clone(),
+            CheckpointShowcaseRerolls = (int[])_checkpointShowcaseRerolls.Clone(),
+            ReturnedOfferPercent = _returnedOfferPercent,
 			Day = CurrentDay,
 			Score = Score,
 			EnergyRemaining = EnergyRemaining,
@@ -110,58 +116,9 @@ public partial class TradeScene
 			data.DayStarted);
 
 		_storedItems.Clear();
+		_storedGrades.Clear();
 		_checkpointItems.Clear();
-
-		foreach (int index in data.StoredItems ?? [])
-		{
-			if (index >= 0 && index < Items.Count)
-				_storedItems.Add(index);
-		}
-
-		foreach (int index in data.CheckpointItems ?? [])
-		{
-			if (index >= 0 && index < Items.Count)
-				_checkpointItems.Add(index);
-		}
-
-		for (int i = 0;
-			 i < Mathf.Min(
-				 ShowcaseCapacity,
-				 data.ShowcaseItems?.Length ?? 0);
-			 i++)
-		{
-			if (data.ShowcaseItems![i] >= 0 &&
-				data.ShowcaseItems[i] < Items.Count)
-			{
-				_showcaseItems[i] = data.ShowcaseItems[i];
-			}
-		}
-
-		for (int i = 0;
-			 i < Mathf.Min(
-				 ShowcaseCapacity,
-				 data.CheckpointShowcaseItems?.Length ?? 0);
-			 i++)
-		{
-			if (data.CheckpointShowcaseItems![i] >= 0 &&
-				data.CheckpointShowcaseItems[i] < Items.Count)
-			{
-				_checkpointShowcaseItems[i] =
-					data.CheckpointShowcaseItems[i];
-			}
-		}
-
-		LoadLegacyGradeArrays(data.StoredGrades, data.ShowcaseGrades);
 		_checkpointGrades.Clear();
-		for (int i = 0; i < _checkpointItems.Count; i++)
-			_checkpointGrades.Add(data.CheckpointGrades != null && i < data.CheckpointGrades.Length
-				? NormalizeRank(data.CheckpointGrades[i]) : "D");
-		for (int i = 0; i < ShowcaseCapacity; i++)
-			_checkpointShowcaseGrades[i] = data.CheckpointShowcaseGrades != null && i < data.CheckpointShowcaseGrades.Length
-				? NormalizeRank(data.CheckpointShowcaseGrades[i]) : "D";
-
-		MoveItemsOutOfLockedShowcases();
-
 		_activeShowcaseIndex =
 			data.ActiveShowcaseIndex >= 0 &&
 			data.ActiveShowcaseIndex < ShowcaseCapacity
@@ -248,11 +205,64 @@ public partial class TradeScene
 		if (!TradeActive)
 			_activeShowcaseIndex = -1;
 
+        _returnedOfferPercent = data.ReturnedOfferPercent is int percent ? Math.Clamp(percent, -30, 30) : null;
+        RestoreDisplays(data.ShowcaseItems, data.ShowcaseGrades, data.ShowcaseRerolls,
+            data.StoredItems, data.StoredGrades, data.DeferredDisplayItems,
+            _showcaseItems, _showcaseGrades, _showcaseRerolls, _deferredStock,
+            MusicWorkshopUnlocked, restoreActive: true, savedWithReservedSlot: data.SaveVersion >= 20);
+        RestoreDisplays(data.CheckpointShowcaseItems, data.CheckpointShowcaseGrades, data.CheckpointShowcaseRerolls,
+            data.CheckpointItems, data.CheckpointGrades, data.CheckpointDeferredDisplayItems,
+            _checkpointShowcaseItems, _checkpointShowcaseGrades, _checkpointShowcaseRerolls, _checkpointStock,
+            CheckpointMusicWorkshopUnlocked, restoreActive: false);
+
 		if (_inventoryUI != null)
 			_inventoryUI.UpdateUI(_storedItems);
 
 		RefreshShowcases();
 		return true;
 	}
+
+    private void RestoreDisplays(int[] entries, string[] ranks, int[] savedRerolls,
+        int[] legacy, string[] legacyRanks, DisplayStock[] deferred,
+        int[] items, string[] grades, int[] rerolls, System.Collections.Generic.List<DisplayStock> overflow,
+        bool musicOpen, bool restoreActive, bool savedWithReservedSlot = false)
+    {
+        Array.Fill(items, -1);
+        Array.Fill(grades, "D");
+        Array.Fill(rerolls, -1);
+        overflow.Clear();
+        for (int slot = 0; slot < (entries?.Length ?? 0); slot++)
+        {
+            int item = entries[slot];
+            if (item < 0 || item >= Items.Count) continue;
+            var stock = new DisplayStock(item, ranks != null && slot < ranks.Length ? ranks[slot] : "D",
+                savedRerolls != null && slot < savedRerolls.Length ? savedRerolls[slot] : -1);
+            if (slot < ShowcaseCapacity && DisplayWorkshop(slot) == Items[item].WorkshopId &&
+                (slot < InitialShowcaseCapacity || musicOpen))
+                PutDisplay(slot, stock, items, grades, rerolls);
+            else if (!savedWithReservedSlot || !restoreActive || !TradeActive || slot != _activeShowcaseIndex || item != ItemIndex)
+                overflow.Add(stock);
+        }
+
+        if (restoreActive && TradeActive)
+        {
+            int slot = _activeShowcaseIndex;
+            bool compatible = slot >= 0 && DisplayWorkshop(slot) == Items[ItemIndex].WorkshopId &&
+                (slot < InitialShowcaseCapacity || musicOpen);
+            if (!compatible || items[slot] >= 0 && (!savedWithReservedSlot || items[slot] != ItemIndex))
+                slot = FreeDisplay(Items[ItemIndex].WorkshopId, items, musicOpen);
+            _activeShowcaseIndex = slot;
+            if (slot >= 0) PutDisplay(slot, new DisplayStock(ItemIndex, _activeTradeGrade, RerollsRemaining),
+                items, grades, rerolls);
+        }
+
+        for (int i = 0; i < (legacy?.Length ?? 0); i++)
+            if (legacy[i] >= 0 && legacy[i] < Items.Count)
+                overflow.Add(new DisplayStock(legacy[i], legacyRanks != null && i < legacyRanks.Length ? legacyRanks[i] : "D", -1));
+        foreach (var stock in deferred ?? [])
+            if (stock != null && stock.Item >= 0 && stock.Item < Items.Count)
+                overflow.Add(stock);
+        FillDeferredDisplays(overflow, items, grades, rerolls, musicOpen);
+    }
 
 }

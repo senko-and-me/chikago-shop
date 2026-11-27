@@ -194,6 +194,7 @@ horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="RarityPanel" parent="World/Atelier" unique_id=1554035197 instance=ExtResource("19_rarity_panel")]
+visible = false
 layout_mode = 3
 anchors_preset = 0
 offset_left = 1130.0
@@ -287,6 +288,7 @@ horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="RarityPanel" parent="World/MusicWorkshop" unique_id=922423804 instance=ExtResource("19_rarity_panel")]
+visible = false
 layout_mode = 3
 anchors_preset = 0
 offset_left = 50.0
@@ -920,6 +922,7 @@ theme_override_styles/focus = SubResource("ProgressEmpty")
 flat = true
 
 [node name="InventoryUI" parent="HUD" unique_id=1583018025 instance=ExtResource("9_cppqn")]
+visible = false
 offset_top = -3.0
 offset_bottom = -3.0
 metadata/_edit_use_anchors_ = true

@@ -6,8 +6,6 @@ namespace ChikagoShop.Domain.Tests;
 public sealed class DayUpgradeSessionTests
 {
     [TestCase(DayUpgrade.Cash, 2, false)]
-    [TestCase(DayUpgrade.Atelier, 2, false)]
-    [TestCase(DayUpgrade.Music, 2, true)]
     [TestCase(DayUpgrade.AtelierPrice, 2, false)]
     [TestCase(DayUpgrade.MusicPrice, 2, true)]
     public void OneDayChoiceSurvivesRestore(DayUpgrade choice, int energy, bool unlocked)
@@ -51,7 +49,7 @@ public sealed class DayUpgradeSessionTests
         Assert.That((int)DayUpgrade.Energy, Is.EqualTo(2));
         Assert.That((int)DayUpgrade.Time, Is.EqualTo(3));
         Assert.That((int)DayUpgrade.MusicPrice, Is.EqualTo(7));
-        foreach (var retired in new[] { DayUpgrade.Energy, DayUpgrade.Time })
+        foreach (var retired in new[] { DayUpgrade.Energy, DayUpgrade.Time, DayUpgrade.Atelier, DayUpgrade.Music })
         {
             upgrades.Restore(false, retired);
             Assert.That(upgrades.Selected, Is.EqualTo(DayUpgrade.None));
@@ -79,7 +77,7 @@ public sealed class DayUpgradeSessionTests
 
     [TestCase(DayUpgrade.Atelier, "atelier", "music")]
     [TestCase(DayUpgrade.Music, "music", "atelier")]
-    public void CraftTimeBoostIsScopedRestoredAndExpiresWithoutChangingRarity(DayUpgrade card, string workshop, string other)
+    public void RetiredCraftTimeCardsLeaveDurationAndLegacyWeightsUnchanged(DayUpgrade card, string workshop, string other)
     {
         var upgrades = new DayUpgradeSession();
         upgrades.Restore(false, card, 5, musicUnlocked: true);
@@ -88,8 +86,8 @@ public sealed class DayUpgradeSessionTests
         int[] weights = rarities.Select((rarity, i) => upgrades.Weight(workshop, rarity, baseline[i], 60)).ToArray();
         Assert.That(weights, Is.EqualTo(baseline));
         Assert.That(weights.Sum(), Is.EqualTo(100));
-        Assert.That(upgrades.CraftDuration(workshop, 10), Is.EqualTo(12));
-        Assert.That(upgrades.CraftDuration(workshop, 5), Is.EqualTo(6));
+        Assert.That(upgrades.CraftDuration(workshop, 10), Is.EqualTo(10));
+        Assert.That(upgrades.CraftDuration(workshop, 5), Is.EqualTo(5));
         Assert.That(upgrades.CraftDuration(other, 10), Is.EqualTo(10));
         Assert.That(upgrades.CraftDuration("unknown", 10), Is.EqualTo(10));
         for (int i = 0; i < baseline.Length; i++)
@@ -102,13 +100,13 @@ public sealed class DayUpgradeSessionTests
     }
 
     [Test]
-    public void CraftTimeBoostRequiresAnEligibleSelectionAndPositiveFiniteDuration()
+    public void RetiredCraftTimeCardsStillValidatePositiveFiniteBaseline()
     {
         var upgrades = new DayUpgradeSession();
         upgrades.Restore(false, DayUpgrade.Music, musicUnlocked: false);
         Assert.That(upgrades.CraftDuration("music", 10), Is.EqualTo(10));
         upgrades.Restore(false, DayUpgrade.Atelier, musicUnlocked: true);
-        Assert.That(upgrades.CraftDuration("atelier", 10), Is.EqualTo(12));
+        Assert.That(upgrades.CraftDuration("atelier", 10), Is.EqualTo(10));
         upgrades.Offer(4, musicUnlocked: true);
         Assert.That(upgrades.CraftDuration("atelier", 10), Is.EqualTo(10));
         foreach (double invalid in new[] { 0, -1, double.NaN, double.PositiveInfinity })
@@ -118,7 +116,7 @@ public sealed class DayUpgradeSessionTests
     }
 
     [Test]
-    public void AllOffersHaveThreeEligibleCardsAndAreStableAcrossReload()
+    public void AllOffersHaveUniqueEligibleCardsAndAreStableAcrossReload()
     {
         var session = new DayUpgradeSession();
         for (int day = 2; day <= 14; day++)
@@ -126,8 +124,8 @@ public sealed class DayUpgradeSessionTests
         {
             session.Offer(day, unlocked);
             var options = session.Options;
-            Assert.That(options.Count, Is.EqualTo(3));
-            Assert.That(options.Distinct().Count(), Is.EqualTo(3));
+            Assert.That(options.Count, Is.EqualTo(unlocked ? 3 : 2));
+            Assert.That(options.Distinct().Count(), Is.EqualTo(unlocked ? 3 : 2));
             Assert.That(options, Does.Not.Contain(DayUpgrade.Time));
             Assert.That(options, Does.Not.Contain(DayUpgrade.Energy));
             if (!unlocked)
@@ -141,10 +139,10 @@ public sealed class DayUpgradeSessionTests
         }
     }
 
-    [TestCase(false, false, 3)]
-    [TestCase(false, true, 2)]
+    [TestCase(false, false, 2)]
+    [TestCase(false, true, 1)]
     [TestCase(true, false, 3)]
-    [TestCase(true, true, 3)]
+    [TestCase(true, true, 2)]
     public void EveryDayOffersUniqueEligibleCardsIncludingTraining(bool music, bool training, int count)
     {
         foreach (bool weighted in new[] { false, true })
@@ -175,7 +173,7 @@ public sealed class DayUpgradeSessionTests
     }
 
     [Test]
-    public void TrainingWithZeroWeightsFallsBackToTwoDistinctAtelierCards()
+    public void TrainingWithZeroWeightsFallsBackToTheRemainingAtelierPriceCard()
     {
         var rules = new DayUpgradeRules
         {
@@ -189,7 +187,7 @@ public sealed class DayUpgradeSessionTests
         };
         for (int day = 2; day <= 14; day++)
             Assert.That(rules.Options(day, musicUnlocked: false, training: true),
-                Is.EquivalentTo(new[] { DayUpgrade.Atelier, DayUpgrade.AtelierPrice }));
+                Is.EquivalentTo(new[] { DayUpgrade.AtelierPrice }));
     }
 
     [TestCase(DayUpgrade.AtelierPrice, "atelier", "music")]
