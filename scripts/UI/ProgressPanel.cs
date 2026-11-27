@@ -47,6 +47,7 @@ public partial class ProgressPanel : Control
         _captions = _sticks.Select(stick => stick.GetNode<Label>("Caption")).ToArray();
         _toggle.Pressed += () =>
         {
+            if (!_game.GetNode<FirstTradeTutorial>("FirstTradeTutorial").AllowsProgressInteraction) return;
             Pinned = !Pinned;
             SetExpanded(Pinned);
             if (Pinned && TrackLessonHover) LessonOpened?.Invoke();
@@ -75,6 +76,7 @@ public partial class ProgressPanel : Control
 
     private void InspectForLesson(Vector2 pointer)
     {
+        if (!_game.GetNode<FirstTradeTutorial>("FirstTradeTutorial").AllowsProgressInteraction) return;
         if (!TrackLessonHover || GetTree().Paused || !IsVisibleInTree() || !IsOverPack(pointer)) return;
         SetExpanded(true);
         LessonOpened?.Invoke();
@@ -90,6 +92,13 @@ public partial class ProgressPanel : Control
             return;
         }
         _wasVisible = true;
+        if (!_game.GetNode<FirstTradeTutorial>("FirstTradeTutorial").AllowsProgressInteraction)
+        {
+            _pointer = null;
+            Pinned = HoveringHotspot = false;
+            SetExpanded(HoldOpenForLesson);
+            return;
+        }
         Size = new Vector2(Expanded ? 384 : _closedHotspot.Size.X, _closedHotspot.Size.Y);
         Vector2 pointer = _pointer.HasValue ? GetGlobalTransformWithCanvas().AffineInverse() * _pointer.Value : GetLocalMousePosition();
         InspectForLesson(pointer);

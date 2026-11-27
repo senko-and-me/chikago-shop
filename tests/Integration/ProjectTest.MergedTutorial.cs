@@ -72,9 +72,23 @@ public partial class ProjectTest
                 game.GetItemFromAtelier();
                 await Frame();
                 Check(game.Crafting.IsCatalogOpen, "Tutorial must open the real catalogue");
+                await BlockedTutorialClick(game.Crafting.Catalog.ItemButton("vest"));
+                await BlockedTutorialClick(game.Crafting.Catalog.GetNode<Button>("Root/Center/Panel/Margin/Content/Back"));
+                Check(game.Crafting.IsCatalogOpen && game.Crafting.SelectedIndex < 0,
+                    "Other catalogue items and Back must not bypass the hat instruction");
                 Check(game.Crafting.Select("hat"), "Tutorial must select the hat by its stable kind");
                 await Frame();
-                mini.Activate(); mini.FinishForTesting(true); mini.Activate();
+                await BlockedTutorialClick(mini.GetNode<Button>("Surface/Panel/Buttons/Cancel"));
+                await ClickControl(game, "EmbroideryGame/Surface/Panel/Buttons/Action");
+                var surface = mini.GetNode<EmbroiderySurface>("Surface");
+                Vector2 stitch = surface.GetGlobalTransformWithCanvas() * surface.ScreenPoint(0);
+                MoveButtonPointer(stitch);
+                PressButtonPointer(stitch, true);
+                PressButtonPointer(stitch, false);
+                await Frame();
+                Check(mini.Session.Stitches == 1, "The actual instructed stitch must receive input through the shield");
+                mini.FinishForTesting(true);
+                await ClickControl(game, "EmbroideryGame/Surface/Panel/Buttons/Action");
                 game._Process(0);
                 await Frame();
             }

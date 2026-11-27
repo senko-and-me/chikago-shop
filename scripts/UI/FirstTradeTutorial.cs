@@ -185,6 +185,7 @@ public partial class FirstTradeTutorial : CanvasLayer
         RoomFocusDone = restored && config.GetValue("tutorial", "room_focus_done", _cameraHandoffDone).AsBool();
         _cameraHandoffDone &= RoomFocusDone;
         _initialized = true;
+        InstallInputGate();
         _displayInspected = restored && config.GetValue("tutorial", "display_inspected", false).AsBool();
         // Also covers older saves migrated from paid to story-based room access.
         _musicLessonPending |= _game.MusicWorkshopUnlocked && !_musicLessonDone;
@@ -777,6 +778,7 @@ public partial class FirstTradeTutorial : CanvasLayer
 
     public override void _ExitTree()
     {
+        if (IsInstanceValid(_inputLayer)) _inputLayer.QueueFree();
         if (IsInstanceValid(_pack)) _pack.LessonOpened -= OnPackInspected;
         if (IsInstanceValid(_notebook)) _notebook.LessonOpened -= OnNotebookInspected;
         if (IsActive && _progressDirty) Save(false);

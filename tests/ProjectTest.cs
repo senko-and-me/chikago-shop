@@ -30,6 +30,13 @@ public partial class ProjectTest : SceneTree
                 Quit();
                 return;
             }
+            if (OS.GetCmdlineUserArgs().Contains("--tutorial-input-checks"))
+            {
+                await TestTutorialInput();
+                GD.Print("TUTORIAL_INPUT_PASS: strict pointer/hover/keyboard policy, modal/skip/unload restore, resize and full tutorial regression");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--localization-coverage-checks"))
             {
                 await TestLocalizationCoverage();

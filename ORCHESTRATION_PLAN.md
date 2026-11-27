@@ -9,6 +9,20 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### SC248 — строгий ввод по текущему шагу обучения
+
+SC248 DONE; /root; CP `.local/checks/sc248/CP-SC248.md`; SC247 DONE. Ввод ограничен текущей инструкцией на уровне viewport: только целевой элемент, нужная область миниигры, кнопки инструкции/пропуска и активное подтверждение. Пауза доступна на объясняющем её шаге. Сигареты и блокнот не реагируют на hover/click/focus вне своих уроков; видимость удерживаемых подсказок сохраняется. Пользовательские правки trade_scene сохранены побайтно.
+
+```text
+Task: SC248
+Recommended status: REVIEW -> accepted DONE; gate PASSED 28.11.2026
+Changed: FirstTradeTutorial.Input.cs defines per-step pointer/click/focus/key permissions; root TutorialInputGate shields GUI hit tests and intercepts input before gameplay/autoload handlers. Camera gestures forwarded only for their prescribed practice step, room focus only for the atelier. Keyboard traversal cycles permitted buttons; early Escape/F/F6/F7/F10 and unrelated input blocked. Catalog permits hat only, preparation permits Start only, active stitching permits fabric, completion permits collection; card choice unlocks after its explanations. ProgressPanel/PulloutNotebook polling and pin handlers consult this same policy. Skip, confirmation and completion retain working input; viewport shield removed on scene unload. No new TradeScene domain logic or save fields.
+Checks: build and isolated import PASS zero build warnings/errors. Rendered --tutorial-input-checks PASS at1280/960: actual mouse click/hover/forced focus+Enter cannot open unintroduced HUD or alternative catalogue/back/cancel; early wheel/hotkeys blocked; instructed camera pan, actual Start/stitch/Collect, modal cancel/confirm and restored HUD/unload work. Includes full merged tutorial: room focus, two crafts/sales, reload, reroll, cigarettes, clock, card explanation/purchase, right-edge notebook and clean reset. Evidence .local/checks/sc248/{build-merged,import-merged,input-merged}.*. Incoming --polishing-audio-checks and --craft-result-audio-checks PASS exit0/stderr empty; logs same directory. User scene SHA256 retained F933E613EEC42B9FE4C177324739500FC4115927018E55299826B6BE29DF782C.
+Integration: user requested checking server commits and publishing during this task. Origin/main advanced to1638735 with audio/polishing changes; local changes backed up in stash25c56b8, main fast-forwarded, stash restored. Resolved only orchestration/runner overlap by preserving both full upstream history and every upstream test mode plus our new mode. All76 incoming paths retained unchanged; no force push. Prior4f8ffc4 localization/art is an ancestor of updated main.
+Read-set exception: exact incoming integration paths enumerated in .local/checks/sc248/server-paths.txt; audio code/scenes/tests read for necessary compatibility checks. No source/ reads. No delegated agents.
+Risks/blocker: none. Next: publish validated SC248 commit to origin/main; user scene stays local.
+```
+
 ### POL-55 — объединение с актуальным main и публикация
 
 Статус: DONE; /root coordinator/executor; 2026-11-28; POL54 DONE. CP: .local/checks/pol55-publish-main/CP-POL-55.md. User authorizes merge all current work into latest main and non-force publication. Preserve both administrative histories and all test modes; no competing gameplay conflicts.

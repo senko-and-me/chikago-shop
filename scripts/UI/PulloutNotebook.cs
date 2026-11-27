@@ -72,6 +72,7 @@ public partial class PulloutNotebook : Control
 
     private void OnPageInput(InputEvent input)
     {
+        if (!_game.GetNode<FirstTradeTutorial>("FirstTradeTutorial").AllowsNotebookInteraction) return;
         if (input is not InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true })
             return;
         _pinned = !_pinned;
@@ -91,6 +92,7 @@ public partial class PulloutNotebook : Control
 
     private void InspectForLesson(Vector2 cursor)
     {
+        if (!_game.GetNode<FirstTradeTutorial>("FirstTradeTutorial").AllowsNotebookInteraction) return;
         if (!TrackLessonHover || GetTree().Paused || !IsVisibleInTree() ||
             !(ClosedHoverBounds.HasPoint(cursor) || _expanded && OpenHoverBounds.HasPoint(cursor))) return;
         SetExpanded(true);
@@ -110,6 +112,14 @@ public partial class PulloutNotebook : Control
         }
 
         RefreshNotes();
+        if (!_game.GetNode<FirstTradeTutorial>("FirstTradeTutorial").AllowsNotebookInteraction)
+        {
+            _pointer = null;
+            _pinned = false;
+            _tabArmed = true;
+            SetExpanded(HoldOpenForLesson);
+            return;
+        }
         Vector2 cursor = _pointer.HasValue
             ? GetGlobalTransformWithCanvas().AffineInverse() * _pointer.Value
             : GetLocalMousePosition();
