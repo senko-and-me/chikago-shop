@@ -209,7 +209,7 @@ public partial class ProjectTest
               TradeScene.GetRerollsForRarity("unique") == 1,
             "Every prototype item must derive its reroll limit from its configured rarity");
 		var musicOverlay = game.GetNode<ColorRect>("World/MusicWorkshop/LockedOverlay");
-		var musicUnlockButton = musicOverlay.GetNode<MusicWorkshopUnlockPanel>("UnlockPanel").UnlockButton;
+		var musicUnlockButton = musicOverlay.GetParent().GetNode<MusicWorkshopUnlockPanel>("UnlockPanel").UnlockButton;
         Check(!atelierButton.Disabled && musicButton.Disabled && musicOverlay.Visible &&
 		      !musicUnlockButton.Disabled && !game.MusicWorkshopUnlocked && game.Score == 220 &&
 		      game.EnergyRemaining == 2,

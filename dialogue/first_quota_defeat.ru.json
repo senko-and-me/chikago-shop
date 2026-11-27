@@ -1,0 +1,50 @@
+[
+  {
+    "speaker": "",
+    "text": "*Дверь открывается. В дом заходят трое: стильно одетый мужчина и двое амбалов.*",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "Рад тебя видеть, приятель. Как твои паучьи дела?",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Френки",
+    "text": "Нам больше не о чем болтать…",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "Я так понимаю, ничего уже не будет прежним. Для тебя уж точно.",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "Не переживай, я не изверг. Деньги уйдут твоей семье. Теперь мне нужна будет лишь твоя голова.",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "Последние слова?",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Френки",
+    "text": "…",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "…Мне жаль, что твоя жизнь не стала такой же длинной, как жизнь этого дома.",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  }
+]

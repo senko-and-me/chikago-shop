@@ -268,7 +268,8 @@ public sealed class DayCycleController
 	private void ShowMafiaNotice() => _mafia.OpenWithTransition(
 		_game.CurrentDay >= TotalDays || _game.QuotaStage == 2
 			? _game.SecondQuota : _game.FirstQuota,
-		_game.Score, !_game.Failed, _game.Completed);
+		_game.Score, !_game.Failed, _game.Completed,
+		firstQuotaFailure: _game.Failed && _game.CurrentDay < TotalDays && _game.QuotaStage < 2);
 
 	public void ResumeUpgradeChoice()
 	{

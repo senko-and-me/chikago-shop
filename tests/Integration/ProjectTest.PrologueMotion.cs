@@ -20,9 +20,9 @@ public partial class ProjectTest
                 await Wait(0.05); // Allow the dialogue panel to measure its first text page.
                 var motion = player.GetNode<PrologueCharacterMotion>("Characters");
                 var mafia = motion.GetNode<TextureRect>("Castello");
-                Check(!player.HasNode("Characters/Customer") && player.Session.Current.Speaker == "Кастелло" &&
+                Check(!player.HasNode("Characters/Customer") && player.Session.Current.Speaker == "Френки" &&
                     mafia.Visible && motion.IsMoving,
-                    "The prologue must begin with Castello entering, with no customer portrait");
+                    "The prologue must begin with Frankie's reaction to Castello entering, with no customer portrait");
                 await Wait(0.18);
                 Check(motion.ArrivalProgress > 0 && motion.ArrivalProgress < 1 &&
                     mafia.Modulate.A > 0 && mafia.Modulate.A < 1 && mafia.OffsetLeft < 0,
@@ -33,10 +33,18 @@ public partial class ProjectTest
                 Check(motion.ArrivalProgress == 1 && mafia.Modulate.A == 1 && mafia.OffsetLeft == 0,
                     "Language changes must retain the completed entrance");
                 var catalog = GD.Load<Translation>("res://localization/en.tres");
-                Check(catalog.GetMessage(player.Session.Current.Text).ToString().Contains("Frankie!"),
-                    "Castello's new direct greeting must have an English translation");
+                Check(player.Session.Count == 24 && player.Session.Current.Text == "!!!",
+                    "The edited prologue must have 24 short bubbles and begin with Frankie's reaction");
                 while (!player.Session.IsComplete)
                 {
+                    Check(!string.IsNullOrWhiteSpace(catalog.GetMessage(player.Session.Current.Text).ToString()),
+                        "Every new prologue bubble must have an English translation");
+                    if (player.Session.Index == 3)
+                        Check(player.Session.Current.Speaker == "Кастелло" && player.Session.Current.Text == "*Смеётся.*",
+                            "Castello's laugh must be a separate bubble after Frankie's three reactions");
+                    if (player.Session.Index is 5 or 14)
+                        Check(player.Session.Current.MusicCue == (player.Session.Index == 5 ? "thoughtful" : "sinister"),
+                            "The business proposal and threat must retain their music changes");
                     Check(player.Session.Current.Speaker != "Покупательница" &&
                         !player.HasNode("Characters/Customer"), "The customer must not appear on any prologue line");
                     if (player.Session.Index > 0)

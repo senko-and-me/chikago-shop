@@ -129,7 +129,7 @@ public partial class ProjectTest
         var tradePanel = game.GetNode<Control>("World/TradingRoom/Item/TradePanel");
         Check(tradePanel.ZIndex == 125 && !tradePanel.ZAsRelative, "The trade panel's initial drawing layer must be authored in the scene");
         tradePanel.ZIndex = 127;
-        var unlockPanel = game.GetNode<MusicWorkshopUnlockPanel>("World/MusicWorkshop/LockedOverlay/UnlockPanel");
+        var unlockPanel = game.GetNode<MusicWorkshopUnlockPanel>("World/MusicWorkshop/UnlockPanel");
         var authoredPaper = (StyleBoxTexture)unlockPanel.GetThemeStylebox("panel").Duplicate();
         authoredPaper.ContentMarginLeft = 47;
         unlockPanel.AddThemeStyleboxOverride("panel", authoredPaper);

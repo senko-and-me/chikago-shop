@@ -35,6 +35,21 @@ internal static class StoryDialogueLayout
         heading.AddThemeFontSizeOverride("font_size", 18);
     }
 
+    public static void StyleSkipButton(TextureButton button)
+    {
+        button.TextureNormal = GD.Load<Texture2D>(GameLocalization.Language == "en"
+            ? "res://art/ui/en/skip.png" : "res://art/ui/ru/skip.png");
+        button.IgnoreTextureSize = true;
+        button.StretchMode = TextureButton.StretchModeEnum.Scale;
+        button.AnchorLeft = button.AnchorRight = 1;
+        button.OffsetLeft = -204;
+        button.OffsetRight = -24;
+        button.OffsetTop = 24;
+        button.OffsetBottom = 78;
+        button.MouseDefaultCursorShape = Control.CursorShape.PointingHand;
+        if (!button.HasNode("DropShadow")) ButtonDropShadow.Attach(button);
+    }
+
     public static void StylePanel(PanelContainer panel, Label speaker)
     {
         // Tuck the cut-off portrait edges behind the cloud's wispy foreground.

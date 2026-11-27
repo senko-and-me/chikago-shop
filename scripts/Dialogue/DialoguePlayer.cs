@@ -11,7 +11,8 @@ public partial class DialoguePlayer : Control
 	public DialogueSession Session { get; private set; }
 	[Export(PropertyHint.File, "*.json")]
 	public string DialoguePath { get; set; } = "res://dialogue/intro.ru.json";
-	public bool IsPrologue { get; set; } = true;
+	[Export] public bool IsPrologue { get; set; } = true;
+	[Export] public bool UseWorldScene { get; set; }
 	public Texture2D StoryBackground { get; set; }
 	public Texture2D StoryPortrait { get; set; }
 	public int SavedPageStart => _pageStart;
@@ -60,19 +61,39 @@ public partial class DialoguePlayer : Control
 				right, StoryPortraitController.Frankie);
 			_speakerFocus = new StorySpeakerFocus(this, ("Кастелло", left), ("Френки", right));
 		}
+		else if (UseWorldScene)
+		{
+			background.Hide();
+			GetNode<Control>("Shade").Hide();
+			GetNode<Control>("Characters").Hide();
+			_heading.Hide();
+			var skip = GetNode<TextureButton>("SkipDialogue");
+			StoryDialogueLayout.StyleSkipButton(skip);
+			skip.Pressed += SkipCurrentStory;
+		}
 		else
 		{
-			background.Texture = StoryBackground;
-			background.Visible = StoryBackground != null;
+			if (StoryBackground != null) background.Texture = StoryBackground;
+			StoryDialogueLayout.FrameShowroom(background);
 			var characters = GetNode<Control>("Characters");
 			foreach (var portrait in characters.GetChildren())
 				((CanvasItem)portrait).Hide();
-			if (StoryPortrait != null)
+			var son = characters.GetNodeOrNull<TextureRect>("Son");
+			if (son != null)
+			{
+				son.Show();
+				right.Show();
+				_portraits = new StoryPortraitController(son, "Сын", right, StoryPortraitController.Frankie);
+				_speakerFocus = new StorySpeakerFocus(this, ("Сын", son), ("Френки", right));
+			}
+			else if (StoryPortrait != null)
 			{
 				StoryDialogueLayout.AddPortrait(characters, "Son", StoryPortrait, 0.68f);
 				_speakerFocus = new StorySpeakerFocus(this, ("Сын", characters.GetNode<Control>("Son")));
 			}
 			_heading.Hide();
+			if (GetNodeOrNull<Button>("SkipDialogue") is { } skip)
+				skip.Pressed += SkipCurrentStory;
 		}
 		_speaker = GetNode<Label>("Panel/Content/Speaker");
 		_text = GetNode<RichTextLabel>("Panel/Content/Text");
@@ -107,15 +128,16 @@ public partial class DialoguePlayer : Control
 
 	private void RefreshLocalizedLine()
 	{
+		if (UseWorldScene) StoryDialogueLayout.StyleSkipButton(GetNode<TextureButton>("SkipDialogue"));
 		_heading.Text = GameLocalization.Text("П Р О Л О Г\nДом моды Френки");
 		if (Session.Current == null) return;
 		_speaker.Text = GameLocalization.Text(Session.Current.Speaker);
 		_speaker.Visible = !string.IsNullOrWhiteSpace(Session.Current.Speaker);
 		if (IsPrologue)
 		{
-			UpdatePortraits();
 			GetNode<PrologueCharacterMotion>("Characters").SyncLine();
 		}
+		if (_portraits != null) UpdatePortraits();
 		_portraits?.SetLine(Session.Current);
 		_localizedText = StoryDialogueLayout.LineText(Session.Current.Text);
 		_pageStart = 0;
@@ -126,7 +148,9 @@ public partial class DialoguePlayer : Control
 	{
 		if (_portraitTransition?.IsValid() == true) _portraitTransition.Kill();
 		_portraitTransition = CreateTween().SetParallel();
-		foreach (var entry in new[] { ("Frankie", "Френки"), ("Castello", "Кастелло") })
+		foreach (var entry in IsPrologue
+			? new[] { ("Frankie", "Френки"), ("Castello", "Кастелло") }
+			: new[] { ("Frankie", "Френки"), ("Son", "Сын") })
 		{
 			var portrait = GetNode<TextureRect>("Characters/" + entry.Item1);
 			float tone = Session.Current.Speaker == entry.Item2 ? 0 : StoryDialogueLayout.InactivePortraitTone;
@@ -220,13 +244,20 @@ public partial class DialoguePlayer : Control
 		Advance();
 	}
 
+	private void SkipCurrentStory()
+	{
+		if (_closed || SceneTransition.IsActive(GetTree())) return;
+		StopInteraction();
+		Finished?.Invoke();
+	}
+
 	public override void _Input(InputEvent @event)
 	{
-		if (_closed) return;
+		if (_closed || SceneTransition.IsActive(GetTree())) return;
 		if (@event is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } mouse)
 		{
 			// Let the menu's Skip button receive the click instead of advancing text.
-			if (IsPrologue && GetViewport().GuiGetHoveredControl() is BaseButton) return;
+			if (GetViewport().GuiGetHoveredControl() is BaseButton) return;
 			var scrollbar = _text.GetVScrollBar();
 			if (scrollbar.IsVisibleInTree() && scrollbar.GetGlobalRect().HasPoint(mouse.Position)) return;
 			GetViewport().SetInputAsHandled();
@@ -237,6 +268,7 @@ public partial class DialoguePlayer : Control
 		if (key.Keycode == Key.Escape)
 		{
 			GetViewport().SetInputAsHandled();
+			if (!IsPrologue && HasNode("SkipDialogue")) return;
 			StopInteraction();
 			Cancelled?.Invoke();
 		}

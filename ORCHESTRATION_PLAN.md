@@ -9,6 +9,13 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### POL-54 — обновления сюжетных диалогов из main
+
+Статус: `DONE`; /root coordinator/executor;2026-11-28; POL53/POL52DONE. CP: .local/checks/pol54-main-dialogues/CP-POL-54.md.
+Task POL-54; recommended REVIEW→accepted DONE. Changed: merge origin/main572d03f into polishing78b1064; sole plan conflict resolved by previously approved union of both histories, no game/test conflicts. Include new intro/family/first-quota/failure/victory/defeat dialogue flows, camera/portrait placement, unlock positioning and ending actions. Current UI/craft/stitch/polishing audio choices,mix,pitch/cadence preserved.
+Checks: build PASS0warnings/errors; domain226/226 PASS (DOTNET_ROLL_FORWARD=Major); isolated import PASS; rendered polishing-audio,quota-visit,dialogue-portraits (includes expressions/layout RU/EN720p/1080p),prologue-motion PASS exit0. Polishing actualpitch1/maxRate4 and only1/3/4 pool confirmed. Whitespace check accepts inherited upstream CRLF via cr-at-eol; no bulk normalization of incoming files. Evidence .local/checks/pol54-main-dialogues/{merge-preview,build,domain,import,polishing-audio,quota-visit,dialogue-portraits,prologue-motion}.txt/.log and stderr; successful targeted runs only known root-certificate warning.
+Read-set exception: accidental unsupported --story-dialogue-layout-checks entered legacy default suite and failed unchanged SaveCompatibility Version1 energy/inventory assertion. Inspected exact assertion and incoming delta for scope; then ran supported --dialogue-portraits-checks including requested layout. Legacy save test not altered; no full-suite PASS claim. Attempt logs retained as evidence. source/ not read.
+Risks/blocker: no blocker for reviewed merge; legacy default save-test assumptions remain outside this task. Next:user tests combined polishing in editor. No main writes/remote push/exports.
 ### POL-52 — инструменты чаще:2–4/с
 
 Статус: `DONE`; /root coordinator/executor;2026-11-28; POL51DONE. CP: .local/checks/pol52-faster-instruments/CP-POL-52.md. Task POL52; recommended REVIEW→accepted DONE. Changed instrument audio rates2–4Hz in scene/defaults; expected slow2/mid3/fast4 and global reentry cap updated. IDs1/3/4,0dB,pitch1,all other audio/fades/cooldown preserved. Build PASS0warnings/errors; rendered polishing-audio PASS actualpitch1 maxRate4, membership/no-repeat/input/voice/fade regressions; diffcheck PASS. Evidence .local/checks/pol52-faster-instruments/{build,result,result-errors}.log; only known certificate warning. Read-set exception:none; risks:none. No WAV edits/source/commit/push/export. Next:user listens to faster instrument cadence.
@@ -86,6 +93,179 @@ Read-set exception: existing merged-crafting/helper APIs reused to set up real s
 Task POL-37; recommended REVIEW → accepted DONE. Changed: ui_click_1.wav→audio/sfx/hover.wav; ui_click_2.wav→click.wav; шестерня.wav→settings.wav; продажа(1).wav→sale.wav. Raw bytes preserved, no trimming/normalization; existing scene UIDs/one-shot imports, per-player volumes and suppression/special priority unchanged. Update SFX asset hashes and replace obsolete onset-trim assertions; adapt existing SFX fixture to current main tutorial-first startup, scene fade cleanup, selected crafting/automatic displays and manual showcase selection. No product logic changes.
 Checks: all4 SHA256 source==destination PASS; isolated import PASS; dotnet build PASS0warnings/errors; final rendered --sound-effects-checks PASS exit0 SOUND_EFFECTS_CHECKS_PASS (mapping, editor mix, hover/click priority and no queue/restart, settings/menu/pause/prologue skip, natural bell/reroll, actual sale exactly once and reload). git diff --check PASS. Evidence .local/checks/pol37-replace-ui-sfx/{build,import,sfx-current-main,sfx-current-main-errors}.log; only known root certificate store warning in final run. Earlier fixture failures retained; runner's historical 'trimmed' success label does not describe these new untouched assets.
 Read-set exception: MainMenu/SceneTransition and existing test startup/crafting helpers inspected after stale fixture assumptions failed against fetched main; extensions recorded in CP. Product startup/crafting rules unchanged. Old WAV copies retained locally. Risks/blocker:none. Next:user listens in editor. No commit/push/export; main untouched.
+### M245 — интеграция диалогов в main
+
+M245 DONE; /root; CP `.local/checks/m245/CP-M245.md`; SC244 DONE. Пользователь разрешил перенос в main и публикацию. origin/main93aa847 — предок feature/dialogue-editing f99b9ff, перенос fast-forward без конфликтов. Несвязанные изменения сцены сохранены отдельно для восстановления после публикации.
+
+```text
+Task: M245
+Recommended status: REVIEW -> accepted DONE; gate PASSED 28.11.2026
+Changed: main fast-forward from93aa847 to feature/dialogue-editing f99b9ff, preserving all six feature commits; integration evidence recorded in plan. No merge conflicts or runtime edits during integration.
+Checks: build PASS zero warnings/errors; rendered quota-visit and dialogue-portraits PASS exit0/stderr empty on committed scene copies (.local/checks/m245/); diffcheck PASS. Prior SC238/SC241/SC243/SC244 evidence retained.
+Acceptance: main contains revised prologue/first quota/Bill and three endings, separate skips/fades, camera restoration, larger defeat heading, centered portraits and workshop unlock panel, checkpoint only after second-quota defeat. Local editor scene changes backed up in named stash, hash recorded in .local/checks/m245/stash-ref.txt; restore after push without including them in commit.
+Read-set exception: none; no source/ reads, no forced remote update or branch deletion.
+Risks/blocker: none.
+Next: publish main normally and reapply preserved local scene diff; feature branch remains available.
+```
+
+### SC244 — контрольная точка после второй квоты
+
+SC244 DONE; /root; CP `.local/checks/sc244/CP-SC244.md`; SC243 DONE. Кнопка «С контрольной точки» возвращена только после поражения на второй квоте, включая пропуск финального диалога. Первое поражение без этой кнопки.
+
+```text
+Task: SC244
+Recommended status: REVIEW -> accepted DONE; gate PASSED 28.11.2026
+Changed: MafiaQuotaNotice checkpoint action/callback restored with !succeeded&&!firstQuotaFailure visibility gate after story completion; DayCycleController subscribes existing ReturnToCheckpoint. QuotaVisit exercises second-quota failure, skip, button activation and saved day8/score123 restoration; StoryDialogueLayout verifies visibility on full play/skip for all endings and absence during dialogue.
+Checks: build PASS zero warnings/errors; quota-visit and dialogue-portraits rendered suites PASS exit0/stderr empty (.local/checks/sc244/); diffcheck PASS.
+Acceptance: checkpoint offered only after second-quota defeat, hidden for first-quota defeat/victory and until story ends. Actual button restores checkpoint state, no failed flag or stale ending overlay. Prior large defeat heading and centered room unlock panel retained.
+Read-set exception: none; no source/ reads, no balance/schema change, prior and unrelated scene edits preserved.
+Risks/blocker: none.
+Next: user review; no push requested.
+```
+
+### SC243 — панель открытия между закрытыми комнатами
+
+SC243 DONE; /root; CP `.local/checks/sc243/CP-SC243.md`; SC242 DONE. Панель открытия перенесена на вертикальную середину двух шторок; вынесена из clipping верхней шторки, пути обновлены, текущая логика доступности сохранена.
+
+```text
+Task: SC243
+Recommended status: REVIEW -> accepted DONE; gate PASSED 28.11.2026
+Changed: trade_scene UnlockPanel reparented as MusicWorkshop child, scene-authored center(958.144,1101.746) with z201 above divider/frames. TradeScene node lookup only, RoomCurtainPresentation sibling panel lookup, test node references updated. QuotaVisit asserts real combined-room vertical midpoint, horizontal center and unclipped parent/z before opening.
+Checks: build PASS zero warnings/errors; quota-visit and room-frame rendered suites PASS exit0/stderr empty (.local/checks/sc243/); diffcheck PASS.
+Acceptance: panel spans midpoint of two closed room openings within1world pixel, not clipped by top curtain; availability, clicking/opening, hide after unlock/reload and room frames retained. Curtain geometry/reveal untouched.
+Read-set exception: focused diagnostic search located references in test files, all exact paths included in CP. TradeScene changed only presentation lookup, no domain logic. Existing user edits in trade_scene preserved.
+Risks/blocker: scene also contains unrelated pre-existing user edits; future commit should stage only UnlockPanel hunk for this task.
+Next: user review; no push requested.
+```
+
+### SC242 — увеличить заголовок поражения
+
+SC242 DONE; /root; CP `.local/checks/sc242/CP-SC242.md`; SC241 DONE. Размер заголовка поражения18→54; успешные заголовки сохранены18. Добавлена проверка размера в существующий тест композиции. Build PASS0warnings/errors (.local/checks/sc242/build.log), diffcheck PASS. Полный rendered suite не запускался для этой точечной стилевой правки. User scene edits preserved; no source/ reads. Next: user review, no push requested.
+
+### SC241 — поражение на первой квоте
+
+SC241 DONE; /root; CP `.local/checks/sc241/CP-SC241.md`; SC240 DONE. Отдельный пользовательский диалог нехватки денег первой недели подключён, с затемнением и отдельным «Последние слова?». Позднее поражение сохранено.
+
+```text
+Task: SC241
+Recommended status: REVIEW -> accepted DONE; gate PASSED 28.11.2026
+Changed: dialogue/first_quota_defeat.ru.json (8 short proofread bubbles), English translations; DayCycleController passes explicit first-quota-failure flag; MafiaQuotaNotice selects new script only for this outcome. QuotaVisit verifies real first-week failure path, greeting/final words/no son/no checkpoint. StoryDialogueLayout covers full play and skip of all three endings at720p/1080p.
+Checks: build PASS zero warnings/errors; JSON8 bubbles <=120 characters and English coverage PASS; quota-visit and dialogue-portraits rendered suites PASS exit0/stderr empty (.local/checks/sc241/); diffcheck PASS.
+Acceptance: first-week failure uses new story after fade, Последние слова separate, long threat split, result actions remain Restart/MainMenu. Later defeat unchanged; son/workshop not triggered by failure. Punctuation and typography corrected, narrative preserved.
+Read-set exception: none. Underlying balance/schema and unrelated user scene edits preserved; no source/ reads.
+Risks/blocker: stage directions textual, no new art/animation.
+Next: user review; no push requested.
+```
+
+### SC240 — убрать кнопку контрольной точки
+
+SC240 DONE; /root; CP `.local/checks/sc240/CP-SC240.md`; SC239 DONE. Кнопка «С чекпоинта» и её UI callback/subscription удалены; после поражения остаются «Начать заново» и «Главное меню».
+
+```text
+Task: SC240
+Recommended status: REVIEW -> accepted DONE; gate PASSED 28.11.2026
+Changed: MafiaQuotaNotice button/label/callback removed, DayCycleController dead subscription removed, ending layout assertion checks absence, plan.
+Checks: build PASS zero warnings/errors; rendered dialogue-portraits PASS exit0/stderr empty (.local/checks/sc240/); diffcheck PASS.
+Acceptance: no Checkpoint node exists in ending actions, full play/skip both reach Restart/MainMenu; underlying checkpoint persistence/API untouched.
+Read-set exception: DayCycleController subscription found by focused diagnostic search and included in CP. Prior and user changes preserved.
+Risks/blocker: none.
+Next: user review; no push requested.
+```
+
+### SC239 — портреты ближе к центру
+
+SC239 DONE; /root; CP `.local/checks/sc239/CP-SC239.md`; SC238 DONE. Кастелло сдвинут вправо и Френки влево на10% ширины экрана в прологе и аналогичных диалогах квот; размеры/высота сохранены.
+
+```text
+Task: SC239
+Recommended status: REVIEW -> accepted DONE; gate PASSED 28.11.2026
+Changed: scenes/UI/DialoguePlayer.tscn portrait anchors; MafiaQuotaNotice portrait centers; StoryDialogueLayout center-position regression; plan.
+Checks: build PASS zero warnings/errors; rendered dialogue-portraits PASS exit0/stderr empty (.local/checks/sc239/); screenshot reviewed at1280x720; diffcheck PASS.
+Acceptance: portrait centers now32.5% and64.75% across prologue/quota/endings, each moved10% inward. Existing text, dimensions, animation and real-world family composition preserved.
+Read-set exception: none. User trade_scene edits preserved.
+Risks/blocker: none.
+Next: user review; no push requested.
+```
+
+### SC238 — финальные диалоги и редактура сценария
+
+SC238 DONE; /root; CP `.local/checks/sc238/CP-SC238.md`; SC237 DONE. Победа/поражение реализованы, действия результата появляются после диалога; текущие и предыдущие пользовательские сценарии вычитаны, большие реплики разделены на облачка. Возможные пожары/газета вне scope.
+
+```text
+Task: SC238
+Recommended status: REVIEW -> accepted DONE; gate PASSED 28.11.2026
+Changed: new victory.ru.json (18 bubbles) and defeat.ru.json (15); proofread and split intro (24), first_quota (14) and quota_visitor (23), English keys refreshed. MafiaQuotaNotice runs full terminal sessions under fade; result actions hidden until conversation completes/skips, checkpoints available only on defeat, pause retained. Old one-line notice dictionary no longer used. PrologueMotion, StoryPortraitExpressions, StoryDialogueLayout and QuotaVisit tests updated for edited scripts.
+Checks: build PASS zero warnings/errors; all five JSON files parse, each bubble <=120 characters (actual max114), English key coverage PASS. Rendered dialogue-portraits, quota-visit, prologue-motion and intro-transition suites PASS, exit0/stderr empty (.local/checks/sc238/). Diffcheck PASS. Ending screenshots reviewed at1280/1920.
+Acceptance: both supplied endings playable fully and skippable to their own result actions; natural input visits every ending bubble. Prior story chaining, separate skips, family reload/completion, camera/HUD restoration and startup finish/skip/Continue retained. Corrected закадычный/инструменты/сдастся/садится, за полночь/что ж/месье, ё, spacing, punctuation, numerical notation and grammar throughout active supplied scripts. Narrative outcomes preserved.
+Read-set exception: none. No source/ reads, no new art, unrelated editor scene changes preserved. Speculative fire/newspaper additions excluded as described to user. No economy/save-schema changes.
+Risks/blocker: stage directions remain textual; no new animations or portraits for bodyguards. Prior narrative amounts still differ from gameplay balance.
+Next: user review; no push requested.
+```
+
+### SC237 — сценарий второй недели
+
+SC237 DONE; /root; CP `.local/checks/sc237/CP-SC237.md`; SC236 DONE. После первой квоты полный разговор Френки/Кастелло, затем Билл. Плавные переходы, независимый пропуск, текущая композиция семейного разговора и баланс сохранены. Суммы60000/500 в сценарии не меняют экономику.
+
+```text
+Task: SC237
+Recommended status: REVIEW -> accepted DONE; gate PASSED 28.11.2026
+Changed: dialogue/first_quota.ru.json (11 bubbles), quota_visitor.ru.json (15 family turns); English text and Bill name; MafiaQuotaNotice now runs DialogueSession with page/reveal/advance and independent full-conversation Skip, heading WEEK TWO. QuotaVisit and StoryDialogueLayout tests updated. Existing uncommitted new prologue retained.
+Checks: build PASS zero warnings/errors; exact story speaker/order/text and translation coverage PASS; rendered quota-visit and dialogue-portraits PASS exit0, stderr empty (.local/checks/sc237/); scoped diffcheck PASS.
+Acceptance: both supplied conversations follow first quota, natural input visits every quota turn before son, separate skips and fades retained, Bill speaker/localization, family natural completion and save reload verified; camera framing, overview/HUD restoration and zero-cash workshop permission unchanged. Stage directions remain text, lengthy turns paginate. Family scene remains in actual trading room per prior explicit user direction; no new background art introduced.
+Read-set exception: none beyond recorded CP. No source/ reads; unrelated local trade_scene changes preserved.
+Risks/blocker: narrative $60000/$500 differ from current economy, which was intentionally not changed by this dialogue-content task. No money is granted from dialogue alone.
+Next: user review; no push requested.
+```
+
+### SC236 — новый текст пролога
+
+SC236 DONE; /root; CP `.local/checks/sc236/CP-SC236.md`; SC235 DONE. Новый пользовательский текст:23 облачка в указанном порядке, начало с Френки, без прежних добавочных реплик. Английские тексты и проверки начала сцены обновлены, музыкальные переходы сохранены.
+
+```text
+Task: SC236
+Recommended status: REVIEW -> accepted DONE; gate PASSED 28.11.2026
+Changed: dialogue/intro.ru.json replaced with user's 23 bubbles; English translations added. PrologueMotion, StoryPortraitExpressions and StoryDialogueLayout tests reflect Frankie opening, separate laughter, new indices, expressions and continued speaking focus (6% mouth/cloud overlap allowance covers existing 1.06 speaking scale). No runtime/layout change.
+Checks: exact speaker/text/order comparison against supplied lines and English key coverage PASS; build PASS zero warnings/errors; prologue-motion, dialogue-portraits and intro-transition rendered suites PASS, stderr empty (.local/checks/sc236/). Diffcheck PASS.
+Acceptance: every dash separate bubble, no previous extra lines/narration, proposal/threat retain thoughtful/sinister music; startup finish/skip/Continue and portrait speech tested.
+Read-set exception: StoryPortraitExpressions added to exact write-set after old hardcoded indices failed; IntroMusic read for shared AdvanceMusicLine helper. No source/ reads. Unrelated trade_scene changes preserved.
+Risks/blocker: none.
+Next: user review; no push requested.
+```
+
+### SC235 — смещение камеры семейного разговора
+
+SC235 DONE; /root; CP `.local/checks/sc235/CP-SC235.md`; SC234 DONE. Центр камеры смещён вправо на8% ширины комнаты и вниз на4% высоты, приближение сохранено. Ожидания координат в quota-visit обновлены, включая resize. По прямому указанию пользователя debug и тесты не запускались; статическая проверка diff PASS. Несвязанные изменения сохранены. Next: визуальная оценка пользователем.
+
+### SC234 — разговор с сыном внутри торговой комнаты
+
+SC234 DONE; /root; CP `.local/checks/sc234/CP-SC234.md`; SC233 DONE. Уточнение пользователя: использовать настоящий мир trade_scene с отцом за прилавком и сыном рядом, поверх только диалоговое окно пролога. Кастелло: убрать Continue, перенести Skip наверх, обычный ввод как в прологе. Автоматическая последовательность, независимый пропуск и возврат камеры сохранены.
+
+```text
+Task: SC234
+Recommended status: REVIEW -> accepted DONE; gate PASSED 28.11.2026
+Changed: FamilyDialoguePlayer now overlays only the shared prologue cloud and localized prologue Skip texture; DialoguePlayer world-scene mode hides replacement backdrop/cast/shade. TradeScene.QuotaVisit shows the real-world son next to cashier, frames actual room, temporarily hides HUD/clock and restores them. WorldCamera adds story framing with viewport resize support. MafiaQuotaNotice removes Continue, uses top-right prologue Skip and click/Space reveal-then-finish. Integration tests and plan updated.
+Checks: build PASS zero warnings/errors; quota-visit and dialogue-portraits PASS on final behavior, intro-transition PASS before final world-only HUD/localization adjustments; all engine stderr empty (.local/checks/sc234/). Actual world screenshots inspected in RU1280x720 and EN1920x1080. Scoped diffcheck PASS.
+Acceptance: family story uses World/TradingRoom and its existing father/counter; no synthetic room or enlarged portraits. No visitor click; independent skip, first line retained, natural Castello reveal/finish, reload, zero-cash permission, camera pause/overview/control and HUD restoration covered. Viewport resize retains room framing and readable cloud. Existing editor changes to trade_scene preserved.
+Read-set exception: DayCycleController inspected to locate nested HUD/DayClock; audio sources inspected to locate local preferences following user's mute request. CP scope extended for shared skip styling and camera framing. No source/ reads.
+Risks/blocker: none. Local music/effects preferences set to zero in main local user settings and isolated test settings; other settings retained, shipped audio defaults unchanged. Already-running game needs next launch to load preferences.
+Next: user review in feature/dialogue-editing; no push requested.
+```
+
+### SC233 — композиция разговора отца и сына
+
+SC233 DONE; /root; CP `.local/checks/sc233/CP-SC233.md`; M232 DONE; feature/dialogue-editing. По уточнению пользователя и эскизу: отец за прилавком, сын рядом в центре сцены, текст внизу. После Кастелло сын начинает автоматически; у каждого разговора отдельная кнопка пропуска, повторный ввод не закрывает оба. Камера заблокирована до окончания и возвращается к начальному общему виду. Предыдущее решение с двумя разнесёнными портретами заменено эскизом. Устаревшее обещание1000$ убрано без изменения текущей механики мастерской; пользовательские изменения trade_scene.tscn вне scope.
+
+```text
+Task: SC233
+Recommended status: REVIEW -> accepted DONE; gate PASSED 27.11.2026
+Changed: authored scenes/UI/FamilyDialoguePlayer.tscn; DialoguePlayer, TradeScene.QuotaVisit, MafiaQuotaNotice; quota_visitor.ru.json and English translations; QuotaVisit and StoryDialogueLayout integration tests; plan. Father stands behind counter, son beside him; text cloud and independent family Skip button are authored in scene. Castello completion/skip automatically starts son under black transition; family completion/skip resets overview under black transition before releasing control.
+Checks: dotnet build ChikagoShop.csproj --no-restore -v minimal PASS, zero warnings/errors (.local/checks/sc233/build.log). Rendered quota-visit, dialogue-portraits and intro-transition suites PASS, all stderr empty (.local/checks/sc233/). Visual review of family dialogue at 1280/1920; scoped diffcheck PASS.
+Acceptance: Castello skip leaves son's first line intact despite repeated Escape; family has separate skip, world visitor never requires clicking. Camera blocked during family story, overview/drag restored afterwards. Mid-dialogue reload, natural completion, separate family skip, zero-cash free opening, checkpoint and startup finish/skip/Continue retained. Workshop permission/balance/save schema unchanged; unrelated editor changes preserved.
+Read-set exception: cashier_closed.jpg and WorldCamera/DayCycleController inspected for scene-native counter crop, reset and automatic sequence; recorded in expanded CP. No source/ reads.
+Risks/blocker: counter reuses cropped existing art; no new character artwork. No push requested.
+Next: user review in feature/dialogue-editing.
+```
+
 ### M232 — debug/gameplay в main с релизом v1.4.4
 
 M232 DONE; /root; CP `.local/checks/m232/CP-M232.md`. Пользователь разрешил merge/push. origin/main3be4aae содержит новый релиз поверх cec04d6; debug/gameplay0f72793 и SC230/231ae8ba6e объединены с сохранением релизных изменений и удалением покупательницы. Несвязанные локальные изменения сцены сохранены отдельно, source/ не читался.

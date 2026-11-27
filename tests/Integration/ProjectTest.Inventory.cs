@@ -102,7 +102,7 @@ public partial class ProjectTest
                 Check(camera.Position == before && !game.MusicWorkshopUnlocked && game.Score == 220 &&
                       game.StoredItems.Length == 0, "Releasing drag must stop panning without buying or crafting");
             }
-            await ClickControl(game, "World/MusicWorkshop/LockedOverlay/UnlockPanel/Content/UnlockButton");
+            await ClickControl(game, "World/MusicWorkshop/UnlockPanel/Content/UnlockButton");
             Check(game.MusicWorkshopUnlocked && game.Score == 120,
                 "The unlock button must still work after dragging the closed room");
         }
@@ -175,7 +175,7 @@ public partial class ProjectTest
         await PressEscapeForTest();
         await ClickControl(game, "PauseMenu/Root/Overlay/Center/Panel/Content/Menu/CheckpointButton");
         Check(game.CurrentDay == 1 && game.Score == 220, "Checkpoint handler must be connected");
-        await ClickControl(game, "World/MusicWorkshop/LockedOverlay/UnlockPanel/Content/UnlockButton");
+        await ClickControl(game, "World/MusicWorkshop/UnlockPanel/Content/UnlockButton");
         Check(game.MusicWorkshopUnlocked, "Unlock must accept mouse input");
         game.Score = 140;
         game.RefreshItemButtons();

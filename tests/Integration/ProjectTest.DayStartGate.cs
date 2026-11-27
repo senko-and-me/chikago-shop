@@ -67,7 +67,7 @@ public partial class ProjectTest
                     "The Start instruction must remain readable beside the existing tutorial panel");
             }
             gate.Dismiss();
-            await ClickControl(game, "World/MusicWorkshop/LockedOverlay/UnlockPanel/Content/UnlockButton");
+            await ClickControl(game, "World/MusicWorkshop/UnlockPanel/Content/UnlockButton");
             Check(!game.MusicWorkshopUnlocked && game.Score == money && !game.DayStarted,
                 "The locked-room notice must not sell access before the first-week conversation");
             gate.Dismiss();

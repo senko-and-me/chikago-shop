@@ -1,0 +1,110 @@
+[
+  {
+    "speaker": "",
+    "text": "*Звонок в дверь.*",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "Френки! Мой ненаглядный, закадычный! Выглядишь убитым.",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "Судя по тому, что ты теперь и инструменты стругаешь, я славно заставил тебя помучиться.",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "*Смешок.* Ну так… как твоё «ничего»?",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Френки",
+    "text": "…",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "Неужто и язык свой продал?",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Френки",
+    "text": "*Кивает в сторону кассы. Там лежит сумка, судя по виду, набитая чем-то.*",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "Уже успел собрать пожитки?",
+    "leftPortrait": "serious",
+    "rightPortrait": "serious"
+  },
+  {
+    "speaker": "Френки",
+    "text": "Мы давно не дети. Забирай, уходи и не возвращайся.",
+    "leftPortrait": "serious",
+    "rightPortrait": "angry"
+  },
+  {
+    "speaker": "Френки",
+    "text": "Этот дом ты не увидишь и в своих лучших снах.",
+    "leftPortrait": "serious",
+    "rightPortrait": "angry"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "… *Кивает в сторону купюр.* Пересчитайте. Не доверяю мошенникам.",
+    "leftPortrait": "serious",
+    "rightPortrait": "angry"
+  },
+  {
+    "speaker": "Френки",
+    "text": "Зря сомневаешься. Моя репутация дороже любой мелочи.",
+    "leftPortrait": "serious",
+    "rightPortrait": "angry"
+  },
+  {
+    "speaker": "Телохранители",
+    "text": "Здесь всё верно, синьор.",
+    "leftPortrait": "serious",
+    "rightPortrait": "angry"
+  },
+  {
+    "speaker": "Кастелло",
+    "text": "Н-но… Как?.. Ведь это было невозможно! Ты теперь снова в долгах?",
+    "leftPortrait": "serious",
+    "rightPortrait": "angry"
+  },
+  {
+    "speaker": "Френки",
+    "text": "Я прошу тебя об одном, Марко: уходи из моего дома и не возвращайся.",
+    "leftPortrait": "serious",
+    "rightPortrait": "angry"
+  },
+  {
+    "speaker": "Френки",
+    "text": "Тебе здесь больше ничего не принадлежит. Наша дружба никогда не будет такой, как раньше.",
+    "leftPortrait": "serious",
+    "rightPortrait": "angry"
+  },
+  {
+    "speaker": "Френки",
+    "text": "И семья у меня одна.",
+    "leftPortrait": "serious",
+    "rightPortrait": "angry"
+  },
+  {
+    "speaker": "",
+    "text": "*Кастелло не находит, что сказать. Он злится, разворачивается и уходит.*",
+    "leftPortrait": "serious",
+    "rightPortrait": "angry"
+  }
+]

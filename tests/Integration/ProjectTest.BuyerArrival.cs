@@ -153,9 +153,9 @@ public partial class ProjectTest
 
     private async Task CheckMusicUnlockPanel(TradeScene game, bool rendered)
     {
-        const string panelPath = "World/MusicWorkshop/LockedOverlay/UnlockPanel";
+        const string panelPath = "World/MusicWorkshop/UnlockPanel";
         var panel = game.GetNode<MusicWorkshopUnlockPanel>(panelPath);
-        var curtain = panel.GetParent<RoomCurtainPresentation>();
+        var curtain = panel.GetParent().GetNode<RoomCurtainPresentation>("LockedOverlay");
         var button = panel.UnlockButton;
         var title = panel.GetNode<Label>("Content/Title");
         int price = EconomyConfigProvider.Load().Workshops.Single(workshop => workshop.Id == "music").UnlockCost;
