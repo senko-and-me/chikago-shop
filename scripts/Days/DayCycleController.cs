@@ -28,7 +28,9 @@ public sealed class DayCycleController
 	private int _displayedSeconds = -1;
 	public const double TutorialDuration = 180;
 	private double? _restoredTutorialRemaining;
-	private bool TutorialActive => _game.GetNodeOrNull<FirstTradeTutorial>("FirstTradeTutorial")?.IsActive == true;
+	private FirstTradeTutorial Tutorial => _game.GetNodeOrNull<FirstTradeTutorial>("FirstTradeTutorial");
+	private bool TutorialActive => Tutorial?.IsActive == true;
+	private bool CanFinishTrainingDay => Tutorial?.CanFinishTrainingDay == true;
 	private readonly DayTransitionCard _card;
 	private readonly MafiaQuotaNotice _mafia;
 	private readonly DayNightBackground _dayNight;
@@ -174,13 +176,13 @@ public sealed class DayCycleController
 			return;
 		}
 		bool closed;
-		if (TutorialActive)
+		if (TutorialActive && !CanFinishTrainingDay)
 		{
 			Session.TickRepeating(delta);
 			closed = false;
 		}
 		else closed = Session.Tick(delta);
-		if (closed) _advanceWhenClosed = true;
+		if (closed && !TutorialActive) _advanceWhenClosed = true;
 		UpdateDayNightBackground();
 		bool secondChanged = RefreshTimer();
 		if (closed) _game.SynchronizeDayState();
@@ -191,7 +193,15 @@ public sealed class DayCycleController
 	{
 		if (_game.Failed || _game.Completed || TransitionOpen || Upgrades.Pending || _game.QuotaVisitPending || _game.CraftMiniGameOpen) return;
 		if (!Started && !Session.IsClosed) { StartDay(); return; }
-		if (TutorialActive) return;
+		if (TutorialActive)
+		{
+			if (!CanFinishTrainingDay || Session.IsClosed) return;
+			Session.Close();
+			RefreshTimer();
+			UpdateDayNightBackground();
+			_game.SynchronizeDayState();
+			return;
+		}
 		switch (Session.RequestEnd(_game.TradeActive))
 		{
 			case EndDayAction.Closed:
@@ -280,12 +290,7 @@ public sealed class DayCycleController
 			_card.Open(_game.CurrentDay - 1, _game.CurrentDay, Upgrades.Options, _game.Score);
 	}
 
-	public void FinishQuotaVisit()
-	{
-		// The pending day-eight hand can now include the newly available room.
-		if (Upgrades.Pending) Upgrades.Offer(_game.CurrentDay, _game.MusicWorkshopUnlocked);
-		_announcements.ShowReward(GameLocalization.Format("Получено {0}$", TradeScene.QuotaGift), ResumeUpgradeChoice);
-	}
+	public void FinishQuotaVisit() => ResumeUpgradeChoice();
 
 	public void CaptureCheckpointUpgrades()
 	{
@@ -418,7 +423,7 @@ public sealed class DayCycleController
 			_clockAction.Visible && !_clockAction.Disabled && (_clockAction.IsHovered() || _clockAction.HasFocus());
 		_clock.SelfModulate = active ? new Color(0.9f, 0.9f, 0.9f) : Colors.White;
 		if (_endCaption == null) return;
-		bool showEnd = !TutorialActive && _clockAction.Visible && !_clockAction.Disabled && Started &&
+		bool showEnd = (!TutorialActive || CanFinishTrainingDay) && _clockAction.Visible && !_clockAction.Disabled && Started &&
 			!Session.IsClosed && Session.RemainingSeconds > 0 &&
 			(_clockAction.IsHovered() || _clockAction.HasFocus());
 		_endCaption.Visible = showEnd;

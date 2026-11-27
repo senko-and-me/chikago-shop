@@ -21,7 +21,8 @@ public partial class ProjectTest
         var keys = catalog.GetMessageList().Select(key => key.ToString()).ToHashSet();
         var source = new List<DialogueLine>();
         while (!original.IsComplete) { source.Add(original.Current); original.Advance(); }
-        Check(source.Count == 26, "All original speeches and actions must remain in the dialogue");
+        Check(source.Count == 25 && source.All(line => line.Speaker != "Покупательница"),
+            "The prologue must retain the wager without the removed customer's speech");
         foreach (var line in source)
         {
             Check(keys.Contains(line.Text) && !string.IsNullOrWhiteSpace(catalog.GetMessage(line.Text)) &&
@@ -51,8 +52,9 @@ public partial class ProjectTest
             menu.GetNode<TextureButton>("MainMenuContainer/Menu/NewGameButton").EmitSignal(BaseButton.SignalName.Pressed);
             await ToSignal(this, SignalName.ProcessFrame);
             await ToSignal(this, SignalName.ProcessFrame);
-            Check(menu.ActiveDialogue.GetNode<Label>("Panel/Content/Speaker").Text == "Customer" &&
-                  menu.ActiveDialogue.GetNode<RichTextLabel>("Panel/Content/Text").Text.StartsWith("Oh, how right you are.") &&
+            await SkipStartupTraining(menu);
+            Check(menu.ActiveDialogue.GetNode<Label>("Panel/Content/Speaker").Text == "Castello" &&
+                  menu.ActiveDialogue.GetNode<RichTextLabel>("Panel/Content/Text").Text.StartsWith("Frankie!") &&
                   menu.ActiveDialogue.GetNode<Label>("Heading").Text.Contains("Frankie's Fashion House"),
                 "New Game after selecting English must open an English dialogue and title");
             while (menu.ActiveDialogue.Session.Index < 6) AdvanceMusicLine(menu.ActiveDialogue);

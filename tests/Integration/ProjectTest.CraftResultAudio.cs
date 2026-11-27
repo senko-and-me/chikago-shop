@@ -43,7 +43,7 @@ public partial class ProjectTest
                 foreach (var other in new[] { SoundEffects.Cue.CraftGreat, SoundEffects.Cue.CraftNormal, SoundEffects.Cue.CraftBad })
                     if (other != cue) Check(!effects.GetNode<AudioStreamPlayer>(other.ToString()).Playing,
                         "Different result melodies must not overlap");
-                string filename = cue == SoundEffects.Cue.CraftGreat ? "great" : cue == SoundEffects.Cue.CraftNormal ? "normal" : "bad_1";
+                string filename = cue == SoundEffects.Cue.CraftGreat ? "great(1)" : cue == SoundEffects.Cue.CraftNormal ? "normal(1)" : "bad";
                 var stream = (AudioStreamWav)player.Stream;
                 Check(stream.ResourcePath == $"res://audio/sfx/{filename}.wav" && stream.GetLength() > 0 &&
                     stream.LoopMode == AudioStreamWav.LoopModeEnum.Disabled,

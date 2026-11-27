@@ -19,7 +19,7 @@ public partial class ProjectTest : SceneTree
             if (OS.GetCmdlineUserArgs().Contains("--polishing-audio-checks"))
             {
                 await TestPolishingAudio();
-                GD.Print("POLISHING_AUDIO_CHECKS_PASS: 15 variants, speed rates, jitter, two voices, fades, mouse/touch, pause and finish");
+                GD.Print("POLISHING_AUDIO_CHECKS_PASS: selected variants, speed rates, jitter, two voices, fades, mouse/touch, pause and finish");
                 Quit();
                 return;
             }
@@ -27,6 +27,13 @@ public partial class ProjectTest : SceneTree
             {
                 await TestCraftResultAudio();
                 GD.Print("CRAFT_RESULT_AUDIO_CHECKS_PASS: all tiers, both minigames, real collection, cancellation and no duplicate click");
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--showcase-card-visibility-checks"))
+            {
+                await TestShowcaseCardVisibility();
+                GD.Print("SHOWCASE_CARD_VISIBILITY_PASS: tables and stock retained through cards, pause, skip, purchase and reload");
                 Quit();
                 return;
             }
@@ -132,7 +139,7 @@ public partial class ProjectTest : SceneTree
             if (OS.GetCmdlineUserArgs().Contains("--quota-visit-checks"))
             {
                 await TestQuotaVisit();
-                GD.Print("QUOTA_VISIT_CHECKS_PASS: greeting, dialogue reload, gift, checkpoint, failure, notebook and unlock");
+                GD.Print("QUOTA_VISIT_CHECKS_PASS: dialogue reload, unchanged balance, checkpoint, failure, notebook and free unlock");
                 Quit();
                 return;
             }

@@ -5,7 +5,6 @@
 [ext_resource type="Texture2D" path="res://art/rooms/showroom.jpg" id="3_room"]
 [ext_resource type="Texture2D" path="res://art/dialogue/frankie.png" id="5_frankie"]
 [ext_resource type="Texture2D" path="res://art/dialogue/castello.png" id="6_castello"]
-[ext_resource type="Texture2D" path="res://art/dialogue/customer.png" id="7_customer"]
 [ext_resource type="Shader" path="res://shaders/dialogue_portrait.gdshader" id="8_portrait"]
 [ext_resource type="Script" path="res://scripts/Dialogue/PrologueCharacterMotion.cs" id="9_motion"]
 
@@ -18,11 +17,6 @@ shader_parameter/lighten = 0.12
 resource_local_to_scene = true
 shader = ExtResource("8_portrait")
 shader_parameter/lighten = 0.12
-
-[sub_resource type="ShaderMaterial" id="CustomerTone"]
-resource_local_to_scene = true
-shader = ExtResource("8_portrait")
-shader_parameter/lighten = 0.0
 
 [node name="DialoguePlayer" type="Control"]
 layout_mode = 3
@@ -69,18 +63,6 @@ anchor_right = 0.33
 anchor_bottom = 0.755
 mouse_filter = 2
 texture = ExtResource("6_castello")
-expand_mode = 1
-stretch_mode = 5
-
-[node name="Customer" type="TextureRect" parent="Characters"]
-material = SubResource("CustomerTone")
-layout_mode = 1
-anchor_left = 0.27
-anchor_top = 0.255
-anchor_right = 0.43
-anchor_bottom = 0.745
-mouse_filter = 2
-texture = ExtResource("7_customer")
 expand_mode = 1
 stretch_mode = 5
 

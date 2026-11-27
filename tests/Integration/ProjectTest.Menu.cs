@@ -202,6 +202,18 @@ public partial class ProjectTest
         Check(OS.GetUserDataDir().Contains("ChikagoShopStartupSmoke"),
             "Startup smoke requires isolated userdata via a temporary override.cfg; refusing to touch player saves");
         GD.Print("Startup smoke user directory: " + OS.GetUserDataDir());
+        var startupScene = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
+        try
+        {
+            Check(startupScene.SavePath == "user://trade_progress.json" && startupScene.StartingMoney == 220 &&
+                startupScene.FirstQuota == 750 && startupScene.SecondQuota == 1500,
+                "The packed gameplay scene must retain valid startup money, quotas and save path before Ready; editor null overrides break New Game");
+            Check(startupScene.GetNode<FirstTradeTutorial>("FirstTradeTutorial").CameraTravelSeconds > 0 &&
+                startupScene.GetNode<PulloutNotebook>("HUD/Root/PulloutNotebook").SlideSeconds > 0 &&
+                !string.IsNullOrEmpty(startupScene.GetNode<TradingRoomPosterHotspot>("World/TradingRoom/ShowPoster").ThumbnailPath),
+                "Startup tutorial and room UI must keep their authored defaults rather than null/zero exports");
+        }
+        finally { startupScene.Free(); }
         Check(FileAccess.FileExists("res://config/economy.v1.json") && FileAccess.FileExists("res://dialogue/intro.ru.json"),
             "The executable must contain both economy and dialogue JSON files");
         var menuScene = GD.Load<PackedScene>("res://scenes/main_menu.tscn");

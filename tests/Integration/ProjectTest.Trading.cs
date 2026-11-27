@@ -374,7 +374,7 @@ public partial class ProjectTest
         Check(game.Percentage is >= -30 and <= 30, "Offer percentage is out of range");
         Check(game.OfferedPrice == TradeScene.PriceForPercent(TradeScene.GetItemBasePrice(firstItem), game.Percentage),
             "Offer price does not match the percentage");
-        Check(game.GetNode<Label>("World/TradingRoom/Item/TradePanel/Content/OfferLabel").Text == $"Получим: {game.OfferedPrice}$",
+        Check(game.GetNode<RichTextLabel>("World/TradingRoom/Item/TradePanel/Content/OfferLabel").Text == $"Получим: {game.OfferedPrice}$",
             "The panel must show the amount received");
 
 		var redRerollButton = game.GetNode<Button>("World/TradingRoom/Item/TradePanel/Content/Buttons/DeclineButton");

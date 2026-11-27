@@ -13,6 +13,9 @@ public partial class ProgressPanel : Control
     public bool Expanded { get; private set; }
     public bool Pinned { get; private set; }
     public bool HoveringHotspot { get; private set; }
+    internal bool TrackLessonHover { get; set; }
+    internal bool HoldOpenForLesson { get; set; }
+    internal event Action LessonOpened;
     public bool IsAnimating => _slide?.IsRunning() == true;
     private TradeScene _game;
     private Button _toggle;
@@ -42,7 +45,12 @@ public partial class ProgressPanel : Control
         _closedHotspot = new Rect2(0, 0, exposedWidth, Size.Y);
         _toggle.Size = new Vector2(exposedWidth, _toggle.Size.Y);
         _captions = _sticks.Select(stick => stick.GetNode<Label>("Caption")).ToArray();
-        _toggle.Pressed += () => { Pinned = !Pinned; SetExpanded(Pinned); };
+        _toggle.Pressed += () =>
+        {
+            Pinned = !Pinned;
+            SetExpanded(Pinned);
+            if (Pinned && TrackLessonHover) LessonOpened?.Invoke();
+        };
         _toggle.GuiInput += input =>
         {
             if (input is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true })
@@ -55,10 +63,22 @@ public partial class ProgressPanel : Control
 
     public override void _Input(InputEvent input)
     {
-        if (input is InputEventMouseMotion motion) _pointer = motion.Position;
+        if (input is not InputEventMouseMotion motion) return;
+        _pointer = motion.Position;
+        InspectForLesson(GetGlobalTransformWithCanvas().AffineInverse() * motion.Position);
     }
 
     private void OnPointerLeft() => _pointer = new Vector2(-1000, -1000);
+
+    private bool IsOverPack(Vector2 pointer) => _closedHotspot.HasPoint(pointer) ||
+        Expanded && new Rect2(0, 0, 384, 208).HasPoint(pointer);
+
+    private void InspectForLesson(Vector2 pointer)
+    {
+        if (!TrackLessonHover || GetTree().Paused || !IsVisibleInTree() || !IsOverPack(pointer)) return;
+        SetExpanded(true);
+        LessonOpened?.Invoke();
+    }
 
     public override void _Process(double delta)
     {
@@ -72,11 +92,10 @@ public partial class ProgressPanel : Control
         _wasVisible = true;
         Size = new Vector2(Expanded ? 384 : _closedHotspot.Size.X, _closedHotspot.Size.Y);
         Vector2 pointer = _pointer.HasValue ? GetGlobalTransformWithCanvas().AffineInverse() * _pointer.Value : GetLocalMousePosition();
-        bool onPack = _closedHotspot.HasPoint(pointer);
-        bool onOpen = Expanded && new Rect2(0, 0, 384, 208).HasPoint(pointer);
+        InspectForLesson(pointer);
         Control focused = GetViewport().GuiGetFocusOwner();
-        HoveringHotspot = onPack || onOpen;
-        bool wanted = HoveringHotspot || Pinned || _toggle.HasFocus() ||
+        HoveringHotspot = IsOverPack(pointer);
+        bool wanted = HoveringHotspot || HoldOpenForLesson || Pinned || _toggle.HasFocus() ||
             focused != null && (focused == _content || _content.IsAncestorOf(focused)) || _game.Failed || _game.Completed;
         _leaveTime = wanted ? 0 : _leaveTime + delta;
         if (wanted) SetExpanded(true);

@@ -4,6 +4,7 @@ using Godot;
 public partial class CraftButtonVisual : Button
 {
 	private Control[] _artwork;
+	private Color _tint = Colors.White;
 
 	public override void _Ready()
 	{
@@ -23,6 +24,7 @@ public partial class CraftButtonVisual : Button
 			DrawMode.Hover => new Color(0.9f, 0.9f, 0.9f),
 			_ => Colors.White
 		};
-		foreach (var item in _artwork) item.Modulate = tint;
+		_tint = GetDrawMode() == DrawMode.Disabled ? tint : _tint.Lerp(tint, Mathf.Clamp((float)delta * 25, 0, 1));
+		foreach (var item in _artwork) item.Modulate = _tint;
 	}
 }

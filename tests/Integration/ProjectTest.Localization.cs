@@ -211,7 +211,7 @@ public partial class ProjectTest
             Check(!System.Text.RegularExpressions.Regex.IsMatch(game.GetNode<Label>("World/ShowroomLeft/Showcases/Slot1/ItemLabel").Text, "[А-Яа-яЁё]"),
                 "An occupied showcase must display the localized item name");
             game._Process(0);
-            Check(game.GetNode<Label>("World/TradingRoom/Item/TradePanel/Content/OfferLabel").Text == $"You get: ${game.OfferedPrice}",
+            Check(game.GetNode<RichTextLabel>("World/TradingRoom/Item/TradePanel/Content/OfferLabel").Text == $"You get: ${game.OfferedPrice}",
                 "Offer text must translate while retaining the actual offer value");
             string saveBefore = FileAccess.GetFileAsString(SavePath);
             int score = game.Score;
@@ -219,7 +219,7 @@ public partial class ProjectTest
             TranslationServer.SetLocale("ru");
             await ToSignal(this, SignalName.ProcessFrame);
             Check(game.GetNode<Label>("HUD/Root/ScorePanel/ScoreLabel").Text == $"Счёт: {score}$" &&
-                  game.GetNode<Label>("World/TradingRoom/Item/TradePanel/Content/OfferLabel").Text == $"Получим: {game.OfferedPrice}$",
+                  game.GetNode<RichTextLabel>("World/TradingRoom/Item/TradePanel/Content/OfferLabel").Text == $"Получим: {game.OfferedPrice}$",
                 "Switching back to Russian must refresh dynamic HUD and trade text");
             TranslationServer.SetLocale("en");
             await ToSignal(this, SignalName.ProcessFrame);

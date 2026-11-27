@@ -35,6 +35,13 @@ public partial class ProjectTest
         }
         Vector2I originalSize = Root.Size;
         var game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
+        foreach (string period in new[] { "Day", "Night" })
+        {
+            var layer = game.GetNode<Sprite2D>("World/TimeOfDay" + period);
+            var layoutLayer = game.GetNode<Sprite2D>("World/RoomLayout");
+            Check((layer.Transform * layer.GetRect()).IsEqualApprox(layoutLayer.Transform * layoutLayer.GetRect()),
+                "Day and night house artwork must align with the room grid already in the editor, without a runtime correction");
+        }
         // Inspect the packed scene before _Ready: an editor must see the complete background already.
         var sceneGeometry = new System.Collections.Generic.List<(CanvasItem Node, Transform2D Transform, Rect2 Rect)>();
         void Remember(string path)
@@ -55,6 +62,13 @@ public partial class ProjectTest
         {
             Remember($"World/{room}/LockedOverlay");
             Remember($"World/{room}/LockedOverlay/LockedCurtain");
+            var roomNode = game.GetNode<Node2D>("World/" + room);
+            var curtainCover = roomNode.GetNode<Control>("LockedOverlay");
+            var roomArt = roomNode.GetNode<Sprite2D>(room == "MusicWorkshop" ? "Background" : "ShowroomBackground");
+            Check(curtainCover.ClipContents && curtainCover.GetRect().IsEqualApprox(roomArt.Transform * roomArt.GetRect()),
+                "Curtain and backing must be clipped to the room opening already in the scene, without protruding over the exterior outline");
+            Check(roomNode.GetNode<Control>("RoomFrame").ZIndex > curtainCover.ZIndex,
+                "The black frame must render above the entire locked-room cover");
         }
         Check(game.GetNode<Control>("World/MusicWorkshop/LockedOverlay/UnlockPanel").Owner == game,
             "The reusable unlock panel must be authored in the room scene; its contents lay out after Ready");
@@ -179,11 +193,21 @@ public partial class ProjectTest
             for (int i = 0; i < 3; i++) await ToSignal(this, SignalName.ProcessFrame);
             await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
             using var pixels = viewport.GetTexture().GetImage();
+            // Add an opaque cover after the frame: the authored Z order must keep the ink above it.
+            var cover = new ColorRect { Position = start, Size = room.Size * scale,
+                Color = Colors.White, ZIndex = original.GetParent().GetNodeOrNull<Control>("LockedOverlay")?.ZIndex ?? 100 };
+            viewport.AddChild(cover);
+            await ToSignal(this, SignalName.ProcessFrame);
+            await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+            using var coveredPixels = viewport.GetTexture().GetImage();
             Vector2 end = start + room.Size * scale;
             for (int y = 0; y < pixels.GetHeight(); y++)
             for (int x = 0; x < pixels.GetWidth(); x++)
             {
                 Color pixel = pixels.GetPixel(x, y);
+                if (pixel.A > 0.95f && pixel.R < 0.01f)
+                    Check(coveredPixels.GetPixel(x, y).R < 0.06f,
+                        "An opaque curtain drawn later must not paint over any solid black frame pixel");
                 Check(pixel.A < 0.1f || (pixel.R < 0.01f && pixel.G < 0.01f && pixel.B < 0.01f),
                     "The rendered frame must contain no opaque white flecks at its joints");
             }
