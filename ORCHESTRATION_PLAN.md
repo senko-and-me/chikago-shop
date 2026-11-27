@@ -9,6 +9,12 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### POL-55 — объединение с актуальным main и публикация
+
+Статус: DONE; /root coordinator/executor; 2026-11-28; POL54 DONE. CP: .local/checks/pol55-publish-main/CP-POL-55.md. User authorizes merge all current work into latest main and non-force publication. Preserve both administrative histories and all test modes; no competing gameplay conflicts.
+Task: POL-55; Recommended status: REVIEW → accepted DONE (integration validated, publication authorized). Changed: incoming main4f8ffc4 merged with polishingdd6f547, plan histories united, both new runner modes retained alongside audio modes. Checks: build PASS0warnings/errors; domain226/226 PASS; isolated import and rendered localization-coverage,quota-visit,polishing-audio,progress-art PASS exit0. Evidence .local/checks/pol55-publish-main/. Initial localization run rejected test-folder name; corrected isolated override (UTF8 without BOM), no product changes. Read-set exception: localization fixture guard inspected to configure required isolated SC218 directory; no user saves touched. Risks/blocker: none for this integration; full legacy suite not asserted. Next: fast-forward local main and normal push; exact publication receipt in local CP.
+
+
 ### POL-54 — обновления сюжетных диалогов из main
 
 Статус: `DONE`; /root coordinator/executor;2026-11-28; POL53/POL52DONE. CP: .local/checks/pol54-main-dialogues/CP-POL-54.md.
@@ -93,6 +99,36 @@ Read-set exception: existing merged-crafting/helper APIs reused to set up real s
 Task POL-37; recommended REVIEW → accepted DONE. Changed: ui_click_1.wav→audio/sfx/hover.wav; ui_click_2.wav→click.wav; шестерня.wav→settings.wav; продажа(1).wav→sale.wav. Raw bytes preserved, no trimming/normalization; existing scene UIDs/one-shot imports, per-player volumes and suppression/special priority unchanged. Update SFX asset hashes and replace obsolete onset-trim assertions; adapt existing SFX fixture to current main tutorial-first startup, scene fade cleanup, selected crafting/automatic displays and manual showcase selection. No product logic changes.
 Checks: all4 SHA256 source==destination PASS; isolated import PASS; dotnet build PASS0warnings/errors; final rendered --sound-effects-checks PASS exit0 SOUND_EFFECTS_CHECKS_PASS (mapping, editor mix, hover/click priority and no queue/restart, settings/menu/pause/prologue skip, natural bell/reroll, actual sale exactly once and reload). git diff --check PASS. Evidence .local/checks/pol37-replace-ui-sfx/{build,import,sfx-current-main,sfx-current-main-errors}.log; only known root certificate store warning in final run. Earlier fixture failures retained; runner's historical 'trimmed' success label does not describe these new untouched assets.
 Read-set exception: MainMenu/SceneTransition and existing test startup/crafting helpers inspected after stale fixture assumptions failed against fetched main; extensions recorded in CP. Product startup/crafting rules unchanged. Old WAV copies retained locally. Risks/blocker:none. Next:user listens in editor. No commit/push/export; main untouched.
+### SC247 — полная локализация и сумма квоты в сценарии
+
+SC247 DONE; /root; CP `.local/checks/sc247/CP-SC247.md`; SC246 DONE. Три упоминания суммы в разговоре после первой квоты используют `{second_quota}` из действующего `TradeScene.SecondQuota` (вне торговой сцены — configured final quota). RU/EN обновлены для кнопок, подсказок, карточек дня и debug UI; открытые диалоги, карточки и ошибки обновляются при смене языка. Предыдущие изменения текстур и пользовательские правки trade_scene сохранены.
+
+```text
+Task: SC247
+Recommended status: REVIEW -> accepted DONE; gate PASSED 28.11.2026
+Changed: first_quota.ru.json has three named quota arguments; StoryDialogueLayout resolves runtime amount after translation, MafiaQuotaNotice passes active game amount and refreshes current line/header/actions/skip artwork without story advancement. English catalog +77 entries, obsolete literal60000 dialogue keys removed. Day cards refresh purchase buttons/route live. Debug tabs, composed item/card field names, preview and validation/status messages localized; obsolete energy hint corrected.
+Checks: dotnet build ChikagoShop.csproj --no-restore -v quiet PASS zero warnings/errors; rendered --localization-coverage-checks PASS (all authored scene text/tooltips; all six active story files; every English entry and numbered/named format argument; actual menu/game/catalog/embroidery/polishing/tutorial/debug, all fields/tabs/errors; live quota12345/8765 RU/EN and all three mentions; cards at1280/960 with screenshots reviewed). --dialogue-localization-checks PASS (24 current prologue lines, settings persistence, full RU/EN pagination, live switch without cue replay); --pause-localization-checks PASS (actual language buttons, live layout, settings persistence and unchanged game state). Logs .local/checks/sc247/{build,coverage,dialogue,pause}.*. git diff --check PASS.
+Acceptance: current user-facing texts/buttons have RU/EN coverage; native language names stay native. Literal audit leaves only native names, technical logs/internal IDs, existing bilingual interpolations, localized composed-field fragments and profile parser errors (not shown by the UI). No quota balance or save/schema changes; no push requested.
+Read-set exception: scripts/scenes enumeration required full text audit; src/ChikagoShop.Domain/**/*.cs searched for untranslated player-visible exceptions, BalanceProfile.cs read to localize validation at its UI boundary. No source/ reads. Existing prologue test assertions updated for current script and asynchronous menu fade.
+Risks/blocker: none. Unrelated local asset/scene changes retained.
+Next: user review in the editor.
+```
+
+### SC246 — новые текстуры сигареты и мастерской
+
+SC246 DONE; /root; CP `.local/checks/sc246/CP-SC246.md`; M245 DONE. Предоставленные Drive-файлы комнаты и сигареты подключены, размещение сохранено; обрезка нового холста сигареты обновлена. Перед пачки совпадает с текущим; файл «ПачкаСпина» содержит старую сигарету, поэтому настоящая задняя часть сохранена.
+
+```text
+Task: SC246
+Recommended status: REVIEW -> accepted DONE; gate PASSED 28.11.2026
+Changed: art/rooms/music_room.jpg and art/ui/cigarette_stick.png replaced byte-for-byte with supplied originals; CigaretteProgress Atlas region(214,1343,1763,208). Tests assert new canvas2360x1640, crop and retained room1920x1080. Targeted progress-art runner reuses hover/caption/viewport visual coverage and captures unlocked music room; stale hardcoded250 expectation replaced with actual FirstQuota. No runtime scripts/world geometry changed.
+Checks: SHA256 exact originals PASS (room84e1e40d15da68de6bddb9381571f35d801fefcc880ad59c57a94bfeb09f0374, cigarette278957cbb706f65620ddc3cc1df1fc0f00d21add94ee9b136b9886452c630488); build PASS zero warnings/errors, asset import PASS; progress-art and room-frame rendered checks PASS exit0/stderr empty (.local/checks/sc246/). Collapsed/expanded RU/EN cigarettes at960/1280 and unlocked room screenshots visually reviewed; diffcheck PASS.
+Acceptance: actual new cigarette art rendered without transparent-canvas padding, labels/hover/animation unchanged; new room fits existing frames. Existing front pack already identical to source; preserve genuine back pack since remote ПачкаСпина incorrectly contains the old stick. User informed.
+Read-set exception: no Drive connector available, public HTML/download fallback; remote folders enumerated for exact requested assets only. ProjectTest runner added to CP write-set. No source/ reads or raster modifications; read-only alpha/pixel metadata inspection. User scene changes preserved.
+Risks/blocker: full legacy progress-toggle suite initially failed at stale250 quota expectation; visual segment corrected and independently passed. Broader obsolete campaign assumptions in its remaining portion were not migrated by this asset task.
+Next: user review; no push requested.
+```
+
 ### M245 — интеграция диалогов в main
 
 M245 DONE; /root; CP `.local/checks/m245/CP-M245.md`; SC244 DONE. Пользователь разрешил перенос в main и публикацию. origin/main93aa847 — предок feature/dialogue-editing f99b9ff, перенос fast-forward без конфликтов. Несвязанные изменения сцены сохранены отдельно для восстановления после публикации.

@@ -108,7 +108,7 @@ text = "Закрыть · F10"
 layout_mode = 2
 theme_override_colors/font_color = Color(0.18, 0.18, 0.18, 1)
 theme_override_font_sizes/font_size = 16
-text = "Игра приостановлена. Применение сохраняет профиль между запусками debug-билда. Стартовые деньги и энергия выдаются только при новой игре."
+text = "Игра приостановлена. Применение сохраняет профиль между запусками debug-билда. Стартовые деньги выдаются только при новой игре."
 autowrap_mode = 3
 
 [node name="Tabs" type="TabContainer" parent="Root/Inset/Panel/Content"]

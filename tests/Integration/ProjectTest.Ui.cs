@@ -186,7 +186,7 @@ public partial class ProjectTest
         GD.Print("Constant-zoom layout invalidation and item popup lifecycle checks passed");
     }
 
-    private async Task TestCollapsibleProgress()
+    private async Task TestCollapsibleProgress(bool visualsOnly = false)
     {
         Vector2I originalSize = Root.Size;
         string locale = TranslationServer.GetLocale();
@@ -222,6 +222,12 @@ public partial class ProjectTest
             var visual = panel.GetNode<Control>("Visual");
             var front = visual.GetNode<TextureRect>("Pack/Front");
             var back = visual.GetNode<TextureRect>("Back");
+            var cigaretteAtlas = (AtlasTexture)((TextureRect)sticks[0]).Texture;
+            Check(cigaretteAtlas.Atlas.GetSize() == new Vector2(2360, 1640) &&
+                cigaretteAtlas.Region == new Rect2(214, 1343, 1763, 208),
+                "The supplied cigarette must crop its new canvas to the visible art without changing the on-screen size");
+            Check(game.GetNode<Sprite2D>("World/MusicWorkshop/Background").Texture.GetSize() == new Vector2(1920, 1080),
+                "The replacement music-room background must retain the existing room proportions");
             Rect2 frontBounds = ScreenBounds(front);
             Rect2 backBounds = ScreenBounds(back);
             Check(back.GetIndex() < sticks[0].GetIndex() &&
@@ -320,7 +326,7 @@ public partial class ProjectTest
                 GameLocalization.SelectLanguage(language);
                 await ToSignal(this, SignalName.ProcessFrame);
                 await ToSignal(this, SignalName.ProcessFrame);
-                Check(Caption(0).Text.Contains("1") && Caption(1).Text.Contains("250") && Caption(2).Text.Contains("7"),
+                Check(Caption(0).Text.Contains("1") && Caption(1).Text.Contains(game.FirstQuota.ToString()) && Caption(2).Text.Contains("7"),
                     "Current day, upcoming quota and inclusive countdown must be localized from live state");
                 foreach (var stick in sticks)
                 {
@@ -330,6 +336,16 @@ public partial class ProjectTest
                         "Expanded cigarettes and their RU/EN captions must fit both viewports");
                 }
                 using (await CapturePresentation($"cigarette-{language}-{size.X}")) { }
+            }
+            if (visualsOnly)
+            {
+                game.GetNode<Control>("World/MusicWorkshop/LockedOverlay").Hide();
+                game.GetNode<Control>("World/MusicWorkshop/UnlockPanel").Hide();
+                game.GetNode<WorldCamera>("Camera2D").ResetToOverview();
+                MoveButtonPointer(new Vector2(600, 350));
+                await Settle();
+                using (await CapturePresentation("updated-music-room")) { }
+                return;
             }
             await ClickControl(game, "HUD/Root/ProgressPanel/Content/EndDayButton");
             Check(game.DayStarted, "The existing Start action remains wired to the real day cycle");

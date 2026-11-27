@@ -27,6 +27,8 @@ public partial class MafiaQuotaNotice : CanvasLayer
     private Tween _fade = null!;
     private bool _ownsPause;
     private bool _terminal;
+    private bool _succeeded, _final;
+    private DialogueLine _displayedLine;
     private bool _canCheckpoint;
     private bool _storyFinished;
     private bool _transitioning;
@@ -200,24 +202,19 @@ public partial class MafiaQuotaNotice : CanvasLayer
     public void Open(int paidQuota, int remaining, bool succeeded, bool final, bool firstQuotaFailure = false)
     {
         if (IsOpen) return;
-        bool english = GameLocalization.Language == "en";
+        _succeeded = succeeded;
+        _final = final;
         _terminal = !succeeded || final;
         _canCheckpoint = !succeeded && !firstQuotaFailure;
         _storyFinished = false;
         _heading.AddThemeFontSizeOverride("font_size", succeeded ? 18 : 54);
-        _heading.Text = succeeded
-            ? final ? (english ? "VICTORY" : "ПОБЕДА")
-                : (english ? "WEEK TWO" : "НЕДЕЛЯ ВТОРАЯ")
-            : (english ? "DEFEAT" : "ПОРАЖЕНИЕ");
+        RefreshLocalizedControls();
         string notice = !succeeded ? firstQuotaFailure ? "first_quota_defeat" : "defeat" : final ? "victory" : "firstQuota";
         _conversation = DialogueSession.FromJson(FileAccess.GetFileAsString(
             $"res://dialogue/{(notice == "firstQuota" ? "first_quota" : notice)}.ru.json"));
         DialogueLine line = _conversation.Current;
         ShowLine(line);
         StoryDialogueLayout.StyleSkipButton(_skipDialogue);
-        _restart.Text = english ? "New game" : "Начать заново";
-        _checkpoint.Text = english ? "From checkpoint" : "С контрольной точки";
-        _mainMenu.Text = english ? "Main menu" : "Главное меню";
         _skipDialogue.Show();
         _restart.Hide();
         _checkpoint.Hide();
@@ -234,12 +231,33 @@ public partial class MafiaQuotaNotice : CanvasLayer
 
     private void ShowLine(DialogueLine line)
     {
+        _displayedLine = line;
         _currentSpeaker = line.Speaker;
         _speaker.Text = GameLocalization.Text(line.Speaker);
         _speaker.Visible = !string.IsNullOrWhiteSpace(line.Speaker);
-        _pageText = StoryDialogueLayout.LineText(line.Text);
+        _pageText = StoryDialogueLayout.LineText(line.Text, (GetParent() as TradeScene)?.SecondQuota);
         _pageStart = 0;
         _portraits.SetLine(line);
+        ShowPage();
+    }
+
+    private void RefreshLocalizedControls()
+    {
+        _heading.Text = GameLocalization.Text(_succeeded ? _final ? "ПОБЕДА" : "НЕДЕЛЯ ВТОРАЯ" : "ПОРАЖЕНИЕ");
+        _restart.Text = GameLocalization.Text("Начать заново");
+        _checkpoint.Text = GameLocalization.Text("С контрольной точки");
+        _mainMenu.Text = GameLocalization.Text("Главное меню");
+        StoryDialogueLayout.StyleSkipButton(_skipDialogue);
+    }
+
+    public override void _Notification(int what)
+    {
+        if (what != NotificationTranslationChanged || !IsNodeReady() || !IsOpen) return;
+        RefreshLocalizedControls();
+        if (_displayedLine == null) return;
+        _speaker.Text = GameLocalization.Text(_displayedLine.Speaker);
+        _pageText = StoryDialogueLayout.LineText(_displayedLine.Text, (GetParent() as TradeScene)?.SecondQuota);
+        _pageStart = 0;
         ShowPage();
     }
 

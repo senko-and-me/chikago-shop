@@ -30,6 +30,20 @@ public partial class ProjectTest : SceneTree
                 Quit();
                 return;
             }
+            if (OS.GetCmdlineUserArgs().Contains("--localization-coverage-checks"))
+            {
+                await TestLocalizationCoverage();
+                GD.Print("LOCALIZATION_COVERAGE_PASS: scene texts, all stories, format tokens, live quota, menus, catalog, crafting, cards, tutorial and debug");
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--progress-art-checks"))
+            {
+                await TestCollapsibleProgress(visualsOnly: true);
+                GD.Print("PROGRESS_ART_CHECKS_PASS: supplied cigarette crop, pack hover, labels, sizes, RU/EN and music room");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--showcase-card-visibility-checks"))
             {
                 await TestShowcaseCardVisibility();

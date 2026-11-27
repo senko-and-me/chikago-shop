@@ -9,9 +9,15 @@ internal static class StoryDialogueLayout
     public static readonly Color TextColor = new(0.93f, 0.91f, 0.88f);
     private static readonly Color SpeakerColor = new(0.88f, 0.82f, 0.72f);
 
-    public static string LineText(string key)
+    public static string LineText(string key, int? secondQuota = null)
     {
         string text = GameLocalization.Text(key);
+        if (text.Contains("{second_quota}"))
+        {
+            int amount = secondQuota ?? System.Linq.Enumerable.Single(
+                EconomyConfigProvider.Load().Quotas, quota => quota.Id == "final").Amount;
+            text = text.Replace("{second_quota}", amount.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        }
         return text.StartsWith('—') ? text[1..].TrimStart() : text;
     }
 
