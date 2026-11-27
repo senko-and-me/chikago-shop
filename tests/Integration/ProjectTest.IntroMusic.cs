@@ -151,6 +151,15 @@ public partial class ProjectTest
                 "Scene overrides must preserve music streams, positive compensation and fade durations");
             float menuGain = Mathf.DbToLinear(director.MenuVolumeDb);
             float introGain = Mathf.DbToLinear(director.IntroVolumeDb);
+            var gameplay = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
+            try
+            {
+                var gameMusic = gameplay.GetNode<GameplayMusicDirector>("GameplayMusicDirector");
+                Check(director.MenuVolumeDb == gameMusic.VolumeDb && director.IntroVolumeDb == gameMusic.VolumeDb &&
+                    menuVoice.Stream == gameMusic.DayStream && first.Stream == gameMusic.DayStream,
+                    "Menu, dialogue and gameplay must use the same main recording at the gameplay volume");
+            }
+            finally { gameplay.Free(); }
             Check(director.MenuVolumeDb == director.IntroVolumeDb &&
                   director.ThoughtfulCompensation == 1 && director.SinisterCompensation == 1,
                 "Menu and prologue must share the same gain without legacy source boosts");

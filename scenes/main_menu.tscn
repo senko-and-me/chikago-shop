@@ -57,18 +57,6 @@ autoplay = true
 
 [node name="MusicDirector" type="Node" parent="." unique_id=1010500646]
 script = ExtResource("11_music_director")
-MenuVolumeDb = null
-IntroVolumeDb = null
-ThoughtfulVolumeDb = null
-SinisterVolumeDb = null
-ThoughtfulCompensation = null
-SinisterCompensation = null
-ThoughtfulStream = null
-SinisterStream = null
-IntroFadeSeconds = null
-CrossfadeSeconds = null
-ExitFadeSeconds = null
-SkipFadeSeconds = null
 
 [node name="Background" type="TextureRect" parent="." unique_id=1737544570]
 layout_mode = 1

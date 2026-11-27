@@ -34,6 +34,7 @@ public partial class EmbroideryGame : CanvasLayer
 	private PauseMenu _pause = null!;
 	private FirstTradeTutorial _tutorial = null!;
 	private bool Covered => _pause.IsOpen || _tutorial.IsSkipConfirmationOpen;
+	internal bool PolishingInputAllowed => IsPolishing && IsOpen && !Covered && ActiveSession.State == EmbroideryState.Playing;
 
 	public override void _Ready()
 	{
@@ -114,7 +115,10 @@ public partial class EmbroideryGame : CanvasLayer
 		}
 		else if (ActiveSession.State == EmbroideryState.Finished)
 		{
+			string rank = ActiveSession.Rank;
+			bool collected = _preparedItemClaimed && _qualityRecorded;
 			Close();
+			if (collected) SoundEffects.Instance?.PlayCraftResult(rank);
 			return;
 		}
 

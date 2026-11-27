@@ -63,6 +63,22 @@ public partial class ProjectTest
             game.GetNode<WorldCamera>("Camera2D").SetProcess(false);
             await Settle();
         }
+        void CraftSoundFixture()
+        {
+            game.Crafting.OpenCatalog("atelier");
+            Check(game.Crafting.Select("hat"), "The sound fixture must select an available item from the catalog");
+            var embroidery = game.GetNode<EmbroideryGame>("EmbroideryGame");
+            embroidery.Activate();
+            embroidery.FinishForTesting(true);
+            embroidery.Activate();
+            if (game.StoredItems.Length > 0)
+            {
+                SelectInventorySlot(game, 0);
+                game.PlaceItemInShowcase(0);
+            }
+            Check((game.ShowcaseItems.Any(item => item >= 0) || game.TradeActive) && !Paused,
+                "Collect the fixture item without spending the waiting buyer's full patience");
+        }
 
         try
         {
@@ -70,7 +86,7 @@ public partial class ProjectTest
             var authored = GD.Load<PackedScene>("res://scenes/Audio/SoundEffects.tscn").Instantiate<SoundEffects>();
             try
             {
-                Check(authored.GetChildren().OfType<AudioStreamPlayer>().Count() == 10,
+                Check(authored.GetChildren().OfType<AudioStreamPlayer>().Count() == Enum.GetValues<SoundEffects.Cue>().Length,
                     "Every effect must be authored as an editable player before the scene enters the tree");
                 foreach (var cue in Enum.GetValues<SoundEffects.Cue>())
                 {
@@ -89,34 +105,24 @@ public partial class ProjectTest
             }
             finally { authored.Free(); }
             foreach (var (file, hash) in new[] {
-                ("sale", "82066F6DC4D74D074174197E3DDE173730735AD29AC2C521CC32F6496381406A"),
-                ("hover", "0E8C1D135E8A176E9E342A1AA1B02590260723C1C56F6EE0383B78BA84281B6D"),
+                ("sale", "C551903A4D9C339C901CB46BF1FA65B2DCE3270AD91EF86DAAF179DC37A7F747"),
+                ("hover", "025A7DCAB4B9812642C1015EDB153E1C2612F78EC9C013526AB6DF3229054A94"),
                 ("customer_bell", "B0C1B0E9BEB015260B53BC62878646DD0BB6FB1B8E0EFDED393A3B6A86808EDB"),
-                ("settings", "4610590A4D9A06C4C3764452F9479B5D02DC326E08B8B64464F586C4CCFDB66A"),
-                ("click", "43DF2320E80F198451BDCE4647DB05B93D993DDD07335A744569CDF43C570DEC"),
+                ("settings", "1C9E9B0A55D4D6FB94332D7DAFECE4E4DB437EC133CA2E9F7052076E1FAEE199"),
+                ("click", "3F48CF0A142FB4F11D3487B107DB514DD4FC46034724D6379BFFFB27FE311FDD"),
                 ("reroll_success", "A3781C4CF59B15C66CC3E3088188833C7E11E4A0C7F9376EF4C0FD77950FE40D"),
                 ("reroll_failure", "485ABFFB20623403A204107812EAF06F9A764BB3CE01F25058CBDAC88D7B2163") })
             {
                 string path = $"res://audio/sfx/{file}.wav";
                 Check(Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(FileAccess.GetFileAsBytes(path))) == hash,
-                    "SFX must match their approved originals or the approved onset-trimmed hover/click copies");
+                    "SFX must match the approved WAV files without modifying their audio");
                 var stream = GD.Load<AudioStreamWav>(path);
-                Check(stream.LoopMode == AudioStreamWav.LoopModeEnum.Disabled && stream.Data.Length > 0,
+                Check(stream.LoopMode == AudioStreamWav.LoopModeEnum.Disabled && stream.Data.Length > 0 && stream.GetLength() > 0,
                     "Every sound effect must be imported as a playable one-shot");
-                if (file is "hover" or "click")
-                {
-                    Check(stream.GetLength() < (file == "hover" ? 0.3 : 0.36), "Approved quiet-lead removal must shorten the UI sample");
-                    using var probe = stream.InstantiatePlayback();
-                    probe.Start();
-                    var onset = probe.MixAudio(1, (int)(AudioServer.GetMixRate() * 0.02));
-                    Check(onset.Any(sample => sample.LengthSquared() > 0.0001), "The UI transient must be present in the first decoded20ms");
-                    probe.Stop();
-                }
             }
             Check(effects.GetNode<AudioStreamPlayer>("Click").Stream.ResourcePath == "res://audio/sfx/click.wav" &&
-                  effects.GetNode<AudioStreamPlayer>("Hover").Stream.ResourcePath == "res://audio/sfx/hover.wav" &&
-                  effects.GetNode<AudioStreamPlayer>("Hover").Stream.GetLength() < 0.3,
-                "The onset-trimmed hover and click must retain separate roles without a timed merge window");
+                  effects.GetNode<AudioStreamPlayer>("Hover").Stream.ResourcePath == "res://audio/sfx/hover.wav",
+                "Hover and click must retain separate roles without a timed merge window");
             fixture = new CanvasLayer { Layer = 500 };
             Root.AddChild(fixture);
             var button = new Button { Name = "SoundProbe", Text = "Sound", Position = new Vector2(80, 100), Size = new Vector2(240, 70) };
@@ -219,6 +225,7 @@ public partial class ProjectTest
             menu.GetNode<IntroMusicDirector>("MusicDirector").SetProcess(false);
             menu.OnPlayPressed();
             menu.GetNode<TextureButton>("MainMenuContainer/Menu/NewGameButton").EmitSignal(BaseButton.SignalName.Pressed);
+            await SkipStartupTraining(menu);
             await Settle();
             var skip = menu.GetNode<TextureButton>("IntroSkipLayer/SkipButton");
             await WaitUi();
@@ -237,12 +244,14 @@ public partial class ProjectTest
                 "A sounded Skip must still start exactly one existing fade-out transition");
             menu.QueueFree(); menu = null;
             await Settle();
+            await WaitForSceneFade();
 
             menu = GD.Load<PackedScene>("res://scenes/main_menu.tscn").Instantiate<MainMenu>();
             Root.AddChild(menu);
             menu.GetNode<IntroMusicDirector>("MusicDirector").SetProcess(false);
             menu.OnPlayPressed();
             menu.GetNode<TextureButton>("MainMenuContainer/Menu/NewGameButton").EmitSignal(BaseButton.SignalName.Pressed);
+            await SkipStartupTraining(menu);
             await Settle();
             skip = menu.GetNode<TextureButton>("IntroSkipLayer/SkipButton");
             await WaitUi();
@@ -255,6 +264,7 @@ public partial class ProjectTest
                 "Fast Skip must emit exactly one click and cancel hover without a late sound");
             menu.QueueFree(); menu = null;
             await Settle();
+            await WaitForSceneFade();
 
             if (FileAccess.FileExists(save)) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(save));
             await CreateTrade();
@@ -262,9 +272,10 @@ public partial class ProjectTest
             game.EndDay(); // Start and bring in the first buyer.
             Check(sounds.SequenceEqual(new[] { SoundEffects.Cue.CustomerBell }),
                 "The first customer must ring once at Start");
-            CraftAtelier(game); SelectInventorySlot(game, 0); game.PlaceItemInShowcase(0);
+            CraftSoundFixture();
             sounds.Clear();
             game._Process(0);
+            game.OnShowcasePressed(0);
             Check(game.TradeActive && !sounds.Contains(SoundEffects.Cue.CustomerBell),
                 "Serving the customer who is already waiting must not ring a second time");
             sounds.Clear();
@@ -324,8 +335,9 @@ public partial class ProjectTest
             game.GetNode<Button>("World/TradingRoom/Item/TradePanel/Content/Buttons/AcceptButton").EmitSignal(BaseButton.SignalName.Pressed);
             Check(sounds.Count == 0, "A hidden completed sale must not play another effect");
 
-            CraftAtelier(game); SelectInventorySlot(game, 0); game.PlaceItemInShowcase(0);
+            CraftSoundFixture();
             sounds.Clear(); game._Process(0);
+            game.OnShowcasePressed(0);
             Check(game.TradeActive && sounds.SequenceEqual(new[] { SoundEffects.Cue.CustomerBell }),
                 "The next natural buyer must ring once after the previous sale");
             game.PersistProgress();

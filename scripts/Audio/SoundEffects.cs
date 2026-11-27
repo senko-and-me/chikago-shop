@@ -5,12 +5,14 @@ using Godot;
 // Presentation observer: input still belongs to the original controls and game rules.
 public partial class SoundEffects : Node
 {
-    public enum Cue { Hover, Click, Settings, Sale, CustomerBell, RerollSuccess, RerollFailure, Stitch1, Stitch2, Stitch3 }
-    private static readonly Cue[] StitchCues = { Cue.Stitch1, Cue.Stitch2, Cue.Stitch3 };
+    public enum Cue { Hover, Click, Settings, Sale, CustomerBell, RerollSuccess, RerollFailure, Stitch1, Stitch2, Stitch3, CraftGreat, CraftNormal, CraftBad, Stitch4, Stitch5, Stitch6, Stitch7, Stitch8, Stitch9 }
+    private static readonly Cue[] CraftResultCues = { Cue.CraftGreat, Cue.CraftNormal, Cue.CraftBad };
+    private static readonly Cue[] StitchCues = { Cue.Stitch1, Cue.Stitch2, Cue.Stitch3, Cue.Stitch4, Cue.Stitch5, Cue.Stitch6, Cue.Stitch7, Cue.Stitch8, Cue.Stitch9 };
     private static readonly Cue[] UiCues = { Cue.Hover, Cue.Click, Cue.Settings, Cue.Sale };
     private readonly RandomNumberGenerator _stitchRandom = new();
     public const string BusName = "SFX";
     public static SoundEffects Instance { get; private set; }
+    public PolishingAudio Polishing { get; private set; }
     public double Volume { get; private set; } = 1;
     public event Action<double> VolumeChanged;
     public event Action<Cue> Played;
@@ -40,6 +42,8 @@ public partial class SoundEffects : Node
             player.Bus = BusName;
             _voices.Add(cue, player);
         }
+        Polishing = GetNode<PolishingAudio>("PolishingAudio");
+        Polishing.Initialize();
         GetTree().NodeAdded += Attach;
         GetTree().NodeRemoved += Detach;
         AttachExisting(GetTree().Root);
@@ -93,6 +97,14 @@ public partial class SoundEffects : Node
                 if (!Interactive(button)) return;
                 // Refusal is sounded once the new offer is known, rather than as a generic click.
                 if (button.Name == "DeclineButton") return;
+                // Collection has its own rank cue, regardless of pressed-handler ordering.
+                if (button.Name == "Action")
+                    for (Node parent = button.GetParent(); parent != null; parent = parent.GetParent())
+                        if (parent is EmbroideryGame craft)
+                        {
+                            if (craft.ActiveSession.State == ChikagoShop.Domain.Crafting.EmbroideryState.Finished) return;
+                            break;
+                        }
                 Cue cue = button.Name.ToString() switch
                 {
                     "SettingsButton" => Cue.Settings,
@@ -180,6 +192,21 @@ public partial class SoundEffects : Node
     {
         CancelHover();
         Play(StitchCues[_stitchRandom.RandiRange(0, StitchCues.Length - 1)]);
+    }
+
+    public void PlayCraftResult(string rank)
+    {
+        Cue? cue = rank switch
+        {
+            "S" => Cue.CraftGreat,
+            "A" or "B" => Cue.CraftNormal,
+            "C" or "D" => Cue.CraftBad,
+            _ => null
+        };
+        if (cue == null) return;
+        foreach (Cue ui in UiCues) _voices[ui].Stop();
+        foreach (Cue result in CraftResultCues) _voices[result].Stop();
+        Play(cue.Value);
     }
 
     private void Play(Cue cue)

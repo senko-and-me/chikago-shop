@@ -42,6 +42,20 @@ public partial class EmbroiderySurface : Control
 
     private Vector2 _missPoint;
     private ulong _missAt;
+    private static readonly int[] EmbroideryRankThresholds = [0, 40, 60, 75, 90, 100];
+    private static readonly int[] PolishingRankThresholds = [0, 42, 63, 78, 92, 100];
+
+    // The artwork has five equally spaced grade bands, unlike the quality thresholds.
+    // Map each actual grade interval onto its painted band without changing the score.
+    internal static float QualityToRankFill(int quality, bool polishing)
+    {
+        int[] thresholds = polishing ? PolishingRankThresholds : EmbroideryRankThresholds;
+        quality = Mathf.Clamp(quality, 0, 100);
+        for (int tier = 0; tier < 5; tier++)
+            if (quality < thresholds[tier + 1] || tier == 4)
+                return (tier + (quality - thresholds[tier]) / (float)(thresholds[tier + 1] - thresholds[tier])) / 5f;
+        return 1;
+    }
 
     public EmbroideryGame Game { get; set; } = null!;
 
@@ -199,8 +213,7 @@ public partial class EmbroiderySurface : Control
 
         var sessionQuality = Game.ActiveSession;
         Rect2 track = QualityTrackRect;
-        float fill = Mathf.Clamp(
-            sessionQuality.Quality / 100f, 0f, 1f);
+        float fill = QualityToRankFill(sessionQuality.Quality, Game.IsPolishing);
 
         if (_rankEmpty != null && _rankFilled != null)
         {

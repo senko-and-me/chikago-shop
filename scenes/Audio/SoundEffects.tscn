@@ -5,12 +5,22 @@
 [ext_resource type="AudioStream" uid="uid://ddekd0uqyb4qg" path="res://audio/sfx/click.wav" id="3_click"]
 [ext_resource type="AudioStream" uid="uid://6kh6h58rjjhj" path="res://audio/sfx/settings.wav" id="4_settings"]
 [ext_resource type="AudioStream" uid="uid://daudwmjegqxbe" path="res://audio/sfx/sale.wav" id="5_sale"]
-[ext_resource type="AudioStream" uid="uid://bks33ucfa2t6w" path="res://audio/sfx/customer_bell.wav" id="6_bell"]
+[ext_resource type="AudioStream" uid="uid://7ko41o6021f6" path="res://audio/sfx/bell_2.wav" id="6_ui7m8"]
 [ext_resource type="AudioStream" uid="uid://cq3vh4l402w3j" path="res://audio/sfx/reroll_success.wav" id="7_success"]
 [ext_resource type="AudioStream" uid="uid://cbsxp1es3mr7i" path="res://audio/sfx/reroll_failure.wav" id="8_failure"]
 [ext_resource type="AudioStream" uid="uid://b8uuinasxu335" path="res://audio/sfx/stitch_1.wav" id="9_stitch"]
 [ext_resource type="AudioStream" uid="uid://bwk0m1266ix3t" path="res://audio/sfx/stitch_2.wav" id="10_stitch"]
 [ext_resource type="AudioStream" uid="uid://of5rfd4tg0k2" path="res://audio/sfx/stitch_3.wav" id="11_stitch"]
+[ext_resource type="AudioStream" uid="uid://j87oehe1ghc5" path="res://audio/sfx/stitch_4.wav" id="15_stitch"]
+[ext_resource type="AudioStream" uid="uid://c5l4hux1ky8ro" path="res://audio/sfx/stitch_5.wav" id="16_stitch"]
+[ext_resource type="AudioStream" uid="uid://dc08lq27npcvl" path="res://audio/sfx/stitch_6.wav" id="17_stitch"]
+[ext_resource type="AudioStream" uid="uid://brqlmc6ruqmws" path="res://audio/sfx/great(1).wav" id="18_aiwwg"]
+[ext_resource type="AudioStream" uid="uid://cpyr5q2ptm3e6" path="res://audio/sfx/stitch_7.wav" id="18_stitch"]
+[ext_resource type="AudioStream" uid="uid://cnqimdu3yjq35" path="res://audio/sfx/normal(1).wav" id="19_by6c7"]
+[ext_resource type="AudioStream" uid="uid://d8tx8oh8mer8" path="res://audio/sfx/stitch_8.wav" id="19_stitch"]
+[ext_resource type="AudioStream" uid="uid://b78ptelf34lck" path="res://audio/sfx/bad.wav" id="20_mncdf"]
+[ext_resource type="AudioStream" uid="uid://ba3016xgxonne" path="res://audio/sfx/stitch_9.wav" id="20_stitch"]
+[ext_resource type="PackedScene" uid="uid://ry3gier3b7g1" path="res://scenes/Audio/PolishingAudio.tscn" id="polishing_audio"]
 
 [node name="SoundEffects" type="Node" unique_id=62203458]
 process_mode = 3
@@ -27,7 +37,7 @@ max_polyphony = 4
 
 [node name="Settings" type="AudioStreamPlayer" parent="." unique_id=1072096386]
 stream = ExtResource("4_settings")
-volume_db = -12.0
+volume_db = -15.0
 max_polyphony = 4
 
 [node name="Sale" type="AudioStreamPlayer" parent="." unique_id=2137755391]
@@ -36,17 +46,17 @@ volume_db = -12.0
 max_polyphony = 4
 
 [node name="CustomerBell" type="AudioStreamPlayer" parent="." unique_id=710280389]
-stream = ExtResource("6_bell")
-volume_db = -10.0
+stream = ExtResource("6_ui7m8")
+volume_db = -15.0
 max_polyphony = 4
 
 [node name="RerollSuccess" type="AudioStreamPlayer" parent="." unique_id=606890841]
 stream = ExtResource("7_success")
-volume_db = -12.0
+volume_db = -15.0
 
 [node name="RerollFailure" type="AudioStreamPlayer" parent="." unique_id=1137307390]
 stream = ExtResource("8_failure")
-volume_db = -12.0
+volume_db = 5.0
 
 [node name="Stitch1" type="AudioStreamPlayer" parent="." unique_id=1420005318]
 stream = ExtResource("9_stitch")
@@ -59,3 +69,41 @@ max_polyphony = 4
 [node name="Stitch3" type="AudioStreamPlayer" parent="." unique_id=1775370672]
 stream = ExtResource("11_stitch")
 max_polyphony = 4
+
+[node name="Stitch4" type="AudioStreamPlayer" parent="." unique_id=9863734]
+stream = ExtResource("15_stitch")
+max_polyphony = 4
+
+[node name="Stitch5" type="AudioStreamPlayer" parent="." unique_id=1208311992]
+stream = ExtResource("16_stitch")
+max_polyphony = 4
+
+[node name="Stitch6" type="AudioStreamPlayer" parent="." unique_id=1848902704]
+stream = ExtResource("17_stitch")
+max_polyphony = 4
+
+[node name="Stitch7" type="AudioStreamPlayer" parent="." unique_id=624865341]
+stream = ExtResource("18_stitch")
+max_polyphony = 4
+
+[node name="Stitch8" type="AudioStreamPlayer" parent="." unique_id=641572045]
+stream = ExtResource("19_stitch")
+max_polyphony = 4
+
+[node name="Stitch9" type="AudioStreamPlayer" parent="." unique_id=46970251]
+stream = ExtResource("20_stitch")
+max_polyphony = 4
+
+[node name="CraftGreat" type="AudioStreamPlayer" parent="." unique_id=1918462923]
+stream = ExtResource("18_aiwwg")
+volume_db = -15.0
+
+[node name="CraftNormal" type="AudioStreamPlayer" parent="." unique_id=2114234634]
+stream = ExtResource("19_by6c7")
+volume_db = -15.0
+
+[node name="CraftBad" type="AudioStreamPlayer" parent="." unique_id=871151267]
+stream = ExtResource("20_mncdf")
+volume_db = -15.0
+
+[node name="PolishingAudio" parent="." unique_id=1224847491 instance=ExtResource("polishing_audio")]

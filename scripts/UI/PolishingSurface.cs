@@ -38,6 +38,7 @@ public partial class PolishingSurface : Control
 	private int _lastMisses;
 	private ulong _missAt;
 	private Vector2 _missPoint;
+	private bool _audioContact;
 
 	private static readonly Shader CoatingShader = new()
 	{
@@ -194,6 +195,7 @@ void fragment() {
 
 		Vector2 logical = ToLogical(local);
 		Session.BeginRub(logical.X, logical.Y);
+		UpdateAudioContact(logical, 0, true);
 		UpdateMiss(local);
 	}
 
@@ -245,6 +247,7 @@ void fragment() {
 
 		Session.MoveRub(
 			logical.X, logical.Y, (now - _lastMove) / 1000.0);
+		UpdateAudioContact(logical, (now - _lastMove) / 1000000.0);
 
 		_lastMove = now;
 		UpdateMiss(local);
@@ -265,10 +268,30 @@ void fragment() {
 
 	public void EndPointer()
 	{
+		SoundEffects.Instance?.Polishing?.EndContact(this);
+		_audioContact = false;
 		if (_pointer != -2) Input.UseAccumulatedInput = _previousInputAccumulation;
 		_pointer = -2;
 		Session?.EndRub();
 		QueueRedraw();
+	}
+
+	private void UpdateAudioContact(Vector2 logical, double seconds, bool beginning = false)
+	{
+		var audio = SoundEffects.Instance?.Polishing;
+		if (audio == null) return;
+		if (!Session.Inside(logical.X, logical.Y))
+		{
+			audio.EndContact(this);
+			_audioContact = false;
+			return;
+		}
+		if (!_audioContact || beginning)
+		{
+			audio.BeginContact(this, logical);
+			_audioContact = true;
+		}
+		else audio.MoveContact(this, logical, seconds);
 	}
 
 	public override void _ExitTree() => EndPointer();
@@ -307,7 +330,8 @@ void fragment() {
 		if (Session == null || !IsVisibleInTree())
 			return;
 
-		if (Session.State != EmbroideryState.Playing &&
+		bool allowed = GetParent() is not EmbroiderySurface surface || surface.Game.PolishingInputAllowed;
+		if ((Session.State != EmbroideryState.Playing || !allowed) &&
 			_pointer != -2)
 		{
 			EndPointer();

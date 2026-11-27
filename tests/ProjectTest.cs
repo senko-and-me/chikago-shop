@@ -16,6 +16,20 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--polishing-audio-checks"))
+            {
+                await TestPolishingAudio();
+                GD.Print("POLISHING_AUDIO_CHECKS_PASS: 15 variants, speed rates, jitter, two voices, fades, mouse/touch, pause and finish");
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--craft-result-audio-checks"))
+            {
+                await TestCraftResultAudio();
+                GD.Print("CRAFT_RESULT_AUDIO_CHECKS_PASS: all tiers, both minigames, real collection, cancellation and no duplicate click");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--merged-crafting-checks"))
             {
                 await TestMergedCrafting();

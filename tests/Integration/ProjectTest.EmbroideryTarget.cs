@@ -11,6 +11,7 @@ public partial class ProjectTest
         Vector2I originalSize = Root.Size;
         var game = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
         game.SavePath = "";
+        game.GetNode<FirstTradeTutorial>("FirstTradeTutorial").ProgressPath = "";
         Root.AddChild(game);
         await ToSignal(this, SignalName.ProcessFrame);
         var sounds = new List<SoundEffects.Cue>();
@@ -19,6 +20,25 @@ public partial class ProjectTest
         SoundEffects.Instance.Played += Observe;
         try
         {
+            var effects = SoundEffects.Instance;
+            for (int variant = 1; variant <= 9; variant++)
+            {
+                var player = effects.GetNode<AudioStreamPlayer>("Stitch" + variant);
+                var stream = (AudioStreamWav)player.Stream;
+                Check(stream.ResourcePath == $"res://audio/sfx/stitch_{variant}.wav" &&
+                    stream.GetLength() > 0 && stream.LoopMode == AudioStreamWav.LoopModeEnum.Disabled,
+                    "All nine supplied stitch variants must be editable playable one-shots");
+            }
+            for (int sample = 0; sample < 256; sample++)
+            {
+                sounds.Clear();
+                effects.PlayStitch();
+                Check(sounds.Count == 1 && sounds[0].ToString().StartsWith("Stitch"),
+                    "One random draw must play exactly one stitch variant");
+                variants.Add(sounds[0]);
+                effects.GetNode<AudioStreamPlayer>(sounds[0].ToString()).Stop();
+            }
+            Check(variants.Count == 9, "Every one of the nine variants must be reachable from the random pool");
             foreach (var size in new[] { new Vector2I(1280, 720), new Vector2I(960, 540) })
             {
                 Root.Size = size;
@@ -26,6 +46,7 @@ public partial class ProjectTest
                 game.EndDay();
                 var craft = game.GetNode<EmbroideryGame>("EmbroideryGame");
                 craft.Open();
+                Check(game.Crafting.Select("hat"), "Prepare the selected embroidery item from the current catalog");
                 await ToSignal(this, SignalName.ProcessFrame);
                 var surface = craft.GetNode<EmbroiderySurface>("Surface");
                 sounds.Clear();
@@ -64,7 +85,7 @@ public partial class ProjectTest
                         Root.PushInput(new InputEventScreenTouch { Index = 0, Position = target, Pressed = true }, true);
                         Root.PushInput(new InputEventScreenTouch { Index = 0, Position = target, Pressed = false }, true);
                     }
-                    Check(sounds.Count == 1 && sounds[0] is SoundEffects.Cue.Stitch1 or SoundEffects.Cue.Stitch2 or SoundEffects.Cue.Stitch3,
+                    Check(sounds.Count == 1 && sounds[0].ToString().StartsWith("Stitch"),
                         "Each successful mouse/touch stitch must play exactly one variant without duplicate click");
                     variants.Add(sounds[0]);
                     var player = SoundEffects.Instance.GetNode<AudioStreamPlayer>(sounds[0].ToString());
