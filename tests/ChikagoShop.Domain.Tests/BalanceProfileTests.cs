@@ -53,14 +53,14 @@ public sealed class BalanceProfileTests
     public void WeightedCardsAreStableWithoutDuplicatesAndPurchaseUsesEditedCost()
     {
         var weights = Enum.GetValues<DayUpgrade>().Where(card => card != DayUpgrade.None)
-            .ToDictionary(card => card, card => card == DayUpgrade.Cash ? 1 : 0);
+            .ToDictionary(card => card, card => card == DayUpgrade.Atelier ? 1 : 0);
         var rules = new DayUpgradeRules { WeightedSelection = true, Weights = weights,
-            Costs = new Dictionary<DayUpgrade, int> { [DayUpgrade.Cash] = 17 } };
+            Costs = new Dictionary<DayUpgrade, int> { [DayUpgrade.Atelier] = 17 } };
         var session = new DayUpgradeSession { Rules = rules };
         session.Offer(2);
-        Assert.AreEqual(new[] { DayUpgrade.Cash }, session.Options);
-        Assert.IsFalse(session.TryPurchase(DayUpgrade.Cash, 16, out _));
-        Assert.IsTrue(session.TryPurchase(DayUpgrade.Cash, 100, out int cash));
+        Assert.AreEqual(new[] { DayUpgrade.Atelier }, session.Options);
+        Assert.IsFalse(session.TryPurchase(DayUpgrade.Atelier, 16, out _));
+        Assert.IsTrue(session.TryPurchase(DayUpgrade.Atelier, 100, out int cash));
         Assert.AreEqual(83, cash);
         var many = new DayUpgradeRules { WeightedSelection = true, Seed = 71 };
         Assert.AreEqual(many.Options(3), new DayUpgradeRules { WeightedSelection = true, Seed = 71 }.Options(3));

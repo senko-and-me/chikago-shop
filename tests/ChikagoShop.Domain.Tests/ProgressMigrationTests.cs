@@ -158,7 +158,7 @@ public sealed class ProgressMigrationTests
             "quota_visit", "checkpoint_quota_visit", "quota_dialogue_page", "quota_dialogue_revealed", "quota_dialogue_language",
             "status", "trade_active", "item_index", "customer_index", "percentage", "rerolls_remaining", "stored_items",
             "checkpoint_items", "showcase_items", "checkpoint_showcase_items", "active_showcase_index",
-            "buyer_wait_remaining", "waiting_buyer_present", "waiting_buyer_music", "stored_grades", "showcase_grades",
+            "buyer_wait_remaining", "buyer_wait_initial", "waiting_buyer_present", "waiting_buyer_music", "stored_grades", "showcase_grades",
             "checkpoint_grades", "checkpoint_showcase_grades", "active_trade_grade"
         ];
         Assert.That(doc.RootElement.EnumerateObject().Select(property => property.Name),
