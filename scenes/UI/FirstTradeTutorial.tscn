@@ -60,6 +60,10 @@ ReferenceViewSize = Vector2(1900, 1068.75)
 script = ExtResource("3_checkpoint")
 Overview = true
 
+[node name="RoomFocus" type="Marker2D" parent="CameraCheckpoints"]
+script = ExtResource("3_checkpoint")
+Overview = true
+
 [node name="Craft" type="Marker2D" parent="CameraCheckpoints"]
 script = ExtResource("3_checkpoint")
 FocusTarget = NodePath("World/Atelier/Background")

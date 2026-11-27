@@ -19,8 +19,9 @@ public partial class ProjectTest
         try
         {
             var cfg = new ConfigFile();
-            foreach (string key in new[] { "camera_pan_done", "camera_zoom_done", "two_sales" })
+            foreach (string key in new[] { "camera_pan_done", "two_sales" })
                 cfg.SetValue("tutorial", key, true);
+            cfg.SetValue("tutorial", "camera_zoom_done", false);
             cfg.SetValue("tutorial", "finished", false);
             cfg.SetValue("tutorial", "camera_handoff_done", false);
             cfg.SetValue("tutorial", "room_focus_done", false);
@@ -36,9 +37,30 @@ public partial class ProjectTest
             var mini = game.GetNode<EmbroideryGame>("EmbroideryGame");
             mini.SetProcess(false);
             await Frame();
-            await Wait(() => tutorial.CurrentStep == FirstTradeTutorial.Step.RoomFocus, "Practice must ask for the atelier");
             var camera = game.GetNode<WorldCamera>("Camera2D");
             var atelier = game.GetNode<Control>("World/Atelier/RoomFrame");
+            await Wait(() => tutorial.CurrentStep == FirstTradeTutorial.Step.CameraZoom, "Restored pan must lead to zoom practice");
+            // Reproduce a zoomed/panned view where the atelier is outside the current screen.
+            camera.FocusOn(game.GetNode<Control>("World/MusicWorkshop/RoomFrame").GetGlobalRect().GetCenter(), new Vector2(1600, 900), 0);
+            tutorial.CameraTravelSeconds = 0.25;
+            for (int wheel = 0; wheel < 16; wheel++)
+            {
+                var direction = wheel % 2 == 0 ? MouseButton.WheelDown : MouseButton.WheelUp;
+                Vector2 point = Root.Size * new Vector2(0.5f, 0.65f);
+                Root.PushInput(new InputEventMouseButton { Position = point, GlobalPosition = point, ButtonIndex = direction, Pressed = true }, true);
+                Root.PushInput(new InputEventMouseButton { Position = point, GlobalPosition = point, ButtonIndex = direction, Pressed = false }, true);
+                await Frame();
+            }
+            await Wait(() => tutorial.CurrentStep == FirstTradeTutorial.Step.RoomFocus, "Practice must ask for the atelier");
+            Check(camera.IsReturningToOverview, "Entering room focus must start a smooth overview return");
+            await Wait(() => !camera.IsReturningToOverview && !camera.IsFocusing, "Overview return must settle without restarting");
+            Check(Mathf.IsEqualApprox(camera.Zoom.X, camera.OverviewZoom) && Root.GetVisibleRect().Grow(2).Encloses(ScreenBounds(atelier)),
+                "Room focus must start at overview zoom with the complete atelier visible");
+            Vector2 overviewPosition = camera.Position;
+            await Frame();
+            Check(!camera.IsReturningToOverview && camera.Position.IsEqualApprox(overviewPosition), "Refreshing the room-focus hint must not restart its camera flight");
+            using (await CapturePresentation("room-focus-overview")) { }
+            tutorial.CameraTravelSeconds = 0;
             Check(tutorial.Target == atelier, "The spotlight must select the atelier frame");
             void DoubleClickRoom(Control frame)
             {

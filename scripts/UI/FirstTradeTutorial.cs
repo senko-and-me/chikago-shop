@@ -687,7 +687,7 @@ public partial class FirstTradeTutorial : CanvasLayer
         bool keepChosenRoom = step == Step.Start && _cameraHandoffDone && !_game.DayClosed ||
             step == Step.Craft && _keepFocusedAtelier;
         if (step == Step.Craft) _keepFocusedAtelier = false;
-        bool continuingPractice = _appliedCameraStep == Step.Camera && cameraStep;
+        bool continuingPractice = _appliedCameraStep == Step.Camera && step is Step.Camera or Step.CameraZoom;
         CurrentStep = step;
         _camera.NavigationLocked = !cameraStep && !keepChosenRoom;
         _body.Text = message;
@@ -713,7 +713,7 @@ public partial class FirstTradeTutorial : CanvasLayer
         };
         _cameraProgress.Visible = cameraStep && step != Step.RoomFocus;
         _cameraProgress.Value = step == Step.Camera ? CameraPanProgress : CameraZoomProgress;
-        Step cameraCheckpoint = cameraStep ? Step.Camera : step is Step.Select or Step.Place ? Step.Place :
+        Step cameraCheckpoint = step == Step.RoomFocus ? Step.RoomFocus : cameraStep ? Step.Camera : step is Step.Select or Step.Place ? Step.Place :
             step is Step.BuyerRequest or Step.Reroll or Step.TimedSale or Step.LateSale ? Step.Offer :
             step is Step.Notebook or Step.NotebookContents or Step.CloseTrainingDay or Step.EndDayExplanation ? Step.Summary : step;
         if (step is not (Step.EmbroideryStart or Step.CraftSelection) && _appliedCameraStep != cameraCheckpoint && !_game.DayTransitionOpen)

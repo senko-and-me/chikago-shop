@@ -5,7 +5,7 @@ using Godot;
 
 public partial class ProjectTest
 {
-    private async Task TestRevisionUi()
+    private async Task TestRevisionUi(bool saleOnly = false)
     {
         var original = Root.Size;
         string locale = TranslationServer.GetLocale();
@@ -45,11 +45,18 @@ public partial class ProjectTest
                         $"Trade elements must fit without overlap at {viewport}, zoom {scale}: {offerBounds}, {bubbleBounds}");
                     Check(sale.ZIndex >= 125 && bubble.ZIndex > sale.ZIndex &&
                         !sale.ZAsRelative && !bubble.ZAsRelative, "Both trade controls must draw above the room textures");
+                    foreach (Node worldRoom in game.GetNode("World").GetChildren())
+                    {
+                        var frame = worldRoom.GetNodeOrNull<Control>("RoomFrame");
+                        if (frame != null)
+                            Check(bubble.ZIndex > frame.ZIndex, "Neighbouring room frames must not cut across the buyer's timer bubble");
+                    }
                 }
                 camera.Zoom = Vector2.One * 0.52f;
                 camera.ForceUpdateScroll();
                 zoomUi.UpdateForZoom(0.52f);
                 using (var frame = await CapturePresentation($"v131-sale-{viewport.X}")) { }
+                if (saleOnly) continue;
 
                 foreach (string language in new[] { "ru", "en" })
                 {

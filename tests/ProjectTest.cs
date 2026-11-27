@@ -16,6 +16,14 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--room-focus-and-bubble-checks"))
+            {
+                await TestMergedTutorial();
+                await TestRevisionUi(saleOnly: true);
+                GD.Print("ROOM_FOCUS_AND_BUBBLE_PASS: overview entry once, visible atelier, focus/handoff, full tutorial and unobscured buyer bubble at multiple zooms/sizes");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--polishing-audio-checks"))
             {
                 await TestPolishingAudio();

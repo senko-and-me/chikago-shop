@@ -212,7 +212,7 @@ public partial class ProjectTest
             await Create();
             Step(FirstTradeTutorial.Step.Camera);
             var initialCamera = game.GetNode<WorldCamera>("Camera2D");
-            Check(tutorial.GetNode("CameraCheckpoints").GetChildCount() == 8 && initialCamera.IsFocusing,
+            Check(tutorial.GetNode("CameraCheckpoints").GetChildCount() == 9 && initialCamera.IsFocusing,
                 "Every tutorial checkpoint must be scene-authored and entry must fly to the practice view");
             Vector2 initialPosition = initialCamera.Position;
             float initialZoom = initialCamera.Zoom.X;

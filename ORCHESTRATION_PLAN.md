@@ -9,6 +9,19 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### SC249 — обзор перед приближением комнаты и слой таймера
+
+SC249 DONE; /root; CP `.local/checks/sc249/CP-SC249.md`; SC248 DONE. Шаг RoomFocus использует отдельную обзорную точку камеры из сцены: после масштабирования камера плавно возвращается в исходный общий вид, ателье полностью видно. Облако таймера рисуется выше рамок закрытых комнат. Пользовательские правки trade_scene сохранены.
+
+```text
+Task: SC249
+Recommended status: REVIEW -> accepted DONE; gate PASSED 28.11.2026
+Changed: FirstTradeTutorial scene adds RoomFocus overview checkpoint; state-to-checkpoint mapping separates it from pan/zoom practice while preserving the completed focus handoff. ZoomResponsiveUi raises the complete buyer bubble to absolute202, above neighbouring frame200, without changing curtains/room geometry or sale layout.
+Checks: dotnet build PASS0warnings/errors; rendered --room-focus-and-bubble-checks PASS exit0/stderr empty. Real16wheel events from panned/zoomed right-room view trigger one smooth overview return; whole atelier visible at overview zoom; repeated refresh does not restart transition; real double click focuses atelier and retains view for crafting. Full strict tutorial regression passes through two crafts/real stitch/sales/reload/reroll/cards/notebook/reset. Buyer bubble fits alongside sale UI and exceeds every room-frame z-order at zoom0.4/0.72/1, viewports1280x720/1920x1080. Captures room-focus-overview and v131-sale visually reviewed; timer/bar no longer cut by right-room frame. Legacy authored checkpoint count updated8->9. Evidence .local/checks/sc249/{build,checks}.*; git diff --check PASS.
+Read-set exception: TradeScene.BuyerBonuses widget creation and user-modified trade_scene read to locate overlay; no writes to either. No source/ access, save/audio/domain changes or publishing.
+Risks/blocker: none. Next: user review.
+```
+
 ### SC248 — строгий ввод по текущему шагу обучения
 
 SC248 DONE; /root; CP `.local/checks/sc248/CP-SC248.md`; SC247 DONE. Ввод ограничен текущей инструкцией на уровне viewport: только целевой элемент, нужная область миниигры, кнопки инструкции/пропуска и активное подтверждение. Пауза доступна на объясняющем её шаге. Сигареты и блокнот не реагируют на hover/click/focus вне своих уроков; видимость удерживаемых подсказок сохраняется. Пользовательские правки trade_scene сохранены побайтно.

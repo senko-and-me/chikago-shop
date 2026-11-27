@@ -105,7 +105,8 @@ public partial class ZoomResponsiveUi : Node
                 _bubbleHome = _bubble.Position;
                 _bubbleScale = _bubble.Scale;
                 _bubble.ZAsRelative = false;
-                _bubble.ZIndex = 126;
+                // Neighbouring locked-room frames are at 200; the whole bubble must clear them.
+                _bubble.ZIndex = 202;
             }
         }
 
