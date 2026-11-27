@@ -163,47 +163,60 @@ public partial class ProjectTest
             Check(Paused && mafia.IsOpen, "Fade-in must retain the dialogue pause");
             game.ResumeQuotaVisit();
             Check(!game.GetNode<TextureButton>(visitorPath).Visible, "The son must wait until Castello finishes");
-            await ClickControl(game, "MafiaQuotaNotice/StoryRoot/Speech/Content/Actions/Continue");
+            await ClickControl(game, "MafiaQuotaNotice/StoryRoot/SkipDialogue");
             Check(SceneTransition.IsActive(this) && mafia.IsOpen && game.MafiaNoticePending,
                 "Continue must fade out before closing or acknowledging Castello");
             mafia._Input(new InputEventKey { Pressed = true, Keycode = Key.Escape });
             await WaitForQuotaFade();
-            Check(!mafia.IsOpen && !Paused && !game.MafiaNoticePending && game.Score == cashAfterQuota,
-                "A repeated close during the fade must acknowledge once, restore gameplay and leave the gift for the son's dialogue");
-            Check(game.GetNode<TextureButton>(visitorPath).Visible && game.QuotaVisitPending && !game.DayStarted,
-                "The visitor must replace the regular customer before the next day");
+            Check(!mafia.IsOpen && Paused && !game.MafiaNoticePending && game.Score == cashAfterQuota &&
+                game.QuotaVisitPending && Dialogue().Session.Index == 0,
+                "Skipping Castello must automatically start only the son's dialogue, without skipping its first line");
+            Check(game.GetNode<TextureButton>(visitorPath).Visible && !game.DayStarted,
+                "No visitor click or playable gap may appear between the two conversations");
             game.EndDay();
-            Check(!game.DayStarted, "The next day cannot start until the scene ends");
+            Check(!game.DayStarted, "The next day cannot start until both conversations end");
             await Reload();
-            Check(game.GetNode<TextureButton>(visitorPath).Visible && !Paused, "Reload must restore the waiting visitor");
-            await ToSignal(CreateTimer(0.7), SceneTreeTimer.SignalName.Timeout);
-            if (DisplayServer.GetName() == "headless") game.GetNode<TextureButton>(visitorPath).EmitSignal(BaseButton.SignalName.Pressed);
-            else await ClickControl(game, visitorPath);
             Check(Paused && Dialogue().Session.Current.Text.Contains("Пап") && !game.MusicWorkshopUnlocked,
                 "The family conversation must open in the existing dialogue UI without unlocking prematurely");
             await ToSignal(this, SignalName.ProcessFrame);
-            Check(!game.GetNode<TextureButton>(visitorPath).Visible &&
-                Dialogue().GetNode<TextureRect>("Characters/Son").Visible,
-                "The son must use the full portrait while the world visitor is hidden during dialogue");
+            Check(game.GetNode<TextureButton>(visitorPath).Visible && Dialogue().UseWorldScene &&
+                !Dialogue().GetNode<Control>("Background").Visible &&
+                !Dialogue().GetNode<Control>("Characters").Visible &&
+                game.GetNode<Node2D>("World/TradingRoom").IsAncestorOf(game.GetNode(visitorPath)),
+                "The son must stand in the real trading room; the overlay must not replace its background or father");
+            mafia = game.GetNode<MafiaQuotaNotice>("MafiaQuotaNotice");
+            Check(!mafia.HasNode("StoryRoot/Speech/Content/Actions/Continue") &&
+                mafia.GetNode<Control>("StoryRoot/SkipDialogue").AnchorRight == 1,
+                "Castello must use a top-right prologue skip button without Continue");
+            var storyCamera = game.GetNode<WorldCamera>("Camera2D");
+            var storyRoom = game.GetNode<Control>("World/TradingRoom/RoomFrame").GetGlobalRect();
+            Check(storyCamera.Position.DistanceTo(storyRoom.GetCenter()) < 0.1f &&
+                !game.GetNode<CanvasLayer>("HUD").Visible && !game.GetNode<CanvasLayer>("HUD/DayClock").Visible,
+                "The camera must frame the actual trading room and hide the gameplay HUD during the story");
             if (DisplayServer.GetName() != "headless")
             {
+                Vector2I storySize = Root.Size;
                 foreach (string language in new[] { "ru", "en" })
                 {
+                    Root.Size = language == "ru" ? new Vector2I(1280, 720) : new Vector2I(1920, 1080);
                     TranslationServer.SetLocale(language);
+                    await ToSignal(this, SignalName.ProcessFrame);
+                    await ToSignal(this, SignalName.ProcessFrame);
                     Dialogue().RestorePage(0, true);
+                    Check(storyCamera.Position.DistanceTo(storyRoom.GetCenter()) < 0.1f &&
+                        Root.GetVisibleRect().Encloses(Dialogue().GetNode<Control>("Panel/Content").GetGlobalRect()),
+                        "Resizing the story must preserve the real room framing and readable dialogue");
                     using (await CapturePresentation("story-workshop-dialogue-" + language)) { }
                 }
+                Root.Size = storySize;
                 TranslationServer.SetLocale("ru");
             }
             Dialogue()._Input(new InputEventKey { Pressed = true, Keycode = Key.Escape });
-            Check(!Paused && game.GetNode<TextureButton>(visitorPath).Visible && game.QuotaVisitPending,
-                "Escape must close the story layout and restore the clickable visitor");
+            Check(Paused && game.QuotaVisitPending && Dialogue().Session.Index == 0,
+                "A repeated Escape from Castello must not also skip the automatically opened family dialogue");
             game.TryUnlockMusicWorkshop();
             Check(!game.MusicWorkshopUnlocked && game.Score == cashAfterQuota,
-                "Cancelling the conversation must not open the room or issue a gift");
-            await ToSignal(this, SignalName.ProcessFrame);
-            game.GetNode<TextureButton>(visitorPath).EmitSignal(BaseButton.SignalName.Pressed);
-            await ToSignal(this, SignalName.ProcessFrame);
+                "The unfinished family dialogue must not grant access or money");
             Dialogue().RestorePage(0, true);
             Check(ProgressSaveStore.Load(save, 3).QuotaVisit == QuotaVisitStage.Dialogue,
                 "Starting the conversation must save the dialogue phase");
@@ -215,7 +228,30 @@ public partial class ProjectTest
             Check(Dialogue().GetNode<Label>("Panel/Content/Speaker").Text == "Son", "The story dialogue must localize in English");
             Check(GameLocalization.Text(Dialogue().Session.Current.Text).Contains("Dad"),
                 "The son must address his father naturally in English too");
+            var cameraAfterStory = game.GetNode<WorldCamera>("Camera2D");
+            cameraAfterStory.ResetToOverview();
+            Vector2 overviewPosition = cameraAfterStory.Position, overviewZoom = cameraAfterStory.Zoom;
+            cameraAfterStory.FocusOn(game.GetNode<Control>("World/TradingRoom/RoomFrame").GetGlobalRect().GetCenter(),
+                cameraAfterStory.CloseupSize, 0);
+            Vector2 lockedCamera = cameraAfterStory.Position;
+            cameraAfterStory._UnhandledInput(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = true, Position = new Vector2(400, 200) });
+            cameraAfterStory._Input(new InputEventMouseMotion { Relative = new Vector2(80, 40), ButtonMask = MouseButtonMask.Left });
+            Check(!cameraAfterStory.IsDragging && cameraAfterStory.Position == lockedCamera,
+                "The camera must stay locked while the son is speaking");
             for (int i = 0; i < 24 && game.QuotaVisitPending; i++) Dialogue().Advance();
+            await WaitForQuotaFade();
+            if (game.DayTransitionOpen)
+            {
+                await WaitForDayCardAnimation(game);
+                game.GetNode<DayTransitionCard>("DayTransitionCard").Skip();
+                await WaitForDayCardAnimation(game);
+            }
+            Check(!Paused && game.GetNode<CanvasLayer>("HUD").Visible && cameraAfterStory.Position.DistanceTo(overviewPosition) < 0.05f &&
+                cameraAfterStory.Zoom.DistanceTo(overviewZoom) < 0.001f,
+                "Completing both dialogues must restore the initial overview and camera control");
+            cameraAfterStory._UnhandledInput(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = true, Position = new Vector2(400, 200) });
+            Check(cameraAfterStory.IsDragging, "Camera drag must be available again after the story sequence");
+            cameraAfterStory._Input(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = false });
             Check(!game.QuotaVisitPending && game.Score == cashAfterQuota && game.MusicWorkshopAvailable &&
                 !game.MusicWorkshopUnlocked && !game.CheckpointMusicWorkshopUnlocked,
                 "The dialogue must grant only permission, leaving the balance and curtain untouched");
@@ -272,15 +308,18 @@ public partial class ProjectTest
             game.EndDay();
             game._Process(0);
             await WaitForQuotaFade();
-            game.GetNode<MafiaQuotaNotice>("MafiaQuotaNotice").Close();
+            var zeroCashNotice = game.GetNode<MafiaQuotaNotice>("MafiaQuotaNotice");
+            zeroCashNotice._Input(new InputEventKey { Pressed = true, Keycode = Key.Space });
+            Check(zeroCashNotice.IsOpen && zeroCashNotice.GetNode<Label>("StoryRoot/Speech/Content/Message").VisibleCharacters == -1,
+                "The first prologue-style input must reveal Castello's line without closing it");
+            zeroCashNotice._Input(new InputEventKey { Pressed = true, Keycode = Key.Space });
+            await WaitForQuotaFade();
+            Check(!zeroCashNotice.IsOpen, "The next input must finish Castello before the automatic son dialogue");
             Check(game.Score == 0 && !game.MusicWorkshopUnlocked, "Exact quota payment must leave a pending story and zero cash");
-            game.GetNode<TextureButton>(visitorPath).EmitSignal(BaseButton.SignalName.Pressed);
             await ToSignal(this, SignalName.ProcessFrame);
-            for (int i = 0; i < 20 && game.QuotaVisitPending; i++)
-            {
-                Dialogue().Advance();
-                await ToSignal(this, SignalName.ProcessFrame);
-            }
+            Check(Paused && Dialogue().Session.Index == 0, "The son must open automatically even with zero cash");
+            await ClickControl(game, "QuotaDialogue/DialoguePlayer/SkipDialogue");
+            await WaitForQuotaFade();
             Check(game.MusicWorkshopAvailable && !game.MusicWorkshopUnlocked && game.Score == 0,
                 "Completing the conversation with zero cash must make opening available");
             if (game.DayTransitionOpen)

@@ -77,21 +77,22 @@ public partial class ProjectTest
                 notice.QueueFree();
                 await ToSignal(this, SignalName.ProcessFrame);
 
-                var son = storyScene.Instantiate<DialoguePlayer>();
+                var son = GD.Load<PackedScene>("res://scenes/UI/FamilyDialoguePlayer.tscn").Instantiate<DialoguePlayer>();
                 fixture = son;
                 son.IsPrologue = false;
-                son.StoryPortrait = GD.Load<Texture2D>("res://art/characters/quota_visitor.png");
-                son.StoryBackground = GD.Load<Texture2D>("res://art/rooms/cashier_closed.jpg");
                 son.DialoguePath = "res://dialogue/quota_visitor.ru.json";
                 Root.AddChild(son);
                 await ToSignal(this, SignalName.ProcessFrame);
-                await CheckSpeaking(son.GetNode<TextureRect>("Characters/Son"));
+                Check(son.UseWorldScene && !son.GetNode<Control>("Background").Visible &&
+                    !son.GetNode<Control>("Shade").Visible && !son.GetNode<Control>("Characters").Visible &&
+                    !son.HasNode("Counter"),
+                    "Family UI must leave the real world visible and must not create a replacement room, cast or counter");
                 son.RestorePage(0, true);
-                await ToSignal(CreateTimer(0.46), SceneTreeTimer.SignalName.Timeout);
-                using (await CapturePresentation($"story-son-{size.X}")) { }
-                CheckStoryComposition(son, "Panel", "Son");
-                Check(son.GetNode<TextureRect>("Characters/Son").GetGlobalRect().GetCenter().X > son.Size.X * 0.65f,
-                    "The son must stand clear of Frankie, who is drawn into the cashier background.");
+                await ToSignal(this, SignalName.ProcessFrame);
+                Check(Root.GetVisibleRect().Encloses(son.GetNode<Control>("Panel/Content").GetGlobalRect()),
+                    "The prologue speech window must remain readable over the world");
+                AdvanceMusicLine(son);
+                Check(son.Session.Current.Speaker == "\u0424\u0440\u0435\u043d\u043a\u0438", "The father must answer the son");
                 son.QueueFree();
                 await ToSignal(this, SignalName.ProcessFrame);
             }

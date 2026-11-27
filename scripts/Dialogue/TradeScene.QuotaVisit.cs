@@ -1,4 +1,5 @@
 using ChikagoShop.Domain.Persistence;
+using System.Threading.Tasks;
 using Godot;
 
 public partial class TradeScene
@@ -12,6 +13,9 @@ public partial class TradeScene
     private CanvasLayer _quotaDialogueLayer = null!;
     private DialoguePlayer _quotaDialogue;
     private bool _ownsQuotaDialoguePause;
+    private bool _quotaCompletionInProgress;
+    private bool _quotaHudWasVisible;
+    private bool _quotaClockWasVisible;
 
     public bool MusicWorkshopAvailable => !Failed && !Completed && !MusicWorkshopUnlocked &&
         CurrentDay > FirstDeadline && QuotaStage >= 1 && _quotaVisit == QuotaVisitStage.Rewarded;
@@ -36,46 +40,50 @@ public partial class TradeScene
             IgnoreTextureSize = true,
             Size = size,
             Position = feet - new Vector2(size.X / 2, size.Y),
-            MouseDefaultCursorShape = Control.CursorShape.PointingHand,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
             Material = tone,
             Visible = false
         };
         _customer.GetParent().AddChild(_quotaVisitor);
-        _quotaVisitor.MouseEntered += () => tone.SetShaderParameter("lighten", 0.16f);
-        _quotaVisitor.MouseExited += () => tone.SetShaderParameter("lighten", 0f);
-        _quotaVisitor.Pressed += OpenQuotaDialogue;
         _quotaDialogueLayer = new CanvasLayer { Name = "QuotaDialogue", Layer = 151, ProcessMode = ProcessModeEnum.Always };
         AddChild(_quotaDialogueLayer);
     }
 
     public void ResumeQuotaVisit()
     {
-        if (!QuotaVisitPending || MafiaNoticePending || _quotaDialogue != null || _quotaVisitor.Visible) return;
+        if (!QuotaVisitPending || MafiaNoticePending || _quotaDialogue != null) return;
         _customer.Hide();
-        _quotaVisitor.Show();
-        var frame = _customer.GetParent().GetNode<Control>("RoomFrame");
-        var camera = GetNode<WorldCamera>("Camera2D");
-        camera.FocusOn(frame.GetGlobalRect().GetCenter(), camera.CloseupSize, _quotaVisit == QuotaVisitStage.Dialogue ? 0 : 0.55);
-        if (_quotaVisit == QuotaVisitStage.Dialogue) OpenQuotaDialogue();
+        _quotaVisitor.Hide();
+        OpenQuotaDialogue();
     }
 
     private void OpenQuotaDialogue()
     {
-        if (!QuotaVisitPending || MafiaNoticePending || _quotaDialogue != null ||
-            GetTree().Paused && _quotaVisit != QuotaVisitStage.Dialogue) return;
+        if (!QuotaVisitPending || MafiaNoticePending || _quotaDialogue != null) return;
         if (_quotaVisit != QuotaVisitStage.Dialogue) ClearQuotaDialoguePage();
         _quotaVisit = QuotaVisitStage.Dialogue;
         GetViewport().GuiReleaseFocus();
         _ownsQuotaDialoguePause = true;
         GetTree().Paused = true;
-        var dialogue = GD.Load<PackedScene>("res://scenes/UI/DialoguePlayer.tscn").Instantiate<DialoguePlayer>();
+        var dialogue = GD.Load<PackedScene>("res://scenes/UI/FamilyDialoguePlayer.tscn").Instantiate<DialoguePlayer>();
         dialogue.DialoguePath = "res://dialogue/quota_visitor.ru.json";
         dialogue.IsPrologue = false;
-        dialogue.StoryPortrait = _quotaVisitor.TextureNormal;
-        dialogue.StoryBackground = _quotaVisitor.GetParent().GetNode<Sprite2D>("TradingRoomBackground").Texture;
         _quotaDialogue = dialogue;
-        _quotaVisitor.Hide();
+        _quotaVisitor.Show();
+        var room = _customer.GetParent().GetNode<Control>("RoomFrame");
+        var camera = GetNode<WorldCamera>("Camera2D");
+        camera.FrameStoryRoom(room.GetGlobalRect());
+        var hud = GetNode<CanvasLayer>("HUD");
+        _quotaHudWasVisible = hud.Visible;
+        hud.Hide();
+        var clock = GetNode<CanvasLayer>("HUD/DayClock");
+        _quotaClockWasVisible = clock.Visible;
+        clock.Hide();
         _quotaDialogueLayer.AddChild(dialogue);
+        Callable.From(() =>
+        {
+            if (_quotaDialogue == dialogue && QuotaVisitPending) GetTree().Paused = true;
+        }).CallDeferred();
         dialogue.Finished += CompleteQuotaVisit;
         dialogue.Cancelled += CancelQuotaDialogue;
         dialogue.PageProgressed += () =>
@@ -95,16 +103,35 @@ public partial class TradeScene
     {
         CloseQuotaDialogue();
         _quotaVisit = QuotaVisitStage.AwaitingVisitor;
-        _quotaVisitor.Show();
         ClearQuotaDialoguePage();
         SaveProgress();
+        Callable.From(ResumeQuotaVisit).CallDeferred();
     }
 
-    private void CompleteQuotaVisit()
+    private async void CompleteQuotaVisit()
+    {
+        if (_quotaVisit != QuotaVisitStage.Dialogue || _quotaCompletionInProgress || SceneTransition.IsActive(GetTree())) return;
+        _quotaCompletionInProgress = true;
+        var dialogue = _quotaDialogue;
+        try
+        {
+            await SceneTransition.Run(this, () =>
+            {
+                if (_quotaDialogue != dialogue || _quotaVisit != QuotaVisitStage.Dialogue)
+                    return Task.FromResult(false);
+                CompleteQuotaVisitCore();
+                return Task.FromResult(true);
+            }, keepChangedPause: true);
+        }
+        finally { _quotaCompletionInProgress = false; }
+    }
+
+    private void CompleteQuotaVisitCore()
     {
         if (_quotaVisit != QuotaVisitStage.Dialogue) return;
         _quotaVisit = _checkpointQuotaVisit = QuotaVisitStage.Rewarded;
         ResetQuotaVisitPresentation();
+        GetNode<WorldCamera>("Camera2D").ResetToOverview();
         _customer.Hide();
         RefreshDayPresentation();
         SaveProgress();
@@ -140,6 +167,8 @@ public partial class TradeScene
         _quotaDialogue.StopInteraction();
         _quotaDialogue.QueueFree();
         _quotaDialogue = null;
+        GetNode<CanvasLayer>("HUD").Visible = _quotaHudWasVisible;
+        GetNode<CanvasLayer>("HUD/DayClock").Visible = _quotaClockWasVisible;
         ReleaseQuotaDialoguePause();
     }
 

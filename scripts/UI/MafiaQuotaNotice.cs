@@ -19,7 +19,7 @@ public partial class MafiaQuotaNotice : CanvasLayer
     private Label _heading = null!;
     private Label _speaker = null!;
     private Label _message = null!;
-    private Button _continue = null!;
+    private TextureButton _skipDialogue = null!;
     private Button _restart = null!;
     private Button _checkpoint = null!;
     private Button _mainMenu = null!;
@@ -121,7 +121,10 @@ public partial class MafiaQuotaNotice : CanvasLayer
         };
         actions.AddThemeConstantOverride("separation", 12);
         content.AddChild(actions);
-        _continue = MakeAction(actions, "Continue", CloseWithTransition);
+        _skipDialogue = new TextureButton { Name = "SkipDialogue" };
+        _root.AddChild(_skipDialogue);
+        StoryDialogueLayout.StyleSkipButton(_skipDialogue);
+        _skipDialogue.Pressed += CloseWithTransition;
         _checkpoint = MakeAction(actions, "Checkpoint", () =>
         {
             CloseCore(false);
@@ -211,11 +214,11 @@ public partial class MafiaQuotaNotice : CanvasLayer
         _portraits.ShowSpeech(0);
         _speakerFocus.SetSpeaker(line.Speaker);
         SetProcess(true);
-        _continue.Text = english ? "Continue" : "Продолжить";
+        StoryDialogueLayout.StyleSkipButton(_skipDialogue);
         _checkpoint.Text = english ? "From checkpoint" : "С чекпоинта";
         _restart.Text = english ? "New game" : "Начать заново";
         _mainMenu.Text = english ? "Main menu" : "Главное меню";
-        _continue.Visible = !_terminal;
+        _skipDialogue.Visible = !_terminal;
         _checkpoint.Visible = !succeeded;
         _restart.Visible = _terminal;
         _mainMenu.Visible = _terminal;
@@ -226,7 +229,8 @@ public partial class MafiaQuotaNotice : CanvasLayer
         if (_fade?.IsValid() == true) _fade.Kill();
         _fade = CreateTween().SetPauseMode(Tween.TweenPauseMode.Process);
         _fade.TweenProperty(_shade, "color:a", StoryDialogueLayout.Shade.A, 0.28f);
-        (_terminal ? _restart : _continue).GrabFocus();
+        if (_terminal) _restart.GrabFocus();
+        else GetViewport().GuiReleaseFocus();
     }
 
     public override void _Process(double delta)
@@ -286,6 +290,20 @@ public partial class MafiaQuotaNotice : CanvasLayer
 
     public override void _Input(InputEvent input)
     {
+        if (!IsOpen || _transitioning || SceneTransition.IsActive(GetTree())) return;
+        if (!_terminal && (input is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } ||
+            input is InputEventKey { Pressed: true, Echo: false, Keycode: Key.Space }))
+        {
+            if (input is InputEventMouseButton && GetViewport().GuiGetHoveredControl() is BaseButton) return;
+            GetViewport().SetInputAsHandled();
+            if (_message.VisibleCharacters >= 0)
+            {
+                _speechTime = _message.Text.Length / 48.0 + 1;
+                _Process(0);
+            }
+            else CloseWithTransition();
+            return;
+        }
         if (!IsOpen || input is not InputEventKey { Pressed: true, Echo: false } key) return;
         if (key.Keycode != Key.Escape) return;
         GetViewport().SetInputAsHandled();

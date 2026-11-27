@@ -1,0 +1,20 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/UI/DialoguePlayer.tscn" id="1_dialogue"]
+
+[node name="FamilyDialoguePlayer" instance=ExtResource("1_dialogue")]
+DialoguePath = "res://dialogue/quota_visitor.ru.json"
+IsPrologue = false
+UseWorldScene = true
+
+[node name="SkipDialogue" type="TextureButton" parent="." index="5"]
+layout_mode = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -204.0
+offset_top = 24.0
+offset_right = -24.0
+offset_bottom = 78.0
+grow_horizontal = 0
+ignore_texture_size = true
+stretch_mode = 0

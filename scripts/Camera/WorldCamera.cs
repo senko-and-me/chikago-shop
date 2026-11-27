@@ -24,6 +24,7 @@ public partial class WorldCamera : Camera2D
     private Tween _overviewTween;
     private Tween _focusTween;
     private bool _navigationLocked;
+    private Rect2? _storyRoom;
     private readonly List<(Control Cover, Control.GuiInputEventHandler Handler)> _roomCoverHandlers = new();
     public bool NavigationLocked
     {
@@ -96,6 +97,7 @@ public partial class WorldCamera : Camera2D
 
     public void ResetToOverview()
     {
+        _storyRoom = null;
         CancelFocusTransition();
         CancelOverviewTransition();
         CancelDrag();
@@ -105,6 +107,20 @@ public partial class WorldCamera : Camera2D
         _zoomAnchor = GetViewportRect().Size / 2f;
         ClampToBounds();
         OverviewReset?.Invoke();
+    }
+
+    // Story framing uses the actual room, without the gameplay close-up zoom cap.
+    public void FrameStoryRoom(Rect2 room)
+    {
+        _storyRoom = room;
+        CancelFocusTransition();
+        CancelOverviewTransition();
+        CancelDrag();
+        Vector2 ratio = GetViewportRect().Size / room.Size;
+        _targetZoom = Mathf.Max(ratio.X, ratio.Y);
+        Zoom = Vector2.One * _targetZoom;
+        Position = room.GetCenter();
+        ForceUpdateScroll();
     }
 
     public void ReturnToOverview(double duration)
@@ -180,6 +196,7 @@ public partial class WorldCamera : Camera2D
 
     private void OnViewportSizeChanged()
     {
+        if (_storyRoom is { } room) { FrameStoryRoom(room); return; }
         CancelFocusTransition();
         ClampToBounds();
     }

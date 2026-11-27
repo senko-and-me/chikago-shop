@@ -9,6 +9,36 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### SC234 — разговор с сыном внутри торговой комнаты
+
+SC234 DONE; /root; CP `.local/checks/sc234/CP-SC234.md`; SC233 DONE. Уточнение пользователя: использовать настоящий мир trade_scene с отцом за прилавком и сыном рядом, поверх только диалоговое окно пролога. Кастелло: убрать Continue, перенести Skip наверх, обычный ввод как в прологе. Автоматическая последовательность, независимый пропуск и возврат камеры сохранены.
+
+```text
+Task: SC234
+Recommended status: REVIEW -> accepted DONE; gate PASSED 28.11.2026
+Changed: FamilyDialoguePlayer now overlays only the shared prologue cloud and localized prologue Skip texture; DialoguePlayer world-scene mode hides replacement backdrop/cast/shade. TradeScene.QuotaVisit shows the real-world son next to cashier, frames actual room, temporarily hides HUD/clock and restores them. WorldCamera adds story framing with viewport resize support. MafiaQuotaNotice removes Continue, uses top-right prologue Skip and click/Space reveal-then-finish. Integration tests and plan updated.
+Checks: build PASS zero warnings/errors; quota-visit and dialogue-portraits PASS on final behavior, intro-transition PASS before final world-only HUD/localization adjustments; all engine stderr empty (.local/checks/sc234/). Actual world screenshots inspected in RU1280x720 and EN1920x1080. Scoped diffcheck PASS.
+Acceptance: family story uses World/TradingRoom and its existing father/counter; no synthetic room or enlarged portraits. No visitor click; independent skip, first line retained, natural Castello reveal/finish, reload, zero-cash permission, camera pause/overview/control and HUD restoration covered. Viewport resize retains room framing and readable cloud. Existing editor changes to trade_scene preserved.
+Read-set exception: DayCycleController inspected to locate nested HUD/DayClock; audio sources inspected to locate local preferences following user's mute request. CP scope extended for shared skip styling and camera framing. No source/ reads.
+Risks/blocker: none. Local music/effects preferences set to zero in main local user settings and isolated test settings; other settings retained, shipped audio defaults unchanged. Already-running game needs next launch to load preferences.
+Next: user review in feature/dialogue-editing; no push requested.
+```
+
+### SC233 — композиция разговора отца и сына
+
+SC233 DONE; /root; CP `.local/checks/sc233/CP-SC233.md`; M232 DONE; feature/dialogue-editing. По уточнению пользователя и эскизу: отец за прилавком, сын рядом в центре сцены, текст внизу. После Кастелло сын начинает автоматически; у каждого разговора отдельная кнопка пропуска, повторный ввод не закрывает оба. Камера заблокирована до окончания и возвращается к начальному общему виду. Предыдущее решение с двумя разнесёнными портретами заменено эскизом. Устаревшее обещание1000$ убрано без изменения текущей механики мастерской; пользовательские изменения trade_scene.tscn вне scope.
+
+```text
+Task: SC233
+Recommended status: REVIEW -> accepted DONE; gate PASSED 27.11.2026
+Changed: authored scenes/UI/FamilyDialoguePlayer.tscn; DialoguePlayer, TradeScene.QuotaVisit, MafiaQuotaNotice; quota_visitor.ru.json and English translations; QuotaVisit and StoryDialogueLayout integration tests; plan. Father stands behind counter, son beside him; text cloud and independent family Skip button are authored in scene. Castello completion/skip automatically starts son under black transition; family completion/skip resets overview under black transition before releasing control.
+Checks: dotnet build ChikagoShop.csproj --no-restore -v minimal PASS, zero warnings/errors (.local/checks/sc233/build.log). Rendered quota-visit, dialogue-portraits and intro-transition suites PASS, all stderr empty (.local/checks/sc233/). Visual review of family dialogue at 1280/1920; scoped diffcheck PASS.
+Acceptance: Castello skip leaves son's first line intact despite repeated Escape; family has separate skip, world visitor never requires clicking. Camera blocked during family story, overview/drag restored afterwards. Mid-dialogue reload, natural completion, separate family skip, zero-cash free opening, checkpoint and startup finish/skip/Continue retained. Workshop permission/balance/save schema unchanged; unrelated editor changes preserved.
+Read-set exception: cashier_closed.jpg and WorldCamera/DayCycleController inspected for scene-native counter crop, reset and automatic sequence; recorded in expanded CP. No source/ reads.
+Risks/blocker: counter reuses cropped existing art; no new character artwork. No push requested.
+Next: user review in feature/dialogue-editing.
+```
+
 ### M232 — debug/gameplay в main с релизом v1.4.4
 
 M232 DONE; /root; CP `.local/checks/m232/CP-M232.md`. Пользователь разрешил merge/push. origin/main3be4aae содержит новый релиз поверх cec04d6; debug/gameplay0f72793 и SC230/231ae8ba6e объединены с сохранением релизных изменений и удалением покупательницы. Несвязанные локальные изменения сцены сохранены отдельно, source/ не читался.
