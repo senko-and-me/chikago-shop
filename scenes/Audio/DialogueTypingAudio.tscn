@@ -10,7 +10,7 @@
 script = ExtResource("1_script")
 Samples = Array[AudioStream]([ExtResource("2_07"), ExtResource("3_11"), ExtResource("4_12"), ExtResource("5_13")])
 StartOffsets = Array[float]([0.035, 0.036, 0.26, 0.033])
-VolumeDb = -20.0
+VolumeDb = -25.0
 MinimumInterval = 0.035
 SnippetSeconds = 0.065
 
