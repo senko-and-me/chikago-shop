@@ -23,6 +23,7 @@ public partial class MafiaQuotaNotice : CanvasLayer
     private Button _mainMenu = null!;
     private StoryPortraitController _portraits = null!;
     private StorySpeakerFocus _speakerFocus = null!;
+    private DialogueTypingAudio _typingAudio;
     private double _speechTime;
     private Tween _fade = null!;
     private bool _ownsPause;
@@ -48,6 +49,7 @@ public partial class MafiaQuotaNotice : CanvasLayer
         Name = "MafiaQuotaNotice";
         Layer = 150;
         ProcessMode = ProcessModeEnum.Always;
+        _typingAudio = DialogueTypingAudio.Attach(this);
         Theme theme = GD.Load<Theme>("res://themes/game_theme.tres");
         _root = new Control
         {
@@ -280,6 +282,7 @@ public partial class MafiaQuotaNotice : CanvasLayer
         _message.Text = _pageText[_pageStart.._pageEnd].Trim();
         _speechTime = 0;
         _message.VisibleCharacters = 0;
+        _typingAudio.BeginPage(_message.Text, !_storyFinished && !string.IsNullOrWhiteSpace(_currentSpeaker));
         _portraits.ShowSpeech(0);
         _speakerFocus.SetSpeaker(_currentSpeaker);
         SetProcess(true);
@@ -290,9 +293,13 @@ public partial class MafiaQuotaNotice : CanvasLayer
         _speechTime += delta;
         _message.VisibleCharacters = (int)(_speechTime * 48);
         if (_message.VisibleCharacters < _message.Text.Length)
+        {
+            _typingAudio.Advance(_message.VisibleCharacters, delta);
             _portraits.ShowSpeech(_speechTime);
+        }
         else
         {
+            _typingAudio.Stop();
             _message.VisibleCharacters = -1;
             _portraits.ShowSpeech(null, lineComplete: true);
             _speakerFocus.SetSpeaker(null);
@@ -321,6 +328,7 @@ public partial class MafiaQuotaNotice : CanvasLayer
 
     private void CloseCore(bool notify)
     {
+        _typingAudio.Stop();
         if (!IsOpen && !_transitioning) return;
         ++_transitionRevision;
         if (_fade?.IsValid() == true) _fade.Kill();
@@ -335,6 +343,7 @@ public partial class MafiaQuotaNotice : CanvasLayer
 
     private void FinishStory()
     {
+        _typingAudio.Stop();
         if (_storyFinished) return;
         _storyFinished = true;
         SetProcess(false);

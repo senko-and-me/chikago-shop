@@ -9,6 +9,43 @@
 Требования и таблицы ниже сохраняют первоначальный план от 31.10.2026. Внеочередные HF-задачи развивали прототип дальше этого среза; старые числа и описания не следует принимать за актуальную конфигурацию runtime. Текущие игровые механики описаны в [docs/GAMEPLAY.md](docs/GAMEPLAY.md), числа — в `config/economy.v1.json`. Завершение функции в HF не заменяет приёмку соответствующей задачи стадии.
 
 ## Текущий фронт
+### SC253 — карта дня в блокноте
+
+SC253 DONE; /root; SC252 DONE; CP `.local/checks/sc253/CP-SC253.md`. Блокнот показывает название и эффект всех девяти карт, включая уже полученные деньги; описание соответствует текущим параметрам и языку. Игровые правила и пользовательские изменения сохранены.
+
+```text
+Task: SC253
+Recommended status: REVIEW -> accepted DONE; gate PASSED 28.11.2026
+Changed: PulloutNotebook includes Cash as a receipt instead of falsely showing None, with localized already-received wording. Display cache includes the actual formatted effect, so changing runtime card amounts updates the entry without requiring a different selection. Existing non-Cash formatter and scene layout retained. New focused rendered integration mode covers all cards.
+Checks: dotnet build PASS0warnings/errors; isolated editor import PASS; --notebook-buffs-checks PASS exit0/stderr empty. All9 restored selections RU/EN show name and actual amount, fully translated English, complete effect fits authored notes area; changed runtime amount refreshes same selection; actual card presenter/controller purchase credits Cash once and appears after close; repeated notebook reads/restored Cash never credit money; pending offer, reset and skip clear old entry. git diff --check PASS. Evidence .local/checks/sc253/{build,import,checks}.*.
+Read-set exception: none; source/ untouched. Risks/blocker: none. Prior SC251/252 and user changes preserved. Next: user review; no publication requested.
+```
+
+### SC252 — звук вылета карт
+
+SC252 DONE; /root; CP `.local/checks/sc252/CP-SC252.md`; SC251 DONE. Предоставленный woosh.mp3 синхронизирован с вылетом каждой карты из колоды; SFX и повторное открытие работают, перестроение окна не дублирует звук. Предыдущие и пользовательские изменения сохранены.
+
+```text
+Task: SC252
+Recommended status: REVIEW -> accepted DONE; gate PASSED 28.11.2026
+Changed: original0.490159s woosh.mp3 copied byte-for-byte to audio/sfx/card_fly.mp3. DayTransitionCard scene owns CardFlySound player, SFX bus, volume-12dB, max_polyphony3. Animator fires a launch callback after each card's stagger delay directly before its movement. Presenter plays once per logical card per opening; resize/reflow retains the sounded-card set, fresh opening clears it. Close stops active sound; cancelled tweens cannot trigger pending launch sounds. Other animation/rules/audio unchanged.
+Checks: original/runtime SHA256 equal; dotnet build PASS0warnings/errors; isolated import PASS; rendered --card-flight-audio-checks PASS exit0/stderr empty. Real trade-scene1/3card animations cover no early sound, actual playing on staggered card launch during pause, SFX mute, bounded polyphony, resize during deal with one event per card, silent choosing reflow, premature close cancelling delayed callbacks, stop and re-arm on next opening. Evidence .local/checks/sc252/{build,import,checks}.*; diffcheck PASS.
+Read-set exception: DayCardSceneTransition inspected to instantiate the actual trade-scene-owned presenter for integration testing. No source/ reads or user file modifications; SC251 and prior user dirty changes preserved. Risks/blocker: none. Next: user listens; no publication requested.
+```
+
+### SC251 — случайные звуки появления букв в диалогах
+
+SC251 DONE; /root; CP `.local/checks/sc251/CP-SC251.md`; SC250 sync DONE. Четыре предоставленных звука подключены к автоматическому появлению букв в прологе, семейном разговоре, квотах и концовках. Случайный выбор без одинаковых соседних вариантов, общий SFX, ограниченные короткие голоса; пропуск/раскрытие/закрытие прекращают звук. Существующие пользовательские изменения сохранены.
+
+```text
+Task: SC251
+Recommended status: REVIEW -> accepted DONE; gate PASSED 28.11.2026
+Changed: supplied07/11/12/13 WAVs copied byte-for-byte into audio/dialogue with ASCII paths and PCM import for precise short playback. New scene-owned DialogueTypingAudio component holds four samples, two bounded SFX voices, volume-18dB, minimum interval0.035s and snippets0.065s with12ms fade. Per-sample start offsets bypass leading silence (especially sample12 onset0.264s) without modifying originals. Both dialogue implementations notify it only for automatic newly revealed letters/digits; punctuation/whitespace/narration/asterisk actions silent, one tick maximum per frame, no adjacent sample repeats. Page/layout/locale resets and reveal/skip/close stop voices. No wording, reading speed, story state or existing audio mix changes.
+Checks: all4 original/runtime SHA256 pairs match; build PASS0warnings/errors; isolated import PASS. --dialogue-typing-audio-checks PASS exit0/stderr empty: actual PCM snippet contains audible onset for every sample;128ticks cover all4 with no adjacent repeats; max2voices, snippet expiry, punctuation/stage/narration silence, slow-frame no-burst and restored text silence; actual prologue RU/EN, family world-scene Skip, first-quota/victory/defeat playback, pause, locale/reset/manual reveal/close and SFX mute. --dialogue-localization-checks PASS (24lines, live language/settings/pagination/cues). Evidence .local/checks/sc251/{build,import,checks,localization}.*; diffcheck PASS.
+Read-set exception: FamilyDialoguePlayer scene and TradeScene.QuotaVisit factory inspected to instantiate the actual family overlay in tests; fixture scenes refreshed from current project, isolated userdir unchanged. No source/ reads. User TradeScene.cs, EmbroideryGame.cs, trade_scene.tscn and original sound folder untouched.
+Risks/blocker: none. Next: user listens to the typing effect; no publishing requested.
+```
+
 ### SC249 — обзор перед приближением комнаты и слой таймера
 
 SC249 DONE; /root; CP `.local/checks/sc249/CP-SC249.md`; SC248 DONE. Шаг RoomFocus использует отдельную обзорную точку камеры из сцены: после масштабирования камера плавно возвращается в исходный общий вид, ателье полностью видно. Облако таймера рисуется выше рамок закрытых комнат. Пользовательские правки trade_scene сохранены.

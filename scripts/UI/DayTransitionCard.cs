@@ -13,6 +13,9 @@ public partial class DayTransitionCard : CanvasLayer
     private readonly List<Button> _navigationButtons = new();
     private Control _choices = null!;
     private readonly List<PanelContainer> _cards = new();
+    private readonly HashSet<PanelContainer> _soundedCards = new();
+    private AudioStreamPlayer _flightSound;
+    internal event Action<PanelContainer> FlightSoundPlayed;
     private ColorRect _shade = null!;
     private PokerCardBack _deck = null!;
     private DayCardDealAnimator _animation = null!;
@@ -88,6 +91,8 @@ public partial class DayTransitionCard : CanvasLayer
     public override void _Ready()
     {
         _root = GetNode<Control>("Root");
+        _flightSound = GetNode<AudioStreamPlayer>("CardFlySound");
+        _flightSound.Bus = SoundEffects.BusName;
         _panel = GetNode<PanelContainer>("Root/Center/Card");
         _route = GetNode<Label>("Root/Center/Card/Content/Route");
         _title = GetNode<Label>("Root/Center/Card/Content/Title");
@@ -201,6 +206,11 @@ public partial class DayTransitionCard : CanvasLayer
             if (generation != _generation || !IsOpen) return;
             _phase = Phase.Choosing;
             LockActions(false);
+        }, card =>
+        {
+            if (generation != _generation || !IsOpen || !_soundedCards.Add(card)) return;
+            _flightSound.Play();
+            FlightSoundPlayed?.Invoke(card);
         });
     }
 
@@ -223,6 +233,7 @@ public partial class DayTransitionCard : CanvasLayer
         _balance = balance;
         _navigationButtons.Clear();
         _cards.Clear();
+        _soundedCards.Clear();
         foreach (Node child in _choices.GetChildren()) child.Free();
         foreach (var upgrade in Options)
         {
@@ -274,6 +285,7 @@ public partial class DayTransitionCard : CanvasLayer
     {
         if (!IsOpen) return;
         ++_generation;
+        _flightSound.Stop();
         _animation.Cancel();
         _sceneTransition.Restore();
         _phase = Phase.Closed;

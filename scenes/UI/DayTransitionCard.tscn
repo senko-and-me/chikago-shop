@@ -4,6 +4,7 @@
 [ext_resource type="Theme" path="res://themes/game_theme.tres" id="2_theme"]
 [ext_resource type="Script" path="res://scripts/UI/PokerCardBack.cs" id="3_back"]
 [ext_resource type="Texture2D" path="res://art/ui/panel_small.png" id="4_button_paper"]
+[ext_resource type="AudioStream" path="res://audio/sfx/card_fly.mp3" id="5_flight"]
 
 [sub_resource type="StyleBoxFlat" id="Tray"]
 resource_local_to_scene = true
@@ -48,6 +49,12 @@ content_margin_bottom = 6.0
 process_mode = 3
 layer = 120
 script = ExtResource("1_card")
+
+[node name="CardFlySound" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("5_flight")
+volume_db = -12.0
+max_polyphony = 3
+bus = &"SFX"
 
 [node name="Root" type="Control" parent="."]
 visible = false

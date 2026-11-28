@@ -19,7 +19,8 @@ public sealed class DayCardDealAnimator(Node owner)
         _tweens.Clear();
     }
 
-    public void Deal(IReadOnlyList<PanelContainer> cards, Control deck, ColorRect shade, Control panel, Action finished)
+    public void Deal(IReadOnlyList<PanelContainer> cards, Control deck, ColorRect shade, Control panel, Action finished,
+        Action<PanelContainer> launched = null)
     {
         Cancel();
         Tween().TweenProperty(shade, "modulate:a", 1f, 0.25);
@@ -46,6 +47,7 @@ public sealed class DayCardDealAnimator(Node owner)
             double delay = 0.55 + i * 0.14;
             var tween = Tween();
             tween.TweenInterval(delay);
+            tween.TweenCallback(Callable.From(() => launched?.Invoke(card)));
             tween.TweenProperty(card, "position", destination, 0.48).SetTrans(Godot.Tween.TransitionType.Cubic).SetEase(Godot.Tween.EaseType.Out);
             tween.Parallel().TweenProperty(card, "scale", Vector2.One, 0.48).SetTrans(Godot.Tween.TransitionType.Cubic).SetEase(Godot.Tween.EaseType.Out);
             tween.Parallel().TweenProperty(card, "rotation", 0f, 0.48);

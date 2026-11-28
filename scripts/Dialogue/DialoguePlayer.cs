@@ -29,10 +29,12 @@ public partial class DialoguePlayer : Control
 	private StorySpeakerFocus _speakerFocus;
 	private bool _closed;
 	private Tween _portraitTransition;
+	private DialogueTypingAudio _typingAudio;
 	public bool IsRevealing => _text.VisibleCharacters >= 0;
 
 	public void StopInteraction()
 	{
+		_typingAudio?.Stop();
 		if (_portraitTransition?.IsValid() == true) _portraitTransition.Kill();
 		if (IsPrologue) GetNode<PrologueCharacterMotion>("Characters").Stop();
 		_portraits?.ShowSpeech(null, lineComplete: true);
@@ -97,6 +99,7 @@ public partial class DialoguePlayer : Control
 		}
 		_speaker = GetNode<Label>("Panel/Content/Speaker");
 		_text = GetNode<RichTextLabel>("Panel/Content/Text");
+		_typingAudio = DialogueTypingAudio.Attach(this);
 		StoryDialogueLayout.StylePanel(GetNode<PanelContainer>("Panel"), _speaker);
 		_text.AddThemeColorOverride("default_color", StoryDialogueLayout.TextColor);
 		_text.AddThemeConstantOverride("line_separation", 5);
@@ -184,6 +187,8 @@ public partial class DialoguePlayer : Control
 		_characters = Math.Max(0, visibleUntil - _pageStart);
 		bool revealed = visibleUntil >= _pageEnd;
 		_text.VisibleCharacters = revealed ? -1 : (int)_characters;
+		_typingAudio.BeginPage(_text.GetParsedText(), !string.IsNullOrWhiteSpace(Session.Current?.Speaker),
+			revealed ? _text.GetTotalCharacterCount() : (int)_characters);
 		UpdateMouths();
 	}
 
@@ -193,7 +198,11 @@ public partial class DialoguePlayer : Control
 		_characters += delta * CharactersPerSecond;
 		_text.VisibleCharacters = (int)_characters;
 		if (_text.VisibleCharacters >= _text.GetTotalCharacterCount()) Reveal();
-		else UpdateMouths();
+		else
+		{
+			_typingAudio.Advance(_text.VisibleCharacters, delta);
+			UpdateMouths();
+		}
 	}
 
 	private void UpdateMouths()
@@ -207,6 +216,7 @@ public partial class DialoguePlayer : Control
 
 	private void Reveal()
 	{
+		_typingAudio.Stop();
 		_text.VisibleCharacters = -1;
 		UpdateMouths();
 		PageProgressed?.Invoke();
