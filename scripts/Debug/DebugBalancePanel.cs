@@ -82,7 +82,7 @@ public partial class DebugBalancePanel : CanvasLayer
 	public override void _Input(InputEvent input)
 	{
 		if (!OS.IsDebugBuild() || input is not InputEventKey { Pressed: true, Echo: false } key) return;
-		if (key.Keycode == Key.F10 && !key.CtrlPressed && !key.AltPressed && !key.ShiftPressed && !key.MetaPressed)
+		if (DebugHotkeysController.PlayerShortcutsEnabled && key.Keycode == Key.F10 && !key.CtrlPressed && !key.AltPressed && !key.ShiftPressed && !key.MetaPressed)
 		{
 			if (IsOpen) Close(); else Open();
 			GetViewport().SetInputAsHandled();

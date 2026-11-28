@@ -10,7 +10,6 @@ public sealed class DayCardPurchaseTests
     [TestCase(DayUpgrade.MusicPrice)]
     [TestCase(DayUpgrade.Materials)]
     [TestCase(DayUpgrade.Patient)]
-    [TestCase(DayUpgrade.Bargaining)]
     [TestCase(DayUpgrade.QualityMark)]
     [TestCase(DayUpgrade.Loyal)]
     [TestCase(DayUpgrade.QuickService)]

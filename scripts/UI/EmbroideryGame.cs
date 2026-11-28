@@ -103,9 +103,8 @@ public partial class EmbroideryGame : CanvasLayer
 		_preparedItemClaimed = false;
 		_qualityRecorded = false;
 		string kind = TradeScene.GetItemKind(index);
-		double duration = _game.Crafting.Duration(IsPolishing ? "music" : "atelier");
-		if (IsPolishing) Polishing = _polishingSurface.Begin(kind, duration);
-		else Session = new EmbroiderySession(kind, duration);
+		if (IsPolishing) Polishing = _polishingSurface.Begin(kind);
+		else Session = new EmbroiderySession(kind);
 		_ownsPause = true;
 		GetTree().Paused = true;
 		_surface.Show();
@@ -332,14 +331,14 @@ public partial class EmbroideryGame : CanvasLayer
 		_title.Text = GameLocalization.Text(
 			ready || playing
 				? (IsPolishing ? "Полировка" : "Вышивка")
-				: ActiveSession.Complete ? "Готово" : "Время вышло");
+				: "Готово");
 		if ((ready || playing) && PreparedItemIndex.HasValue)
 			_title.Text += ": " + TradeScene.GetItemName(PreparedItemIndex.Value);
 
 		_statValues[0].Text = _game.BuyerClockText;
 
 		_statValues[1].Text = IsPolishing
-			? $"{Math.Round(Polishing.Progress * 100)}%"
+			? $"{Polishing.Quality}%"
 			: $"{Session.Stitches} / {Session.Points.Count}";
 
 		_statValues[2].Text = ActiveSession.Misses.ToString();
@@ -358,7 +357,7 @@ public partial class EmbroideryGame : CanvasLayer
         if (modifier == 0) _hint.RemoveThemeColorOverride("font_color");
         else _hint.AddThemeColorOverride("font_color", new Color(modifier > 0 ? "268d48" : "c32938"));
 
-		_quality.Text = $"{ActiveSession.Quality}%";
+		if (!IsPolishing) _quality.Text = $"{ActiveSession.Quality}%";
 		_action.Text = GameLocalization.Text(ready ? "Начать" : "Забрать");
 		_action.Visible = !playing || CanCollectEarly;
 		_cancel.Visible = ready;

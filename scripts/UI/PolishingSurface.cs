@@ -63,12 +63,13 @@ void fragment() {
 			_clothTexture = GD.Load<Texture2D>(ClothPath);
 	}
 
-	public PolishingSession Begin(string kind, double duration = 10)
+	public PolishingSession Begin(string kind)
 	{
 		EndPointer();
 		InstrumentKind = kind;
 
 		Texture2D mask;
+		Rect2I artBounds;
 
 		if (!System.Linq.Enumerable.Contains(InstrumentKinds, kind))
 			throw new ArgumentOutOfRangeException(nameof(kind));
@@ -97,12 +98,8 @@ void fragment() {
 
 			fitted.Fill(Colors.Transparent);
 
-			fitted.BlendRect(
-				source,
-				new Rect2I(0, 0, width, height),
-				new Vector2I(
-					(600 - width) / 2,
-					(480 - height) / 2));
+			artBounds = new Rect2I((600 - width) / 2, (480 - height) / 2, width, height);
+			fitted.BlendRect(source, new Rect2I(Vector2I.Zero, artBounds.Size), artBounds.Position);
 
 			_instrument = ImageTexture.CreateFromImage(fitted);
 			mask = _instrument;
@@ -116,9 +113,11 @@ void fragment() {
 		for (int i = 0; i < alpha.Length; i++)
 			alpha[i] = rgba[i * 4 + 3];
 
-		Session = new PolishingSession(alpha, duration: duration,
+		byte[] missSafeMask = kind == "violin" ? AddViolinBow(alpha, artBounds) : null;
+		Session = new PolishingSession(alpha,
 			radiusCorrection: DebugBalanceSettings.Number($"polish.{kind}.radius"),
-			strengthCorrection: DebugBalanceSettings.Number($"polish.{kind}.strength") / PolishingSession.CleaningEfficiencyScale);
+			strengthCorrection: DebugBalanceSettings.Number($"polish.{kind}.strength") / PolishingSession.CleaningEfficiencyScale,
+			missSafeMask: missSafeMask);
 		_coatingImage = Image.CreateEmpty(
 			Session.Columns, Session.Rows,
 			false, Image.Format.Rgba8);
@@ -146,6 +145,37 @@ void fragment() {
 		UpdateCoating();
 
 		return Session;
+	}
+
+	private static byte[] AddViolinBow(byte[] alpha, Rect2I art)
+	{
+		var missSafeMask = new byte[alpha.Length];
+		int top = art.Position.Y + Mathf.RoundToInt(art.Size.Y * 0.16f);
+		int bottom = art.Position.Y + Mathf.RoundToInt(art.Size.Y * 0.87f);
+		for (int y = top; y < bottom; y++)
+		{
+			int row = y * 600;
+			float artY = (y - art.Position.Y) / (float)art.Size.Y;
+			// The bow is the narrow slanted drawing at the right edge of violin.png.
+			int split = art.Position.X + Mathf.RoundToInt(art.Size.X * (0.69f + 0.205f * artY));
+			int left = split;
+			while (left < art.End.X && alpha[row + left] < 24) left++;
+			if (left == art.End.X) continue;
+			int right = art.End.X - 1;
+			while (right > left && alpha[row + right] < 24) right--;
+
+			int body = split - 1;
+			while (body >= art.Position.X && alpha[row + body] <= 128) body--;
+			if (body >= art.Position.X)
+				Array.Fill(missSafeMask, (byte)1, row + body, left - body);
+
+			// Make the thin artwork wide enough to register on the coating grid.
+			int padding = Math.Max(0, (PolishingSession.CellSize - (right - left)) / 2);
+			int bowLeft = Math.Max(art.Position.X, left - padding);
+			int bowRight = Math.Min(art.End.X - 1, right + padding);
+			Array.Fill(alpha, (byte)255, row + bowLeft, bowRight - bowLeft + 1);
+		}
+		return missSafeMask;
 	}
 
 	public Vector2 LogicalToScreen(Vector2 point)

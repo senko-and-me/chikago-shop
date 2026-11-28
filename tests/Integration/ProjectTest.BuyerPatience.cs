@@ -59,8 +59,8 @@ public partial class ProjectTest
             game.AcceptTrade();
             Check(game.Score == expected, "Repeated accept must not pay twice");
             game._Process(0);
-            Check(game.BuyerWaitRemaining == game.BuyerWaitInitial && game.BuyerWaitInitial is >= 15 and <= 20 && !game.TradeActive, "The next customer must reset their patience within the shared range");
-            game.OnShowcasePressed(game.FirstDisplayedItem("atelier"));
+            Check(game.BuyerWaitRemaining == game.BuyerWaitInitial && game.BuyerWaitInitial is >= 15 and <= 20, "The next customer must reset their patience within the shared range");
+            if (!game.TradeActive) game.OnShowcasePressed(game.FirstDisplayedItem("atelier"));
             game._Process(0);
             Check(game.TradeActive && game.Percentage >= -30 && !game.GetNode<Button>(buttons + "DeclineButton").Disabled,
                 "The next buyer must use a normal offer and available rerolls");
@@ -93,11 +93,11 @@ public partial class ProjectTest
             Check(game.Score == balance + latePayout, "Loyal expiry must retain the D deduction in the real payout");
 
             int bargain = (int)DayUpgrade.Bargaining;
-            await Reload($$"""{"save_version":20,"day_started":true,"score":500,"trade_active":true,"item_index":0,"customer_index":0,"percentage":24,"rerolls_remaining":1,"buyer_wait_remaining":17,"buyer_wait_initial":20,"selected_upgrade":{{bargain}}}""");
-            int floor = game.DayUpgrades.Rules.For(DayUpgrade.Bargaining).Amount;
+            await Reload($$"""{"save_version":20,"day_started":true,"score":500,"trade_active":true,"item_index":0,"customer_index":0,"percentage":30,"rerolls_remaining":1,"buyer_wait_remaining":17,"buyer_wait_initial":20,"selected_upgrade":{{bargain}}}""");
+            Check(game.DayUpgrades.Selected == DayUpgrade.None, "A saved bargaining card must load as no active upgrade");
             game.RerollCustomer();
-            Check(game.RerollsRemaining == 0 && game.Percentage >= System.Math.Max(24, floor) && game.BuyerWaitRemaining == 17,
-                "A guaranteed last reroll must preserve patience and any offer above its floor");
+            Check(game.RerollsRemaining == 0 && game.Percentage < 30 && game.BuyerWaitRemaining == 17,
+                "The third reroll must follow the normal offer rules and preserve buyer patience");
 
             int patient = (int)DayUpgrade.Patient;
             await Reload($$"""{"save_version":20,"day_started":true,"score":500,"selected_upgrade":{{patient}}}""");

@@ -14,7 +14,6 @@ public sealed class PolishingSession : ICraftSession
 {
     public const int CellSize = 7;
     public const double BrushRadius = 34;
-    private const int RankAQuality = 78;
     private const double ReferenceArea = 42000;
     private const double Step = 7;
     private const double MaximumSweep = 34;
@@ -23,6 +22,7 @@ public sealed class PolishingSession : ICraftSession
     public const double CleaningEfficiencyScale = 1.25;
     public double CleaningStrength { get; }
     private readonly byte[] _mask;
+    private readonly byte[]? _missSafeMask;
     private readonly int _width, _height;
     private readonly PolishingCell[] _cells;
     private readonly int _insideCount;
@@ -40,23 +40,30 @@ public sealed class PolishingSession : ICraftSession
     public double Progress { get; private set; }
     public double DirtProgress { get; private set; }
     public bool Complete => Progress >= 0.85;
-    public int Quality => Math.Clamp((int)Math.Round(Math.Min(100, Progress / .85 * 96)
-        + RemainingSeconds / Duration * 4 - Misses * 4.5), 0, _finishedEarly ? RankAQuality - 1 : 100);
-    public string Rank => Quality >= 92 ? "S" : Quality >= RankAQuality ? "A" : Quality >= 63 ? "B" : Quality >= 42 ? "C" : "D";
+    private double CoatingQuality => double.IsFinite(Duration)
+        ? Math.Min(100, Progress / .85 * 96) + RemainingSeconds / Duration * 4
+        : Math.Min(100, Progress / .85 * 100);
+    public int Quality => Math.Clamp((int)Math.Round(CoatingQuality - Misses * 4.5),
+        0, _finishedEarly ? CraftQualityRank.MaxEarlyQuality : 100);
+    public string Rank => CraftQualityRank.FromQuality(Quality);
 
-    public PolishingSession(byte[] alphaMask, int width = 600, int height = 480, double duration = 10,
-        double radiusCorrection = 1, double strengthCorrection = 1)
+    public PolishingSession(byte[] alphaMask, int width = 600, int height = 480, double? duration = null,
+        double radiusCorrection = 1, double strengthCorrection = 1, byte[]? missSafeMask = null)
     {
-        if (!double.IsFinite(duration) || duration <= 0) throw new ArgumentOutOfRangeException(nameof(duration));
+        if (duration is double limit && (!double.IsFinite(limit) || limit <= 0))
+            throw new ArgumentOutOfRangeException(nameof(duration));
         if (!double.IsFinite(radiusCorrection) || radiusCorrection <= 0)
             throw new ArgumentOutOfRangeException(nameof(radiusCorrection));
         if (!double.IsFinite(strengthCorrection) || strengthCorrection <= 0)
             throw new ArgumentOutOfRangeException(nameof(strengthCorrection));
-        Duration = RemainingSeconds = duration;
+        Duration = RemainingSeconds = duration ?? double.PositiveInfinity;
         if (width <= 0 || height <= 0 || alphaMask.Length != checked(width * height))
             throw new ArgumentException("Mask dimensions must match its pixel data.");
         _width = width; _height = height;
         _mask = (byte[])alphaMask.Clone();
+        if (missSafeMask != null && missSafeMask.Length != alphaMask.Length)
+            throw new ArgumentException("The miss-safe mask must match the silhouette dimensions.", nameof(missSafeMask));
+        _missSafeMask = missSafeMask == null ? null : (byte[])missSafeMask.Clone();
         MaskArea = _mask.Count(alpha => alpha > 128);
         // The mask is already fitted to the playfield. Let both the reach and the real
         // removal rate absorb part of the area difference.
@@ -83,7 +90,12 @@ public sealed class PolishingSession : ICraftSession
     {
         if (State != EmbroideryState.Playing) return;
         _finishedEarly = true;
-        Tick(RemainingSeconds);
+        if (double.IsFinite(Duration)) Tick(RemainingSeconds);
+        else
+        {
+            State = EmbroideryState.Finished;
+            EndRub();
+        }
     }
 
     public void FinishForTesting(bool successful)
@@ -97,7 +109,7 @@ public sealed class PolishingSession : ICraftSession
         }
         Progress = DirtProgress = successful ? 1 : 0;
         Misses = 0;
-        RemainingSeconds = successful ? Duration : 0;
+        if (double.IsFinite(Duration)) RemainingSeconds = successful ? Duration : 0;
         State = EmbroideryState.Finished;
     }
     public void Tick(double delta)
@@ -114,6 +126,8 @@ public sealed class PolishingSession : ICraftSession
     private bool Near(double x, double y)
     {
         if (Inside(x,y)) return true;
+        if (_missSafeMask != null && x >= 0 && y >= 0 && x < _width && y < _height &&
+            _missSafeMask[(int)y * _width + (int)x] != 0) return true;
         for(int dy=-47;dy<=47;dy+=5)
         for(int dx=-47;dx<=47;dx+=5)
             if(dx*dx+dy*dy<=47*47 && Inside(x+dx,y+dy)) return true;

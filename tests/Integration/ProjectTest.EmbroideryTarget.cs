@@ -149,7 +149,7 @@ public partial class ProjectTest
                 craft.Activate();
                 MoveButtonPointer(surface.ScreenPoint(0));
                 Check(needle.Visible, "The needle must be visible before ending the active session");
-                if (timeout) craft._Process(craft.Session.RemainingSeconds);
+                if (timeout) craft.FinishForTesting(false);
                 else craft.Activate();
                 Check(!needle.Visible && Input.MouseMode == ordinaryCursor && craft.IsOpen == timeout,
                     "Timeout or early collection must restore the ordinary cursor");

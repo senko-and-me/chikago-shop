@@ -185,15 +185,11 @@ public partial class PulloutNotebook : Control
         _slide.TweenProperty(_notes, "modulate:a", expand ? 1f : 0f, SlideSeconds);
     }
 
-    private void RefreshNotes()
+    internal void RefreshNotes()
     {
         if (!_game.IsNodeReady() || _game.DayUpgrades == null)
             return;
 
-        var config = EconomyConfigProvider.Load();
-        int deadline = _game.QuotaStage == 0
-            ? config.Quotas.Single(entry => entry.Id == "first").DeadlineDay
-            : config.Days.TotalDays;
         int quota = _game.QuotaStage == 0 ? _game.FirstQuota : _game.SecondQuota;
         DayUpgrade selected = _game.DayUpgrades.Selected;
         bool english = GameLocalization.Language == "en";
@@ -206,7 +202,8 @@ public partial class PulloutNotebook : Control
                 : DayTransitionCard.Describe(selected, terms)];
         }
         string activeBuff = FormatBuffDetails(effects, english ? "None" : "Нет");
-        string signature = $"{english}|{quota}|{deadline}|{_game.Completed}|{_game.Failed}|{activeBuff}";
+        string countdown = _game.QuotaCountdownText;
+        string signature = $"{english}|{quota}|{countdown}|{_game.Completed}|{_game.Failed}|{activeBuff}";
         if (signature == _lastSignature)
             return;
         _lastSignature = signature;
@@ -220,8 +217,8 @@ public partial class PulloutNotebook : Control
             _questDetails.Text = english ? "Quota overdue" : "Квота просрочена";
         else
             _questDetails.Text = english
-                ? $"Pay mafia: ${quota}\nBy the end of day {deadline}"
-                : $"Выплатить мафии: {quota}$\nДо конца {deadline}-го дня";
+                ? $"Pay mafia: ${quota}\n{countdown}"
+                : $"Выплатить мафии: {quota}$\n{countdown}";
 
         _buffsTitle.Text = english ? "DAY BUFFS" : "БАФФЫ ДНЯ";
         _buffDetails.Text = activeBuff;

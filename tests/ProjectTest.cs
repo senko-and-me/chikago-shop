@@ -19,7 +19,7 @@ public partial class ProjectTest : SceneTree
             if (OS.GetCmdlineUserArgs().Contains("--notebook-buffs-checks"))
             {
                 await TestNotebookBuffs();
-                GD.Print("NOTEBOOK_BUFFS_PASS: nine cards RU/EN, actual amounts, cash receipt, real purchase, reset and no duplicate reward");
+                GD.Print("NOTEBOOK_BUFFS_PASS: eight cards RU/EN, actual amounts, cash receipt, real purchase, reset and no duplicate reward");
                 Quit();
                 return;
             }

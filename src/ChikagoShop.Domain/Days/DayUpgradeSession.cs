@@ -1,6 +1,6 @@
 namespace ChikagoShop.Domain.Days;
 
-// Serialized enum values must remain stable; Energy and Time are retired, not renumbered.
+// Keep retired upgrades in the serialized enum so older saves keep their original IDs.
 public enum DayUpgrade { None, Cash, Energy, Time, Atelier, Music, AtelierPrice, MusicPrice, Materials, Patient, Bargaining, QualityMark, Loyal, QuickService }
 
 // Every purchased upgrade is effective only during the upcoming day.
@@ -29,8 +29,6 @@ public sealed class DayUpgradeSession
         ? Math.Max(0, baseline - Rules.For(Selected).Amount) : baseline;
 
     public int WaitExtension => Selected == DayUpgrade.Patient ? Rules.For(Selected).Amount : 0;
-    public int MinimumFinalOffer(int percentage) => Math.Max(percentage, Rules.For(DayUpgrade.Bargaining).Amount);
-    public bool GuaranteesReroll(int remaining) => Selected == DayUpgrade.Bargaining && remaining == 1;
     public int ExpiredOffer(int percentage) => Selected == DayUpgrade.Loyal
         ? Math.Min(percentage, -Rules.For(Selected).Amount) : -50;
 

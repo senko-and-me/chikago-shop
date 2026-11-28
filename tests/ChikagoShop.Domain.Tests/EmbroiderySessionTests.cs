@@ -77,7 +77,7 @@ public sealed class EmbroiderySessionTests
     [TestCase(0)] [TestCase(1)] [TestCase(2)] [TestCase(3)]
     public void OnlyOrderedHitsCompletePatternAndFinishIsTerminal(int pattern)
     {
-        var session = new EmbroiderySession(pattern);
+        var session = new EmbroiderySession(pattern, duration: 10);
         Assert.That(session.Hit(150, 180), Is.False);
         session.Start();
         session.Tick(1);
@@ -96,7 +96,7 @@ public sealed class EmbroiderySessionTests
     [Test]
     public void TimeoutPenalizesMissingStitchesAndIgnoresInvalidInput()
     {
-        var session = new EmbroiderySession();
+        var session = new EmbroiderySession(duration: 10);
         session.Tick(5);
         Assert.That(session.RemainingSeconds, Is.EqualTo(10));
         session.Start();
@@ -109,6 +109,19 @@ public sealed class EmbroiderySessionTests
         Assert.That(session.Quality, Is.EqualTo(19));
         Assert.That(session.Rank, Is.EqualTo("D"));
         Assert.That(session.Hit(150,180), Is.False);
+    }
+
+    [Test]
+    public void DefaultEmbroideryRemainsPlayableAfterTheOldLimit()
+    {
+        var session = new EmbroiderySession("hat");
+        session.Start();
+        session.Tick(60);
+        Assert.That(session.State, Is.EqualTo(EmbroideryState.Playing));
+        Assert.That(session.Quality, Is.EqualTo(100));
+        foreach (var point in session.Points) session.Hit(point.X, point.Y);
+        Assert.That(session.Complete, Is.True);
+        Assert.That(session.Rank, Is.EqualTo("S"));
     }
 
     [Test]

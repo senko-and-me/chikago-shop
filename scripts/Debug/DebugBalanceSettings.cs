@@ -43,7 +43,6 @@ public static class DebugBalanceSettings
         DayUpgrade.AtelierPrice => "Мастерство портного",
         DayUpgrade.MusicPrice => "Мастерство музыканта",
         DayUpgrade.Patient => "Терпеливые клиенты",
-        DayUpgrade.Bargaining => "Искусство торга",
         DayUpgrade.QualityMark => "Знак качества",
         DayUpgrade.Loyal => "Лояльные покупатели",
         DayUpgrade.QuickService => "Быстрое обслуживание",
@@ -60,7 +59,7 @@ public static class DebugBalanceSettings
             bool retired = RemoveRetiredOverrides(profile);
             // One-time migration of the old shipped first-quota defaults in existing F10 profiles.
             // Later explicit changes (even back to 250 or 500) remain fully editable.
-            bool migrated = retired | MigrateFirstQuotaBaseline(profile) | MigrateEconomyBaseline(profile) | MigratePolishingStrength(profile);
+            bool migrated = retired | MigrateFirstQuotaBaseline(profile) | MigrateEconomyBaseline(profile) | MigratePolishingStrength(profile) | CapDayCardCosts(profile);
             Validate(profile);
             if (migrated && OS.IsDebugBuild() && Godot.FileAccess.FileExists(StoragePath))
             {
@@ -95,6 +94,7 @@ public static class DebugBalanceSettings
         {
             if (!OS.IsDebugBuild()) throw new InvalidOperationException("Панель доступна только в debug-сборке.");
             RemoveRetiredOverrides(profile);
+            CapDayCardCosts(profile);
             // This is an explicit edit, so do not migrate this first-quota choice later.
             profile.FirstQuotaBaselineRevision = 1;
             profile.EconomyBaselineRevision = 2;
@@ -142,7 +142,7 @@ public static class DebugBalanceSettings
             {
                 [DayUpgrade.Cash] = new(0, 15), [DayUpgrade.Materials] = new(13, 7),
                 [DayUpgrade.AtelierPrice] = new(20, 10), [DayUpgrade.MusicPrice] = new(20, 10),
-                [DayUpgrade.Patient] = new(11, 3), [DayUpgrade.Bargaining] = new(2, 30),
+                [DayUpgrade.Patient] = new(11, 3),
                 [DayUpgrade.QualityMark] = new(8, 8), [DayUpgrade.Loyal] = new(12, 20),
                 [DayUpgrade.QuickService] = new(5, 7)
             };
@@ -182,6 +182,8 @@ public static class DebugBalanceSettings
         bool removedLegacy = false;
         profile.ItemRarities?.Clear();
         profile.Numbers?.Remove("card.Time.cost");
+        profile.Numbers?.Remove("card.Bargaining.cost");
+        profile.Numbers?.Remove("card.Bargaining.amount");
         if (profile.Numbers?.GetValueOrDefault("card.Cash.cost") == 0) profile.Numbers.Remove("card.Cash.cost");
         profile.Numbers?.Remove("items.rerolls");
         profile.Numbers?.Remove("card.Time.weight");
@@ -195,6 +197,8 @@ public static class DebugBalanceSettings
         profile.Numbers?.Remove("card.Music.cost");
         profile.Numbers?.Remove("card.Music.weight");
         profile.Numbers?.Remove("craft.count");
+        profile.Numbers?.Remove("craft.atelier.seconds");
+        profile.Numbers?.Remove("craft.music.seconds");
         profile.Numbers?.Remove("hand.rarity");
         foreach (var key in profile.Numbers?.Keys.ToArray() ?? [])
         {
@@ -214,6 +218,20 @@ public static class DebugBalanceSettings
         }
         return removedLegacy || oldCount != (profile.Numbers?.Count ?? 0) + (profile.ItemRarities?.Count ?? 0);
     }
+    private static bool CapDayCardCosts(BalanceProfile profile)
+    {
+        if (profile.Numbers == null) return false;
+        bool changed = false;
+        foreach (DayUpgrade card in Cards)
+        {
+            string key = $"card.{card}.cost";
+            if (!profile.Numbers.TryGetValue(key, out double cost) || cost <= DayUpgradeRules.MaximumCost) continue;
+            profile.Numbers[key] = DayUpgradeRules.MaximumCost;
+            changed = true;
+        }
+        return changed;
+    }
+
     private static void Publish(BalanceProfile profile)
     {
         _profile = profile.Clone();
@@ -282,8 +300,6 @@ public static class DebugBalanceSettings
             new("hand.offer", "Партия", "Невидимая рука: предел предложения (п.п.)", 3, 0, 3),
             new("buyer.wait.min", "Партия", "Минимум ожидания покупателя (сек.)", config.BuyerWaitMinSeconds, 1, 600),
             new("buyer.wait.max", "Партия", "Максимум ожидания покупателя (сек.)", config.BuyerWaitMaxSeconds, 1, 600),
-            new("craft.atelier.seconds", "Создание", "Время вышивки (сек.)", 10, 1, 600),
-            new("craft.music.seconds", "Создание", "Время полировки (сек.)", 10, 1, 600),
             new("cards.seed", "Карты", "Seed выбора карт (повторяемый результат)", 1, 0, 1000000)
         };
         foreach (var quota in config.Quotas)
@@ -297,9 +313,9 @@ public static class DebugBalanceSettings
         foreach (var card in Cards)
         {
             var terms = config.Cards[card];
-            fields.Add(new($"card.{card}.cost", "Карты", CardName(card) + ": цена ($)", terms.Cost, 1, 1000000));
+            fields.Add(new($"card.{card}.cost", "Карты", CardName(card) + ": цена ($)", terms.Cost, 1, DayUpgradeRules.MaximumCost));
             fields.Add(new($"card.{card}.amount", "Карты", CardName(card) + ": величина эффекта", terms.Amount, 0,
-                    card == DayUpgrade.Patient ? 600 : card == DayUpgrade.Loyal ? 50 : card == DayUpgrade.Bargaining ? 30 : 1000000));
+                    card == DayUpgrade.Patient ? 600 : card == DayUpgrade.Loyal ? 50 : 1000000));
         }
         foreach (var item in WorkshopItemCatalog.BaselineItems.Where(item => item.WorkshopId == "music"))
         {

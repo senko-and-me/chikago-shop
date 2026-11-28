@@ -16,10 +16,10 @@ public static class EconomyConfigValidator
         if (config.CraftCost < 1 || config.CraftCost > 1000000)
             throw new EconomyConfigException("The shared crafting cost is out of range.");
         if (config.Cards == null || !config.Cards.Keys.ToHashSet().SetEquals(Days.DayUpgradeRules.Available) ||
-            config.Cards.Values.Any(card => card == null || card.Cost is < 1 or > 1000000 ||
+            config.Cards.Values.Any(card => card == null || card.Cost is < 1 or > Days.DayUpgradeRules.MaximumCost ||
                 card.Amount is < 0 or > 1000000) ||
             config.Cards[Days.DayUpgrade.Cash].Amount <= config.Cards[Days.DayUpgrade.Cash].Cost ||
-            config.Cards[Days.DayUpgrade.Patient].Amount > 600 || config.Cards[Days.DayUpgrade.Loyal].Amount > 50 || config.Cards[Days.DayUpgrade.Bargaining].Amount > 30)
+            config.Cards[Days.DayUpgrade.Patient].Amount > 600 || config.Cards[Days.DayUpgrade.Loyal].Amount > 50)
             throw new EconomyConfigException("Invalid day card settings.");
         if (config.BuyerWaitMinSeconds < 1 || config.BuyerWaitMinSeconds > config.BuyerWaitMaxSeconds || config.BuyerWaitMaxSeconds > 600)
             throw new EconomyConfigException("Buyer wait must be an ordered range from 1 to 600 seconds.");

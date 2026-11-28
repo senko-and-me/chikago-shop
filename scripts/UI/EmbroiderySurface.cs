@@ -45,20 +45,9 @@ public partial class EmbroiderySurface : Control
 
     private Vector2 _missPoint;
     private ulong _missAt;
-    private static readonly int[] EmbroideryRankThresholds = [0, 40, 60, 75, 90, 100];
-    private static readonly int[] PolishingRankThresholds = [0, 42, 63, 78, 92, 100];
-
-    // The artwork has five equally spaced grade bands, unlike the quality thresholds.
-    // Map each actual grade interval onto its painted band without changing the score.
-    internal static float QualityToRankFill(int quality, bool polishing)
-    {
-        int[] thresholds = polishing ? PolishingRankThresholds : EmbroideryRankThresholds;
-        quality = Mathf.Clamp(quality, 0, 100);
-        for (int tier = 0; tier < 5; tier++)
-            if (quality < thresholds[tier + 1] || tier == 4)
-                return (tier + (quality - thresholds[tier]) / (float)(thresholds[tier + 1] - thresholds[tier])) / 5f;
-        return 1;
-    }
+    // Only the painted interior fills. The end caps and letters stay visible at every score.
+    private static readonly Rect2 RankFillArtwork = new(200, 100, 190, 1800);
+    private static readonly int[] PaintedRankDividers = [0, 427, 799, 1201, 1575, 2000];
 
     public EmbroideryGame Game { get; set; } = null!;
 
@@ -81,6 +70,33 @@ public partial class EmbroiderySurface : Control
     public Rect2 QualityTrackRect => new(
         new Vector2(PanelRect.End.X - SidePadding - QualityTrackWidth, FabricRect.Position.Y + 28),
         new Vector2(QualityTrackWidth, FabricRect.Size.Y - 66));
+
+    internal Rect2 MeterTrackRect => new(
+        QualityTrackRect.Position + QualityTrackRect.Size * RankFillArtwork.Position / new Vector2(400, 2000),
+        QualityTrackRect.Size * RankFillArtwork.Size / new Vector2(400, 2000));
+
+    internal float MeterFill => Game.ActiveSession.Quality / 100f;
+
+    private static Rect2 BottomPortion(Rect2 rect, float fraction) => new(
+        rect.Position.X, rect.End.Y - rect.Size.Y * fraction, rect.Size.X, rect.Size.Y * fraction);
+
+    private void DrawQualityBands(Rect2 track)
+    {
+        Rect2 fillTrack = MeterTrackRect;
+        // Keep the hand-drawn letters and linework, snapping each divider to its score.
+        for (int band = 0; band < PaintedRankDividers.Length - 1; band++)
+        {
+            float top = band == 0 ? track.Position.Y :
+                fillTrack.Position.Y + fillTrack.Size.Y * band * CraftQualityRank.BandSize / 100f;
+            int nextBand = band + 1;
+            float bottom = nextBand == PaintedRankDividers.Length - 1 ? track.End.Y :
+                fillTrack.Position.Y + fillTrack.Size.Y * nextBand * CraftQualityRank.BandSize / 100f;
+            var bandRect = new Rect2(track.Position.X, top, track.Size.X, bottom - top);
+            var bandArt = new Rect2(0, PaintedRankDividers[band], _rankEmpty.GetWidth(),
+                PaintedRankDividers[nextBand] - PaintedRankDividers[band]);
+            DrawTextureRectRegion(_rankEmpty, bandRect, bandArt);
+        }
+    }
 
     public Vector2 ScreenPoint(int index)
     {
@@ -218,42 +234,18 @@ public partial class EmbroiderySurface : Control
             }
         }
 
-        var sessionQuality = Game.ActiveSession;
         Rect2 track = QualityTrackRect;
-        float fill = QualityToRankFill(sessionQuality.Quality, Game.IsPolishing);
-
+        float fill = MeterFill;
         if (_rankEmpty != null && _rankFilled != null)
         {
-            DrawTextureRect(_rankEmpty, track, false);
-
+            DrawQualityBands(track);
             if (fill > 0f)
-            {
-                Rect2 target = new Rect2(
-                    track.Position.X,
-                    track.End.Y - track.Size.Y * fill,
-                    track.Size.X,
-                    track.Size.Y * fill);
-
-                Rect2 source = new Rect2(
-                    0,
-                    _rankFilled.GetHeight() * (1f - fill),
-                    _rankFilled.GetWidth(),
-                    _rankFilled.GetHeight() * fill);
-
-                DrawTextureRectRegion(
-                    _rankFilled, target, source);
-            }
+                DrawTextureRectRegion(_rankFilled, BottomPortion(MeterTrackRect, fill), BottomPortion(RankFillArtwork, fill));
         }
         else
         {
             DrawRect(track, Colors.White);
-            DrawRect(
-                new Rect2(
-                    track.Position.X,
-                    track.End.Y - track.Size.Y * fill,
-                    track.Size.X,
-                    track.Size.Y * fill),
-                Colors.Black);
+            if (fill > 0f) DrawRect(BottomPortion(track, fill), Colors.Black);
             DrawRect(track, Colors.Black, false, 2);
         }
 

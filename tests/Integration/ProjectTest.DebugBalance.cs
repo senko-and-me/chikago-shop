@@ -95,8 +95,8 @@ public partial class ProjectTest
             panel.Editor("workshop.music.cost").Text = (11).ToString(System.Globalization.CultureInfo.InvariantCulture);
             panel.Editor("workshop.music.unlock").Text = (20).ToString(System.Globalization.CultureInfo.InvariantCulture);
             panel.Editor("day.seconds").Text = (180).ToString(System.Globalization.CultureInfo.InvariantCulture);
-            panel.Editor("craft.atelier.seconds").Text = (25).ToString(System.Globalization.CultureInfo.InvariantCulture);
-            panel.Editor("craft.music.seconds").Text = (17).ToString(System.Globalization.CultureInfo.InvariantCulture);
+            Check(!DebugBalanceSettings.Fields.Any(field => field.Key is "craft.atelier.seconds" or "craft.music.seconds"),
+                "F10 must offer no retired minigame limits");
             panel.Editor(DebugBalanceSettings.BasePriceKey).Text = (123).ToString(System.Globalization.CultureInfo.InvariantCulture);
             panel.Editor("rarity.unique.rerolls").Text = (4).ToString(System.Globalization.CultureInfo.InvariantCulture);
             foreach (var rarity in EconomyConfigProvider.Baseline.Rarities)
@@ -136,7 +136,7 @@ public partial class ProjectTest
 
             game.GetItemFromAtelier();
             var craft = game.GetNode<EmbroideryGame>("EmbroideryGame");
-            Check(craft.Session.RemainingSeconds == 25, "Edited crafting duration must configure the next minigame");
+            Check(double.IsPositiveInfinity(craft.Session.RemainingSeconds), "Embroidery must be untimed");
             craft.Activate();
             Check(game.Score == cash - 7 && game.StoredItems.Length == 3 && game.StoredItems.All(index => index == 0),
                 "Actual crafting must pay the edited cost once and use edited count and rarity selection");
@@ -158,7 +158,7 @@ public partial class ProjectTest
             game.TryUnlockMusicWorkshop();
             game.GetItemFromMusicWorkshop();
             var polish = game.GetNode<EmbroideryGame>("PolishingGame");
-            Check(polish.ActiveSession.RemainingSeconds == 17, "Polishing has its own editable duration");
+            Check(double.IsPositiveInfinity(polish.ActiveSession.RemainingSeconds), "Polishing must be untimed");
             int beforeMusic = game.Score;
             polish.Activate(); polish.FinishForTesting(true); polish.Activate();
             Check(game.Score == beforeMusic - 11 && game.StoredItems.Count(index => index == 2) == 3,

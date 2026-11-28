@@ -30,6 +30,16 @@ public partial class GameLocalization : Node
     public static string Format(string source, params object[] arguments) =>
         string.Format(CultureInfo.InvariantCulture, Text(source), arguments);
 
+    public static string QuotaCountdown(int currentDay, int deadline)
+    {
+        int days = deadline - currentDay;
+        if (days == 0) return Text("День квоты сегодня");
+        if (days < 0) return Text("Квота просрочена");
+        string key = days % 10 == 1 && days % 100 != 11 ? "До квоты: {0} день" :
+            days % 10 is >= 2 and <= 4 && days % 100 is not (>= 12 and <= 14) ? "До квоты: {0} дня" : "До квоты: {0} дней";
+        return Format(key, days);
+    }
+
     public static string Status(string source)
     {
         var match = MissingQuota.Match(source ?? "");

@@ -5,7 +5,6 @@ public enum EmbroideryState { Ready, Playing, Finished }
 // Coordinates use the reference canvas (840 x 480), independent of display size.
 public sealed class EmbroiderySession : ICraftSession
 {
-    private const int RankAQuality = 75;
     private bool _finishedEarly;
     private static readonly (double X, double Y)[][] Patterns =
     [
@@ -31,16 +30,17 @@ public sealed class EmbroiderySession : ICraftSession
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown embroidery item kind.")
     };
 
-    public EmbroiderySession(string kind, double duration = 10) : this(ItemPattern(kind), duration) { }
+    public EmbroiderySession(string kind, double? duration = null) : this(ItemPattern(kind), duration) { }
 
-    public EmbroiderySession(int pattern = 0, double duration = 10)
+    public EmbroiderySession(int pattern = 0, double? duration = null)
         : this(pattern >= 0 && pattern < Patterns.Length ? Patterns[pattern]
             : throw new ArgumentOutOfRangeException(nameof(pattern)), duration) { }
 
-    private EmbroiderySession((double X, double Y)[] points, double duration)
+    private EmbroiderySession((double X, double Y)[] points, double? duration)
     {
-        if (!double.IsFinite(duration) || duration <= 0) throw new ArgumentOutOfRangeException(nameof(duration));
-        Duration = RemainingSeconds = duration;
+        if (duration is double limit && (!double.IsFinite(limit) || limit <= 0))
+            throw new ArgumentOutOfRangeException(nameof(duration));
+        Duration = RemainingSeconds = duration ?? double.PositiveInfinity;
         Points = Array.AsReadOnly(points);
     }
 
@@ -51,10 +51,10 @@ public sealed class EmbroiderySession : ICraftSession
     public double Duration { get; }
     public double RemainingSeconds { get; private set; }
     public bool Complete => Stitches == Points.Count;
-    public int Quality => Math.Clamp((int)Math.Round(100 - Misses * 12 - (Duration - RemainingSeconds) / Duration * 11
+    public int Quality => Math.Clamp((int)Math.Round(100 - Misses * 12 - (double.IsFinite(Duration) ? (Duration - RemainingSeconds) / Duration * 11 : 0)
         - (State == EmbroideryState.Finished && !Complete ? (Points.Count - Stitches) * 7 : 0)), 0,
-        _finishedEarly ? RankAQuality - 1 : 100);
-    public string Rank => Quality >= 90 ? "S" : Quality >= RankAQuality ? "A" : Quality >= 60 ? "B" : Quality >= 40 ? "C" : "D";
+        _finishedEarly ? CraftQualityRank.MaxEarlyQuality : 100);
+    public string Rank => CraftQualityRank.FromQuality(Quality);
 
     public void Start()
     {
@@ -66,7 +66,7 @@ public sealed class EmbroiderySession : ICraftSession
         if (State != EmbroideryState.Playing) return;
         Stitches = successful ? Points.Count : 0;
         Misses = successful ? 0 : 10;
-        RemainingSeconds = successful ? Duration : 0;
+        if (double.IsFinite(Duration)) RemainingSeconds = successful ? Duration : 0;
         State = EmbroideryState.Finished;
     }
 
@@ -74,7 +74,8 @@ public sealed class EmbroiderySession : ICraftSession
     {
         if (State != EmbroideryState.Playing) return;
         _finishedEarly = true;
-        Tick(RemainingSeconds);
+        if (double.IsFinite(Duration)) Tick(RemainingSeconds);
+        else State = EmbroideryState.Finished;
     }
 
     public void Tick(double delta)

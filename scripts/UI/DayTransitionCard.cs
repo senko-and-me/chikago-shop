@@ -60,7 +60,6 @@ public partial class DayTransitionCard : CanvasLayer
         {
             DayUpgrade.Materials => GameLocalization.Format("−{0}$ / товар", terms.Amount),
             DayUpgrade.Patient => GameLocalization.Format("+{0} сек.", terms.Amount),
-            DayUpgrade.Bargaining => $"≥ +{terms.Amount}%",
             DayUpgrade.Loyal => $"−{terms.Amount}%",
             _ => GameLocalization.Format("+{0}$", terms.Amount)
         };
@@ -78,7 +77,6 @@ public partial class DayTransitionCard : CanvasLayer
         DayUpgrade.AtelierPrice => GameLocalization.Format("+{0}$ за каждую продажу одежды.", terms.Amount),
         DayUpgrade.MusicPrice => GameLocalization.Format("+{0}$ за каждую продажу инструмента.", terms.Amount),
         DayUpgrade.Patient => GameLocalization.Format("Новые покупатели ждут на {0} сек. дольше.", terms.Amount),
-        DayUpgrade.Bargaining => GameLocalization.Format("Последняя смена покупателя даёт не меньше +{0}%, пока есть время.", terms.Amount),
         DayUpgrade.QualityMark => GameLocalization.Format("+{0}$ за каждый товар качества B, A или S.", terms.Amount),
         DayUpgrade.Loyal => GameLocalization.Format("После таймера: −{0}% или прежнее предложение, если оно ниже.", terms.Amount),
         DayUpgrade.QuickService => GameLocalization.Format("+{0}$ за каждую продажу вовремя.", terms.Amount),

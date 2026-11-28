@@ -1,3 +1,4 @@
+using ChikagoShop.Domain.Crafting;
 using ChikagoShop.Domain.Economy;
 using NUnit.Framework;
 
@@ -15,6 +16,19 @@ public sealed class RunRewardRulesTests
     [TestCase(21, 5)]
     public void SpeedRewardUsesFiveBoundedBands(double seconds, int expected) =>
         Assert.That(RunRewardRules.SpeedBonus(seconds), Is.EqualTo(expected));
+
+    [TestCase(0, "D")]
+    [TestCase(19, "D")]
+    [TestCase(20, "C")]
+    [TestCase(39, "C")]
+    [TestCase(40, "B")]
+    [TestCase(59, "B")]
+    [TestCase(60, "A")]
+    [TestCase(79, "A")]
+    [TestCase(80, "S")]
+    [TestCase(100, "S")]
+    public void RankChangesAtThePaintedDivider(int quality, string expected) =>
+        Assert.That(CraftQualityRank.FromQuality(quality), Is.EqualTo(expected));
 
     [TestCase("S", 20)]
     [TestCase("A", 10)]

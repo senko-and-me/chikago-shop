@@ -808,18 +808,11 @@ public partial class TradeScene : Node2D
 		if (!CanRerollCurrentBuyer || !trainingReroll && _tutorial.BlocksSaleActions)
 			return;
 
-        bool guaranteed = DayUpgrades.GuaranteesReroll(RerollsRemaining);
 		RerollsRemaining--;
 		int basePrice = GetItemPrice(ItemIndex);
 		int previousOffer = OfferedPrice;
 		int[] pool = TradeOfferRules.RerollOptions(basePrice, previousOffer,
 			trainingReroll || _rng.Randf() < TradeOfferRules.HigherRerollChance);
-		if (guaranteed)
-        {
-            int minimum = DayUpgrades.MinimumFinalOffer(Percentage);
-            pool = Array.FindAll(pool, percent => percent >= minimum);
-            if (pool.Length == 0) pool = [minimum];
-        }
 		if (pool.Length == 0)
 			return;
 
@@ -890,6 +883,9 @@ public partial class TradeScene : Node2D
 			"Счёт: {0}$", Score);
 	}
 
+	internal string QuotaCountdownText => Failed ? GameLocalization.Text("Квота просрочена") :
+		GameLocalization.QuotaCountdown(CurrentDay, QuotaStage == 0 ? FirstDeadline : FinalDay);
+
 	private void RefreshProgress()
 	{
 		_dayLabel.Text = GameLocalization.Format(
@@ -908,20 +904,17 @@ public partial class TradeScene : Node2D
 				? FirstQuota
 				: SecondQuota;
 
-			int deadline = QuotaStage == 0
-				? FirstDeadline
-				: FinalDay;
-
 			_quotaLabel.Text = GameLocalization.Format(
 				"Квота {0} / 2: {1}$",
 				QuotaStage + 1, target);
 
-			_deadlineLabel.Text = GameLocalization.Format(
-				"Срок: конец дня {0}", deadline);
+			_deadlineLabel.Text = QuotaCountdownText;
 		}
 
 		_statusLabel.Text =
 			_dayCycle.DisplayStatus(StatusText);
+		GetNode<ProgressPanel>("HUD/Root/ProgressPanel").RefreshCaptions();
+		GetNode<PulloutNotebook>("HUD/Root/PulloutNotebook").RefreshNotes();
 
 		_dayCycle.UpdateEndButton(_endDayButton);
 	}

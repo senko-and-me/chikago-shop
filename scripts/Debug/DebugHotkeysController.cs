@@ -3,12 +3,14 @@ using Godot;
 
 public partial class DebugHotkeysController : Node
 {
+    internal static bool PlayerShortcutsEnabled => false;
+
     private TradeScene _game = null!;
     private DayCycleController _days = null!;
 
     public static void Attach(TradeScene game, DayCycleController days)
     {
-        if (!OS.IsDebugBuild()) return;
+        if (!PlayerShortcutsEnabled || !OS.IsDebugBuild()) return;
         game.AddChild(new DebugHotkeysController
         {
             Name = "DebugHotkeys", ProcessMode = ProcessModeEnum.Always,

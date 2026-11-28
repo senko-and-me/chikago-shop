@@ -99,15 +99,9 @@ public static class WeekBalanceSimulator
                     while (profile.Reroll && percent < 5 &&
                         BuyerPatienceRules.CanReroll(true, false, rerolls, buyerRemaining))
                     {
-                        bool guaranteed = upgrades.GuaranteesReroll(rerolls);
                         rerolls--;
                         var options = TradeOfferRules.RerollOptions(basePrice, TradeOfferRules.Price(basePrice, percent),
                             rng.NextDouble() < TradeOfferRules.HigherRerollChance);
-                        if (guaranteed)
-                        {
-                            int minimum = upgrades.MinimumFinalOffer(percent);
-                            options = options.Where(option => option >= minimum).DefaultIfEmpty(minimum).ToArray();
-                        }
                         if (options.Length == 0) break;
                         percent = options[rng.Next(options.Length)];
                         remaining -= 0.8; // The final active trade can finish after closing.

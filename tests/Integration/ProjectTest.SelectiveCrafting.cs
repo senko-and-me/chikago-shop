@@ -247,8 +247,6 @@ public partial class ProjectTest
                     game.GetStoredItemQualityRank(2) == (version == 18 ? "A" : "D") &&
                     !game.Crafting.IsCatalogOpen && !Mini("atelier").IsOpen && !Mini("music").IsOpen,
                     "Historical saves must retain canonical indices and existing grades without opening a craft");
-                if (version == 18) Check(game.Crafting.Duration("music") == 12,
-                    "A saved category upgrade must receive its new duration bonus");
                 game.PersistProgress();
                 await Reload();
                 Check(game.StoredItems.SequenceEqual(new[] { 0, 4, 9 }) &&
@@ -269,14 +267,6 @@ public partial class ProjectTest
             Check(game.StoredItems.SequenceEqual(new[] { 0, 0 }) && game.GetStoredItemQualityRank(0) == "S" &&
                 game.GetStoredItemQualityRank(1) == "D", "Loading identical copies must preserve their distinct qualities");
 
-            foreach (var sample in new[] { (DayUpgrade.Atelier, "atelier"), (DayUpgrade.Music, "music") })
-            {
-                Fresh(true);
-                game.DayUpgrades.Restore(false, sample.Item1, musicUnlocked: true);
-                Check(game.Crafting.Duration(sample.Item2) == 12 &&
-                    game.Crafting.Duration(sample.Item2 == "atelier" ? "music" : "atelier") == 10,
-                    "Restored legacy category identifiers must give only their room twenty percent more time");
-            }
             Fresh();
             game.Crafting.OpenCatalog("atelier");
             var catalogPause = game.GetNode<PauseMenu>("PauseMenu");

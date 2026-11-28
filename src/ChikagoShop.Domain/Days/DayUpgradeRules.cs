@@ -4,10 +4,12 @@ public sealed record CardTerms(int Cost, int Amount);
 
 public sealed class DayUpgradeRules
 {
+    public const int MaximumCost = 10;
+
     public static IReadOnlyList<DayUpgrade> Available { get; } = Array.AsReadOnly(new[]
     {
         DayUpgrade.Cash, DayUpgrade.Materials, DayUpgrade.AtelierPrice, DayUpgrade.MusicPrice,
-        DayUpgrade.Patient, DayUpgrade.Bargaining, DayUpgrade.QualityMark, DayUpgrade.Loyal, DayUpgrade.QuickService
+        DayUpgrade.Patient, DayUpgrade.QualityMark, DayUpgrade.Loyal, DayUpgrade.QuickService
     });
 
     public static Dictionary<DayUpgrade, CardTerms> DefaultTerms() => new()
@@ -17,7 +19,6 @@ public sealed class DayUpgradeRules
         [DayUpgrade.AtelierPrice] = new(6, 6),
         [DayUpgrade.MusicPrice] = new(6, 6),
         [DayUpgrade.Patient] = new(9, 2),
-        [DayUpgrade.Bargaining] = new(4, 30),
         [DayUpgrade.QualityMark] = new(6, 6),
         [DayUpgrade.Loyal] = new(5, 30),
         [DayUpgrade.QuickService] = new(4, 5),

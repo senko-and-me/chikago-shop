@@ -10,3 +10,6 @@ visible = true
 
 [node name="Title" parent="Surface/Panel" index="0"]
 text = "Полировка"
+
+[node name="Quality" parent="Surface/Panel" index="5"]
+visible = false

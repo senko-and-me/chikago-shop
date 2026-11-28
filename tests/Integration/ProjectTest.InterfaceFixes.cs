@@ -101,7 +101,7 @@ public partial class ProjectTest
                         game.GetNode<Label>($"HUD/Root/ProgressPanel/Visual/{key}/Caption").Text;
                     Check(Caption("Day") == (language == "ru" ? "День 1" : "Day 1") &&
                         Caption("Quota").StartsWith(language == "ru" ? "Следующая квота:" : "Next quota:") &&
-                        Caption("Deadline") == (language == "ru" ? "До квоты: 7 дней" : "Quota due in 7 days"),
+                        Caption("Deadline") == (language == "ru" ? "До квоты: 6 дней" : "Quota due in 6 days"),
                         "Cigarette captions must use valid Russian and English strings");
                 }
                 bool russianArtwork = viewport.X == 1280;

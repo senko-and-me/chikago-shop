@@ -222,17 +222,14 @@ public sealed class DayUpgradeSessionTests
         session.Restore(false, DayUpgrade.Patient);
         Assert.That(session.WaitExtension, Is.EqualTo(session.Rules.For(DayUpgrade.Patient).Amount));
         session.Restore(false, DayUpgrade.Bargaining);
-        Assert.That(session.GuaranteesReroll(3), Is.False);
-        Assert.That(session.GuaranteesReroll(1), Is.True);
-        Assert.That(session.MinimumFinalOffer(-30), Is.EqualTo(session.Rules.For(DayUpgrade.Bargaining).Amount));
-        Assert.That(session.MinimumFinalOffer(30), Is.EqualTo(30));
+        Assert.That(session.Selected, Is.EqualTo(DayUpgrade.None));
+        Assert.That(DayUpgradeRules.Available, Does.Not.Contain(DayUpgrade.Bargaining));
         session.Restore(false, DayUpgrade.Loyal);
         for (int offer = -30; offer <= 30; offer++)
             Assert.That(session.ExpiredOffer(offer), Is.EqualTo(Math.Min(offer, -session.Rules.For(DayUpgrade.Loyal).Amount)));
         session.Offer(4);
         Assert.That(session.ExpiredOffer(30), Is.EqualTo(-50));
         Assert.That(session.WaitExtension, Is.Zero);
-        Assert.That(session.GuaranteesReroll(1), Is.False);
         Assert.That(session.CraftPrice(20), Is.EqualTo(20));
     }
 }

@@ -96,15 +96,24 @@ public partial class ProjectTest
             await Reload();
             Fresh();
             Check(!game.GetNode<InventoryUI>("HUD/InventoryUI").IsVisibleInTree(), "The old inventory must not appear");
-            Check(DebugBalanceSettings.Cards.SequenceEqual(DayUpgradeRules.Available) && DebugBalanceSettings.Cards.Length == 9,
-                "F10 must expose all nine active cards");
+            Check(DebugBalanceSettings.Cards.SequenceEqual(DayUpgradeRules.Available) && DebugBalanceSettings.Cards.Length == 8,
+                "The balance data must list exactly the eight active cards");
             game.Crafting.OpenCatalog("music");
             Check(!game.Crafting.IsCatalogOpen, "A locked room must still reject its catalogue");
             var debug = Root.GetNode<DebugBalancePanel>("DebugBalance");
-            Root.PushInput(new InputEventKey { Keycode = Key.F10, Pressed = true }, true);
-            Root.PushInput(new InputEventKey { Keycode = Key.F10, Pressed = false }, true);
+            int beforeDebugCash = game.Score;
+            double beforeDebugTime = game.DayRemainingSeconds;
+            foreach (Key key in new[] { Key.F6, Key.F7, Key.F8, Key.F9, Key.F10 })
+            {
+                Root.PushInput(new InputEventKey { Keycode = key, Pressed = true }, true);
+                Root.PushInput(new InputEventKey { Keycode = key, Pressed = false }, true);
+            }
             await Frame();
-            Check(debug.IsOpen, "F10 must open the balance panel");
+            Check(!game.HasNode("DebugHotkeys") && !debug.IsOpen &&
+                game.Score == beforeDebugCash && game.DayRemainingSeconds == beforeDebugTime,
+                "Debug shortcuts must be disabled in the player flow");
+            debug.Open();
+            Check(debug.IsOpen, "The balance panel can be inspected directly by tests");
             var tabs = debug.GetNode<TabContainer>("Root/Inset/Panel/Content/Tabs");
             Check(!tabs.HasNode("Редкости"), "The retired rarity settings must not remain as an empty tab");
             for (int tab = 0; tab < tabs.GetTabCount(); tab++) { tabs.CurrentTab = tab; await Frame(); }
@@ -154,6 +163,9 @@ public partial class ProjectTest
                 profile.Numbers["polish.violin.radius"] = 0.91;
                 profile.Numbers["card.Music.weight"] = 200;
                 profile.Numbers["card.Atelier.cost"] = 25;
+                profile.Numbers["card.Cash.cost"] = 100;
+                profile.Numbers["card.Bargaining.cost"] = 100;
+                profile.Numbers["card.Bargaining.amount"] = 30;
                 using (var file = FileAccess.Open(profilePath, FileAccess.ModeFlags.Write))
                     file.StoreString(profile.ToJson());
                 Check(DebugBalanceSettings.Reload(out string error), $"Legacy F10 profile must reload: {error}");
@@ -161,8 +173,10 @@ public partial class ProjectTest
                 Check(migrated.Numbers.Count == 3 && migrated.PolishingStrengthRevision == 1 &&
                     migrated.Numbers["polish.violin.strength"] == 1.0 &&
                     migrated.Numbers["polish.violin.radius"] == 0.91 &&
+                    migrated.Numbers["card.Cash.cost"] == 10 &&
+                    DebugBalanceSettings.Economy.Cards[DayUpgrade.Cash].Cost == 10 &&
                     DebugBalanceSettings.Reload(out _) && DebugBalanceSettings.Number("polish.violin.strength") == 1.0 &&
-                    migrated.Numbers["craft.atelier.seconds"] == 12 &&
+                    !migrated.Numbers.ContainsKey("craft.atelier.seconds") &&
                     WorkshopItemCatalog.Items.All(item => item.BasePrice == 50 && item.Rerolls == 3) &&
                     DebugBalanceSettings.Economy.BuyerWaitMinSeconds == 15 &&
                     DebugBalanceSettings.Economy.BuyerWaitMaxSeconds == 20,
@@ -240,6 +254,19 @@ public partial class ProjectTest
                 Check(!game.Crafting.Catalog.ItemButton(item.Kind).GetNode<Label>("Content/Rarity").Visible,
                     "The catalogue must not show retired rarity metadata");
                 var mini = Mini(item.WorkshopId);
+                var surface = mini.GetNode<EmbroiderySurface>("Surface");
+                var cleaned = surface.GetNode<Label>("Panel/StatStitches/Value");
+                void CheckPolishingQuality(int quality) =>
+                    Check(cleaned.Text == $"{quality}%" && Mathf.IsEqualApprox(surface.MeterFill, quality / 100f),
+                        $"The upper percentage and meter must both display {quality}% quality");
+                int readyQuality = music ? mini.Polishing.Quality : 0;
+                if (music)
+                {
+                    CheckPolishingQuality(readyQuality);
+                    Check(!surface.GetNode<Label>("Panel/Quality").IsVisibleInTree(),
+                        "Polishing must hide the percentage below the meter");
+                }
+                using var readyMeter = item.Kind == "guitar" ? await CapturePresentation("polishing-meter-ready") : null;
                 int funds = game.Score;
                 mini.Close();
                 Check(game.Crafting.IsCatalogOpen && game.Score == funds && game.ShowcaseItems.All(value => value < 0),
@@ -267,15 +294,14 @@ public partial class ProjectTest
                 Check(Math.Abs(game.DayRemainingSeconds - day + 0.25) < 0.001, "Active craft must advance day time");
                 var pause = game.GetNode<PauseMenu>("PauseMenu");
                 pause.Open();
-                double craftSeconds = mini.ActiveSession.RemainingSeconds, pausedDay = game.DayRemainingSeconds;
+                double pausedDay = game.DayRemainingSeconds, pausedBuyer = game.BuyerWaitRemaining;
                 game.Crafting.Catalog._Process(1);
                 mini._Process(1);
-                Check(mini.ActiveSession.RemainingSeconds == craftSeconds && game.DayRemainingSeconds == pausedDay, "Pause must suspend both clocks");
+                Check(game.BuyerWaitRemaining == pausedBuyer && game.DayRemainingSeconds == pausedDay, "Pause must suspend both shop clocks");
                 pause.Close();
                 if (item.WorkshopId == "atelier")
                 {
                     patterns.Add(string.Join(";", mini.Session.Points.Select(point => $"{point.X},{point.Y}")));
-                    var surface = mini.GetNode<EmbroiderySurface>("Surface");
                     for (int point = 0; point < mini.Session.Points.Count; point++) PushEmbroideryClick(surface.ScreenPoint(point));
                     mini._Process(0);
                     Check(mini.Session.Complete, "Every selected garment pattern must be playable through actual clicks");
@@ -296,7 +322,76 @@ public partial class ProjectTest
                     }
                     Root.PushInput(new InputEventMouseButton { Position = left, GlobalPosition = left, ButtonIndex = MouseButton.Left, Pressed = false }, true);
                     Check(mini.Polishing.Progress > 0, "The selected instrument must respond to actual rubbing");
+                    mini._Process(0);
+                    int qualityAfterRubbing = mini.Polishing.Quality;
+                    Check(qualityAfterRubbing > readyQuality && qualityAfterRubbing < 100,
+                        "Successful rubbing must improve the initial quality");
+                    CheckPolishingQuality(qualityAfterRubbing);
+                    using var partialMeter = readyMeter != null ? await CapturePresentation("polishing-meter-partial") : null;
+                    if (readyMeter != null)
+                    {
+                        double progressAfterRubbing = mini.Polishing.Progress;
+                        mini._Process(3);
+                        CheckPolishingQuality(qualityAfterRubbing);
+                        int misses = mini.Polishing.Misses;
+                        mini.Polishing.BeginRub(0, 0);
+                        mini.Polishing.EndRub();
+                        mini._Process(0);
+                        Check(mini.Polishing.Misses == misses + 1 && mini.Polishing.Quality < qualityAfterRubbing &&
+                            mini.Polishing.Progress == progressAfterRubbing,
+                            "A miss must lower the displayed quality without a change in cleaning progress");
+                        CheckPolishingQuality(mini.Polishing.Quality);
+                    }
+                    if (item.Kind == "violin")
+                    {
+                        Vector2 upperBow = board.LogicalToScreen(new Vector2(363, 230));
+                        Vector2 lowerBow = board.LogicalToScreen(new Vector2(363, 256));
+                        Vector2 gap = board.LogicalToScreen(new Vector2(341, 150));
+                        Vector2 outside = board.LogicalToScreen(new Vector2(500, 200));
+                        Check(mini.Polishing.Inside(363, 230) && mini.Polishing.Inside(363, 256) &&
+                            !mini.Polishing.Inside(341, 150), "The bow must be playable and its gap must remain clear");
+                        double bowDirt = mini.Polishing.Cells.Where(cell => cell.Inside && cell.X > 355 &&
+                            cell.Y is >= 210 and <= 270).Sum(cell => cell.Dirt);
+                        int misses = mini.Polishing.Misses;
+                        void MoveCloth(Vector2 point) => Root.PushInput(new InputEventMouseMotion
+                            { Position = point, GlobalPosition = point, ButtonMask = MouseButtonMask.Left }, true);
+                        Root.PushInput(new InputEventMouseMotion { Position = upperBow, GlobalPosition = upperBow }, true);
+                        Root.PushInput(new InputEventMouseButton { Position = upperBow, GlobalPosition = upperBow,
+                            ButtonIndex = MouseButton.Left, Pressed = true, ButtonMask = MouseButtonMask.Left }, true);
+                        for (int stroke = 0; stroke < 28; stroke++)
+                            MoveCloth(stroke % 2 == 0 ? lowerBow : upperBow);
+                        Check(mini.Polishing.Cells.Where(cell => cell.Inside && cell.X > 355 &&
+                            cell.Y is >= 210 and <= 270).Sum(cell => cell.Dirt) < bowDirt &&
+                            mini.Polishing.Misses == misses, "Real rubbing on the bow must clear its coating without a miss");
+                        double afterBow = mini.Polishing.Progress;
+                        MoveCloth(gap);
+                        Check(mini.Polishing.Misses == misses && mini.Polishing.Progress == afterBow,
+                            "Dragging between the violin and bow must grant neither cleaning nor a miss");
+                        MoveCloth(outside);
+                        Check(mini.Polishing.Misses == misses + 1, "Dragging around the pair must still count as a miss");
+                        Root.PushInput(new InputEventMouseButton { Position = outside, GlobalPosition = outside,
+                            ButtonIndex = MouseButton.Left, Pressed = false }, true);
+                        using (await CapturePresentation("violin-bow-polishing")) { }
+                    }
                     mini.FinishForTesting(true);
+                    CheckPolishingQuality(100);
+                    if (readyMeter != null)
+                    {
+                        using var fullMeter = await CapturePresentation();
+                        Vector2 scale = new Vector2(fullMeter.GetWidth(), fullMeter.GetHeight()) / Root.GetVisibleRect().Size;
+                        Rect2 track = surface.GetGlobalTransformWithCanvas() * surface.MeterTrackRect;
+                        int x = Mathf.RoundToInt(track.GetCenter().X * scale.X);
+                        int fullHeight = 0, partialHeight = 0;
+                        for (int y = Mathf.CeilToInt(track.Position.Y * scale.Y); y < track.End.Y * scale.Y; y++)
+                        {
+                            if (readyMeter.GetPixel(x, y).R < 0.8f || fullMeter.GetPixel(x, y).R > 0.3f) continue;
+                            fullHeight++;
+                            if (partialMeter.GetPixel(x, y).R <= 0.3f) partialHeight++;
+                        }
+                        float expectedFraction = (qualityAfterRubbing - readyQuality) / (100f - readyQuality);
+                        Check(fullHeight > 100 && Math.Abs(partialHeight - fullHeight * expectedFraction) <= 3,
+                            $"Rendered meter fill must match the increase to {qualityAfterRubbing}% quality ({partialHeight}/{fullHeight} px)");
+                    }
                 }
                 double beforeResult = game.DayRemainingSeconds, beforeBuyer = game.BuyerWaitRemaining;
                 game.Crafting.Catalog._Process(0.25);
@@ -374,19 +469,18 @@ public partial class ProjectTest
                     Mathf.IsEqualApprox(surface.PanelRect.Position.X, surface.Size.X - surface.PanelRect.End.X),
                     "Crafting must have equal, generous left and right margins around the paper and its content");
                 mini.Activate();
-                double miniStart = mini.ActiveSession.RemainingSeconds;
                 await PressEscapeForTest();
                 var pause = game.GetNode<PauseMenu>("PauseMenu");
                 Check(pause.IsOpen, "ESC must open true pause over crafting");
                 Tick(2);
                 ExpectClocks(2);
-                Check(mini.ActiveSession.RemainingSeconds == miniStart, "ESC must stop the mini-game clock too");
                 pause.Close();
-                Tick(1);
-                ExpectClocks(3);
-                Check(buyerLabel.Text == game.BuyerClockText && buyerLabel.Text != miniStart.ToString(),
-                    "Playing must show the live buyer timer while the internal clock remains separate");
-                Check(mini.ActiveSession.RemainingSeconds == miniStart - 1, "The mini-game clock must tick once");
+                int startingQuality = mini.ActiveSession.Quality;
+                Tick(11);
+                ExpectClocks(13);
+                Check(buyerLabel.Text == game.BuyerClockText && !mini.HasNode("Surface/Panel/StatWorkTime") &&
+                    mini.ActiveSession.State == EmbroideryState.Playing && mini.ActiveSession.Quality == startingQuality,
+                    "After the former limit, both minigames must still be playable and show the live buyer time without a local countdown");
                 if (!music)
                 {
                     foreach (var point in mini.Session.Points.Take(mini.Session.Points.Count - 1))
@@ -407,7 +501,7 @@ public partial class ProjectTest
                 collect.EmitSignal(Button.SignalName.Pressed);
                 game.PersistProgress();
                 await Reload();
-                ExpectClocks(3);
+                ExpectClocks(13);
                 Check(game.Score == cashAfterCraft && game.ShowcaseItems.Count(item => item == itemIndex) == 1 &&
                     game.GetShowcaseQualityRank(slot) == expectedRank, "Early collection and clocks must survive reload");
             }
@@ -532,7 +626,9 @@ public partial class ProjectTest
             game.Crafting.Catalog._Process(game.DayRemainingSeconds + 1);
             Check(game.DayClosed && Mini("atelier").IsOpen && game.ShowcaseItems[0] == 0,
                 "Expiry must retain the reserved showcase item until its result is collected");
-            Mini("atelier")._Process(Mini("atelier").ActiveSession.RemainingSeconds);
+            Mini("atelier")._Process(60);
+            Check(Mini("atelier").ActiveSession.State == EmbroideryState.Playing,
+                "An already started craft must remain playable when the shop day expires");
             Mini("atelier").Activate();
             game._Process(0);
             Check(game.CurrentDay == 2 && game.DayUpgrades.Pending, "Collecting the expired attempt must advance exactly one day");

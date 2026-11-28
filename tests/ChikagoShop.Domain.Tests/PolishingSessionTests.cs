@@ -5,8 +5,8 @@ namespace ChikagoShop.Domain.Tests;
 
 public sealed class PolishingSessionTests
 {
-    private static PolishingSession Full(int width=100,int height=100) =>
-        new(Enumerable.Repeat((byte)255,width*height).ToArray(),width,height);
+    private static PolishingSession Full(int width=100,int height=100,double? duration=null) =>
+        new(Enumerable.Repeat((byte)255,width*height).ToArray(),width,height,duration);
 
     [Test]
     public void EarlyCollectionKeepsRealDirtAndMissesAndCannotAwardAnA()
@@ -61,7 +61,20 @@ public sealed class PolishingSessionTests
         double progress=session.Progress;
         session.Start(); session.MoveRub(15,14,7); session.Tick(100);
         Assert.That(session.Progress,Is.EqualTo(progress));
-        Assert.That(session.RemainingSeconds,Is.EqualTo(10));
+        Assert.That(session.RemainingSeconds,Is.EqualTo(double.PositiveInfinity));
+    }
+
+    [Test]
+    public void DefaultPolishingRemainsPlayableAfterTheOldLimit()
+    {
+        var session = Full();
+        session.Start();
+        session.Tick(60);
+        Assert.That(session.State, Is.EqualTo(EmbroideryState.Playing));
+        Assert.That(session.Quality, Is.Zero);
+        session.BeginRub(40, 50);
+        session.MoveRub(60, 50, 7);
+        Assert.That(session.Progress, Is.GreaterThan(0));
     }
 
     [Test]
@@ -105,9 +118,32 @@ public sealed class PolishingSessionTests
     }
 
     [Test]
+    public void AProtectedGapDoesNotCountAsCoatingOrAsAMiss()
+    {
+        const int width = 240, height = 80;
+        var coating = new byte[width * height];
+        var safeGap = new byte[coating.Length];
+        for (int y = 20; y < 60; y++)
+        {
+            Array.Fill(coating, (byte)255, y * width + 10, 20);
+            Array.Fill(coating, (byte)255, y * width + 210, 20);
+            Array.Fill(safeGap, (byte)1, y * width + 30, 180);
+        }
+        var session = new PolishingSession(coating, width, height, missSafeMask: safeGap);
+        session.Start();
+        session.BeginRub(100, 40);
+        session.MoveRub(140, 40, 15);
+        Assert.That(session.Misses, Is.Zero);
+        Assert.That(session.Progress, Is.Zero);
+        Assert.That(session.Inside(140, 40), Is.False);
+        session.MoveRub(140, 0, 15);
+        Assert.That(session.Misses, Is.EqualTo(1));
+    }
+
+    [Test]
     public void TimeoutInvalidValuesAndMalformedMasksAreSafe()
     {
-        var session=Full(); session.Tick(10);
+        var session=Full(duration: 10); session.Tick(10);
         Assert.That(session.RemainingSeconds,Is.EqualTo(10));
         session.Start(); session.BeginRub(50,50);
         session.Tick(double.NaN); session.Tick(-1); session.Tick(double.PositiveInfinity);

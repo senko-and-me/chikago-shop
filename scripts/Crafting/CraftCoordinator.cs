@@ -91,9 +91,6 @@ public sealed class CraftCoordinator
         _game.OfferCollectedCraft(slot, SelectedIndex);
     }
 
-    public double Duration(string workshop) => _game.DayUpgrades.CraftDuration(workshop,
-        DebugBalanceSettings.Number(workshop == "music" ? "craft.music.seconds" : "craft.atelier.seconds"));
-
     public void ReturnToCatalog()
     {
         if (_started || Covered) return;

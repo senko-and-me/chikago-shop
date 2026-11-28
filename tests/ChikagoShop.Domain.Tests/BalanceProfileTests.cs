@@ -72,8 +72,8 @@ public sealed class BalanceProfileTests
     {
         var counts = Enumerable.Range(0, 1800).SelectMany(seed => new DayUpgradeRules { Seed = seed }
             .Options(2, musicUnlocked: true)).GroupBy(card => card).Select(cards => cards.Count()).ToArray();
-        Assert.That(counts, Has.Length.EqualTo(9));
-        Assert.That(counts, Is.All.InRange(520, 680));
+        Assert.That(counts, Has.Length.EqualTo(8));
+        Assert.That(counts, Is.All.InRange(595, 755));
     }
 
     [Test]
