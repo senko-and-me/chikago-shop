@@ -58,7 +58,7 @@ public static class WeekBalanceSimulator
                             unlocked ? DayUpgrade.MusicPrice : DayUpgrade.AtelierPrice,
                             unlocked ? DayUpgrade.MusicPrice : DayUpgrade.AtelierPrice };
                         choice = priorities.FirstOrDefault(option => upgrades.Options.Contains(option) &&
-                            cash - DayUpgradeSession.Cost(option) >= 0 &&
+                            cash - DayUpgradeSession.Cost(option) >= (unlocked && profile.UnlockMusic ? music.SpinCost : atelier.SpinCost) * 2 &&
                             (option == DayUpgrade.Cash || day < config.Days.TotalDays));
                     }
                     if (choice != DayUpgrade.None && upgrades.TryPurchase(choice, cash, out int balance))
@@ -80,7 +80,8 @@ public static class WeekBalanceSimulator
                 Observe();
                 while (profile.Produce && remaining > 0)
                 {
-                    var workshop = unlocked && profile.UnlockMusic ? music : atelier;
+                    var workshop = unlocked && profile.UnlockMusic && cash >= music.SpinCost ? music : atelier;
+                    if (cash < workshop.SpinCost) break;
                     double cycle = profile.CycleSeconds;
                     if (!double.IsFinite(cycle) || cycle <= 0 || remaining < cycle) break;
                     Observe();
@@ -88,6 +89,7 @@ public static class WeekBalanceSimulator
                         .OrderByDescending(item => item.BasePrice).FirstOrDefault();
                     if (selected == null) break;
                     remaining -= cycle;
+                    cash -= workshop.SpinCost;
                     items++;
                     int basePrice = upgrades.Price(workshop.Id, selected.BasePrice);
                     Observe(basePrice);

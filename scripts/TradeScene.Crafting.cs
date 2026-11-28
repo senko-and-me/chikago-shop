@@ -9,7 +9,6 @@ public partial class TradeScene
 
     internal int BeginSelectedCraft(int index)
     {
-        if (Crafting.UnavailableReason(index) != "") return -1;
         int position = FreeDisplay(WorkshopItemCatalog.Items[index].WorkshopId, _showcaseItems, MusicWorkshopUnlocked);
         if (position < 0) return -1;
         _pendingCraftSlot = position;
@@ -23,6 +22,12 @@ public partial class TradeScene
         if (position < 0 || position >= ShowcaseCapacity || _showcaseItems[position] != expectedItem || _pendingCraftSlot != position) return;
         _showcaseGrades[position] = NormalizeRank(rank);
         _pendingCraftSlot = -1;
+        RefreshCraftInventory();
+    }
+
+    internal void AdjustCraftFunds(int amount)
+    {
+        Score += amount;
         RefreshCraftInventory();
     }
 

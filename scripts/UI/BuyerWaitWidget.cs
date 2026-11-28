@@ -1,10 +1,10 @@
+using System.Collections.Generic;
 using Godot;
 
-// World-space thought bubble: an icon for the requested workshop, a red-filling
-// speed-bonus countdown; sale bonuses are already included in the dynamic offer.
+// The thought bubble keeps the requested item and its waiting timer together.
 public partial class BuyerWaitWidget : Control
 {
-    // Edit ThoughtScale to change the thought bubble, category icon,
+    // Edit ThoughtScale to change the thought bubble, item icon,
     // countdown text and waiting bar TOGETHER. 1 = old size; 2 = double.
     [Export(PropertyHint.Range, "0.5,4.0,0.1")]
     public float ThoughtScale { get; set; } = 2.0f;
@@ -15,8 +15,8 @@ public partial class BuyerWaitWidget : Control
     private TextureRect _icon = null!;
     private ProgressBar _waitBar = null!;
     private Label _seconds = null!;
-    private bool _music;
-    private bool? _tutorialCategoryPreview;
+    private readonly Dictionary<int, Texture2D> _itemIcons = new();
+    private int _itemIndex = -1;
 
     public override void _Ready()
     {
@@ -48,8 +48,7 @@ public partial class BuyerWaitWidget : Control
         _thought.AddChild(background);
         background.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
 
-        // Preserve the category icon, countdown and red waiting indicator
-        // inside the oval portion of the supplied thought artwork.
+        // The icon and timer share the upper row. The progress bar has its own row.
         var stack = new VBoxContainer
         {
             Name = "Stack",
@@ -59,7 +58,7 @@ public partial class BuyerWaitWidget : Control
         };
         stack.AddThemeConstantOverride("separation", 3);
         _thought.AddChild(stack);
-        var iconLine = new HBoxContainer { Name = "Category", MouseFilter = MouseFilterEnum.Ignore, Alignment = BoxContainer.AlignmentMode.Center };
+        var iconLine = new HBoxContainer { Name = "RequestRow", MouseFilter = MouseFilterEnum.Ignore, Alignment = BoxContainer.AlignmentMode.Center };
         stack.AddChild(iconLine);
         _icon = new TextureRect
         {
@@ -69,6 +68,19 @@ public partial class BuyerWaitWidget : Control
             MouseFilter = MouseFilterEnum.Ignore
         };
         iconLine.AddChild(_icon);
+        var iconBackdrop = new Panel
+        {
+            ShowBehindParent = true,
+            MouseFilter = MouseFilterEnum.Ignore
+        };
+        iconBackdrop.AddThemeStyleboxOverride("panel", new StyleBoxFlat
+        {
+            BgColor = new Color("c6c6c6"),
+            CornerRadiusTopLeft = 5, CornerRadiusTopRight = 5,
+            CornerRadiusBottomLeft = 5, CornerRadiusBottomRight = 5
+        });
+        _icon.AddChild(iconBackdrop);
+        iconBackdrop.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         _seconds = new Label
         {
             Name = "RemainingSeconds", CustomMinimumSize = new Vector2(53, 27),
@@ -103,31 +115,31 @@ public partial class BuyerWaitWidget : Control
     internal Rect2 TimerBounds() =>
         TutorialSpotlight.TargetBounds(_seconds).Merge(TutorialSpotlight.TargetBounds(_waitBar));
 
-    public void SetState(bool music, double remaining, double initial)
+    public void SetState(int itemIndex, double remaining, double initial)
     {
         if (!Visible) Show();
         if (!_thought.Visible) _thought.Show();
-        _music = music;
-        RefreshCategoryIcon();
+        if (_itemIndex != itemIndex)
+        {
+            _itemIndex = itemIndex;
+            _icon.Texture = GetRequestIcon(itemIndex);
+        }
         _waitBar.MaxValue = initial;
         _waitBar.Value = initial - remaining;
         _seconds.Text = $"{Mathf.Max(0, (float)remaining):0.0}s";
         QueueRedraw();
     }
 
-    // Demonstration only: SetState still retains the customer's real request.
-    public void SetTutorialCategoryPreview(bool? music)
+    private Texture2D GetRequestIcon(int itemIndex)
     {
-        _tutorialCategoryPreview = music;
-        if (_icon != null) RefreshCategoryIcon();
-    }
+        if (_itemIcons.TryGetValue(itemIndex, out var icon)) return icon;
 
-    private void RefreshCategoryIcon()
-    {
-        bool music = _tutorialCategoryPreview ?? _music;
-        string path = music ? "res://art/ui/buyer_wish_music.png" : "res://art/ui/buyer_wish_atelier.png";
-        if (_icon.Texture?.ResourcePath != path) _icon.Texture = GD.Load<Texture2D>(path);
-        _icon.TooltipText = music ? "Музыкальные инструменты" : "Ателье";
+        var artwork = GD.Load<Texture2D>(TradeScene.GetItemArtPath(itemIndex));
+        using var image = artwork.GetImage();
+        // Fit the drawn item into the shared icon size, removing each PNG's transparent padding.
+        icon = new AtlasTexture { Atlas = artwork, Region = image.GetUsedRect(), FilterClip = true };
+        _itemIcons.Add(itemIndex, icon);
+        return icon;
     }
 
     public void EndTrade()

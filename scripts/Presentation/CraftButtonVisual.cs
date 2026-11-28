@@ -10,7 +10,7 @@ public partial class CraftButtonVisual : Button
 	{
 		_artwork = new[] { GetNode<Control>("Paper"), GetNode<Control>("Frame"),
 			GetNode<Control>("RussianCaption"), GetNode<Control>("EnglishCaption"),
-			GetNode<Control>("RarityHotspot/EnglishHelp") };
+			GetNode<Control>("RarityHotspot/EnglishHelp"), GetNode<Control>("Price") };
 		// The artwork draws its own opaque face; the native button style is empty.
 		ButtonDropShadow.Attach(this, solidFace: true);
 	}

@@ -10,6 +10,9 @@ public sealed class CraftCoordinator
     public string Workshop { get; private set; }
     public int SelectedIndex { get; private set; } = -1;
     private int _reservedPosition = -1;
+    private int _reservedPrice;
+    // Saves resume without a preparation screen, so only started crafts are committed.
+    internal int RefundablePrice => _reservedPrice;
     private bool _started;
     private bool _finished;
 
@@ -19,7 +22,6 @@ public sealed class CraftCoordinator
         Catalog = GD.Load<PackedScene>("res://scenes/UI/CraftCatalog.tscn").Instantiate<CraftCatalog>();
         Catalog.Coordinator = this;
         game.AddChild(Catalog);
-        game.NewGameStarted += Reset;
     }
 
     private EmbroideryGame Host(string workshop) => _game.GetNode<EmbroideryGame>(
@@ -31,6 +33,7 @@ public sealed class CraftCoordinator
         var item = WorkshopItemCatalog.Items[index];
         if (_game.Failed || _game.Completed || _game.DayClosed || !_game.DayStarted) return "Магазин закрыт";
         if (item.WorkshopId == "music" && !_game.MusicWorkshopUnlocked) return "Мастерская закрыта";
+        if (_reservedPrice == 0 && _game.Score < WorkshopItemCatalog.CraftCost(item.WorkshopId)) return "Недостаточно денег";
         if (!_game.HasFreeDisplay(item.WorkshopId)) return "Нет свободных витрин";
         return "";
     }
@@ -44,9 +47,11 @@ public sealed class CraftCoordinator
         if (workshop is not ("atelier" or "music") || !_game.RequireStartedDay() || Covered ||
             _game.GetTree().Paused || _game.CraftMiniGameOpen || IsCatalogOpen ||
             _game.Failed || _game.Completed || _game.DayClosed || _game.DayTransitionOpen ||
-            (workshop == "music" && !_game.MusicWorkshopUnlocked)) return;
+            (workshop == "music" && !_game.MusicWorkshopUnlocked) || !_game.CanBeginCraft(workshop)) return;
         Workshop = workshop;
         SelectedIndex = -1;
+        _reservedPrice = WorkshopItemCatalog.CraftCost(workshop);
+        _game.AdjustCraftFunds(-_reservedPrice);
         Catalog.Open(workshop);
     }
 
@@ -66,12 +71,15 @@ public sealed class CraftCoordinator
 
     public bool TryStart(int index)
     {
-        if (_started || _finished || Covered || SelectedIndex != index || index < 0 ||
+        if (_started || _finished || Covered || _reservedPrice == 0 || SelectedIndex != index || index < 0 ||
             UnavailableReason(index) != "" || !Host(Workshop).IsReadyToStart) return false;
-        // State flips before notifications/save so duplicate input cannot reserve a second display.
+        // Starting commits the already-paid attempt and its showcase slot together.
+        int price = _reservedPrice;
         _started = true;
+        _reservedPrice = 0;
         _reservedPosition = _game.BeginSelectedCraft(index);
         if (_reservedPosition >= 0) return true;
+        _reservedPrice = price;
         _started = false;
         return false;
     }
@@ -84,27 +92,51 @@ public sealed class CraftCoordinator
         _game.CompleteSelectedCraft(_reservedPosition, SelectedIndex, rank);
     }
 
+    public void Collect()
+    {
+        if (!_finished || _reservedPosition < 0) return;
+        int slot = _reservedPosition;
+        _reservedPosition = -1;
+        _game.OfferCollectedCraft(slot, SelectedIndex);
+    }
+
     public double Duration(string workshop) => _game.DayUpgrades.CraftDuration(workshop,
         DebugBalanceSettings.Number(workshop == "music" ? "craft.music.seconds" : "craft.atelier.seconds"));
 
     public void ReturnToCatalog()
     {
-        if (_started && !_finished || Covered) return;
-        CancelPreparation();
-        if (!_game.DayClosed) Catalog.Open(Workshop);
+        if (_started || Covered) return;
+        if (_game.DayClosed)
+        {
+            CancelPreparation();
+            return;
+        }
+        SelectedIndex = -1;
+        _started = _finished = false;
+        _reservedPosition = -1;
+        Catalog.Open(Workshop);
     }
 
     public void CancelPreparation()
     {
+        int refund = _reservedPrice;
+        _reservedPrice = 0;
+        ResetSelection();
+        if (refund > 0) _game.AdjustCraftFunds(refund);
+    }
+
+    internal void ResetForRun()
+    {
+        Catalog.CloseForReset();
+        _reservedPrice = 0;
+        ResetSelection();
+    }
+
+    private void ResetSelection()
+    {
+        Workshop = null;
         SelectedIndex = -1;
         _reservedPosition = -1;
         _started = _finished = false;
-    }
-
-    private void Reset()
-    {
-        Catalog.CloseForReset();
-        CancelPreparation();
-        Workshop = null;
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using ChikagoShop.Domain.Trading;
 using Godot;
 
@@ -20,7 +21,7 @@ public partial class TradeScene
     private int _lastShownSpeedBonus = -1;
     private double _buyerWaitAutosave;
     private bool _waitingBuyer;
-    private bool _waitingBuyerMusic;
+    private int _waitingBuyerItem = -1;
     private BuyerWaitWidget _buyerWaitWidget = null!;
 
     public double BuyerWaitInitial => _buyerWaitInitial;
@@ -97,7 +98,7 @@ public partial class TradeScene
         if (_buyerWaitRemaining <= 0)
         {
             _buyerWaitRemaining = _buyerWaitInitial;
-            _buyerWaitWidget.SetState(Items[ItemIndex].WorkshopId == "music", _buyerWaitRemaining, _buyerWaitInitial);
+            UpdateBuyerWaitWidget();
         }
         LimitTrainingInitialOffer();
         RefreshOffer();
@@ -108,7 +109,7 @@ public partial class TradeScene
     {
         _buyerWaitRemaining = _buyerWaitInitial;
         _buyerWaitAutosave = 0;
-        _buyerWaitWidget.SetState(Items[ItemIndex].WorkshopId == "music", _buyerWaitRemaining, _buyerWaitInitial);
+        UpdateBuyerWaitWidget();
         RefreshOffer();
         SaveProgress();
     }
@@ -119,10 +120,13 @@ public partial class TradeScene
         if (_buyerWaitRemaining <= previewSeconds) return;
 
         _buyerWaitRemaining = previewSeconds;
-        _buyerWaitWidget.SetState(Items[ItemIndex].WorkshopId == "music", _buyerWaitRemaining, _buyerWaitInitial);
+        UpdateBuyerWaitWidget();
         RefreshOffer();
         SaveProgress();
     }
+
+    private void UpdateBuyerWaitWidget() =>
+        _buyerWaitWidget?.SetState(TradeActive ? ItemIndex : _waitingBuyerItem, _buyerWaitRemaining, _buyerWaitInitial);
 
     private void TickBuyerWait(double delta)
     {
@@ -133,9 +137,7 @@ public partial class TradeScene
         bool wasExpired = BuyerPatienceRules.IsExpired(_buyerWaitRemaining);
         _buyerWaitRemaining = Math.Max(_tutorial.HoldTrainingBuyer ? 1 : 0, _buyerWaitRemaining - delta);
         bool justExpired = !wasExpired && BuyerPatienceRules.IsExpired(_buyerWaitRemaining);
-        if (_buyerWaitWidget != null)
-            _buyerWaitWidget.SetState(_waitingBuyer ? _waitingBuyerMusic :
-                Items[ItemIndex].WorkshopId == "music", _buyerWaitRemaining, _buyerWaitInitial);
+        UpdateBuyerWaitWidget();
         if (TradeActive)
         {
             int speedNow = SpeedBonus(_buyerWaitRemaining, _buyerWaitInitial);
@@ -154,17 +156,67 @@ public partial class TradeScene
     {
         if (_waitingBuyer || TradeActive || !_dayCycle.CanReceiveBuyers || !CanSupplyWaitingBuyer()) return;
 
-        // Each new customer independently chooses a desired category, 50/50.
-        // Before the music workshop is unlocked, only atelier requests are playable.
-        // Do not bias the choice toward the current showcase inventory.
         _returnedOfferPercent = null;
-        _waitingBuyerMusic = MusicWorkshopUnlocked && _rng.Randf() < 0.5f;
+        _waitingBuyerItem = ChooseBuyerRequest();
         CustomerIndex = _rng.RandiRange(0, _customer.GetAppearanceCount() - 1);
         _waitingBuyer = true;
         ResetBuyerWait();
         ShowWaitingBuyer();
         BuyerArrived?.Invoke();
         SaveProgress();
+    }
+
+    private int ChooseBuyerRequest()
+    {
+        if (_tutorial.IsActive)
+            return _showcaseItems[FirstDisplayedItem("atelier")];
+
+        // Prefer goods the player can sell immediately. At an empty counter, ask for
+        // a catalogue item the player can afford to craft in an open workshop.
+        int[] candidates = DisplayedRequestItems().Distinct().ToArray();
+        if (candidates.Length == 0)
+        {
+            var unlocked = Enumerable.Range(0, Items.Count).Where(IsAvailableBuyerRequest);
+            candidates = unlocked.Where(item => Score >= WorkshopItemCatalog.ItemCraftCost(item)).ToArray();
+            if (candidates.Length == 0)
+                return unlocked.OrderBy(WorkshopItemCatalog.ItemCraftCost).First();
+        }
+
+        string workshop = MusicWorkshopUnlocked && _rng.Randf() < 0.5f ? "music" : "atelier";
+        int[] preferred = candidates.Where(item => Items[item].WorkshopId == workshop).ToArray();
+        if (preferred.Length > 0) candidates = preferred;
+        return candidates[_rng.RandiRange(0, candidates.Length - 1)];
+    }
+
+    private IEnumerable<int> DisplayedRequestItems() =>
+        _showcaseItems.Where((item, slot) => slot != _pendingCraftSlot && IsAvailableBuyerRequest(item));
+
+    private bool IsAvailableBuyerRequest(int item) =>
+        item >= 0 && item < Items.Count && (MusicWorkshopUnlocked || Items[item].WorkshopId == "atelier");
+
+    private int RestoreWaitingBuyerRequest(string kind, bool music)
+    {
+        int item = WorkshopItemCatalog.IndexOf(kind);
+        if (IsAvailableBuyerRequest(item)) return item;
+
+        string workshop = music && MusicWorkshopUnlocked ? "music" : "atelier";
+        int slot = FirstDisplayedItem(workshop);
+        return slot >= 0 ? _showcaseItems[slot] : (workshop == "music" ? WorkshopItemCatalog.IndexOf("guitar") : WorkshopItemCatalog.IndexOf("hat"));
+    }
+
+    private void ReplaceUnavailableExpiredBuyer()
+    {
+        if (!_waitingBuyer || !_dayCycle.CanReceiveBuyers || _tutorial.IsActive ||
+            !BuyerPatienceRules.IsExpired(_buyerWaitRemaining)) return;
+
+        int item = _waitingBuyerItem;
+        if (Array.IndexOf(_showcaseItems, item) >= 0 ||
+            (HasFreeDisplay(Items[item].WorkshopId) && Score >= WorkshopItemCatalog.ItemCraftCost(item)) ||
+            !DisplayedRequestItems().Any()) return;
+
+        // A full workshop or an unaffordable request must not trap all the remaining stock.
+        HideWaitingBuyer();
+        StartWaitingBuyer();
     }
 
     private void ShowWaitingBuyer()
@@ -175,12 +227,13 @@ public partial class TradeScene
         _customer.Visible = true;
         _world.ItemVisible = false;
         _tradePanel.Visible = false;
-        _buyerWaitWidget.SetState(_waitingBuyerMusic, _buyerWaitRemaining, _buyerWaitInitial);
+        UpdateBuyerWaitWidget();
     }
 
     private void HideWaitingBuyer()
     {
         _waitingBuyer = false;
+        _waitingBuyerItem = -1;
         _buyerWaitWidget?.EndTrade();
         if (!TradeActive) _customer.Visible = false;
     }
@@ -210,7 +263,7 @@ public partial class TradeScene
     {
         _buyerWaitRemaining = BuyerPatienceRules.RemainingAfterDayClosure(_buyerWaitRemaining, DayClosed);
         if (TradeActive && DayClosed)
-            _buyerWaitWidget?.SetState(Items[ItemIndex].WorkshopId == "music", _buyerWaitRemaining, _buyerWaitInitial);
+            UpdateBuyerWaitWidget();
     }
 
     private void RefreshClosedBuyerOffer()

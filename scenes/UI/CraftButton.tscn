@@ -57,9 +57,9 @@ patch_margin_bottom = 64
 [node name="RussianCaption" type="TextureRect" parent="."]
 layout_mode = 0
 offset_left = 40.0
-offset_top = 29.5
+offset_top = 12.0
 offset_right = 412.0
-offset_bottom = 173.5
+offset_bottom = 129.0
 mouse_filter = 2
 texture = SubResource("RussianLettering")
 expand_mode = 1
@@ -69,16 +69,31 @@ stretch_mode = 5
 visible = false
 layout_mode = 0
 offset_left = 39.5
-offset_top = 15.0
+offset_top = 4.0
 offset_right = 411.5
-offset_bottom = 181.0
+offset_bottom = 127.0
 mouse_filter = 2
 auto_translate_mode = 2
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 0
 theme_override_fonts/font = ExtResource("4_font")
-theme_override_font_sizes/font_size = 60
+theme_override_font_sizes/font_size = 49
 text = "CREATE\nITEMS"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Price" type="Label" parent="."]
+layout_mode = 0
+offset_left = 64.0
+offset_top = 125.0
+offset_right = 386.0
+offset_bottom = 176.0
+mouse_filter = 2
+auto_translate_mode = 2
+theme_override_colors/font_color = Color(0.14, 0.14, 0.14, 1)
+theme_override_constants/outline_size = 0
+theme_override_fonts/font = ExtResource("4_font")
+theme_override_font_sizes/font_size = 45
 horizontal_alignment = 1
 vertical_alignment = 1
 

@@ -125,7 +125,11 @@ public partial class EmbroideryGame : CanvasLayer
 			string rank = ActiveSession.Rank;
 			bool collected = _preparedItemClaimed && _qualityRecorded;
 			Close();
-			if (collected) SoundEffects.Instance?.PlayCraftResult(rank);
+			if (collected)
+			{
+				_game.Crafting.Collect();
+				SoundEffects.Instance?.PlayCraftResult(rank);
+			}
 			return;
 		}
 

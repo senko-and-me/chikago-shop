@@ -135,6 +135,7 @@ public sealed class ProgressMigrationTests
             StoredItems = [0, 4, 9], CheckpointItems = [2, 3], ShowcaseItems = [1, -1, 8],
             CheckpointShowcaseItems = [-1, 7], TradeActive = true, ItemIndex = 8,
             CustomerIndex = 3, RerollsRemaining = 1, ActiveShowcaseIndex = 2, BuyerWaitRemaining = 12.5,
+            WaitingBuyerItemKind = "violin",
             DayRemainingSeconds = 35.5, UpgradePending = true, SelectedUpgrade = (int)DayUpgrade.Energy,
             AtelierUpgradeLevel = 2, MusicUpgradeLevel = 3, AtelierPriceLevel = 4, MusicPriceLevel = 5,
             CheckpointAtelierUpgradeLevel = 1, CheckpointMusicUpgradeLevel = 2,
@@ -159,7 +160,7 @@ public sealed class ProgressMigrationTests
             "quota_visit", "checkpoint_quota_visit", "quota_dialogue_page", "quota_dialogue_revealed", "quota_dialogue_language",
             "status", "trade_active", "item_index", "customer_index", "percentage", "rerolls_remaining", "stored_items",
             "checkpoint_items", "showcase_items", "checkpoint_showcase_items", "active_showcase_index",
-            "buyer_wait_remaining", "buyer_wait_initial", "waiting_buyer_present", "waiting_buyer_music", "stored_grades", "showcase_grades",
+            "buyer_wait_remaining", "buyer_wait_initial", "waiting_buyer_present", "waiting_buyer_music", "waiting_buyer_item_kind", "stored_grades", "showcase_grades",
             "checkpoint_grades", "checkpoint_showcase_grades", "active_trade_grade"
         ];
         Assert.That(doc.RootElement.EnumerateObject().Select(property => property.Name),
@@ -174,6 +175,7 @@ public sealed class ProgressMigrationTests
         Assert.That(data.EnergyRemaining, Is.EqualTo(6));
         Assert.That(data.CheckpointEnergy, Is.EqualTo(6));
         Assert.That(data.ItemIndex, Is.EqualTo(-1));
+        Assert.That(data.WaitingBuyerItemKind, Is.Null);
         Assert.That(data.StoredItems, Is.Empty);
         Assert.That(ProgressJson.Deserialize("{\"energy_remaining\":0,\"checkpoint_energy\":0}", 6)!.EnergyRemaining, Is.Zero);
         Assert.That(ProgressJson.Deserialize("null", 3), Is.Null);

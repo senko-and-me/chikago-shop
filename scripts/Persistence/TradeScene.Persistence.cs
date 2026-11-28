@@ -20,7 +20,7 @@ public partial class TradeScene
             CheckpointShowcaseRerolls = (int[])_checkpointShowcaseRerolls.Clone(),
             ReturnedOfferPercent = _returnedOfferPercent,
 			Day = CurrentDay,
-			Score = Score,
+			Score = Score + (Crafting?.RefundablePrice ?? 0),
 			EnergyRemaining = EnergyRemaining,
 			UpgradePending = _dayCycle.Upgrades.Pending,
 			SelectedUpgrade = (int)_dayCycle.Upgrades.Selected,
@@ -77,7 +77,8 @@ public partial class TradeScene
 			BuyerWaitRemaining = _buyerWaitRemaining,
 			BuyerWaitInitial = _buyerWaitInitial,
 			WaitingBuyerPresent = _waitingBuyer,
-			WaitingBuyerMusic = _waitingBuyerMusic,
+			WaitingBuyerItemKind = _waitingBuyer ? Items[_waitingBuyerItem].Kind : null,
+			WaitingBuyerMusic = _waitingBuyer && Items[_waitingBuyerItem].WorkshopId == "music",
 			StoredGrades = _storedGrades.ToArray(),
 			ShowcaseGrades = (string[])_showcaseGrades.Clone(),
 			CheckpointGrades = _checkpointGrades.ToArray(),
@@ -187,7 +188,6 @@ public partial class TradeScene
 		_waitingBuyer = data.SaveVersion >= 16 && data.WaitingBuyerPresent && !TradeActive &&
 			!data.DayClosed && data.DayStarted && !Failed && !Completed &&
 			CustomerIndex >= 0 && CustomerIndex < _customer.GetAppearanceCount();
-		_waitingBuyerMusic = data.SaveVersion >= 16 && data.WaitingBuyerMusic;
 
 		if (ItemIndex < 0 ||
 			ItemIndex >= Items.Count ||
@@ -211,6 +211,8 @@ public partial class TradeScene
             data.CheckpointItems, data.CheckpointGrades, data.CheckpointDeferredDisplayItems,
             _checkpointShowcaseItems, _checkpointShowcaseGrades, _checkpointShowcaseRerolls, _checkpointStock,
             CheckpointMusicWorkshopUnlocked, restoreActive: false);
+
+		_waitingBuyerItem = _waitingBuyer ? RestoreWaitingBuyerRequest(data.WaitingBuyerItemKind, data.WaitingBuyerMusic) : -1;
 
 		if (_inventoryUI != null)
 			_inventoryUI.UpdateUI(_storedItems);

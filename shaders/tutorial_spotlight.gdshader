@@ -5,6 +5,7 @@ uniform vec2 screen_size;
 uniform vec2 focus_center;
 uniform vec2 focus_half_size;
 uniform float darkness;
+uniform bool focus_outline = true;
 uniform float accessory_glow;
 uniform vec4 accessories[6];
 uniform int accessory_count;
@@ -23,7 +24,7 @@ void fragment() {
     vec2 p = UV * screen_size;
     float edge = edge_distance(p, focus_center, focus_half_size);
     float shade = darkness * smoothstep(0.0, 16.0, edge);
-    float glow = halo(edge) * darkness * 0.6;
+    float glow = focus_outline ? halo(edge) * darkness * 0.6 : 0.0;
     for (int i = 0; i < accessory_count; i++) {
         vec4 area = accessories[i];
         float other_edge = edge_distance(p, area.xy, area.zw);

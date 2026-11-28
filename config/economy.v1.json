@@ -4,6 +4,18 @@
   "starting_money": 220,
   "buyer_wait_min_seconds": 15,
   "buyer_wait_max_seconds": 20,
+  "craft_costs": {
+    "hat": 50,
+    "vest": 50,
+    "gloves": 50,
+    "matteo_hat": 50,
+    "lorgnette": 50,
+    "guitar": 50,
+    "drum": 50,
+    "banjo": 50,
+    "violin": 50,
+    "tuba": 50
+  },
   "days": {
     "total_days": 14,
     "tutorial_day": 1,
@@ -13,10 +25,12 @@
   "workshops": [
     {
       "id": "atelier",
+      "spin_cost": 50,
       "unlock_cost": 0
     },
     {
       "id": "music",
+      "spin_cost": 50,
       "unlock_cost": 0
     }
   ],

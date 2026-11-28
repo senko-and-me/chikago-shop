@@ -55,17 +55,16 @@ public partial class TradeScene
 
     internal bool CanBeginCraft(string workshop) =>
         !Failed && !Completed && !DayClosed && !QuotaVisitPending && !DayTransitionOpen &&
+        Score >= WorkshopItemCatalog.CraftCost(workshop) &&
         FreeDisplay(workshop, _showcaseItems, MusicWorkshopUnlocked) >= 0;
 
     private void RefreshCraftPriceHint(int index, string workshop)
     {
-        var label = _priceHints[index].GetNode<Label>("Label");
-        label.Text = FreeDisplay(workshop, _showcaseItems, MusicWorkshopUnlocked) < 0
-            ? GameLocalization.Text("Нет свободных витрин")
-            : GameLocalization.Text("Выбор предмета");
-        int deferred = _deferredStock.FindAll(stock => Items[stock.Item].WorkshopId == workshop).Count;
-        if (deferred > 0)
-            label.Text += (label.Text.Length > 0 ? "\n" : "") + GameLocalization.Format("Товаров ждут свободной витрины: {0}", deferred);
+        var hint = _priceHints[index];
+        string reason = !HasFreeDisplay(workshop) ? "Нет свободных витрин" :
+            Score < WorkshopItemCatalog.CraftCost(workshop) ? "Недостаточно денег" : "";
+        hint.GetNode<Label>("Label").Text = GameLocalization.Text(reason);
+        hint.Visible = reason.Length > 0 && !_rarityPanels[index].Visible;
     }
 
     private void InitializeShowcasePopup()
@@ -124,10 +123,43 @@ public partial class TradeScene
         int item = _showcaseItems[slot];
         if (item < 0 || !_tutorial.CanSelectDisplay(slot) || !_dayCycle.CanReceiveBuyers) return;
         RefreshBuyers();
-        if (!_waitingBuyer || (Items[item].WorkshopId == "music") != _waitingBuyerMusic) return;
+        if (!_waitingBuyer || item != _waitingBuyerItem) return;
 
+        OfferDisplay(slot);
+    }
+
+    internal void OfferCollectedCraft(int slot, int item)
+    {
+        if (TradeActive || GetTree().Paused || DayTransitionOpen || !_dayCycle.CanReceiveBuyers ||
+            _showcaseItems[slot] != item) return;
+        RefreshBuyers();
+        if (!_waitingBuyer || item != _waitingBuyerItem) return;
+
+        string workshop = Items[item].WorkshopId;
+        Vector2 counter = GetNode<Node2D>("World/TradingRoom/Item").GlobalPosition;
+        int nearest = slot;
+        float distance = _showcaseSlots[slot].GetGlobalRect().GetCenter().DistanceSquaredTo(counter);
+        for (int candidate = 0; candidate < ShowcaseCapacity; candidate++)
+        {
+            if (_showcaseItems[candidate] >= 0 || DisplayWorkshop(candidate) != workshop) continue;
+            float candidateDistance = _showcaseSlots[candidate].GetGlobalRect().GetCenter().DistanceSquaredTo(counter);
+            if (candidateDistance >= distance) continue;
+            nearest = candidate;
+            distance = candidateDistance;
+        }
+        if (nearest != slot)
+        {
+            PutDisplay(nearest, new DisplayStock(item, _showcaseGrades[slot], _showcaseRerolls[slot]),
+                _showcaseItems, _showcaseGrades, _showcaseRerolls);
+            ClearDisplay(slot, _showcaseItems, _showcaseGrades, _showcaseRerolls);
+        }
+        OfferDisplay(nearest);
+    }
+
+    private void OfferDisplay(int slot)
+    {
         _activeShowcaseIndex = slot;
-        ItemIndex = item;
+        ItemIndex = _showcaseItems[slot];
         _activeTradeGrade = NormalizeRank(_showcaseGrades[slot]);
         ShowcasePopup.HideInfo();
         StartBuyerOffer();
@@ -149,7 +181,7 @@ public partial class TradeScene
         TradeActive = false;
         _activeShowcaseIndex = -1;
         _waitingBuyer = !DayClosed;
-        _waitingBuyerMusic = Items[ItemIndex].WorkshopId == "music";
+        _waitingBuyerItem = ItemIndex;
         ItemIndex = -1;
         _world.ItemVisible = false;
         if (_waitingBuyer) ShowWaitingBuyer();

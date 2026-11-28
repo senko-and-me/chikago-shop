@@ -106,8 +106,9 @@ public partial class ProjectTest
                 Check(!mini.IsOpen && heard.Where(cue => cue != SoundEffects.Cue.Hover).SequenceEqual(new[] { Expected(rank) }) &&
                     !effects.GetNode<AudioStreamPlayer>("Hover").Playing,
                     $"Real Collect in {workshop} must play exactly one {rank} result, without a generic click");
-                Check(game.GetShowcaseQualityRank(music ? 3 : 0) == rank,
-                    "The collected item's saved rank must match its result sound");
+                int display = Array.IndexOf(game.ShowcaseItems, WorkshopItemCatalog.IndexOf(kind));
+                Check(display >= 0 && game.GetShowcaseQualityRank(display) == rank,
+                    "The collected item's saved rank must match its result sound, including an automatic offer");
                 heard.Clear();
                 mini.Activate();
                 Check(heard.Count == 0, "Repeated collection input must not replay the reward sound");

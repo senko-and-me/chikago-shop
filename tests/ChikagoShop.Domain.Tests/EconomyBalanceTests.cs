@@ -9,17 +9,21 @@ public sealed class EconomyBalanceTests
     private static EconomyConfig Config() => EconomyConfigLoader.Load(File.ReadAllText(Path.Combine(TestContext.CurrentContext.TestDirectory, "config", "economy.v1.json")));
 
     [Test]
-    public void SingleItemCraftingUsesTheUniformBasePrice()
+    public void SingleItemCraftingAndBaseSaleUseTheWorkshopPrice()
     {
         var config = Config();
         Assert.That(config.Days.DurationSeconds, Is.EqualTo(60));
         Assert.That(config.Days.ItemsPerCraft, Is.EqualTo(1));
-        Assert.That(config.Items.Select(item => item.BasePrice), Is.EqualTo(Enumerable.Repeat(50, 10)));
+        foreach (var item in config.Items)
+        {
+            Assert.That(config.CraftCosts[item.Id], Is.EqualTo(50));
+            Assert.That(item.BasePrice, Is.EqualTo(50));
+        }
         Assert.That(config.Quotas.Single(quota => quota.Id == "first").DeadlineDay, Is.EqualTo(7));
     }
 
     [Test]
-    public void AZeroBalanceStillAllowsProductionInTheSimulator()
+    public void SimulatorRequiresEnoughMoneyToCraft()
     {
         var original = Config();
         var config = new EconomyConfig
@@ -28,17 +32,17 @@ public sealed class EconomyBalanceTests
             Workshops = original.Workshops, Items = original.Items, Rarities = original.Rarities,
             OfferRanges = original.OfferRanges, Quotas = original.Quotas
         };
-        Assert.That(WeekBalanceSimulator.Run(config, WeekBalanceSimulator.Profiles[0], 10).MeanItems, Is.GreaterThan(0));
+        Assert.That(WeekBalanceSimulator.Run(config, WeekBalanceSimulator.Profiles[0], 10).MeanItems, Is.Zero);
     }
 
     [Test]
-    public void ReproducibleSelectedItemPolicyCanFundTheFirstQuotaAndPassivePlayCannot()
+    public void BuyerOfferPoliciesAreReproducibleAndPassivePlayCannotFundTheCampaign()
     {
         var config = Config();
         var ordinary = WeekBalanceSimulator.Run(config, WeekBalanceSimulator.Profiles[0], 1000);
         var careful = WeekBalanceSimulator.Run(config, WeekBalanceSimulator.Profiles[1], 1000);
         var passive = WeekBalanceSimulator.Run(config, WeekBalanceSimulator.Profiles[5], 1000);
-        Assert.That(ordinary.FirstQuotaPassRate, Is.GreaterThan(0));
+        Assert.That(ordinary.FirstQuotaPassRate, Is.LessThan(1), "Ordinary sales at the fixed base no longer guarantee the first quota");
         Assert.That(ordinary.WinRate, Is.LessThanOrEqualTo(ordinary.FirstQuotaPassRate));
         Assert.That(careful.WinRate, Is.LessThanOrEqualTo(careful.FirstQuotaPassRate));
         Assert.That(passive.FirstQuotaPassRate + passive.WinRate, Is.Zero);

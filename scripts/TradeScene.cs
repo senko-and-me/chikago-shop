@@ -327,9 +327,7 @@ public partial class TradeScene : Node2D
 				? _atelierGetItemButton
 				: _musicGetItemButton;
 
-			button.MouseEntered += () =>
-				_priceHints[index].Visible =
-					!_rarityPanels[index].Visible;
+			button.MouseEntered += () => RefreshCraftPriceHint(index, index == 0 ? "atelier" : "music");
 
 			button.MouseExited += () =>
 				_priceHints[index].Hide();
@@ -343,7 +341,7 @@ public partial class TradeScene : Node2D
 			_rarityHotspots[index].MouseExited += () =>
 			{
 				_rarityPanels[index].Hide();
-				_priceHints[index].Visible = button.IsHovered();
+				if (button.IsHovered()) RefreshCraftPriceHint(index, index == 0 ? "atelier" : "music");
 			};
 		}
 
@@ -454,23 +452,13 @@ public partial class TradeScene : Node2D
 	{
 		bool english = GameLocalization.Language == "en";
 
-		Label atelierPrice = GetNode<Label>(
-			"World/Atelier/GetItemButton/PriceHint/Label");
-
-		Label musicPrice = GetNode<Label>(
-			"World/MusicWorkshop/GetItemButton/PriceHint/Label");
-
-		atelierPrice.AutoTranslateMode =
-			Node.AutoTranslateModeEnum.Disabled;
-		musicPrice.AutoTranslateMode =
-			Node.AutoTranslateModeEnum.Disabled;
-
 		_atelierGetItemButton.AutoTranslateMode =
 			Node.AutoTranslateModeEnum.Disabled;
 		_musicGetItemButton.AutoTranslateMode =
 			Node.AutoTranslateModeEnum.Disabled;
 
-		atelierPrice.Text = musicPrice.Text = GameLocalization.Text("Выбор предмета");
+		_atelierGetItemButton.GetNode<Label>("Price").Text = GameLocalization.Format("{0}$", WorkshopItemCatalog.CraftCost("atelier"));
+		_musicGetItemButton.GetNode<Label>("Price").Text = GameLocalization.Format("{0}$", WorkshopItemCatalog.CraftCost("music"));
 
 		CraftButtonPresentation.Apply(_atelierGetItemButton, english);
 		CraftButtonPresentation.Apply(_musicGetItemButton, english);
@@ -486,6 +474,7 @@ public partial class TradeScene : Node2D
 			return;
 
 		TickGameClocks(delta);
+		ReplaceUnavailableExpiredBuyer();
 		RefreshBuyers();
 	}
 
@@ -601,7 +590,7 @@ public partial class TradeScene : Node2D
 		_customer.SetAppearance(CustomerIndex);
 		_customer.Visible = true;
 		_tradePanel.Visible = true;
-		_buyerWaitWidget.SetState(Items[ItemIndex].WorkshopId == "music", _buyerWaitRemaining, _buyerWaitInitial);
+		UpdateBuyerWaitWidget();
 
 		RefreshOffer();
 		RefreshItemButtons();
@@ -647,6 +636,7 @@ public partial class TradeScene : Node2D
 				SetShowcaseArt(shadow, bounds, ItemIndex);
 			}
 
+			_showcaseLabels[i].Visible = !reserved;
 			_showcaseLabels[i].Text = locked
 				? GameLocalization.Language == "en"
 					? "LOCKED"
@@ -771,7 +761,7 @@ public partial class TradeScene : Node2D
 			basePrice, Percentage);
 
 		_baseLabel.Text = GameLocalization.Format(
-			"Обычно: {0}$", basePrice);
+			"Обычно: {0}$", GetItemBasePrice(ItemIndex));
 
 		_percentLabel.Text = GameLocalization.Format(
 			"К цене: {0}{1}%",
@@ -865,6 +855,7 @@ public partial class TradeScene : Node2D
 	private void FinishTrade()
 	{
 		_waitingBuyer = false;
+		_waitingBuyerItem = -1;
 		TradeActive = false;
 		ItemIndex = -1;
 		_activeShowcaseIndex = -1;
@@ -1060,6 +1051,7 @@ public partial class TradeScene : Node2D
 
 	public void ReturnToCheckpoint()
 	{
+		Crafting.ResetForRun();
 		ResetQuotaVisitPresentation();
 		_quotaVisit = _checkpointQuotaVisit;
 		_dayCycle.Reset();
@@ -1131,6 +1123,7 @@ public partial class TradeScene : Node2D
 
 	public void NewGame()
 	{
+		Crafting.ResetForRun();
 		ResetQuotaVisitPresentation();
 		_checkpointQuotaVisit = _quotaVisit = ChikagoShop.Domain.Persistence.QuotaVisitStage.Unavailable;
 		LoadedSavedGame = false;

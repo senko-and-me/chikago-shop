@@ -22,14 +22,14 @@ public partial class FirstTradeTutorial : CanvasLayer
     internal bool CanSelectDisplay(int slot) => !IsActive || CurrentStep == Step.Place && Target == _game.DisplayControl(slot);
 
     public enum Step { Camera, Start, Craft, Select, Place, WaitBuyer, Offer, Summary, CameraZoom, RoomFocus, BuyerRequest, UpgradeChoice, Notebook, NotebookContents, EmbroideryStart, TimedSale, LateSale, MusicWorkshop, CardExplanation, CraftSelection, Reroll, EndDayExplanation, CloseTrainingDay }
-    private const string BuyerRequestMessage = "Облачко показывает, что покупатель ищет одежду из ателье.";
+    private const string BuyerRequestMessage = "Нужный товар сразу попадает на кассу. Иконка рядом с таймером показывает, что ищет покупатель.";
     private const string NotebookMessage = "Наведите курсор на блокнот справа, чтобы открыть его.";
     private const float PanGoal = 3000;
     private const int ZoomGoal = 16;
     private static readonly (string Title, string Body)[] SummaryPages =
     [
         ("Дни и квоты", "Наведите мышь на пачку сигарет, чтобы узнать день, сумму и срок квоты."),
-        ("Пауза и сохранение", "Esc открывает паузу: там есть настройки, чекпоинт и повтор обучения. Игра сохраняется автоматически. После обучения первый день начнётся заново.")
+        ("Пауза и сохранение", "Esc открывает паузу: там есть настройки и возврат к чекпоинту. Игра сохраняется автоматически. После обучения первый день начнётся заново.")
     ];
     [Export] public double CameraTravelSeconds { get; set; } = 0.8;
     public Step CurrentStep { get; private set; }
@@ -81,7 +81,7 @@ public partial class FirstTradeTutorial : CanvasLayer
             NeedsTrainingReroll && (!_game.TradeActive || _game.RerollsRemaining > 0));
     public bool DefersBuyerArrival => IsActive && !_game.TradeActive &&
         (_sawSale || _game.Accepted >= _acceptedAtStart + 2 ||
-            !_buyerRequestRead && (!_cameraHandoffDone || _game.FirstDisplayedItem("atelier") < 0));
+            !_cameraHandoffDone || _game.FirstDisplayedItem("atelier") < 0);
     private bool FirstTrainingBuyer => IsActive && !_sawSale && _game.Accepted == _acceptedAtStart;
     internal bool HoldTrainingBuyer => FirstTrainingBuyer && _game.TradeActive && _timedSaleStarted;
     internal bool FreezeTrainingBuyer => FirstTrainingBuyer && !HoldTrainingBuyer;
@@ -132,7 +132,7 @@ public partial class FirstTradeTutorial : CanvasLayer
         _actions = _done.GetParent<Control>();
         _skip = _root.GetNode<Button>("Skip");
         _skip.Pressed += ShowSkipConfirmation;
-        _spotlight.SetAccessories(_panel, _skip, null);
+        _spotlight.SetAccessories(_panel, null);
         GetNode<Button>("Root/SkipConfirmation/Center/Panel/Content/Actions/Confirm").Pressed += ConfirmSkip;
         GetNode<Button>("Root/SkipConfirmation/Center/Panel/Content/Actions/Cancel").Pressed += CancelSkip;
         _game.NewGameStarted += OnNewGameStarted;
@@ -287,7 +287,7 @@ public partial class FirstTradeTutorial : CanvasLayer
         bool music = CurrentStep == Step.MusicWorkshop;
         _confirmation.GetNode<Label>("Center/Panel/Content/Message").Text = music
             ? "Подсказки мастерской будут закрыты. Игра продолжится с текущего места."
-            : "Первый день начнётся заново со стартовыми деньгами. Обучение можно повторить в паузе.";
+            : "Первый день начнётся заново со стартовыми деньгами.";
         StopCamera();
         _camera.NavigationLocked = true;
         _confirmation.Show();
@@ -563,7 +563,7 @@ public partial class FirstTradeTutorial : CanvasLayer
         if (IsSkipConfirmationOpen)
         {
             ClearHudLesson();
-            _spotlight.SetAccessories(null, null, null);
+            _spotlight.SetAccessories(null, null);
             _root.Show();
             _panel.Hide();
             _skip.Hide();
@@ -592,7 +592,7 @@ public partial class FirstTradeTutorial : CanvasLayer
         if (GetTree().Paused || _game.CraftMiniGameOpen || _game.DayTransitionOpen || _game.Failed || _game.Completed)
         {
             ClearHudLesson();
-            _spotlight.SetAccessories(null, null, null);
+            _spotlight.SetAccessories(null, null);
             _root.Hide();
             Target = null;
             _spotlight.SetTarget(null);
@@ -844,7 +844,7 @@ public partial class FirstTradeTutorial : CanvasLayer
         {
             0 => "Мастерская открывает новые инструменты и витрины. Выберите инструмент в каталоге.",
             1 => "В полировке удерживайте ЛКМ и водите тряпочкой по инструменту.",
-            2 => "Готовый инструмент сам займёт свободную витрину. Наведите курсор для просмотра, нажмите для продажи.",
+            2 => "Если покупатель ждёт готовый инструмент, он сразу появится на кассе. Остальные товары можно продать с витрины.",
             _ => GameLocalization.Format("Сверяйтесь с облачком покупателя. Время для надбавки за скорость: {0}–{1} сек.",
                 DebugBalanceSettings.Economy.BuyerWaitMinSeconds, DebugBalanceSettings.Economy.BuyerWaitMaxSeconds)
         };
@@ -890,8 +890,8 @@ public partial class FirstTradeTutorial : CanvasLayer
         _notebook.HoldOpenForLesson = IsActive && CurrentStep == Step.NotebookContents;
         Control secondary = CurrentStep == Step.CloseTrainingDay && _pack.Expanded ? _pack :
             CurrentStep is Step.Reroll or Step.TimedSale or Step.LateSale ? _salePanel : null;
-        _spotlight.SetAccessories(_panel, _skip, secondary);
-        _spotlight.SetTarget(Target, bounds);
+        _spotlight.SetAccessories(_panel, secondary);
+        _spotlight.SetTarget(Target, bounds, outline: CurrentStep != Step.CardExplanation);
         if (!GodotObject.IsInstanceValid(Target) || !Target.IsVisibleInTree()) return;
         Rect2 target = bounds?.Invoke() ?? TutorialSpotlight.TargetBounds(Target);
         if (secondary?.IsVisibleInTree() == true)

@@ -8,7 +8,8 @@ public partial class TutorialSpotlight : ColorRect
     private const float Darkness = 0.50f;
     private Control _target;
     private Func<Rect2> _targetBounds;
-    private Control _panel, _skip, _sale;
+    private Control _panel, _sale;
+    private bool _targetOutline = true;
     private float _accessoryGlow;
     private readonly HashSet<Control> _tooltips = new();
     private readonly Vector4[] _accessories = new Vector4[6];
@@ -29,8 +30,9 @@ public partial class TutorialSpotlight : ColorRect
         Hide();
     }
 
-    public void SetTarget(Control target, Func<Rect2> bounds = null)
+    public void SetTarget(Control target, Func<Rect2> bounds = null, bool outline = true)
     {
+        if (target != null) _targetOutline = outline;
         if (_target == target && _targetBounds == bounds) return;
         _target = target;
         _targetBounds = bounds;
@@ -41,10 +43,9 @@ public partial class TutorialSpotlight : ColorRect
     public static Rect2 TargetBounds(Control target) =>
         target.GetGlobalTransformWithCanvas() * new Rect2(Vector2.Zero, target.Size);
 
-    public void SetAccessories(Control panel, Control skip, Control sale)
+    public void SetAccessories(Control panel, Control sale)
     {
         _panel = panel;
-        _skip = skip;
         _sale = sale;
     }
 
@@ -69,7 +70,6 @@ public partial class TutorialSpotlight : ColorRect
         _opacity = Mathf.MoveToward(_opacity, shown ? Darkness : 0, (float)delta * Darkness / TransitionSeconds);
         int count = 0;
         AddAccessory(_panel, ref count);
-        AddAccessory(_skip, ref count);
         AddAccessory(_sale, ref count);
         if (IsInstanceValid(_panel) && _panel.IsVisibleInTree())
             foreach (var tooltip in _tooltips)
@@ -89,6 +89,7 @@ public partial class TutorialSpotlight : ColorRect
         _shader.SetShaderParameter("focus_center", _focus.GetCenter());
         _shader.SetShaderParameter("focus_half_size", _focus.Size / 2);
         _shader.SetShaderParameter("darkness", _opacity);
+        _shader.SetShaderParameter("focus_outline", _targetOutline);
         _shader.SetShaderParameter("accessory_glow", _accessoryGlow);
         if (count > 0)
             _shader.SetShaderParameter("accessories", _accessories);

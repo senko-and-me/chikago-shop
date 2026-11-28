@@ -52,6 +52,20 @@ public partial class ProjectTest
             var camera = game.GetNode<WorldCamera>("Camera2D");
             var atelier = game.GetNode<Control>("World/Atelier/RoomFrame");
             await Wait(() => tutorial.CurrentStep == FirstTradeTutorial.Step.CameraZoom, "Restored pan must lead to zoom practice");
+            ShaderMaterial SpotlightMaterial() => (ShaderMaterial)tutorial.GetNode<TutorialSpotlight>("Spotlight").Material;
+            void CheckExplanationGlow()
+            {
+                var spotlight = SpotlightMaterial();
+                Vector2 center = ScreenBounds(tutorial.GetNode<Control>("Root/Panel")).GetCenter();
+                var area = spotlight.GetShaderParameter("accessories").AsVector4Array()[0];
+                Check(spotlight.GetShaderParameter("accessory_count").AsInt32() == 1 &&
+                    new Vector2(area.X, area.Y).IsEqualApprox(center) &&
+                    spotlight.GetShaderParameter("accessory_glow").AsSingle() > 0,
+                    "Only the explanation panel must have an accessory halo");
+            }
+            await Frame();
+            Check(tutorial.GetNode<Button>("Root/Skip").IsVisibleInTree(), "The skip button must remain visible");
+            CheckExplanationGlow();
             // Reproduce a zoomed/panned view where the atelier is outside the current screen.
             camera.FocusOn(game.GetNode<Control>("World/MusicWorkshop/RoomFrame").GetGlobalRect().GetCenter(), new Vector2(1600, 900), 0);
             tutorial.CameraTravelSeconds = 0.25;
@@ -106,15 +120,15 @@ public partial class ProjectTest
                 await ClickTutorialTarget(game.GetNode<Control>("World/Atelier/GetItemButton"));
                 await Frame();
                 Check(game.Crafting.IsCatalogOpen, "Tutorial must open the real catalogue");
+                var hat = game.Crafting.Catalog.ItemButton("hat");
                 await BlockedTutorialClick(game.Crafting.Catalog.ItemButton("vest"));
                 await BlockedTutorialClick(game.Crafting.Catalog.GetNode<Button>("Root/Center/Panel/Margin/Content/Back"));
                 Check(game.Crafting.IsCatalogOpen && game.Crafting.SelectedIndex < 0,
                     "Other catalogue items and Back must not bypass the hat instruction");
-                Button hat = game.Crafting.Catalog.ItemButton("hat");
                 await ClickTutorialTarget(hat);
                 await Frame();
-                Check(mini.IsOpen && mini.PreparedItemIndex == WorkshopItemCatalog.IndexOf("hat"),
-                    "The highlighted hat must open preparation through the tutorial input gate");
+                Check(!game.Crafting.IsCatalogOpen && mini.IsOpen && mini.PreparedItemIndex == WorkshopItemCatalog.IndexOf("hat"),
+                    $"Clicking the highlighted hat must open embroidery after {game.Accepted} completed sales");
                 await BlockedTutorialClick(mini.GetNode<Button>("Surface/Panel/Buttons/Cancel"));
                 await ClickControl(game, "EmbroideryGame/Surface/Panel/Buttons/Action");
                 Check(!mini.StartButton.IsVisibleInTree(), "Required stitch practice must hide early collection");
@@ -142,25 +156,9 @@ public partial class ProjectTest
                 await Frame();
             }
             await Hat();
-            Check(tutorial.CurrentStep == FirstTradeTutorial.Step.Select && game.ShowcaseItems[0] == 0,
-                "The completed hat must lead to inspecting its automatic showcase");
+            Check(tutorial.CurrentStep == FirstTradeTutorial.Step.BuyerRequest && game.TradeActive && game.ItemIndex == 0,
+                "Collecting the first hat must open the buyer explanation and offer automatically");
             double fullWait = game.BuyerWaitInitial;
-            game._Process(25);
-            Check(game.BuyerWaitRemaining == fullWait, "Waiting near the first showcase must preserve the entire customer timer");
-            var display = game.GetNode<Button>("World/ShowroomLeft/Showcases/Slot1");
-            Vector2 displayPoint = ScreenBounds(display).GetCenter();
-            Check(Root.GetVisibleRect().HasPoint(displayPoint), "The showcase checkpoint must bring the item into view");
-            Vector2 inspectionCamera = camera.Position;
-            MoveButtonPointer(displayPoint);
-            await Frame();
-            Check(tutorial.CurrentStep == FirstTradeTutorial.Step.Place && camera.Position.IsEqualApprox(inspectionCamera),
-                "Hover must advance to item selection without moving the camera away");
-            Check(game.ShowcasePopup.Visible && game.ShowcasePopup.ItemText.Contains("S"),
-                "The real hover must reveal the quality tooltip over the spotlight");
-            await ClickTutorialTarget(display);
-            await Frame();
-            Check(!camera.Position.IsEqualApprox(inspectionCamera),
-                "The camera must move to the buyer only after selecting the item.");
             game.Percentage = 30;
             game.RerollsRemaining = 1;
             game.ShowTrade();
@@ -249,9 +247,9 @@ public partial class ProjectTest
             int expectedPayout = game.OfferedPrice + quality + 1;
             await ClickControl(game, salePath + "Buttons/AcceptButton"); await Frame();
             Check(game.Score == balanceBeforeSale + expectedPayout, "Formatting must leave the actual payout intact");
-            Check(game.Accepted == 1 && game.ShowcaseItems[0] < 0, "The first training sale must free the showcase");
+            Check(game.Accepted == 1 && Array.TrueForAll(game.ShowcaseItems, item => item < 0),
+                "The first training sale must free the showcase");
             await Hat();
-            await ClickTutorialTarget(game.GetNode<Control>("World/ShowroomLeft/Showcases/Slot1"));
             await Frame();
             Check(tutorial.CurrentStep == FirstTradeTutorial.Step.LateSale && game.BuyerWaitRemaining is > 0 and <= 2,
                 "Late-sale practice must start within two seconds of expiry");
@@ -295,8 +293,13 @@ public partial class ProjectTest
             }
             await Frame();
             CheckTrainingDisplays();
-            using (await CapturePresentation("training-card-showcases")) { }
             Check(tutorial.CurrentStep == FirstTradeTutorial.Step.CardExplanation, "The remaining upgrades need their existing explanation");
+            await Wait(() => SpotlightMaterial().GetShaderParameter("darkness").AsSingle() > 0,
+                "The upgrade explanation must retain its dimming");
+            Check(!SpotlightMaterial().GetShaderParameter("focus_outline").AsBool(),
+                "The upgrade choices must have no large outline during the explanation");
+            CheckExplanationGlow();
+            using (await CapturePresentation("training-card-showcases")) { }
             next.EmitSignal(Button.SignalName.Pressed); await Frame();
             next.EmitSignal(Button.SignalName.Pressed); await Frame();
             var card = game.GetNode<DayTransitionCard>("DayTransitionCard");

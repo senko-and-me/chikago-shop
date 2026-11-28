@@ -151,8 +151,10 @@ public static class DebugBalanceSettings
         profile.Numbers?.Remove("hand.rarity");
         foreach (var key in profile.Numbers?.Keys.ToArray() ?? [])
         {
-            bool oldCost = key.StartsWith("craft.", StringComparison.Ordinal) && key.EndsWith(".cost", StringComparison.Ordinal);
-            bool oldPrice = key.StartsWith("item.", StringComparison.Ordinal) && key.EndsWith(".price", StringComparison.Ordinal);
+            bool oldCost = key.StartsWith("craft.", StringComparison.Ordinal) && key.EndsWith(".cost", StringComparison.Ordinal) &&
+                key is not ("craft.atelier.cost" or "craft.music.cost");
+            bool oldPrice = key == BasePriceKey ||
+                key.StartsWith("item.", StringComparison.Ordinal) && key.EndsWith(".price", StringComparison.Ordinal);
             bool oldWait = key.StartsWith("buyer.", StringComparison.Ordinal) && key is not ("buyer.wait.min" or "buyer.wait.max");
             if (oldCost || oldPrice || oldWait) removedLegacy |= profile.Numbers.Remove(key);
         }
@@ -188,12 +190,18 @@ public static class DebugBalanceSettings
     {
         var source = EconomyConfigProvider.Baseline;
         int Get(string key, int fallback) => (int)profile.Number(key, fallback);
-        int basePrice = Get(BasePriceKey, source.Items[0].BasePrice);
+        var workshopPrices = source.Workshops.ToDictionary(workshop => workshop.Id,
+            workshop => Get($"craft.{workshop.Id}.cost", workshop.SpinCost));
         return new EconomyConfig
         {
             SchemaVersion = source.SchemaVersion, IsProvisional = source.IsProvisional,
             StartingMoney = Get("start.cash", source.StartingMoney),
-            Items = source.Items.Select(item => new ItemConfig { Id = item.Id, Workshop = item.Workshop, BasePrice = basePrice, Rerolls = Get($"item.{item.Id}.rerolls", item.Rerolls) }).ToList(),
+            Items = source.Items.Select(item => new ItemConfig
+            {
+                Id = item.Id, Workshop = item.Workshop, BasePrice = workshopPrices[item.Workshop],
+                Rerolls = Get($"item.{item.Id}.rerolls", item.Rerolls)
+            }).ToList(),
+            CraftCosts = source.Items.ToDictionary(item => item.Id, item => workshopPrices[item.Workshop]),
             BuyerWaitMinSeconds = Get("buyer.wait.min", source.BuyerWaitMinSeconds),
             BuyerWaitMaxSeconds = Get("buyer.wait.max", source.BuyerWaitMaxSeconds),
             Days = new DayConfig
@@ -206,13 +214,13 @@ public static class DebugBalanceSettings
             },
             Workshops = source.Workshops.Select(workshop => new WorkshopConfig
             {
-                Id = workshop.Id,
+                Id = workshop.Id, SpinCost = workshopPrices[workshop.Id],
                 UnlockCost = workshop.UnlockCost
             }).ToList(),
             Rarities = source.Rarities.Select(rarity => new RarityConfig
             {
                 Id = rarity.Id, Name = rarity.Name, Weight = rarity.Weight,
-                Rerolls = Get($"rarity.{rarity.Id}.rerolls", rarity.Rerolls), BasePrices = new(rarity.BasePrices)
+                Rerolls = Get($"rarity.{rarity.Id}.rerolls", rarity.Rerolls), BasePrices = new(workshopPrices)
             }).ToList(),
             OfferRanges = source.OfferRanges,
             Quotas = source.Quotas.Select(quota => new QuotaConfig
@@ -242,6 +250,9 @@ public static class DebugBalanceSettings
             string name = workshop.Id == "atelier" ? "Ателье" : "Музыка";
             if (workshop.UnlockCost > 0) fields.Add(new($"workshop.{workshop.Id}.unlock", "Создание", name + ": цена открытия ($)", workshop.UnlockCost));
         }
+        foreach (var workshop in config.Workshops)
+            fields.Add(new($"craft.{workshop.Id}.cost", "Создание",
+                (workshop.Id == "atelier" ? "Ателье" : "Музыка") + ": создание и базовая цена продажи ($)", workshop.SpinCost, 1, 1000000));
         foreach (var card in Cards)
         {
             if (card != DayUpgrade.Cash) fields.Add(new($"card.{card}.cost", "Карты", CardName(card) + ": цена ($)", DayUpgradeSession.Cost(card)));
@@ -261,7 +272,6 @@ public static class DebugBalanceSettings
             };
             fields.Add(new($"polish.{item.Kind}.strength", "Создание", item.Name + ": поправка силы полировки", strength, .4, 2.5, .01));
         }
-        fields.Add(new(BasePriceKey, "Предметы", "Базовая цена всех товаров ($)", config.Items[0].BasePrice, 1, 100000));
         foreach (var item in WorkshopItemCatalog.BaselineItems)
             fields.Add(new($"item.{item.Kind}.rerolls", "Предметы", item.Name + ": смен покупателя", item.Rerolls, 0, 3));
         return fields;

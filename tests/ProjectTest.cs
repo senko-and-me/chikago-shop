@@ -179,6 +179,14 @@ public partial class ProjectTest : SceneTree
                 Quit();
                 return;
             }
+            if (OS.GetCmdlineUserArgs().Contains("--buyer-request-checks"))
+            {
+                await TestExactBuyerRequests();
+                await TestRevisionUi(saleOnly: true);
+                GD.Print("BUYER_REQUEST_CHECKS_PASS: exact requests, stock, saves and all ten icons beside the timer");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--buyer-arrival-checks"))
             {
                 await TestBuyerArrival();

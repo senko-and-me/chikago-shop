@@ -31,10 +31,10 @@ public partial class ProjectTest
             var body = tutorial.GetNode<Label>("Root/Panel/Content/Body");
             TranslationServer.SetLocale("en");
             await Frame();
-            bool english = body.Tr(body.Text).Contains("clothing from the atelier");
+            bool english = body.Tr(body.Text).Contains("what the customer wants");
             TranslationServer.SetLocale("ru");
             await Frame();
-            return english && body.Text.Contains("ищет одежду из ателье") &&
+            return english && body.Text.Contains("что ищет покупатель") &&
                 tutorial.GetNode<Button>("Root/Panel/Content/Actions/Done").Visible;
         }
         void CheckEmptyTutorialCounter()
@@ -534,7 +534,7 @@ public partial class ProjectTest
                 await CameraSettled();
                 Check(tutorial.Target == game.GetNode<Control>(thought), "Buyer request must outline the actual thought bubble");
                 Highlight();
-                Check(await CheckBuyerRequestLesson(), "Buyer request must explain both categories and require acknowledgment");
+                Check(await CheckBuyerRequestLesson(), "Buyer request must explain exact items and require acknowledgment");
                 using var screenshot = await CapturePresentation($"tutorial-buyer-request-{viewport.X}");
                 Check(screenshot.GetSize() == viewport, "Buyer lesson must be checked at the requested native resolution");
             }
@@ -549,15 +549,16 @@ public partial class ProjectTest
             Check(game.Accepted == 0 && game.BuyerWaitRemaining == heldTime && game.RerollsRemaining == rerolls,
                 "Reading the buyer request must preserve the time, rerolls and first sale");
             int originalBuyer = game.CustomerIndex, originalItem = game.ItemIndex, originalCash = game.Score;
-            const string iconPath = thought + "/Stack/Category/ThoughtIcon";
-            Check(game.GetNode<TextureRect>(iconPath).Texture.ResourcePath == "res://art/ui/buyer_wish_atelier.png",
-                "The first request must show the real clothing icon before the example");
+            const string iconPath = thought + "/Stack/RequestRow/ThoughtIcon";
+            string RequestArtwork() => ((AtlasTexture)game.GetNode<TextureRect>(iconPath).Texture).Atlas.ResourcePath;
+            Check(RequestArtwork() == TradeScene.GetItemArtPath(originalItem),
+                "The first request must show the exact item being sold");
             await ClickControl(game, continueInstruction);
             await Frame();
             Step(FirstTradeTutorial.Step.Offer);
-            Check(game.GetNode<TextureRect>(iconPath).Texture.ResourcePath == "res://art/ui/buyer_wish_atelier.png" &&
+            Check(RequestArtwork() == TradeScene.GetItemArtPath(originalItem) &&
                 game.CustomerIndex == originalBuyer && game.ItemIndex == originalItem && game.Score == originalCash,
-                "The introductory tutorial must progress directly to the offer with the real clothing request");
+                "The introductory tutorial must progress directly to the offer with the same item request");
             await Reload();
             Step(FirstTradeTutorial.Step.Offer);
             await CheckTutorialEndBlocked();
@@ -852,13 +853,8 @@ public partial class ProjectTest
                 "The real pause-menu new-run button must offer fresh practice after a completed tutorial");
             game.GetNode<PauseMenu>("PauseMenu").Open();
             await Frame();
-            Check(!tutorial.IsShowing && Paused, "Pause must hide tutorial hints");
-            await ClickControl(game, "PauseMenu/Root/Overlay/Center/Panel/Content/Menu/TutorialButton");
-            await Frame();
-            Check(tutorial.IsActive && !Paused, "The scene-owned pause button must allow replay without resetting the run");
-            Step(FirstTradeTutorial.Step.Camera);
-            game.GetNode<PauseMenu>("PauseMenu").Open();
-            await Frame();
+            Check(!game.HasNode("PauseMenu/Root/Overlay/Center/Panel/Content/Menu/TutorialButton"),
+                "The pause menu must not offer to replay onboarding");
             Check(!tutorial.IsShowing && Paused, "An active tutorial must hide its panel and highlight while paused");
             Vector2 pausedPosition = game.GetNode<WorldCamera>("Camera2D").Position;
             await ToSignal(CreateTimer(0.2), SceneTreeTimer.SignalName.Timeout);

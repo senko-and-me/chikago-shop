@@ -34,11 +34,12 @@ public static class WorkshopItemCatalog
         {
             int revision = DebugBalanceSettings.Revision;
             if (_items != null && _revision == revision) return _items;
-            var terms = DebugBalanceSettings.Economy.Items.ToDictionary(item => item.Id);
+            var economy = Config;
+            var itemsByKind = economy.Items.ToDictionary(item => item.Id);
+            var workshopPrices = economy.Workshops.ToDictionary(workshop => workshop.Id, workshop => workshop.SpinCost);
             _items = System.Array.AsReadOnly(BaselineItems.Select(item => item with
             {
-                BasePrice = terms[item.Kind].BasePrice,
-                Rerolls = terms[item.Kind].Rerolls
+                BasePrice = workshopPrices[item.WorkshopId], Rerolls = itemsByKind[item.Kind].Rerolls
             }).ToArray());
             _revision = revision;
             return _items;
@@ -76,6 +77,8 @@ public static class WorkshopItemCatalog
         for (int i = 0; i < Items.Count; i++) if (Items[i].Kind == kind) return i;
         return -1;
     }
+    public static int ItemCraftCost(int index) => Items[index].BasePrice;
+    public static int CraftCost(string workshop) => Config.Workshops.Single(entry => entry.Id == workshop).SpinCost;
     public static int DayDurationSeconds => Config.Days.DurationSeconds;
     public static int Roll(string workshop, int ticket, DayUpgradeSession upgrades = null, int hiddenShift = 0) =>
         Table(workshop, upgrades, hiddenShift).Select(ticket);

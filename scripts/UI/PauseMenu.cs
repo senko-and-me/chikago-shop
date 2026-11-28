@@ -73,7 +73,6 @@ public partial class PauseMenu : CanvasLayer
 			GetParent<TradeScene>().NewGame();
 			Close();
 		});
-		AddButton(_menu, "TutorialButton", "Повторить обучение", ReplayTutorial);
 		AddButton(_menu, "MainMenuButton", "В главное меню", ReturnToMainMenu);
 
 		_settings = new VBoxContainer { Name = "Settings", Visible = false };
@@ -125,13 +124,6 @@ public partial class PauseMenu : CanvasLayer
 		_english.AddThemeFontSizeOverride("font_size", 24);
 		_russian.AddThemeFontSizeOverride("font_size", 24);
 		_settings.GetNode<Button>("BackButton").AddThemeFontSizeOverride("font_size", 24);
-	}
-
-	private void ReplayTutorial()
-	{
-        DismissCraft();
-		Close();
-		GetParent<TradeScene>().GetNode<FirstTradeTutorial>("FirstTradeTutorial").Restart();
 	}
 
 	private static Button AddLanguageButton(HBoxContainer row, ButtonGroup group, string name, string text, string language)

@@ -27,11 +27,26 @@ public partial class ProjectTest
         {
             item.Show();
             sale.Show();
-            widget.SetState(false, 0, 15);
-            foreach (Vector2I viewport in new[] { new Vector2I(1280, 720), new Vector2I(1920, 1080) })
+            const string requestRow = "Stack/RequestRow/";
+            var icon = bubble.GetNode<TextureRect>(requestRow + "ThoughtIcon");
+            var seconds = bubble.GetNode<Label>(requestRow + "RemainingSeconds");
+            var waitBar = bubble.GetNode<ProgressBar>("Stack/RedWaitingBar");
+            for (int index = 0; index < WorkshopItemCatalog.Items.Count; index++)
+            {
+                widget.SetState(index, 12.5, 15);
+                await ToSignal(this, SignalName.ProcessFrame);
+                Check(icon.Texture is AtlasTexture artwork && artwork.Atlas.ResourcePath == TradeScene.GetItemArtPath(index) &&
+                    artwork.Region.HasArea() && icon.Size == new Vector2(49, 50) && icon.MouseFilter == Control.MouseFilterEnum.Ignore &&
+                    icon.StretchMode == TextureRect.StretchModeEnum.KeepAspectCentered,
+                    $"The exact item icon for {TradeScene.GetItemKind(index)} must fit the shared icon size and ignore input");
+            }
+
+            var viewports = new[] { new Vector2I(960, 540), new Vector2I(1280, 720), new Vector2I(1920, 1080) };
+            foreach (Vector2I viewport in saleOnly ? viewports : viewports.Skip(1))
             {
                 Root.Size = viewport;
                 await ToSignal(this, SignalName.ProcessFrame);
+                Vector2 farSaleSize = Vector2.Zero, farBubbleSize = Vector2.Zero;
                 foreach (float scale in new[] { 0.4f, 0.72f, 1f })
                 {
                     camera.Zoom = Vector2.One * scale;
@@ -40,16 +55,35 @@ public partial class ProjectTest
                     zoomUi.UpdateForZoom(scale);
                     await ToSignal(this, SignalName.ProcessFrame);
                     Rect2 offerBounds = ScreenBounds(sale), bubbleBounds = ScreenBounds(bubble);
+                    Rect2 clockBounds = ScreenBounds(game.GetNode<Control>("HUD/DayClock/Root/DayTimer"));
+                    Check(!clockBounds.Intersects(offerBounds) && !clockBounds.Intersects(bubbleBounds),
+                        "Neither trade control may cover the day clock");
                     Check(Root.GetVisibleRect().Encloses(offerBounds) &&
                         Root.GetVisibleRect().Encloses(bubbleBounds) && !offerBounds.Intersects(bubbleBounds),
                         $"Trade elements must fit without overlap at {viewport}, zoom {scale}: {offerBounds}, {bubbleBounds}");
+                    Rect2 iconBounds = ScreenBounds(icon), secondsBounds = ScreenBounds(seconds), barBounds = ScreenBounds(waitBar);
+                    Check(bubbleBounds.Encloses(iconBounds) && bubbleBounds.Encloses(secondsBounds) && bubbleBounds.Encloses(barBounds) &&
+                        !iconBounds.Intersects(secondsBounds) && !iconBounds.Intersects(barBounds) && !secondsBounds.Intersects(barBounds),
+                        $"The request icon, seconds and bar must fit separately inside the bubble at {viewport}, zoom {scale}");
+                    if (scale == 0.4f)
+                    {
+                        Check(offerBounds.Size.X < 0.27f * viewport.X && bubbleBounds.Size.X < 0.27f * viewport.X,
+                            "Even at overview zoom, the deal and thought bubble must each stay compact");
+                        farSaleSize = offerBounds.Size;
+                        farBubbleSize = bubbleBounds.Size;
+                    }
+                    if (scale == 1 && viewport.X >= 1280)
+                        Check(farSaleSize.X > offerBounds.Size.X && farBubbleSize.X > bubbleBounds.Size.X &&
+                            Mathf.IsEqualApprox(farSaleSize.X / offerBounds.Size.X, farBubbleSize.X / bubbleBounds.Size.X),
+                            "Zooming out must enlarge both trade controls by the same proportion");
                     Check(sale.ZIndex >= 125 && bubble.ZIndex > sale.ZIndex &&
                         !sale.ZAsRelative && !bubble.ZAsRelative, "Both trade controls must draw above the room textures");
                     foreach (Node worldRoom in game.GetNode("World").GetChildren())
                     {
                         var frame = worldRoom.GetNodeOrNull<Control>("RoomFrame");
                         if (frame != null)
-                            Check(bubble.ZIndex > frame.ZIndex, "Neighbouring room frames must not cut across the buyer's timer bubble");
+                            Check(sale.ZIndex > frame.ZIndex && bubble.ZIndex > frame.ZIndex,
+                                "Neighbouring room frames must not cut across either trade control");
                     }
                 }
                 camera.Zoom = Vector2.One * 0.52f;

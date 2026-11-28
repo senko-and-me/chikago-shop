@@ -9,6 +9,7 @@ public partial class ZoomResponsiveUi : Node
     private readonly List<(CanvasItem Item, Color Color, bool Visible)> _headers = [];
     private Control _sale = null!;
     private Control _bubble;
+    private Control _dayTimer;
     private Vector2 _saleHome, _saleScale, _bubbleHome, _bubbleScale;
     private float _lastZoom = float.NaN;
     private bool _layoutDirty = true;
@@ -32,6 +33,8 @@ public partial class ZoomResponsiveUi : Node
             Register(game.GetNode<Control>($"World/{room}/GetItemButton/PriceHint"));
         }
         _sale = game.GetNode<Control>("World/TradingRoom/Item/TradePanel");
+        _sale.ZAsRelative = false;
+        _sale.ZIndex = 201;
         _saleHome = _sale.Position;
         _saleScale = _sale.Scale;
         foreach (string room in new[] { "Showroom", "ShowroomLeft" })
@@ -111,15 +114,28 @@ public partial class ZoomResponsiveUi : Node
         }
 
         _sale.PivotOffset = new Vector2(_sale.Size.X / 2f, _sale.Size.Y);
-        float inverseZoom = 1f / Mathf.Max(0.01f, zoom);
-        Vector2 saleScale = _saleScale * Mathf.Clamp(inverseZoom, 1f, 2.6f);
+        Rect2 viewport = GetViewport().GetVisibleRect();
+        Vector2 margin = new(Mathf.Min(90, viewport.Size.X * 0.08f),
+            Mathf.Min(105, viewport.Size.Y * 0.14f));
+        Rect2 screen = new(viewport.Position + margin, viewport.Size - 2 * margin);
+        _dayTimer ??= GetParent().GetNodeOrNull<Control>("HUD/DayClock/Root/DayTimer");
+        if (_dayTimer?.IsVisibleInTree() == true)
+        {
+            float clockTop = (_dayTimer.GetGlobalTransformWithCanvas() * Vector2.Zero).Y;
+            float safeBottom = Mathf.Max(screen.Position.Y + 1, Mathf.Min(screen.End.Y, clockTop - 12));
+            screen.Size = new Vector2(screen.Size.X, safeBottom - screen.Position.Y);
+        }
+        float counterDistance = _sale.GetParent<CanvasItem>().GetGlobalTransformWithCanvas().Origin.DistanceTo(viewport.GetCenter());
+        float zoomOut = Mathf.Clamp((1f - zoom) / 0.65f, 0f, 1f);
+        float awayFromCounter = Mathf.Clamp(2f * counterDistance / viewport.Size.X, 0f, 1f);
+        float scale = (0.94f + 0.24f * zoomOut + 0.08f * awayFromCounter) / Mathf.Max(0.01f, zoom);
+        Vector2 saleScale = _saleScale * scale;
         if (!_sale.IsVisibleInTree() && _bubble?.IsVisibleInTree() != true)
         {
             _sale.Scale = saleScale;
             return;
         }
 
-        Rect2 screen = GetViewport().GetVisibleRect().Grow(-12);
         Rect2 sale = Project(_sale, _saleHome, saleScale);
         bool showBubble = _bubble?.IsVisibleInTree() == true;
         const float gap = 12;
@@ -131,20 +147,19 @@ public partial class ZoomResponsiveUi : Node
 
         _bubble.PivotOffset = _bubble.Size / 2f;
         Vector2 bubbleHome = _bubbleHome + _bubble.PivotOffset * (_bubbleScale - Vector2.One);
-        Vector2 bubbleScale = _bubbleScale * Mathf.Clamp(Mathf.Sqrt(inverseZoom), 1f, 1.65f);
+        Vector2 bubbleScale = _bubbleScale * scale;
         Rect2 bubble = Project(_bubble, bubbleHome, bubbleScale);
-        if (_sale.IsVisibleInTree())
+        bool showSale = _sale.IsVisibleInTree();
+        Vector2 totalSize = showSale
+            ? new Vector2(sale.Size.X + gap + bubble.Size.X, Mathf.Max(sale.Size.Y, bubble.Size.Y))
+            : bubble.Size;
+        float fit = Mathf.Min(1, Mathf.Min(screen.Size.X / totalSize.X, screen.Size.Y / totalSize.Y));
+        if (fit < 1)
         {
-            float fit = Mathf.Min(1, Mathf.Min(
-                (screen.Size.X - gap) / (sale.Size.X + bubble.Size.X),
-                screen.Size.Y / Mathf.Max(sale.Size.Y, bubble.Size.Y)));
-            if (fit < 1)
-            {
-                saleScale *= fit;
-                bubbleScale *= fit;
-                sale = Project(_sale, _saleHome, saleScale);
-                bubble = Project(_bubble, bubbleHome, bubbleScale);
-            }
+            saleScale *= fit;
+            bubbleScale *= fit;
+            sale = Project(_sale, _saleHome, saleScale);
+            bubble = Project(_bubble, bubbleHome, bubbleScale);
         }
 
         Vector2 salePosition = ClampTo(sale, screen);
@@ -153,9 +168,10 @@ public partial class ZoomResponsiveUi : Node
             bubblePosition.X + 22f * Mathf.Clamp(1f - zoom, 0f, 1f));
         bool sharedRows = salePosition.Y < bubblePosition.Y + bubble.Size.Y &&
             bubblePosition.Y < salePosition.Y + sale.Size.Y;
-        if (_sale.IsVisibleInTree() && sharedRows)
+        if (showSale && sharedRows)
         {
-            salePosition.X = Mathf.Min(salePosition.X, screen.End.X - bubble.Size.X - gap - sale.Size.X);
+            salePosition.X = Mathf.Max(screen.Position.X,
+                Mathf.Min(salePosition.X, screen.End.X - bubble.Size.X - gap - sale.Size.X));
             bubblePosition.X = Mathf.Max(bubblePosition.X, salePosition.X + sale.Size.X + gap);
         }
         Place(_sale, _saleHome, saleScale, sale, salePosition);

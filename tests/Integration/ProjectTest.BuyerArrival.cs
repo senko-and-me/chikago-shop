@@ -1,10 +1,107 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using ChikagoShop.Domain.Persistence;
 using Godot;
 
 public partial class ProjectTest
 {
+    private async Task TestExactBuyerRequests()
+    {
+        const string save = "user://exact_buyer_request_test.json";
+        const string thought = "World/TradingRoom/BuyerWaitingThought/ThoughtBubble";
+        var scene = GD.Load<PackedScene>("res://scenes/trade_scene.tscn");
+        TradeScene game = null;
+
+        async Task Reload(ProgressData fixture = null)
+        {
+            if (game != null)
+            {
+                game.QueueFree();
+                await ToSignal(this, SignalName.ProcessFrame);
+            }
+            if (fixture != null) ProgressSaveStore.Save(save, fixture);
+            game = scene.Instantiate<TradeScene>();
+            game.SavePath = save;
+            game.GetNode<FirstTradeTutorial>("FirstTradeTutorial").ProgressPath = "";
+            Root.AddChild(game);
+            game.SetProcess(false);
+            await ToSignal(this, SignalName.ProcessFrame);
+        }
+
+        string RequestArt() => ((AtlasTexture)game.GetNode<TextureRect>(thought + "/Stack/RequestRow/ThoughtIcon").Texture)
+            .Atlas.ResourcePath;
+        ProgressData Saved() => ProgressSaveStore.Load(save, game.EnergyCapacity);
+
+        try
+        {
+            var fixture = new ProgressData
+            {
+                SaveVersion = ProgressJson.CurrentVersion, Day = 8, QuotaStage = 1, QuotaVisit = QuotaVisitStage.Rewarded,
+                MusicWorkshopUnlocked = true, DayStarted = true, DayRemainingSeconds = 80, Score = 500,
+                ShowcaseItems = [0, 1, -1, 2, 3, -1],
+                WaitingBuyerPresent = true, WaitingBuyerMusic = true, WaitingBuyerItemKind = "drum",
+                CustomerIndex = 0, BuyerWaitInitial = 23, BuyerWaitRemaining = 13.5
+            };
+            await Reload(fixture);
+            game.OnShowcasePressed(3); // Guitar is from the same workshop as the requested drum.
+            game.OnShowcasePressed(0);
+            Check(!game.TradeActive && game.BuyerWaitRemaining == 13.5 && game.Score == fixture.Score &&
+                game.ShowcaseItems.SequenceEqual(fixture.ShowcaseItems) && RequestArt() == TradeScene.GetItemArtPath(3),
+                "Offering any other item must preserve the customer, timer, money and stock");
+
+            game.PersistProgress();
+            await Reload();
+            Check(Saved().WaitingBuyerItemKind == "drum" && RequestArt() == TradeScene.GetItemArtPath(3) &&
+                game.BuyerWaitRemaining == 13.5, "Reload must keep the exact request, its icon and its clock");
+            game.OnShowcasePressed(4);
+            Check(game.TradeActive && game.ItemIndex == 3 && game.BuyerWaitRemaining == 13.5 &&
+                RequestArt() == TradeScene.GetItemArtPath(3), "Clicking the requested item must start a sale with the same timer and artwork");
+            game.ReturnItemToShowcase();
+            game.OnShowcasePressed(3);
+            Check(!game.TradeActive && Saved().WaitingBuyerItemKind == "drum" && game.BuyerWaitRemaining == 13.5,
+                "Returning an item to the showcase must restore the same request");
+            game.OnShowcasePressed(4);
+            game.AcceptTrade();
+            Check(game.Accepted == 1 && game.ShowcaseItems[4] == -1 && game.ShowcaseItems[3] == 2,
+                "Accepting the sale must consume only the requested item");
+
+            await Reload(fixture with { SaveVersion = 20, WaitingBuyerItemKind = null });
+            Check(RequestArt() == TradeScene.GetItemArtPath(2) && game.BuyerWaitRemaining == 13.5,
+                "A legacy workshop request must resolve to a stocked item without resetting the clock");
+
+            await Reload(fixture with
+            {
+                WaitingBuyerItemKind = "violin", ShowcaseItems = [-1, -1, -1, 2, 2, 2], BuyerWaitRemaining = 0.1
+            });
+            game.OnShowcasePressed(3);
+            Check(!game.TradeActive && RequestArt() == TradeScene.GetItemArtPath(8),
+                "A full workshop must never make a wrong item match");
+            game._Process(0.2);
+            Check(!game.TradeActive && Saved().WaitingBuyerItemKind == "guitar" && game.BuyerWaitRemaining == game.BuyerWaitInitial,
+                "When a full workshop cannot make the expired request, the next buyer must ask for available stock");
+            game.OnShowcasePressed(3);
+            Check(game.TradeActive && game.ItemIndex == 2, "The replacement request must be playable");
+
+            await Reload(fixture with
+            {
+                Day = 1, QuotaStage = 0, QuotaVisit = QuotaVisitStage.Unavailable, MusicWorkshopUnlocked = false,
+                WaitingBuyerPresent = false, ShowcaseItems = [], Score = WorkshopItemCatalog.ItemCraftCost(0)
+            });
+            game._Process(0);
+            int requested = WorkshopItemCatalog.IndexOf(Saved().WaitingBuyerItemKind);
+            Check(requested >= 0 && WorkshopItemCatalog.Items[requested].WorkshopId == "atelier" &&
+                WorkshopItemCatalog.ItemCraftCost(requested) <= game.Score && RequestArt() == TradeScene.GetItemArtPath(requested),
+                "With empty showcases a new request must be craftable with the available workshop and budget");
+        }
+        finally
+        {
+            game?.QueueFree();
+            await ToSignal(this, SignalName.ProcessFrame);
+            if (FileAccess.FileExists(save)) DirAccess.RemoveAbsolute(save);
+        }
+    }
+
     private async Task TestBuyerArrival()
     {
         const string save = "user://buyer_arrival_test.json";

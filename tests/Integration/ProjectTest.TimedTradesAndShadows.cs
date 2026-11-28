@@ -46,6 +46,7 @@ public partial class ProjectTest
                 CheckpointDay = 8, CheckpointQuotaVisit = QuotaVisitStage.Rewarded,
                 CheckpointMusicWorkshopUnlocked = true, CheckpointScore = 2000, ShowcaseItems = items,
                 CheckpointShowcaseItems = items, WaitingBuyerPresent = true, WaitingBuyerMusic = music,
+                WaitingBuyerItemKind = music ? "guitar" : "hat",
                 CustomerIndex = 0, BuyerWaitInitial = music ? 24 : 12, BuyerWaitRemaining = music ? 21 : 11
             };
         }

@@ -88,10 +88,11 @@ public partial class ProjectTest
                 game.PlaceItemInShowcase(0);
                 Check(game.GetNode<TextureRect>("World/ShowroomLeft/Showcases/Slot1/Icon").Texture.ResourcePath == art,
                     "Showcases must display matching catalogue artwork");
-                // Exercise a matching customer deterministically without changing the live 50/50 rule.
+                // Set the exact request so the fixture does not depend on a random arrival.
                 var matching = ProgressSaveStore.Load(path, game.EnergyCapacity) with
                 {
                     WaitingBuyerPresent = true,
+                    WaitingBuyerItemKind = TradeScene.GetItemKind(index),
                     WaitingBuyerMusic = WorkshopItemCatalog.Items[index].WorkshopId == "music",
                     BuyerWaitRemaining = 20, CustomerIndex = 0
                 };

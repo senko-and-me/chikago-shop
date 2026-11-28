@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using ChikagoShop.Domain.Configuration;
 using ChikagoShop.Domain.Economy;
+using ChikagoShop.Domain.Trading;
 using NUnit.Framework;
 
 namespace ChikagoShop.Domain.Tests;
@@ -9,13 +10,13 @@ namespace ChikagoShop.Domain.Tests;
 // input skill, offer randomness or the full campaign runtime.
 public sealed class SelectiveCraftBalanceTests
 {
-    private static readonly (string Kind, string Room, string Rarity)[] Items =
+    private static readonly (string Kind, string Room, string Rarity, int Cost)[] Items =
     [
-        ("hat", "atelier", "common"), ("vest", "atelier", "ordinary"),
-        ("gloves", "atelier", "first_class"), ("matteo_hat", "atelier", "exclusive"),
-        ("lorgnette", "atelier", "unique"), ("guitar", "music", "common"),
-        ("drum", "music", "ordinary"), ("banjo", "music", "first_class"),
-        ("violin", "music", "exclusive"), ("tuba", "music", "unique")
+        ("hat", "atelier", "common", 50), ("vest", "atelier", "ordinary", 50),
+        ("gloves", "atelier", "first_class", 50), ("matteo_hat", "atelier", "exclusive", 50),
+        ("lorgnette", "atelier", "unique", 50), ("guitar", "music", "common", 50),
+        ("drum", "music", "ordinary", 50), ("banjo", "music", "first_class", 50),
+        ("violin", "music", "exclusive", 50), ("tuba", "music", "unique", 50)
     ];
 
     private static string ConfigJson() => File.ReadAllText(Path.Combine(
@@ -25,23 +26,21 @@ public sealed class SelectiveCraftBalanceTests
         config.Rarities.Single(value => value.Id == rarity).BasePrices[room];
 
     [Test]
-    public void AllTenItemsAreFreeAndHaveUniformBasePrices()
+    public void AllTenItemsUseTheWorkshopRateForCraftingAndBaseSales()
     {
-        var json = JsonNode.Parse(ConfigJson())!.AsObject();
         var config = Config();
-        Assert.That(json.ContainsKey("craft_costs"), Is.False);
         Assert.That(config.Items.Select(item => item.Id), Is.EquivalentTo(Items.Select(item => item.Kind)));
         foreach (var item in Items)
         {
-            int sale = SalePrice(config, item.Room, item.Rarity);
-            Assert.That(sale, Is.EqualTo(50), item.Kind);
-            Assert.That(config.Items.Single(entry => entry.Id == item.Kind).BasePrice, Is.EqualTo(sale), item.Kind);
+            Assert.That(config.Items.Single(entry => entry.Id == item.Kind).BasePrice, Is.EqualTo(item.Cost), item.Kind);
+            Assert.That(config.CraftCosts[item.Kind], Is.EqualTo(item.Cost), item.Kind);
+            Assert.That(SalePrice(config, item.Room, item.Rarity), Is.EqualTo(item.Cost), item.Kind);
         }
     }
 
     [TestCase(false)]
     [TestCase(true)]
-    public void ThreeNeutralSalesPerDayCanCoverBothQuotasWithFreeCrafting(bool openMusic)
+    public void FastBonusedSalesCanFundBothQuotasWithOptionalMusicCrafting(bool openMusic)
     {
         var config = Config();
         Assert.That(config.StartingMoney, Is.EqualTo(220));
@@ -65,22 +64,28 @@ public sealed class SelectiveCraftBalanceTests
                 musicUnlockDay = day;
             }
 
-            // Ten-second attempts plus ten seconds per sale leave a deliberately
-            // slower three-item daily policy, not a game-imposed attempt limit.
-            const int secondsPerCraftAndSale = 20;
-            int attempts = Math.Min(3, config.Days.DurationSeconds / secondsPerCraftAndSale);
-            Assert.That(attempts, Is.GreaterThanOrEqualTo(3));
+            // Check a feasible high-offer route with ten seconds of craft and one second to sell.
+            const int secondsPerCraftAndSale = 11;
+            int duration = config.Days.DurationSeconds + (firstQuotaPaid ? 30 : 0);
+            int attempts = duration / secondsPerCraftAndSale;
             int secondsUsed = 0;
             for (int i = 0; i < attempts; i++)
             {
-                var affordable = Items.Where(item => item.Room == "atelier" || musicUnlocked).ToArray();
+                var affordable = Items.Where(item => (item.Room == "atelier" || musicUnlocked)
+                        && config.CraftCosts[item.Kind] <= money)
+                    .OrderByDescending(item => SalePrice(config, item.Room, item.Rarity))
+                    .ToArray();
                 Assert.That(affordable, Is.Not.Empty, $"Day {day}: must afford an actual item before sale.");
                 var selected = affordable[0];
+                money -= config.CraftCosts[selected.Kind];
                 Assert.That(money, Is.GreaterThanOrEqualTo(0));
-                money += SalePrice(config, selected.Room, selected.Rarity);
+                int basePrice = SalePrice(config, selected.Room, selected.Rarity);
+                money += TradeOfferRules.Price(basePrice, TradeOfferRules.MaxPercent)
+                    + RunRewardRules.SpeedBonus(config.BuyerWaitMaxSeconds - secondsPerCraftAndSale, config.BuyerWaitMaxSeconds)
+                    + RunRewardRules.QualityBonus("S");
                 secondsUsed += secondsPerCraftAndSale;
             }
-            Assert.That(secondsUsed, Is.LessThanOrEqualTo(config.Days.DurationSeconds));
+            Assert.That(secondsUsed, Is.LessThanOrEqualTo(duration));
 
             foreach (var quota in config.Quotas.Where(q => q.DeadlineDay == day))
             {
@@ -94,7 +99,7 @@ public sealed class SelectiveCraftBalanceTests
         Assert.That(musicUnlocked, Is.EqualTo(openMusic));
         if (openMusic) Assert.That(musicUnlockDay, Is.EqualTo(8));
         Assert.That(money, Is.GreaterThanOrEqualTo(0), "The route remains affordable without a story reward.");
-        TestContext.WriteLine($"Budget feasibility: music={openMusic}, unlock day={musicUnlockDay}, final cash={money}; neutral base sales, no extra bonuses.");
+        TestContext.WriteLine($"Budget feasibility: music={openMusic}, unlock day={musicUnlockDay}, final cash={money}; fast sales with high offers and bonuses.");
     }
 
     [TestCase(0, 20)]
@@ -110,7 +115,7 @@ public sealed class SelectiveCraftBalanceTests
 
     [TestCase(0)]
     [TestCase(20)]
-    public void RetiredPerItemCostParametersAreRejected(int oldCost)
+    public void IncompleteCraftCostTableIsRejected(int oldCost)
     {
         var json = JsonNode.Parse(ConfigJson())!.AsObject();
         json["craft_costs"] = new JsonObject { ["hat"] = oldCost };
