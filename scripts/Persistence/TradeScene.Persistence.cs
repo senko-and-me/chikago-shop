@@ -179,10 +179,8 @@ public partial class TradeScene
 
 		TradeActive = data.TradeActive;
 		_activeTradeGrade = NormalizeRank(data.ActiveTradeGrade);
-		bool musicBuyer = TradeActive && ItemIndex >= 0 && ItemIndex < Items.Count
-			? Items[ItemIndex].WorkshopId == "music" : data.WaitingBuyerMusic;
-		var range = ChikagoShop.Domain.Economy.RunRewardRules.BuyerWaitRange(musicBuyer);
-		_buyerWaitInitial = data.BuyerWaitInitial is double initial && initial >= range.Minimum && initial <= range.Maximum
+		// Existing buyers carry their original patience across balance changes.
+		_buyerWaitInitial = data.BuyerWaitInitial is double initial && double.IsFinite(initial) && initial is >= 1 and <= 600
 			? initial : BuyerWaitDuration;
 		_buyerWaitRemaining = data.SaveVersion >= 15 && data.BuyerWaitRemaining is double remaining && double.IsFinite(remaining)
 			? Math.Clamp(remaining, 0, _buyerWaitInitial) : _buyerWaitInitial;

@@ -123,8 +123,8 @@ public partial class ProjectTest
         {
             string room = workshop.Id == "atelier" ? "Atelier" : "MusicWorkshop";
             string preview = game.GetNode<Label>($"World/{room}/GetItemButton/PriceHint/Label").Text;
-            Check(preview == $"Выбор предмета  •  от {WorkshopItemCatalog.CraftCost(workshop.Id)}$",
-                "The authored price preview must match the default single-item economy before Ready");
+            Check(preview == "Выбор предмета",
+                "The authored craft preview must contain no price before Ready");
         }
         var tradePanel = game.GetNode<Control>("World/TradingRoom/Item/TradePanel");
         Check(tradePanel.ZIndex == 125 && !tradePanel.ZAsRelative, "The trade panel's initial drawing layer must be authored in the scene");

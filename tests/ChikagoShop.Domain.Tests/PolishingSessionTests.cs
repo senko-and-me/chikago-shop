@@ -9,6 +9,27 @@ public sealed class PolishingSessionTests
         new(Enumerable.Repeat((byte)255,width*height).ToArray(),width,height);
 
     [Test]
+    public void EarlyCollectionKeepsRealDirtAndMissesAndCannotAwardAnA()
+    {
+        var session = Full(28, 28);
+        session.Start();
+        session.BeginRub(-60, 14);
+        session.EndRub();
+        session.BeginRub(10, 14);
+        for (int stroke = 0; stroke < 150 && session.Progress < 0.79; stroke++)
+            session.MoveRub(stroke % 2 == 0 ? 18 : 10, 14, 7);
+
+        double progress = session.Progress;
+        Assert.That(progress, Is.InRange(0.79, 0.849));
+        session.FinishEarly();
+        session.MoveRub(18, 14, 7);
+        Assert.That(session.State, Is.EqualTo(EmbroideryState.Finished));
+        Assert.That(session.Progress, Is.EqualTo(progress));
+        Assert.That(session.Misses, Is.EqualTo(1));
+        Assert.That(session.Rank, Is.EqualTo("B"));
+    }
+
+    [Test]
     public void HoldingStillOrMovingWithoutAHeldPointerDoesNotClean()
     {
         var session=Full();

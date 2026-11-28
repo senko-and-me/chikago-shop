@@ -34,10 +34,11 @@ public static class WorkshopItemCatalog
         {
             int revision = DebugBalanceSettings.Revision;
             if (_items != null && _revision == revision) return _items;
-            var profile = DebugBalanceSettings.Profile;
-            _items = System.Array.AsReadOnly(BaselineItems.Select(item =>
+            var terms = DebugBalanceSettings.Economy.Items.ToDictionary(item => item.Id);
+            _items = System.Array.AsReadOnly(BaselineItems.Select(item => item with
             {
-                return item with { BasePrice = (int)profile.Number($"item.{item.Kind}.price", item.BasePrice), Rerolls = (int)profile.Number($"item.{item.Kind}.rerolls", item.Rerolls) };
+                BasePrice = terms[item.Kind].BasePrice,
+                Rerolls = terms[item.Kind].Rerolls
             }).ToArray());
             _revision = revision;
             return _items;
@@ -75,15 +76,6 @@ public static class WorkshopItemCatalog
         for (int i = 0; i < Items.Count; i++) if (Items[i].Kind == kind) return i;
         return -1;
     }
-    public static int ItemCraftCost(int index)
-    {
-        var item = Items[index];
-        if (!Config.CraftCosts.TryGetValue(item.Kind, out int cost) || cost <= 0)
-            throw new InvalidOperationException($"Missing positive craft cost for {item.Kind}");
-        return cost;
-    }
-    public static int CraftCost(string workshop) => Items.Select((item, index) => (item, index))
-        .Where(entry => entry.item.WorkshopId == workshop).Min(entry => ItemCraftCost(entry.index));
     public static int DayDurationSeconds => Config.Days.DurationSeconds;
     public static int Roll(string workshop, int ticket, DayUpgradeSession upgrades = null, int hiddenShift = 0) =>
         Table(workshop, upgrades, hiddenShift).Select(ticket);

@@ -24,8 +24,12 @@ public partial class ProjectTest
             Check(game.TradeActive && game.BuyerWaitRemaining == 0 && game.Percentage == -50 && game.OfferedPrice == half,
                 "Expired buyer must immediately offer half the normal price and display -50%");
             var content = game.GetNode("World/TradingRoom/Item/TradePanel/Content");
-            Check(content.GetNode<RichTextLabel>("OfferLabel").GetParsedText() == GameLocalization.Format("Получим: {0}$", half),
-                "Expired displayed payout must be exactly half without speed/quality bonuses");
+            int quality = TradeScene.QualityBonus(game.ActiveTradeQualityRank);
+            string expected = GameLocalization.Format("Получим: {0}$", half);
+            if (quality > 0) expected += " " + GameLocalization.Format("+{0}$", quality);
+            Check(content.GetNode<RichTextLabel>("OfferLabel").GetParsedText() == expected &&
+                content.GetNode<RichTextLabel>("OfferLabel").TooltipText.Contains(GameLocalization.Format("Скорость: +{0}$", 0)),
+                "Expired payout must retain quality and omit the speed bonus");
             Check(game.GetNode<Button>(buttons + "DeclineButton").Disabled && !game.GetNode<Button>(buttons + "AcceptButton").Disabled,
                 "After timeout only accepting the offer remains available");
         }
@@ -46,14 +50,14 @@ public partial class ProjectTest
                 "Mouse, keyboard and direct rerolls must not replace an expired buyer or spend attempts");
             game.PersistProgress(); await Reload();
             CheckExpiredOffer();
-            int expected = game.Score + game.OfferedPrice;
+            int expected = game.Score + game.OfferedPrice + TradeScene.QualityBonus(game.ActiveTradeQualityRank);
             await ClickControl(game, buttons + "AcceptButton");
             Check(!game.TradeActive && game.Score == expected && game.Accepted == 1,
-                "Accepting an expired S-quality item must pay exactly half once");
+                "Accepting an expired S-quality item must pay half plus quality once");
             game.AcceptTrade();
             Check(game.Score == expected, "Repeated accept must not pay twice");
             game._Process(0);
-            Check(game.BuyerWaitRemaining == game.BuyerWaitInitial && game.BuyerWaitInitial is >= 10 and <= 20 && !game.TradeActive, "The next customer must reset their patience");
+            Check(game.BuyerWaitRemaining == game.BuyerWaitInitial && game.BuyerWaitInitial is >= 15 and <= 20 && !game.TradeActive, "The next customer must reset their patience within the shared range");
             game.OnShowcasePressed(game.FirstDisplayedItem("atelier"));
             game._Process(0);
             Check(game.TradeActive && game.Percentage >= -30 && !game.GetNode<Button>(buttons + "DeclineButton").Disabled,

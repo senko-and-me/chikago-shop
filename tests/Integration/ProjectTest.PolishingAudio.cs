@@ -184,6 +184,17 @@ public partial class ProjectTest
             Root.PushInput(new InputEventScreenTouch { Index = 0, Position = b, Pressed = false }, true);
             mini.Activate(); Advance(0.1);
             Check(!mini.IsOpen && audio.ActiveVoiceCount == 0, "Collecting must not leave a scraping tail or queue");
+
+            game.Crafting.OpenCatalog("music");
+            Check(game.Crafting.Select("guitar"), "A second instrument must allow an early collection check");
+            mini.Activate(); await Frame();
+            Advance(1);
+            Mouse(a, true); Motion(b); Advance(0.02);
+            Check(audio.ActiveVoiceCount > 0, "A scrape should be active before early collection");
+            mini.Activate(); Advance(0.08);
+            Check(!mini.IsOpen && audio.ActiveVoiceCount == 0 && game.GetShowcaseQualityRank(4) == "D",
+                "Early collection during active rubbing must fade the scrape and save partial quality");
+            Mouse(b, false);
         }
         finally
         {

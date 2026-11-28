@@ -66,9 +66,6 @@ public partial class ProjectTest
                 WorkshopItemCatalog.Items.Count(item => item.WorkshopId == "atelier") == 5 &&
                 WorkshopItemCatalog.Items.Count(item => item.WorkshopId == "music") == 5,
                 "Selection must expose exactly five canonical items per room");
-            var prices = new Dictionary<string, int> { ["hat"] = 20, ["vest"] = 30, ["gloves"] = 55,
-                ["matteo_hat"] = 80, ["lorgnette"] = 135, ["guitar"] = 30, ["drum"] = 50,
-                ["banjo"] = 80, ["violin"] = 125, ["tuba"] = 205 };
             var patterns = new HashSet<string>();
             game.NewGame();
             game.Crafting.OpenCatalog("atelier");
@@ -80,7 +77,7 @@ public partial class ProjectTest
             {
                 Fresh(item.WorkshopId == "music");
                 int index = WorkshopItemCatalog.IndexOf(item.Kind);
-                Check(WorkshopItemCatalog.ItemCraftCost(index) == prices[item.Kind], "Keep approved per-item costs");
+                Check(item.BasePrice == 50, "Every item has the same base sale price");
                 int funds = game.Score, energy = game.EnergyRemaining;
                 double dayTime = game.DayRemainingSeconds;
                 await SelectThroughCatalog(item.Kind);
@@ -109,7 +106,7 @@ public partial class ProjectTest
                 await SelectThroughCatalog(item.Kind);
                 await ClickControl(game, MiniPath(item.WorkshopId, "Action"));
                 Check(mini.ActiveSession.State == EmbroideryState.Playing &&
-                    game.Score == funds - prices[item.Kind] && game.EnergyRemaining == energy &&
+                    game.Score == funds && game.EnergyRemaining == energy &&
                     game.StoredItems.SequenceEqual(new[] { index }) && game.GetStoredItemQualityRank(0) == "D",
                     "Start must debit once and immediately grant exactly the selected D item");
                 game.Crafting.Complete("S");
@@ -119,7 +116,7 @@ public partial class ProjectTest
                     saved.StoredItems.SequenceEqual(new[] { index }), "Paid D item and debit must be saved at start");
                 mini.Activate();
                 Check(!game.Crafting.TryStart(index) && !game.Crafting.Select("hat") &&
-                    game.Score == funds - prices[item.Kind] && game.StoredItems.Length == 1,
+                    game.Score == funds && game.StoredItems.Length == 1,
                     "Repeated start and selection input must never create or charge another item");
                 mini.Close();
                 Check(mini.IsOpen, "An active paid mini-game cannot be dismissed normally");
@@ -192,15 +189,15 @@ public partial class ProjectTest
             Check(!game.Crafting.IsCatalogOpen, "Locked workshop must not expose the music catalog");
             game.Score = 0;
             game.Crafting.OpenCatalog("atelier");
-            Check(game.Crafting.Catalog.ItemButton("hat").Disabled && !game.Crafting.Select("hat"),
-                "Unaffordable items must be disabled and reject direct selection");
+            Check(!game.Crafting.Catalog.ItemButton("hat").Disabled && game.Crafting.Select("hat"),
+                "Zero cash must permit item selection");
             game.Crafting.Catalog.Close();
             Fresh();
             await SelectThroughCatalog("hat");
             game.Score = 0;
             Mini("atelier").Activate();
-            Check(Mini("atelier").ActiveSession.State == EmbroideryState.Ready && game.StoredItems.Length == 0,
-                "Start must revalidate funds after selection");
+            Check(Mini("atelier").ActiveSession.State == EmbroideryState.Playing && game.Score == 0,
+                "A zero balance must allow starting");
             Mini("atelier").Close();
             game.Crafting.Catalog.Close();
 
@@ -219,7 +216,7 @@ public partial class ProjectTest
             }
             game.Crafting.OpenCatalog("atelier");
             Check(!game.Crafting.Catalog.ItemButton("hat").Disabled && game.EnergyRemaining == 0 &&
-                game.StoredItems.Length == attempts && game.Score == repeatedFunds - attempts * prices["hat"],
+                game.StoredItems.Length == attempts && game.Score == repeatedFunds,
                 "Six funded attempts must remain available at zero legacy energy and debit only money");
             game.Crafting.Catalog.Close();
 
@@ -373,14 +370,14 @@ public partial class ProjectTest
                 Check(DebugBalanceSettings.TrySave(profile, out string profileError),
                     "Per-item cost profiles must save while retiring random-craft settings: " + profileError);
                 Check(DebugBalanceSettings.Reload(out profileError) &&
-                    WorkshopItemCatalog.ItemCraftCost(WorkshopItemCatalog.IndexOf("hat")) == 21,
-                    "Saved per-item costs must survive profile reload: " + profileError);
+                    !DebugBalanceSettings.Profile.Numbers.ContainsKey("craft.hat.cost"),
+                    "Retired costs must be removed on reload: " + profileError);
                 Fresh();
                 await SelectThroughCatalog("hat");
                 int beforeDebit = game.Score;
                 Mini("atelier").Activate();
-                Check(game.Score == beforeDebit - 21 && game.StoredItems.SequenceEqual(new[] { 0 }),
-                    "Live per-item debug cost must affect the actual single-item debit");
+                Check(game.Score == beforeDebit && game.StoredItems.SequenceEqual(new[] { 0 }),
+                    "Retired per-item debug overrides must not change free crafting");
                 Mini("atelier").FinishForTesting(true);
                 Mini("atelier").Activate();
             }

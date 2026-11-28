@@ -57,7 +57,7 @@ public partial class ProjectTest
             game.GetNode<WorldCamera>("Camera2D").SetProcess(false);
             await Frame();
             foreach (bool music in new[] { false, true })
-            foreach (string outcome in music ? new[] { "S", "D" } : new[] { "S", "B", "D" })
+            foreach (string outcome in music ? new[] { "S", "D", "Early" } : new[] { "S", "B", "D", "Early" })
             {
                 game.NewGame();
                 game.Score = 10000;
@@ -77,7 +77,14 @@ public partial class ProjectTest
                 Check(game.Crafting.Select(kind), "The item must be available after cancellation");
                 mini.Activate();
                 heard.Clear();
-                if (outcome == "B")
+                if (outcome == "Early")
+                {
+                    if (!music)
+                        foreach (var point in mini.Session.Points.Take(mini.Session.Points.Count - 1))
+                            mini.Session.Hit(point.X, point.Y);
+                    Check(mini.StartButton.IsVisibleInTree(), "An ordinary craft must offer early collection");
+                }
+                else if (outcome == "B")
                 {
                     for (int miss = 0; miss < 3; miss++) mini.Session.Hit(-1000, -1000);
                     while (!mini.Session.Complete)
@@ -91,7 +98,7 @@ public partial class ProjectTest
                         "A real B item must occupy the painted B band before collection");
                 }
                 else mini.FinishForTesting(outcome == "S");
-                string rank = mini.ActiveSession.Rank;
+                string rank = outcome == "Early" ? (music ? "D" : "B") : mini.ActiveSession.Rank;
                 Check(heard.Count == 0 && mini.IsOpen, "Finishing must wait for Collect before playing the result");
                 await Frame();
                 heard.Clear();
@@ -99,6 +106,8 @@ public partial class ProjectTest
                 Check(!mini.IsOpen && heard.Where(cue => cue != SoundEffects.Cue.Hover).SequenceEqual(new[] { Expected(rank) }) &&
                     !effects.GetNode<AudioStreamPlayer>("Hover").Playing,
                     $"Real Collect in {workshop} must play exactly one {rank} result, without a generic click");
+                Check(game.GetShowcaseQualityRank(music ? 3 : 0) == rank,
+                    "The collected item's saved rank must match its result sound");
                 heard.Clear();
                 mini.Activate();
                 Check(heard.Count == 0, "Repeated collection input must not replay the reward sound");

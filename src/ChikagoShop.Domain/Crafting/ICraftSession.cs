@@ -10,5 +10,6 @@ public interface ICraftSession
     string Rank { get; }
     void Start();
     void Tick(double delta);
+    void FinishEarly();
     void FinishForTesting(bool successful);
 }

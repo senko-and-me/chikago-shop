@@ -26,6 +26,7 @@ public partial class ProjectTest
             game.GetNode<FirstTradeTutorial>("FirstTradeTutorial").ProgressPath = "";
             Root.AddChild(game);
             game.SetProcess(false);
+            game.Crafting.Catalog.SetProcess(false);
             game.GetNode<WorldCamera>("Camera2D").SetProcess(false);
             game.GetNode<EmbroideryGame>("EmbroideryGame").SetProcess(false);
             game.GetNode<EmbroideryGame>("PolishingGame").SetProcess(false);
@@ -35,7 +36,7 @@ public partial class ProjectTest
         {
             game.NewGame();
             if (music) UnlockMusicForFixture(game);
-            game.Score = 10000;
+            game.Score = 0;
             game.EnergyRemaining = 0;
             game.EndDay();
         }
@@ -45,7 +46,7 @@ public partial class ProjectTest
             int index = WorkshopItemCatalog.IndexOf(kind);
             string room = WorkshopItemCatalog.Items[index].WorkshopId;
             game.Crafting.OpenCatalog(room);
-            Check(game.Crafting.IsCatalogOpen && Paused, "The item catalog must pause the day");
+            Check(game.Crafting.IsCatalogOpen && Paused, "The catalogue must block world input");
             var button = game.Crafting.Catalog.ItemButton(kind);
             var scroll = game.Crafting.Catalog.GetNode<ScrollContainer>("Root/Center/Panel/Margin/Content/Scroll");
             scroll.EnsureControlVisible(button);
@@ -81,8 +82,74 @@ public partial class ProjectTest
             var tabs = debug.GetNode<TabContainer>("Root/Inset/Panel/Content/Tabs");
             Check(!tabs.HasNode("Редкости"), "The retired rarity settings must not remain as an empty tab");
             for (int tab = 0; tab < tabs.GetTabCount(); tab++) { tabs.CurrentTab = tab; await Frame(); }
-            Check(debug.Editor("craft.hat.cost") != null, "Per-item prices must remain editable");
+            Check(!DebugBalanceSettings.Fields.Any(field => field.Key.StartsWith("craft.") && field.Key.EndsWith(".cost")),
+                "F10 must not expose any craft costs");
+            Check(debug.Editor("buyer.wait.min").Text == "15" && debug.Editor("buyer.wait.max").Text == "20",
+                "F10 must expose the shipped shared buyer range");
+            Check(WorkshopItemCatalog.Items.Count == 10 && WorkshopItemCatalog.Items.All(item => item.BasePrice == 50) &&
+                debug.Editor(DebugBalanceSettings.BasePriceKey).Text == "50" &&
+                !DebugBalanceSettings.Fields.Any(field => field.Key.StartsWith("item.") && field.Key.EndsWith(".price")),
+                "All ten catalogue and F10 base prices must be 50");
             debug.Close();
+            string previousProfilePath = DebugBalanceSettings.StoragePath;
+            const string profilePath = "user://merged_wait_profile.json";
+            try
+            {
+                DebugBalanceSettings.StoragePath = profilePath;
+                var profile = new ChikagoShop.Domain.Configuration.BalanceProfile
+                {
+                    FirstQuotaBaselineRevision = 1, EconomyBaselineRevision = 1, ItemCatalogueRevision = 1
+                };
+                profile.Numbers["item.hat.price"] = 70;
+                profile.Numbers["item.guitar.price"] = 120;
+                profile.Numbers["item.cello.price"] = 250;
+                profile.Numbers["buyer.min"] = 9;
+                profile.Numbers["buyer.music.max"] = 40;
+                profile.Numbers["item.hat.rerolls"] = 1;
+                profile.Numbers["craft.atelier.seconds"] = 12;
+                profile.Numbers["craft.hat.cost"] = 75;
+                using (var file = FileAccess.Open(profilePath, FileAccess.ModeFlags.Write))
+                    file.StoreString(profile.ToJson());
+                Check(DebugBalanceSettings.Reload(out string error), $"Legacy F10 profile must reload: {error}");
+                var migrated = ChikagoShop.Domain.Configuration.BalanceProfile.FromJson(FileAccess.GetFileAsString(profilePath));
+                Check(migrated.Numbers.Count == 2 && migrated.Numbers["item.hat.rerolls"] == 1 &&
+                    migrated.Numbers["craft.atelier.seconds"] == 12 &&
+                    WorkshopItemCatalog.Items.All(item => item.BasePrice == 50) &&
+                    DebugBalanceSettings.Economy.BuyerWaitMinSeconds == 15 &&
+                    DebugBalanceSettings.Economy.BuyerWaitMaxSeconds == 20,
+                    "Migration must remove old prices and ranges on disk while preserving other valid overrides");
+                profile = DebugBalanceSettings.Profile;
+                profile.Numbers[DebugBalanceSettings.BasePriceKey] = 62;
+                profile.Numbers["buyer.wait.min"] = 24;
+                profile.Numbers["buyer.wait.max"] = 24;
+                Check(DebugBalanceSettings.TrySave(profile, out error), $"Valid F10 range must save: {error}");
+                Check(WorkshopItemCatalog.Items.All(item => item.BasePrice == 62) &&
+                    WorkshopItemCatalog.Items[0].Rerolls == 1,
+                    "One common F10 edit must adjust all sale prices without changing an individual reroll setting");
+                Check(!DebugBalanceSettings.Profile.Numbers.ContainsKey("craft.hat.cost"),
+                    "An old F10 price for crafting must be discarded");
+                Fresh();
+                game._Process(0);
+                Check(game.BuyerWaitInitial == 24, "New customers must use the F10 range");
+                game.PersistProgress();
+                profile.Numbers["buyer.wait.min"] = 28;
+                profile.Numbers["buyer.wait.max"] = 26;
+                Check(!DebugBalanceSettings.TrySave(profile, out _), "F10 must reject a reversed range");
+                profile.Numbers["buyer.wait.max"] = 28;
+                Check(DebugBalanceSettings.TrySave(profile, out error), $"Changed F10 range must save: {error}");
+                await Reload();
+                Check(game.BuyerWaitInitial == 24 && game.BuyerWaitRemaining == 24,
+                    "An existing customer must retain both saved wait values after editing F10");
+                Fresh();
+                game._Process(0);
+                Check(game.BuyerWaitInitial == 28, "Only new customers acquire the changed F10 duration");
+            }
+            finally
+            {
+                DebugBalanceSettings.StoragePath = previousProfilePath;
+                DebugBalanceSettings.Reload(out _);
+                if (FileAccess.FileExists(profilePath)) DirAccess.RemoveAbsolute(profilePath);
+            }
             var patterns = new HashSet<string>();
             foreach (var item in WorkshopItemCatalog.Items)
             {
@@ -101,20 +168,22 @@ public partial class ProjectTest
                 game.Crafting.Catalog.Close();
                 await Select(item.Kind);
                 mini.Activate();
-                Check(game.Score == funds - WorkshopItemCatalog.ItemCraftCost(index) && game.ShowcaseItems[slot] == index &&
-                    game.StoredItems.Length == 0 && game.GetShowcaseQualityRank(slot) == "D", "Paid start must reserve the exact item with D directly on its room showcase");
+                Check(game.Score == funds && game.ShowcaseItems[slot] == index &&
+                    game.StoredItems.Length == 0 && game.GetShowcaseQualityRank(slot) == "D", "Starting must reserve the exact item with D directly on its room showcase");
                 var saved = ProgressSaveStore.Load(path, 3);
                 Check(saved.ShowcaseItems[slot] == index && saved.ShowcaseGrades[slot] == "D" && saved.StoredItems.Length == 0,
-                    "The paid item must exist on disk before playing completes");
+                    "The reserved item must exist on disk before playing completes");
                 Check(!game.Crafting.TryStart(index), "Duplicate start must be rejected");
                 game.Crafting.Complete("S");
                 Check(game.GetShowcaseQualityRank(slot) == "D", "An unfinished game cannot change its saved D");
                 double day = game.DayRemainingSeconds;
+                game.Crafting.Catalog._Process(0.25);
                 mini._Process(0.25);
                 Check(Math.Abs(game.DayRemainingSeconds - day + 0.25) < 0.001, "Active craft must advance day time");
                 var pause = game.GetNode<PauseMenu>("PauseMenu");
                 pause.Open();
                 double craftSeconds = mini.ActiveSession.RemainingSeconds, pausedDay = game.DayRemainingSeconds;
+                game.Crafting.Catalog._Process(1);
                 mini._Process(1);
                 Check(mini.ActiveSession.RemainingSeconds == craftSeconds && game.DayRemainingSeconds == pausedDay, "Pause must suspend both clocks");
                 pause.Close();
@@ -144,12 +213,103 @@ public partial class ProjectTest
                     Check(mini.Polishing.Progress > 0, "The selected instrument must respond to actual rubbing");
                     mini.FinishForTesting(true);
                 }
+                double beforeResult = game.DayRemainingSeconds, beforeBuyer = game.BuyerWaitRemaining;
+                game.Crafting.Catalog._Process(0.25);
+                Check(game.DayRemainingSeconds == beforeResult - 0.25 &&
+                    game.BuyerWaitRemaining == Math.Max(0, beforeBuyer - 0.25),
+                    "The result must tick both shop clocks");
                 Check(game.GetShowcaseQualityRank(slot) == "S" && game.ShowcaseItems.Count(value => value >= 0) == 1,
                     "Finishing must upgrade the same instance without issuing a second item");
                 mini.Activate();
                 Check(!Paused && !mini.IsOpen, "Collecting must return to gameplay");
             }
             Check(patterns.Count == 5, "Five distinct garment patterns must remain");
+
+            foreach (string kind in new[] { "hat", "guitar" })
+            {
+                bool music = kind == "guitar";
+                if (music)
+                    await Reload(new ProgressData { SaveVersion = ProgressJson.CurrentVersion, Day = 8,
+                        QuotaStage = 1, QuotaVisit = QuotaVisitStage.Rewarded, DayStarted = true,
+                        DayRemainingSeconds = 60, MusicWorkshopUnlocked = true, Score = 0 });
+                else Fresh();
+                game._Process(0);
+                int cashBeforeCraft = game.Score;
+                double dayStart = game.DayRemainingSeconds, buyerStart = game.BuyerWaitRemaining;
+                Check(buyerStart > 6, "A live buyer must be present before crafting");
+                var catalog = game.Crafting.Catalog;
+                game.Crafting.OpenCatalog(music ? "music" : "atelier");
+                var mini = Mini(music ? "music" : "atelier");
+                void Tick(double elapsed)
+                {
+                    game._Process(elapsed);
+                    catalog._Process(elapsed);
+                    mini._Process(elapsed);
+                }
+                void ExpectClocks(double elapsed) => Check(
+                    Math.Abs(game.DayRemainingSeconds - (dayStart - elapsed)) < 0.001 &&
+                    Math.Abs(game.BuyerWaitRemaining - (buyerStart - elapsed)) < 0.001,
+                    $"Both shop clocks must tick exactly once through each craft phase ({kind}: " +
+                    $"day {game.DayRemainingSeconds}/{dayStart - elapsed}, buyer {game.BuyerWaitRemaining}/{buyerStart - elapsed})");
+
+                Tick(1);
+                ExpectClocks(1);
+                Check(game.Crafting.Select(kind), "Live craft must select an item");
+                Tick(1);
+                ExpectClocks(2);
+                mini.Activate();
+                double miniStart = mini.ActiveSession.RemainingSeconds;
+                await PressEscapeForTest();
+                var pause = game.GetNode<PauseMenu>("PauseMenu");
+                Check(pause.IsOpen, "ESC must open true pause over crafting");
+                Tick(2);
+                ExpectClocks(2);
+                Check(mini.ActiveSession.RemainingSeconds == miniStart, "ESC must stop the mini-game clock too");
+                pause.Close();
+                Tick(1);
+                ExpectClocks(3);
+                Check(mini.ActiveSession.RemainingSeconds == miniStart - 1, "The mini-game clock must tick once");
+                if (!music)
+                {
+                    foreach (var point in mini.Session.Points.Take(mini.Session.Points.Count - 1))
+                        mini.Session.Hit(point.X, point.Y);
+                }
+                string expectedRank = music ? "D" : "B";
+                var collect = mini.GetNode<Button>("Surface/Panel/Buttons/Action");
+                Check(collect.IsVisibleInTree() && collect.Text == GameLocalization.Text("Забрать"),
+                    "Collect must be available during play");
+                collect.EmitSignal(Button.SignalName.Pressed);
+                int itemIndex = WorkshopItemCatalog.IndexOf(kind), slot = music ? 3 : 0;
+                int cashAfterCraft = game.Score;
+                Check(cashAfterCraft == cashBeforeCraft, "Early collection must be free");
+                Check(!mini.IsOpen && !Paused && game.Score == cashAfterCraft &&
+                    game.ShowcaseItems.Count(item => item == itemIndex) == 1 && game.GetShowcaseQualityRank(slot) == expectedRank,
+                    "Early collection must keep one item with its earned rank");
+                collect.EmitSignal(Button.SignalName.Pressed);
+                game.PersistProgress();
+                await Reload();
+                ExpectClocks(3);
+                Check(game.Score == cashAfterCraft && game.ShowcaseItems.Count(item => item == itemIndex) == 1 &&
+                    game.GetShowcaseQualityRank(slot) == expectedRank, "Early collection and clocks must survive reload");
+            }
+
+            Fresh();
+            game._Process(0);
+            await Select("hat");
+            var expiryMini = Mini("atelier");
+            expiryMini.Activate();
+            expiryMini.FinishForTesting(true);
+            double dayBeforeExpiry = game.DayRemainingSeconds;
+            game.Crafting.Catalog.SetProcess(true);
+            await Frame();
+            game.Crafting.Catalog.SetProcess(false);
+            Check(game.DayRemainingSeconds < dayBeforeExpiry, "The real scene tree must tick while the result is open");
+            game.Crafting.Catalog._Process(game.BuyerWaitRemaining);
+            Check(game.BuyerWaitRemaining == 0 && expiryMini.IsOpen &&
+                game.GetNode<Node2D>("World/TradingRoom/Customer").Visible,
+                "Patience must reach zero in the result screen without dismissing the buyer");
+            expiryMini.Activate();
+
             Fresh();
             await Craft("hat"); await Craft("vest"); await Craft("gloves");
             int fullFunds = game.Score;
@@ -207,17 +367,18 @@ public partial class ProjectTest
             Check(game.ShowcaseItems.Contains(0) && game.GetShowcaseQualityRank(0) == "A", "Checkpoint must restore its own stock and quality");
 
             Fresh(); await Select("hat"); Mini("atelier").Activate(); await Reload();
-            Check(!game.CraftMiniGameOpen && game.ShowcaseItems[0] == 0 && game.GetShowcaseQualityRank(0) == "D", "Reload after paid start must retain D without resuming the game");
+            Check(!game.CraftMiniGameOpen && game.ShowcaseItems[0] == 0 && game.GetShowcaseQualityRank(0) == "D", "Reload after starting must retain D without resuming the game");
             Fresh(); game.Score = 0; game.Crafting.OpenCatalog("atelier");
-            Check(!game.Crafting.Select("hat") && game.ShowcaseItems.All(value => value < 0), "Insufficient cash must remain a gate");
-            game.Crafting.Catalog.Close();
-            Fresh(); await Select("hat"); game.Score = 0; Mini("atelier").Activate();
-            Check(Mini("atelier").ActiveSession.State == EmbroideryState.Ready, "Paid start must revalidate funds");
+            Check(game.Crafting.Select("hat") && game.ShowcaseItems.All(value => value < 0), "Zero cash must allow preparation without reserving stock");
             Mini("atelier").Close(); game.Crafting.Catalog.Close();
+            Fresh(); await Select("hat"); game.Score = 0; Mini("atelier").Activate();
+            Check(Mini("atelier").ActiveSession.State == EmbroideryState.Playing && game.Score == 0, "Starting at zero cash must be free");
+            Mini("atelier").Activate();
             Fresh(); await Select("hat"); Mini("atelier").Activate();
-            Mini("atelier")._Process(game.DayRemainingSeconds + 1);
+            game.Crafting.Catalog._Process(game.DayRemainingSeconds + 1);
             Check(game.DayClosed && Mini("atelier").IsOpen && game.ShowcaseItems[0] == 0,
-                "Expiry must retain the paid showcase item until its result is collected");
+                "Expiry must retain the reserved showcase item until its result is collected");
+            Mini("atelier")._Process(Mini("atelier").ActiveSession.RemainingSeconds);
             Mini("atelier").Activate();
             game._Process(0);
             Check(game.CurrentDay == 2 && game.DayUpgrades.Pending, "Collecting the expired attempt must advance exactly one day");

@@ -5,8 +5,6 @@ public static class RunRewardRules
 {
     public const double BuyerWaitDuration = 20;
 
-    public static (int Minimum, int Maximum) BuyerWaitRange(bool music) => music ? (15, 25) : (10, 20);
-
     public static int SpeedBonus(double seconds, double initialSeconds = BuyerWaitDuration)
     {
         if (!double.IsFinite(seconds) || !double.IsFinite(initialSeconds) || seconds <= 0 || initialSeconds <= 0)

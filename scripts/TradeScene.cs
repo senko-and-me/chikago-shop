@@ -31,8 +31,6 @@ public partial class TradeScene : Node2D
 	private const int InitialShowcaseCapacity = 3;
 	private static int EnergyBeforeMusicUnlock => Economy.Days.EnergyBeforeMusicUnlock;
 	private static int EnergyAfterMusicUnlock => Economy.Days.EnergyAfterMusicUnlock;
-	private static int AtelierSpinCost => WorkshopItemCatalog.CraftCost("atelier");
-	private static int MusicSpinCost => WorkshopItemCatalog.CraftCost("music");
 
 	private static IReadOnlyList<CraftItem> Items =>
 		WorkshopItemCatalog.Items;
@@ -472,13 +470,7 @@ public partial class TradeScene : Node2D
 		_musicGetItemButton.AutoTranslateMode =
 			Node.AutoTranslateModeEnum.Disabled;
 
-		atelierPrice.Text = english
-			? $"Choose item  •  from ${AtelierSpinCost}"
-			: $"Выбор предмета  •  от {AtelierSpinCost}$";
-
-		musicPrice.Text = english
-			? $"Choose item  •  from ${MusicSpinCost}"
-			: $"Выбор предмета  •  от {MusicSpinCost}$";
+		atelierPrice.Text = musicPrice.Text = GameLocalization.Text("Выбор предмета");
 
 		CraftButtonPresentation.Apply(_atelierGetItemButton, english);
 		CraftButtonPresentation.Apply(_musicGetItemButton, english);
@@ -493,8 +485,7 @@ public partial class TradeScene : Node2D
 		if (GetTree().Paused)
 			return;
 
-		_dayCycle.Tick(delta);
-		TickBuyerWait(delta);
+		TickGameClocks(delta);
 		RefreshBuyers();
 	}
 
@@ -937,7 +928,16 @@ public partial class TradeScene : Node2D
 		_dayCycle.EndDay();
 	}
 
-	public void TickCraftDay(double delta) => _dayCycle.Tick(delta);
+	internal void TickCraftClocks(double delta)
+	{
+		if (GetTree().Paused && CraftClockRunning) TickGameClocks(delta);
+	}
+
+	private void TickGameClocks(double delta)
+	{
+		_dayCycle.Tick(delta);
+		TickBuyerWait(delta);
+	}
 
 	internal void SynchronizeTutorialClock(bool restart) => _dayCycle.SynchronizeTutorialClock(restart);
 	internal bool OpenTutorialUpgradeChoice(Action finished) => _dayCycle.OpenTutorialUpgradeChoice(finished);

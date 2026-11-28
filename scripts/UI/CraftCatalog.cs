@@ -8,6 +8,7 @@ public partial class CraftCatalog : CanvasLayer
     public bool IsOpen => _root?.Visible == true;
     public string Workshop { get; private set; }
     private Control _root;
+    private TradeScene _game;
     private GridContainer _cards;
     private bool _ownsPause;
     private PanelContainer _panel;
@@ -18,6 +19,7 @@ public partial class CraftCatalog : CanvasLayer
 
     public override void _Ready()
     {
+        _game = GetParent<TradeScene>();
         _root = GetNode<Control>("Root");
         _cards = GetNode<GridContainer>("Root/Center/Panel/Margin/Content/Scroll/Cards");
         _panel = GetNode<PanelContainer>("Root/Center/Panel");
@@ -42,14 +44,9 @@ public partial class CraftCatalog : CanvasLayer
             card.Name = entry.item.Kind;
             card.GetNode<TextureRect>("Content/Art").Texture = GD.Load<Texture2D>(entry.item.ArtPath);
             card.GetNode<Label>("Content/Name").Text = GameLocalization.Text(entry.item.Name);
-            card.GetNode<Label>("Content/Cost").Text = GameLocalization.Format("{0}$",
-                WorkshopItemCatalog.ItemCraftCost(entry.index));
-            string reason = Coordinator.UnavailableReason(entry.index);
-            card.GetNode<Label>("Content/Reason").Text = GameLocalization.Text(reason);
-            card.GetNode<Label>("Content/Reason").Visible = reason != "";
+            RefreshAvailability(card, entry.index);
             var button = card.GetNode<Button>("Content/Choose");
             button.Text = GameLocalization.Text("Выбрать");
-            button.Disabled = reason != "";
             string kind = entry.item.Kind;
             button.Pressed += () => Coordinator.Select(kind);
             _cards.AddChild(card);
@@ -76,6 +73,24 @@ public partial class CraftCatalog : CanvasLayer
             Mathf.Min(_authoredScrollHeight, Mathf.Max(120, viewport.Y - 210))));
     }
 
+    public override void _Process(double delta)
+    {
+        bool wasClosed = _game.DayClosed;
+        _game.TickCraftClocks(delta);
+        if (IsOpen && !wasClosed && _game.DayClosed)
+            foreach (Node card in _cards.GetChildren())
+                RefreshAvailability(card, WorkshopItemCatalog.IndexOf(card.Name));
+    }
+
+    private void RefreshAvailability(Node card, int index)
+    {
+        string reason = Coordinator.UnavailableReason(index);
+        var label = card.GetNode<Label>("Content/Reason");
+        label.Text = GameLocalization.Text(reason);
+        label.Visible = reason.Length != 0;
+        card.GetNode<Button>("Content/Choose").Disabled = label.Visible;
+    }
+
     public override void _Notification(int what)
     {
         if (what != NotificationTranslationChanged || !IsOpen || Coordinator == null) return;
@@ -84,9 +99,7 @@ public partial class CraftCatalog : CanvasLayer
             int index = WorkshopItemCatalog.IndexOf(card.Name);
             var item = WorkshopItemCatalog.Items[index];
             card.GetNode<Label>("Content/Name").Text = GameLocalization.Text(item.Name);
-            card.GetNode<Label>("Content/Cost").Text = GameLocalization.Format("{0}$", WorkshopItemCatalog.ItemCraftCost(index));
-            card.GetNode<Label>("Content/Reason").Text = GameLocalization.Text(Coordinator.UnavailableReason(index));
-            card.GetNode<Label>("Content/Reason").Visible = Coordinator.UnavailableReason(index) != "";
+            RefreshAvailability(card, index);
             card.GetNode<Button>("Content/Choose").Text = GameLocalization.Text("Выбрать");
         }
         GetNode<Label>("Root/Center/Panel/Margin/Content/Title").Text = GameLocalization.Text(

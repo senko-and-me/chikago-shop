@@ -22,6 +22,16 @@ public partial class ProjectTest
             game.SetProcess(false);
             await ToSignal(this, SignalName.ProcessFrame);
         }
+        async Task WaitForEnding()
+        {
+            ulong deadline = Time.GetTicksMsec() + 5000;
+            var notice = game.GetNode<MafiaQuotaNotice>("MafiaQuotaNotice");
+            while (!notice.IsOpen || SceneTransition.IsActive(this))
+            {
+                Check(Time.GetTicksMsec() < deadline, "The final quota notice must finish opening after its fade");
+                await ToSignal(this, SignalName.ProcessFrame);
+            }
+        }
         try
         {
             foreach (bool enough in new[] { true, false })
@@ -37,6 +47,7 @@ public partial class ProjectTest
                 Check(game.CurrentDay == 14 && game.DayRemainingSeconds == 90, "The last musical day must restore with ninety seconds");
                 game.EndDay();
                 game._Process(0);
+                await WaitForEnding();
                 Check(game.Completed == enough && game.Failed != enough && game.MafiaNoticePending &&
                     game.GetNode<MafiaQuotaNotice>("MafiaQuotaNotice").IsOpen && !game.GetNode<DayTransitionCard>("DayTransitionCard").IsOpen,
                     $"Day14 result: enough={enough}, completed={game.Completed}, failed={game.Failed}, pending={game.MafiaNoticePending}, notice={game.GetNode<MafiaQuotaNotice>("MafiaQuotaNotice").IsOpen}, card={game.GetNode<DayTransitionCard>("DayTransitionCard").IsOpen}, closed={game.DayClosed}, paused={Paused}");
@@ -45,6 +56,7 @@ public partial class ProjectTest
                 game.EndDay();
                 Check(game.Score == cash && game.CurrentDay == 14, "Repeated end input must not charge again");
                 await Reload();
+                await WaitForEnding();
                 Check(game.Score == cash && game.Completed == enough && game.Failed != enough &&
                     game.GetNode<MafiaQuotaNotice>("MafiaQuotaNotice").IsOpen, "Continue must preserve both terminal outcomes without charging again");
                 game.NewGame();

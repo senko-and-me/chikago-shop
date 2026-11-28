@@ -9,9 +9,8 @@ public static class EconomyConfigValidator
         if (config.StartingMoney < 0)
             throw new EconomyConfigException("Starting money cannot be negative.");
         string[] craftKinds = ["hat", "vest", "gloves", "matteo_hat", "lorgnette", "guitar", "drum", "banjo", "violin", "tuba"];
-        if (config.CraftCosts == null || config.CraftCosts.Count != craftKinds.Length ||
-            craftKinds.Any(kind => !config.CraftCosts.TryGetValue(kind, out int cost) || cost <= 0))
-            throw new EconomyConfigException("Every craftable item requires a positive explicit cost.");
+        if (config.BuyerWaitMinSeconds < 1 || config.BuyerWaitMinSeconds > config.BuyerWaitMaxSeconds || config.BuyerWaitMaxSeconds > 600)
+            throw new EconomyConfigException("Buyer wait must be an ordered range from 1 to 600 seconds.");
         if (config.Items == null || config.Items.Count != craftKinds.Length ||
             config.Items.Select(item => item.Id).Distinct().Count() != craftKinds.Length ||
             config.Items.Any(item => !craftKinds.Contains(item.Id) || item.Workshop is not ("atelier" or "music") || item.BasePrice <= 0 || item.Rerolls < 0))
@@ -27,8 +26,8 @@ public static class EconomyConfigValidator
         RequireUniqueIds(config.Quotas.Select(value => value.Id), "quota");
 
         if (config.Workshops.Count == 0 || config.Workshops.Any(value =>
-                value.SpinCost < 0 || value.UnlockCost < 0))
-            throw new EconomyConfigException("Workshops require non-negative spin and unlock costs.");
+                value.UnlockCost < 0))
+            throw new EconomyConfigException("Workshops require non-negative unlock costs.");
         if (config.Rarities.Count == 0 || config.Rarities.Any(value => value.Rerolls <= 0))
             throw new EconomyConfigException("Rarities require positive rerolls.");
         ValidateRelativeWeights(config.Rarities.Select(value => value.Weight));

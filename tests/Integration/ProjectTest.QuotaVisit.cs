@@ -73,9 +73,8 @@ public partial class ProjectTest
                 familyDialogue.Advance();
             }
             TranslationServer.SetLocale("ru");
-            int[] expectedPrices = [25, 45, 40, 70, 75, 115, 195, 115, 175, 295];
-            Check(WorkshopItemCatalog.Items.Select(item => item.BasePrice).SequenceEqual(expectedPrices) && price == 0,
-                "Catalogue prices remain unchanged and the story workshop has no purchase cost");
+            Check(WorkshopItemCatalog.Items.All(item => item.BasePrice == 50) && price == 0,
+                "All catalogue base prices are 50 and the story workshop has no purchase cost");
             int[] remaining = [7, 6, 5, 4, 3, 2, 1, 7, 6, 5, 4, 3, 2, 1];
             string[] units = ["дней", "день", "дня", "дня", "дня", "дней", "дней", "дней"];
             for (int i = 0; i < remaining.Length; i++)

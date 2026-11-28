@@ -8,11 +8,8 @@ public sealed class EconomyConfig
     public DayConfig Days { get; init; } = new();
     public List<WorkshopConfig> Workshops { get; init; } = [];
     public List<ItemConfig> Items { get; init; } = [];
-    public Dictionary<string, int> CraftCosts { get; init; } = new()
-    {
-        ["hat"] = 20, ["vest"] = 30, ["gloves"] = 55, ["matteo_hat"] = 80, ["lorgnette"] = 135,
-        ["guitar"] = 30, ["drum"] = 50, ["banjo"] = 80, ["violin"] = 125, ["tuba"] = 205
-    };
+    public int BuyerWaitMinSeconds { get; init; } = 15;
+    public int BuyerWaitMaxSeconds { get; init; } = 20;
     public List<RarityConfig> Rarities { get; init; } = [];
     public List<OfferRangeConfig> OfferRanges { get; init; } = [];
     public List<QuotaConfig> Quotas { get; init; } = [];
@@ -32,7 +29,6 @@ public sealed class DayConfig
 public sealed class WorkshopConfig
 {
     public string Id { get; init; } = string.Empty;
-    public int SpinCost { get; init; }
     public int UnlockCost { get; init; }
 }
 

@@ -102,7 +102,7 @@ public partial class SoundEffects : Node
                     for (Node parent = button.GetParent(); parent != null; parent = parent.GetParent())
                         if (parent is EmbroideryGame craft)
                         {
-                            if (craft.ActiveSession.State == ChikagoShop.Domain.Crafting.EmbroideryState.Finished) return;
+                            if (craft.ActiveSession.State != ChikagoShop.Domain.Crafting.EmbroideryState.Ready) return;
                             break;
                         }
                 Cue cue = button.Name.ToString() switch

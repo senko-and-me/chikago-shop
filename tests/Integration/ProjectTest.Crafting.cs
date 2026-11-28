@@ -54,7 +54,7 @@ public partial class ProjectTest
                     "Playing must switch from the UI pointer to the polishing cloth");
                 Check(game.StoredItems.Length == 1,
                     "Start must grant the paid batch exactly once");
-                Check(game.Score == money - WorkshopItemCatalog.ItemCraftCost(craft.PreparedItemIndex.Value) && game.EnergyRemaining == energy,
+                Check(game.Score == money && game.EnergyRemaining == energy,
                     "Start must charge its price once without changing the legacy energy counter");
                 var board = craft.GetNode<PolishingSurface>("Surface/Polishing");
                 var cell = craft.Polishing.Cells.First(value => value.Inside && craft.Polishing.Inside(value.X + 14, value.Y));
@@ -125,13 +125,12 @@ public partial class ProjectTest
                 game.GetItemFromMusicWorkshop();
                 Check(game.Crafting.Select(entry.item.Kind) && craft.PreparedItemIndex == entry.index,
                     "Random generator changes must never substitute the selected instrument");
-                int cost = WorkshopItemCatalog.ItemCraftCost(entry.index);
                 await ClickControl(game, "PolishingGame/Surface/Panel/Buttons/Action");
-                Check(game.Score == money - cost && game.EnergyRemaining == energy &&
+                Check(game.Score == money && game.EnergyRemaining == energy &&
                     game.StoredItems.Length == count + 1 && game.StoredItems[count] == entry.index,
                     "Start must debit the selected price and grant precisely one displayed instrument");
                 craft.Activate();
-                Check(game.Score == money - cost && game.StoredItems.Length == count + 1,
+                Check(game.Score == money && game.StoredItems.Length == count + 1,
                     "Duplicate start must not pay or grant twice");
                 if (iteration % 2 == 0) craft.FinishForTesting(true);
                 else craft._Process(craft.ActiveSession.RemainingSeconds + .1);
@@ -140,7 +139,7 @@ public partial class ProjectTest
                     game.StoredItems[count] == entry.index, "Success and timeout must preserve the exact chosen item");
                 await ClickControl(game, "PolishingGame/Surface/Panel/Buttons/Action");
                 craft.Activate();
-                Check(!craft.IsOpen && !Paused && game.StoredItems.Length == count + 1 && game.Score == money - cost,
+                Check(!craft.IsOpen && !Paused && game.StoredItems.Length == count + 1 && game.Score == money,
                     "Collect and activation after close must be idempotent");
             }
             game.SavePath = savePath; game.PersistProgress();
@@ -386,9 +385,8 @@ public partial class ProjectTest
                 embroidery.StartButton.Text == "Start" &&
                 embroidery.GetNode<Label>("Surface/Panel/StatTime/Heading").Text == "TIME", "Preparation must localize action and selected title");
             await ClickControl(game, "EmbroideryGame/Surface/Panel/Buttons/Action");
-            int cost = WorkshopItemCatalog.ItemCraftCost(WorkshopItemCatalog.IndexOf("hat"));
             embroidery.Activate();
-            Check(game.Score == initialMoney - cost && game.StoredItems.Length == 1 && game.EnergyRemaining == initialEnergy,
+            Check(game.Score == initialMoney && game.StoredItems.Length == 1 && game.EnergyRemaining == initialEnergy,
                 "Start and duplicate activation must debit only one selected item");
             var board = embroidery.GetNode<EmbroiderySurface>("Surface");
             var camera = game.GetNode<WorldCamera>("Camera2D");

@@ -1,7 +1,7 @@
 using System;
 using Godot;
 
-// One selected attempt owns both the debit and the result. UI cannot roll a different reward.
+// One selected attempt owns both the reserved display and the result. UI cannot roll a different reward.
 public sealed class CraftCoordinator
 {
     private readonly TradeScene _game;
@@ -9,7 +9,7 @@ public sealed class CraftCoordinator
     public bool IsCatalogOpen => Catalog.IsOpen;
     public string Workshop { get; private set; }
     public int SelectedIndex { get; private set; } = -1;
-    private int _paidPosition = -1;
+    private int _reservedPosition = -1;
     private bool _started;
     private bool _finished;
 
@@ -31,13 +31,13 @@ public sealed class CraftCoordinator
         var item = WorkshopItemCatalog.Items[index];
         if (_game.Failed || _game.Completed || _game.DayClosed || !_game.DayStarted) return "Магазин закрыт";
         if (item.WorkshopId == "music" && !_game.MusicWorkshopUnlocked) return "Мастерская закрыта";
-        if (_game.Score < WorkshopItemCatalog.ItemCraftCost(index)) return "Недостаточно денег";
         if (!_game.HasFreeDisplay(item.WorkshopId)) return "Нет свободных витрин";
         return "";
     }
 
-    private bool Covered => _game.GetNode<PauseMenu>("PauseMenu").IsOpen ||
-        _game.GetNode<FirstTradeTutorial>("FirstTradeTutorial").IsSkipConfirmationOpen;
+    internal bool Covered => _game.GetNode<PauseMenu>("PauseMenu").IsOpen ||
+        _game.GetNode<FirstTradeTutorial>("FirstTradeTutorial").IsSkipConfirmationOpen ||
+        _game.GetNodeOrNull<DebugBalancePanel>("/root/DebugBalance")?.IsOpen == true;
 
     public void OpenCatalog(string workshop)
     {
@@ -57,7 +57,7 @@ public sealed class CraftCoordinator
             WorkshopItemCatalog.Items[index].WorkshopId != Workshop || UnavailableReason(index) != "") return false;
         SelectedIndex = index;
         _started = _finished = false;
-        _paidPosition = -1;
+        _reservedPosition = -1;
         Catalog.HideForSelection();
         Host(Workshop).OpenItem(index);
         if (!Host(Workshop).IsOpen) { ReturnToCatalog(); return false; }
@@ -68,20 +68,20 @@ public sealed class CraftCoordinator
     {
         if (_started || _finished || Covered || SelectedIndex != index || index < 0 ||
             UnavailableReason(index) != "" || !Host(Workshop).IsReadyToStart) return false;
-        // State flips before notifications/save so duplicate input cannot re-enter the debit.
+        // State flips before notifications/save so duplicate input cannot reserve a second display.
         _started = true;
-        _paidPosition = _game.BeginSelectedCraft(index);
-        if (_paidPosition >= 0) return true;
+        _reservedPosition = _game.BeginSelectedCraft(index);
+        if (_reservedPosition >= 0) return true;
         _started = false;
         return false;
     }
 
     public void Complete(string rank)
     {
-        if (!_started || _finished || _paidPosition < 0 ||
+        if (!_started || _finished || _reservedPosition < 0 ||
             Host(Workshop).ActiveSession.State != ChikagoShop.Domain.Crafting.EmbroideryState.Finished) return;
         _finished = true;
-        _game.CompleteSelectedCraft(_paidPosition, SelectedIndex, rank);
+        _game.CompleteSelectedCraft(_reservedPosition, SelectedIndex, rank);
     }
 
     public double Duration(string workshop) => _game.DayUpgrades.CraftDuration(workshop,
@@ -90,16 +90,14 @@ public sealed class CraftCoordinator
     public void ReturnToCatalog()
     {
         if (_started && !_finished || Covered) return;
-        SelectedIndex = -1;
-        _started = _finished = false;
-        _paidPosition = -1;
-        Catalog.Open(Workshop);
+        CancelPreparation();
+        if (!_game.DayClosed) Catalog.Open(Workshop);
     }
 
     public void CancelPreparation()
     {
         SelectedIndex = -1;
-        _paidPosition = -1;
+        _reservedPosition = -1;
         _started = _finished = false;
     }
 

@@ -64,8 +64,8 @@ public partial class TradeScene
 
     private void ResetBuyerWait()
     {
-        var range = ChikagoShop.Domain.Economy.RunRewardRules.BuyerWaitRange(_waitingBuyerMusic);
-        _buyerWaitInitial = _rng.RandiRange(range.Minimum, range.Maximum);
+        var economy = DebugBalanceSettings.Economy;
+        _buyerWaitInitial = _rng.RandiRange(economy.BuyerWaitMinSeconds, economy.BuyerWaitMaxSeconds);
         _buyerWaitRemaining = _buyerWaitInitial;
         _buyerWaitAutosave = 0;
         _lastShownSpeedBonus = -1;
@@ -215,7 +215,7 @@ public partial class TradeScene
 
     private void RefreshClosedBuyerOffer()
     {
-        if (TradeActive && DayClosed && !CraftMiniGameOpen) RefreshOffer();
+        if (TradeActive && DayClosed) RefreshOffer();
     }
 
     private bool CanRerollCurrentBuyer => BuyerPatienceRules.CanReroll(
@@ -228,7 +228,7 @@ public partial class TradeScene
     {
         if (!TradeActive || ItemIndex < 0) return;
         int speed = SpeedBonus(_buyerWaitRemaining, _buyerWaitInitial);
-        int grade = BuyerPatienceRules.IsExpired(_buyerWaitRemaining) ? 0 : QualityBonus(_activeTradeGrade);
+        int grade = QualityBonus(_activeTradeGrade);
         _lastShownSpeedBonus = speed;
         int basePrice = GetItemPrice(ItemIndex);
         int bonus = CurrentBuyerPayout - OfferedPrice;

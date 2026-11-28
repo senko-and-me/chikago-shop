@@ -55,7 +55,6 @@ public partial class TradeScene
 
     internal bool CanBeginCraft(string workshop) =>
         !Failed && !Completed && !DayClosed && !QuotaVisitPending && !DayTransitionOpen &&
-        Score >= WorkshopItemCatalog.CraftCost(workshop) &&
         FreeDisplay(workshop, _showcaseItems, MusicWorkshopUnlocked) >= 0;
 
     private void RefreshCraftPriceHint(int index, string workshop)
@@ -63,10 +62,10 @@ public partial class TradeScene
         var label = _priceHints[index].GetNode<Label>("Label");
         label.Text = FreeDisplay(workshop, _showcaseItems, MusicWorkshopUnlocked) < 0
             ? GameLocalization.Text("Нет свободных витрин")
-            : GameLocalization.Format("Цена создания: {0}$", WorkshopItemCatalog.CraftCost(workshop));
+            : GameLocalization.Text("Выбор предмета");
         int deferred = _deferredStock.FindAll(stock => Items[stock.Item].WorkshopId == workshop).Count;
         if (deferred > 0)
-            label.Text += "\n" + GameLocalization.Format("Товаров ждут свободной витрины: {0}", deferred);
+            label.Text += (label.Text.Length > 0 ? "\n" : "") + GameLocalization.Format("Товаров ждут свободной витрины: {0}", deferred);
     }
 
     private void InitializeShowcasePopup()

@@ -44,17 +44,15 @@ public partial class RarityPanel : Control
 		_normalLayer = _layer.Layer;
 		_camera = _game.GetNode<Camera2D>("Camera2D");
 
-		string[] headings = ["Редкость", "Ср. цена", "Крафт", "Рероллы"];
+		string[] headings = ["Редкость", "Ср. цена", "Рероллы"];
 		for (int i = 0; i < headings.Length; i++) AddCell($"Heading{i}", headings[i], true, i == 0);
 		string[] names = ["Ширпотреб", "Заурядная", "Первоклассная", "Эксклюзивная", "Неповторимая"];
-		string[] chances = ["60%", "25%", "10%", "4%", "1%"];
 		int[] rerolls = [3, 2, 2, 1, 1];
 		int[] prices = [Price0, Price1, Price2, Price3, Price4];
 		for (int i = 0; i < prices.Length; i++)
 		{
 			AddCell($"Rarity{i}", names[i], false, true);
 			AddCell($"Price{i}", $"{prices[i]}$");
-			AddCell($"Chance{i}", chances[i]);
 			AddCell($"Rerolls{i}", rerolls[i].ToString());
 		}
 		VisibilityChanged += SyncVisibility;
@@ -96,12 +94,7 @@ public partial class RarityPanel : Control
 		var items = WorkshopItemCatalog.ActiveItems.Where(item => item.WorkshopId == workshop).ToArray();
 		for (int i = 0; i < rarities.Length; i++)
 		{
-			var label = Values.GetNode<Label>($"Chance{i}");
 			var category = items.Where(item => item.RarityId == rarities[i]).ToArray();
-			var representative = category.FirstOrDefault();
-			label.Text = representative == null ? "—" : $"{WorkshopItemCatalog.ItemCraftCost(WorkshopItemCatalog.IndexOf(representative.Kind))}$";
-			label.TooltipText = GameLocalization.Text("Предмет выбирается в каталоге");
-			SetChangeColor(label, 0);
 			int average = category.Length > 0 ? (int)Math.Round(category.Average(item => item.BasePrice)) : 0;
 			int price = category.Length > 0
 				? (int)Math.Round(category.Average(item => game?.DayUpgrades?.Price(workshop, item.BasePrice) ?? item.BasePrice))

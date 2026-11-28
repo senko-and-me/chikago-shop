@@ -13,8 +13,8 @@ public sealed record BalanceSummary(string Profile, int Runs, double FirstQuotaP
 
 public static class WeekBalanceSimulator
 {
-    // A cycle includes a full 10-second craft and player interaction. The buyer
-    // timer pauses during crafting; rerolls consume another 0.8 seconds each.
+    // A cycle includes crafting and player interaction. The buyer waits
+    // throughout the cycle; rerolls consume another 0.8 seconds each.
     public static readonly BalanceProfile[] Profiles =
     [
         new("Ordinary: immediate sales", 15, false, true),
@@ -31,8 +31,6 @@ public static class WeekBalanceSimulator
         EconomyConfigValidator.Validate(config);
         var atelier = config.Workshops.Single(workshop => workshop.Id == "atelier");
         var music = config.Workshops.Single(workshop => workshop.Id == "music");
-        int MinimumCost(string room) => config.Items.Where(item => item.Workshop == room)
-            .Min(item => config.CraftCosts[item.Id]);
         int firstDeadline = config.Quotas.Min(quota => quota.DeadlineDay);
 
         int firstPassed = 0, won = 0, items = 0;
@@ -60,7 +58,7 @@ public static class WeekBalanceSimulator
                             unlocked ? DayUpgrade.MusicPrice : DayUpgrade.AtelierPrice,
                             unlocked ? DayUpgrade.MusicPrice : DayUpgrade.AtelierPrice };
                         choice = priorities.FirstOrDefault(option => upgrades.Options.Contains(option) &&
-                            cash - DayUpgradeSession.Cost(option) >= MinimumCost(unlocked ? music.Id : atelier.Id) * 2 &&
+                            cash - DayUpgradeSession.Cost(option) >= 0 &&
                             (option == DayUpgrade.Cash || day < config.Days.TotalDays));
                     }
                     if (choice != DayUpgrade.None && upgrades.TryPurchase(choice, cash, out int balance))
@@ -82,20 +80,20 @@ public static class WeekBalanceSimulator
                 Observe();
                 while (profile.Produce && remaining > 0)
                 {
-                    var workshop = unlocked && profile.UnlockMusic && cash >= MinimumCost(music.Id) ? music : atelier;
+                    var workshop = unlocked && profile.UnlockMusic ? music : atelier;
                     double cycle = profile.CycleSeconds;
                     if (!double.IsFinite(cycle) || cycle <= 0 || remaining < cycle) break;
                     Observe();
-                    var selected = config.Items.Where(item => item.Workshop == workshop.Id && config.CraftCosts[item.Id] <= cash)
-                        .OrderByDescending(item => item.BasePrice - config.CraftCosts[item.Id]).FirstOrDefault();
+                    var selected = config.Items.Where(item => item.Workshop == workshop.Id)
+                        .OrderByDescending(item => item.BasePrice).FirstOrDefault();
                     if (selected == null) break;
                     remaining -= cycle;
-                    cash -= config.CraftCosts[selected.Id];
                     items++;
                     int basePrice = upgrades.Price(workshop.Id, selected.BasePrice);
                     Observe(basePrice);
                     int percent = hand.AdjustInitialOffer(TradeOfferRules.InitialPercent(rng.Next(61)), 3);
-                    double buyerRemaining = RunRewardRules.BuyerWaitDuration - Math.Max(0, cycle - 10);
+                    double waitDuration = rng.Next(config.BuyerWaitMinSeconds, config.BuyerWaitMaxSeconds + 1);
+                    double buyerRemaining = Math.Max(0, waitDuration - cycle);
                     int rerolls = selected.Rerolls;
                     while (profile.Reroll && percent < 5 &&
                         BuyerPatienceRules.CanReroll(true, false, rerolls, buyerRemaining))
@@ -110,7 +108,7 @@ public static class WeekBalanceSimulator
                     buyerRemaining = BuyerPatienceRules.RemainingAfterDayClosure(buyerRemaining, remaining <= 0);
                     percent = BuyerPatienceRules.OfferPercent(percent, buyerRemaining);
                     cash += BuyerPatienceRules.TotalPayout(TradeOfferRules.Price(basePrice, percent), buyerRemaining,
-                        RunRewardRules.SpeedBonus(buyerRemaining), RunRewardRules.QualityBonus(profile.QualityRank));
+                        RunRewardRules.SpeedBonus(buyerRemaining, waitDuration), RunRewardRules.QualityBonus(profile.QualityRank));
                     Observe();
                 }
                 if (day == config.Days.TotalDays) cashAtFinal[run] = cash;

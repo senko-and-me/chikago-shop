@@ -16,6 +16,18 @@ public partial class ProjectTest
             ulong deadline = Time.GetTicksMsec() + 7000;
             while (!predicate()) { Check(Time.GetTicksMsec() < deadline, message); await Frame(); }
         }
+        async Task ClickTutorialTarget(Control control)
+        {
+            await Frame();
+            Rect2 bounds = ScreenBounds(control).Intersection(Root.GetVisibleRect());
+            Check(control.IsVisibleInTree() && bounds.HasArea(), $"Tutorial target must be visible: {control.Name}");
+            Vector2 pointer = bounds.GetCenter();
+            MoveButtonPointer(pointer);
+            await Frame();
+            PressButtonPointer(pointer, true);
+            PressButtonPointer(pointer, false);
+            await Frame();
+        }
         try
         {
             var cfg = new ConfigFile();
@@ -91,17 +103,24 @@ public partial class ProjectTest
             var next = tutorial.GetNode<Button>("Root/Panel/Content/Actions/Done");
             async Task Hat()
             {
-                game.GetItemFromAtelier();
+                await ClickTutorialTarget(game.GetNode<Control>("World/Atelier/GetItemButton"));
                 await Frame();
                 Check(game.Crafting.IsCatalogOpen, "Tutorial must open the real catalogue");
                 await BlockedTutorialClick(game.Crafting.Catalog.ItemButton("vest"));
                 await BlockedTutorialClick(game.Crafting.Catalog.GetNode<Button>("Root/Center/Panel/Margin/Content/Back"));
                 Check(game.Crafting.IsCatalogOpen && game.Crafting.SelectedIndex < 0,
                     "Other catalogue items and Back must not bypass the hat instruction");
-                Check(game.Crafting.Select("hat"), "Tutorial must select the hat by its stable kind");
+                Button hat = game.Crafting.Catalog.ItemButton("hat");
+                await ClickTutorialTarget(hat);
                 await Frame();
+                Check(mini.IsOpen && mini.PreparedItemIndex == WorkshopItemCatalog.IndexOf("hat"),
+                    "The highlighted hat must open preparation through the tutorial input gate");
                 await BlockedTutorialClick(mini.GetNode<Button>("Surface/Panel/Buttons/Cancel"));
                 await ClickControl(game, "EmbroideryGame/Surface/Panel/Buttons/Action");
+                Check(!mini.StartButton.IsVisibleInTree(), "Required stitch practice must hide early collection");
+                mini.Activate();
+                Check(mini.IsOpen && mini.Session.State == ChikagoShop.Domain.Crafting.EmbroideryState.Playing,
+                    "Even direct activation must keep the required craft running");
                 var surface = mini.GetNode<EmbroiderySurface>("Surface");
                 Vector2 stitch = surface.GetGlobalTransformWithCanvas() * surface.ScreenPoint(0);
                 MoveButtonPointer(stitch);
@@ -109,7 +128,15 @@ public partial class ProjectTest
                 PressButtonPointer(stitch, false);
                 await Frame();
                 Check(mini.Session.Stitches == 1, "The actual instructed stitch must receive input through the shield");
-                mini.FinishForTesting(true);
+                for (int point = 1; point < mini.Session.Points.Count; point++)
+                {
+                    Vector2 target = surface.GetGlobalTransformWithCanvas() * surface.ScreenPoint(point);
+                    MoveButtonPointer(target);
+                    PressButtonPointer(target, true);
+                    PressButtonPointer(target, false);
+                }
+                Check(mini.Session.Complete, "Real clicks through the tutorial gate must complete the pattern");
+                mini._Process(0);
                 await ClickControl(game, "EmbroideryGame/Surface/Panel/Buttons/Action");
                 game._Process(0);
                 await Frame();
@@ -130,7 +157,7 @@ public partial class ProjectTest
                 "Hover must advance to item selection without moving the camera away");
             Check(game.ShowcasePopup.Visible && game.ShowcasePopup.ItemText.Contains("S"),
                 "The real hover must reveal the quality tooltip over the spotlight");
-            await ClickControl(game, "World/ShowroomLeft/Showcases/Slot1");
+            await ClickTutorialTarget(display);
             await Frame();
             Check(!camera.Position.IsEqualApprox(inspectionCamera),
                 "The camera must move to the buyer only after selecting the item.");
@@ -220,21 +247,24 @@ public partial class ProjectTest
                 "The green combined bonus must drop as the speed bonus changes");
             int balanceBeforeSale = game.Score;
             int expectedPayout = game.OfferedPrice + quality + 1;
-            game.AcceptTrade(); await Frame();
+            await ClickControl(game, salePath + "Buttons/AcceptButton"); await Frame();
             Check(game.Score == balanceBeforeSale + expectedPayout, "Formatting must leave the actual payout intact");
             Check(game.Accepted == 1 && game.ShowcaseItems[0] < 0, "The first training sale must free the showcase");
             await Hat();
-            game.OnShowcasePressed(0);
+            await ClickTutorialTarget(game.GetNode<Control>("World/ShowroomLeft/Showcases/Slot1"));
             await Frame();
             Check(tutorial.CurrentStep == FirstTradeTutorial.Step.LateSale && game.BuyerWaitRemaining is > 0 and <= 2,
                 "Late-sale practice must start within two seconds of expiry");
             game._Process(2.1);
             Check(game.TradeActive && game.BuyerWaitRemaining == 0, "The second lesson must allow selling after the bonus expires");
-            Check(game.GetNode<Label>(salePath + "PercentLabel").Text == "К цене: -50%" &&
-                game.GetNode<RichTextLabel>(salePath + "OfferLabel").Text == $"Получим: {game.OfferedPrice}$",
-                "Expired offers must show the original price change and omit the zero bonus");
-            game.AcceptTrade(); await Frame();
-            Check(game.Accepted == 2 && tutorial.CurrentStep == FirstTradeTutorial.Step.Summary,
+            int lateQuality = TradeScene.QualityBonus(game.ActiveTradeQualityRank);
+            Check(lateQuality > 0 && game.GetNode<Label>(salePath + "PercentLabel").Text == "К цене: -50%" &&
+                game.GetNode<RichTextLabel>(salePath + "OfferLabel").Text ==
+                $"Получим: {game.OfferedPrice}$ [color=#268d48]+{lateQuality}$[/color]",
+                "Expired offers keep quality in the green bonus and remove only the speed bonus");
+            int expectedLateScore = game.Score + game.OfferedPrice + lateQuality;
+            await ClickControl(game, salePath + "Buttons/AcceptButton"); await Frame();
+            Check(game.Accepted == 2 && game.Score == expectedLateScore && tutorial.CurrentStep == FirstTradeTutorial.Step.Summary,
                 "Both practice sales must reach the quota lesson");
             var pack = game.GetNode<ProgressPanel>("HUD/Root/ProgressPanel");
             Rect2 packTab = ScreenBounds(game.GetNode<Control>("HUD/Root/ProgressToggleButton")).Intersection(Root.GetVisibleRect());

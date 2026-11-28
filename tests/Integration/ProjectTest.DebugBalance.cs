@@ -97,7 +97,7 @@ public partial class ProjectTest
             panel.Editor("day.seconds").Text = (180).ToString(System.Globalization.CultureInfo.InvariantCulture);
             panel.Editor("craft.atelier.seconds").Text = (25).ToString(System.Globalization.CultureInfo.InvariantCulture);
             panel.Editor("craft.music.seconds").Text = (17).ToString(System.Globalization.CultureInfo.InvariantCulture);
-            panel.Editor("item.hat.price").Text = (123).ToString(System.Globalization.CultureInfo.InvariantCulture);
+            panel.Editor(DebugBalanceSettings.BasePriceKey).Text = (123).ToString(System.Globalization.CultureInfo.InvariantCulture);
             panel.Editor("rarity.unique.rerolls").Text = (4).ToString(System.Globalization.CultureInfo.InvariantCulture);
             foreach (var rarity in EconomyConfigProvider.Baseline.Rarities)
                 panel.Editor($"rarity.{rarity.Id}.weight").Text = (rarity.Id == "unique" ? 100 : 0).ToString(System.Globalization.CultureInfo.InvariantCulture);
@@ -203,7 +203,7 @@ public partial class ProjectTest
                 "Invalid typed input must be reported without discarding or publishing the active profile");
             await ClickControl(panel, content + "/Actions/Defaults");
             await ClickControl(panel, content + "/Actions/Apply");
-            Check(TradeScene.GetItemBasePrice(0) == 25 && WorkshopItemCatalog.Items[0].RarityId == "common" &&
+            Check(TradeScene.GetItemBasePrice(0) == 50 && WorkshopItemCatalog.Items[0].RarityId == "common" &&
                 DebugBalanceSettings.CardRules.Cost(DayUpgrade.Cash) == 0 && DebugBalanceSettings.CardRules.Cost(DayUpgrade.Energy) == 10, "Applying defaults must clear item and card overrides");
             await Press(Key.F10);
             int revision = DebugBalanceSettings.Revision;

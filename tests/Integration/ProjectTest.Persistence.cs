@@ -115,7 +115,10 @@ public partial class ProjectTest
                       game.StoredItems.SequenceEqual(new[] { 0 }) && game.TradeActive &&
                       game.CustomerIndex == (sample.Version < 3 ? 3 : 1) &&
                       game.RerollsRemaining == (sample.Version < 2 ? TradeScene.GetItemRerollLimit(2) : 1),
-                    $"Version {sample.Version} must preserve legacy energy, timer, inventory and trade interpretation");
+                    $"Version {sample.Version} must preserve legacy energy, timer, inventory and trade interpretation. " +
+                    $"Actual: cash={game.Score}, energy={game.EnergyRemaining}, seconds={game.DayRemainingSeconds}, " +
+                    $"inventory=[{string.Join(',', game.StoredItems)}], displays=[{string.Join(',', game.ShowcaseItems)}], " +
+                    $"trade={game.TradeActive}, customer={game.CustomerIndex}, rerolls={game.RerollsRemaining}");
                 double seconds = game.DayRemainingSeconds;
                 game.PersistProgress();
                 var saved = ProgressSaveStore.Load(SavePath, 3);
@@ -175,7 +178,6 @@ public partial class ProjectTest
         var economy = EconomyConfigProvider.Load();
         int initialEnergy = economy.Days.EnergyBeforeMusicUnlock;
         int musicEnergy = economy.Days.EnergyAfterMusicUnlock;
-        int craftSpending = WorkshopItemCatalog.CraftCost("atelier") + WorkshopItemCatalog.CraftCost("music");
         int unlockCost = economy.Workshops.Single(workshop => workshop.Id == "music").UnlockCost;
         TradeScene game = await CreateGame(scene);
 		game.Score = 500;
@@ -200,7 +202,7 @@ public partial class ProjectTest
         game._Process(0);
         Check(game.TradeActive && game.ItemIndex == itemsBeforePlacement[0] && game.ShowcaseItems[3] == -1 &&
               game.StoredItems[0] == itemsBeforePlacement[1] && game.EnergyRemaining == musicEnergy - 2 &&
-		      game.Score == 500 - unlockCost - craftSpending && game.MusicWorkshopUnlocked,
+		      game.Score == 500 - unlockCost && game.MusicWorkshopUnlocked,
             "The trade, inventory, unlocked room, cash and spent energy must survive a reload");
         game.QueueFree();
         await ToSignal(this, SignalName.ProcessFrame);

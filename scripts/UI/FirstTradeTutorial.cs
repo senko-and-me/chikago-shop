@@ -571,17 +571,17 @@ public partial class FirstTradeTutorial : CanvasLayer
             return;
         }
         _panel.Show();
-        if (_cameraHandoffDone && !_embroideryStarted && _game.Crafting.IsCatalogOpen &&
+        if (_cameraHandoffDone && _game.Crafting.IsCatalogOpen &&
             _game.Crafting.Catalog.Workshop == "atelier" && !_pause.IsOpen)
         {
             Layer = _game.Crafting.Catalog.Layer + 2;
             _root.Show();
-            SetStep(Step.CraftSelection, "Выберите шляпку в каталоге ателье. Цена указана на карточке.",
+            SetStep(Step.CraftSelection, "Выберите шляпку в каталоге ателье.",
                 _game.Crafting.Catalog.ItemButton("hat"));
             Layout();
             return;
         }
-        if (_cameraHandoffDone && !_embroideryStarted && _embroidery.IsReadyToStart && !_pause.IsOpen)
+        if (_cameraHandoffDone && _embroidery.IsReadyToStart && !_pause.IsOpen)
         {
             Layer = _embroidery.Layer + 2;
             _root.Show();
@@ -665,7 +665,7 @@ public partial class FirstTradeTutorial : CanvasLayer
                 _displayInspected ? SelectForSale : DisplayInstructions,
                 _game.DisplayControl(slot));
         else SetStep(Step.Craft,
-            "Нажмите „Создать предметы“, чтобы выбрать предмет в каталоге. Для создания нужны деньги.",
+            "Нажмите „Создать предметы“, чтобы выбрать предмет в каталоге.",
             _game.GetNode<Control>("World/Atelier/GetItemButton"));
         Layout();
     }
@@ -842,10 +842,11 @@ public partial class FirstTradeTutorial : CanvasLayer
 
         string message = _musicPage switch
         {
-            0 => "Мастерская открывает новые инструменты и витрины. Выберите инструмент в каталоге: его цена указана на карточке.",
+            0 => "Мастерская открывает новые инструменты и витрины. Выберите инструмент в каталоге.",
             1 => "В полировке удерживайте ЛКМ и водите тряпочкой по инструменту.",
             2 => "Готовый инструмент сам займёт свободную витрину. Наведите курсор для просмотра, нажмите для продажи.",
-            _ => "Сверяйтесь с облачком покупателя. Надбавка за скорость доступна 10–20 секунд для одежды и 15–25 секунд для инструментов."
+            _ => GameLocalization.Format("Сверяйтесь с облачком покупателя. Время для надбавки за скорость: {0}–{1} сек.",
+                DebugBalanceSettings.Economy.BuyerWaitMinSeconds, DebugBalanceSettings.Economy.BuyerWaitMaxSeconds)
         };
         Control focus = _musicPage switch
         {

@@ -5,6 +5,8 @@ public enum EmbroideryState { Ready, Playing, Finished }
 // Coordinates use the reference canvas (840 x 480), independent of display size.
 public sealed class EmbroiderySession : ICraftSession
 {
+    private const int RankAQuality = 75;
+    private bool _finishedEarly;
     private static readonly (double X, double Y)[][] Patterns =
     [
         [(150,180),(210,300),(270,180),(330,300),(390,180),(450,300),(510,180),(570,300),(630,180),(690,300)],
@@ -52,8 +54,9 @@ public sealed class EmbroiderySession : ICraftSession
     public double RemainingSeconds { get; private set; }
     public bool Complete => Stitches == Points.Count;
     public int Quality => Math.Clamp((int)Math.Round(100 - Misses * 12 - (Duration - RemainingSeconds) / Duration * 11
-        - (State == EmbroideryState.Finished && !Complete ? (Points.Count - Stitches) * 7 : 0)), 0, 100);
-    public string Rank => Quality >= 90 ? "S" : Quality >= 75 ? "A" : Quality >= 60 ? "B" : Quality >= 40 ? "C" : "D";
+        - (State == EmbroideryState.Finished && !Complete ? (Points.Count - Stitches) * 7 : 0)), 0,
+        _finishedEarly ? RankAQuality - 1 : 100);
+    public string Rank => Quality >= 90 ? "S" : Quality >= RankAQuality ? "A" : Quality >= 60 ? "B" : Quality >= 40 ? "C" : "D";
 
     public void Start()
     {
@@ -67,6 +70,13 @@ public sealed class EmbroiderySession : ICraftSession
         Misses = successful ? 0 : 10;
         RemainingSeconds = successful ? Duration : 0;
         State = EmbroideryState.Finished;
+    }
+
+    public void FinishEarly()
+    {
+        if (State != EmbroideryState.Playing) return;
+        _finishedEarly = true;
+        Tick(RemainingSeconds);
     }
 
     public void Tick(double delta)

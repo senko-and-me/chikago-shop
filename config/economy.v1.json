@@ -2,18 +2,8 @@
   "schema_version": 1,
   "is_provisional": true,
   "starting_money": 220,
-  "craft_costs": {
-    "hat": 20,
-    "vest": 30,
-    "gloves": 55,
-    "matteo_hat": 80,
-    "lorgnette": 135,
-    "guitar": 30,
-    "drum": 50,
-    "banjo": 80,
-    "violin": 125,
-    "tuba": 205
-  },
+  "buyer_wait_min_seconds": 15,
+  "buyer_wait_max_seconds": 20,
   "days": {
     "total_days": 14,
     "tutorial_day": 1,
@@ -23,12 +13,10 @@
   "workshops": [
     {
       "id": "atelier",
-      "spin_cost": 25,
       "unlock_cost": 0
     },
     {
       "id": "music",
-      "spin_cost": 50,
       "unlock_cost": 0
     }
   ],
@@ -39,8 +27,8 @@
       "weight": 60,
       "rerolls": 3,
       "base_prices": {
-        "atelier": 25,
-        "music": 40
+        "atelier": 50,
+        "music": 50
       }
     },
     {
@@ -49,8 +37,8 @@
       "weight": 25,
       "rerolls": 2,
       "base_prices": {
-        "atelier": 45,
-        "music": 70
+        "atelier": 50,
+        "music": 50
       }
     },
     {
@@ -59,8 +47,8 @@
       "weight": 10,
       "rerolls": 2,
       "base_prices": {
-        "atelier": 75,
-        "music": 115
+        "atelier": 50,
+        "music": 50
       }
     },
     {
@@ -69,8 +57,8 @@
       "weight": 4,
       "rerolls": 1,
       "base_prices": {
-        "atelier": 115,
-        "music": 175
+        "atelier": 50,
+        "music": 50
       }
     },
     {
@@ -79,8 +67,8 @@
       "weight": 1,
       "rerolls": 1,
       "base_prices": {
-        "atelier": 195,
-        "music": 295
+        "atelier": 50,
+        "music": 50
       }
     }
   ],
@@ -117,61 +105,61 @@
     {
       "id": "hat",
       "workshop": "atelier",
-      "base_price": 25,
+      "base_price": 50,
       "rerolls": 3
     },
     {
       "id": "vest",
       "workshop": "atelier",
-      "base_price": 45,
+      "base_price": 50,
       "rerolls": 2
     },
     {
       "id": "gloves",
       "workshop": "atelier",
-      "base_price": 75,
+      "base_price": 50,
       "rerolls": 2
     },
     {
       "id": "matteo_hat",
       "workshop": "atelier",
-      "base_price": 115,
+      "base_price": 50,
       "rerolls": 1
     },
     {
       "id": "lorgnette",
       "workshop": "atelier",
-      "base_price": 195,
+      "base_price": 50,
       "rerolls": 1
     },
     {
       "id": "guitar",
       "workshop": "music",
-      "base_price": 40,
+      "base_price": 50,
       "rerolls": 3
     },
     {
       "id": "drum",
       "workshop": "music",
-      "base_price": 70,
+      "base_price": 50,
       "rerolls": 2
     },
     {
       "id": "banjo",
       "workshop": "music",
-      "base_price": 115,
+      "base_price": 50,
       "rerolls": 2
     },
     {
       "id": "violin",
       "workshop": "music",
-      "base_price": 175,
+      "base_price": 50,
       "rerolls": 1
     },
     {
       "id": "tuba",
       "workshop": "music",
-      "base_price": 295,
+      "base_price": 50,
       "rerolls": 1
     }
   ]

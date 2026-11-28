@@ -33,8 +33,9 @@ public partial class EmbroideryGame : CanvasLayer
 	private TradeScene _game = null!;
 	private PauseMenu _pause = null!;
 	private FirstTradeTutorial _tutorial = null!;
-	private bool Covered => _pause.IsOpen || _tutorial.IsSkipConfirmationOpen;
+	private bool Covered => _game.Crafting.Covered;
 	internal bool PolishingInputAllowed => IsPolishing && IsOpen && !Covered && ActiveSession.State == EmbroideryState.Playing;
+	private bool CanCollectEarly => !_tutorial.RestrictsInput;
 
 	public override void _Ready()
 	{
@@ -113,8 +114,14 @@ public partial class EmbroideryGame : CanvasLayer
 			_preparedItemClaimed = true;
 			Started?.Invoke();
 		}
-		else if (ActiveSession.State == EmbroideryState.Finished)
+		else
 		{
+			if (ActiveSession.State == EmbroideryState.Playing)
+			{
+				if (!CanCollectEarly) return;
+				ActiveSession.FinishEarly();
+			}
+			CommitQualityIfFinished();
 			string rank = ActiveSession.Rank;
 			bool collected = _preparedItemClaimed && _qualityRecorded;
 			Close();
@@ -146,6 +153,7 @@ public partial class EmbroideryGame : CanvasLayer
 	internal void Dismiss()
 	{
 		if (!IsOpen) return;
+		if (IsPolishing) _polishingSurface.EndPointer();
 		_surface.Hide();
 		RestoreMouseCursor();
 
@@ -222,8 +230,6 @@ public partial class EmbroideryGame : CanvasLayer
 
 		if (Covered) return;
 
-		if (ActiveSession.State == EmbroideryState.Playing) _game.TickCraftDay(delta);
-
 		if (_game.DayClosed && ActiveSession.State == EmbroideryState.Ready)
 		{
 			Close();
@@ -275,7 +281,7 @@ public partial class EmbroideryGame : CanvasLayer
 
 		_quality.Text = $"{ActiveSession.Quality}%";
 		_action.Text = GameLocalization.Text(ready ? "Начать" : "Забрать");
-		_action.Visible = !playing;
+		_action.Visible = !playing || CanCollectEarly;
 		_cancel.Visible = ready;
 		_qualityHeading.Text = GameLocalization.Text("КАЧЕСТВО");
 		Control panel = _surface.GetNode<Control>("Panel");

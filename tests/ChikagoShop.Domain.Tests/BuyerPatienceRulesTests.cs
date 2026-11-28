@@ -34,8 +34,8 @@ public sealed class BuyerPatienceRulesTests
         Assert.That(TradeOfferRules.Price(normalPrice, BuyerPatienceRules.OfferPercent(30, 0)), Is.EqualTo(expected));
 
     [TestCase(0.01, 56)]
-    [TestCase(0, 50)]
-    [TestCase(-1, 50)]
-    public void ExpiredPayoutCannotExceedHalfThroughTips(double remaining, int expected) =>
+    [TestCase(0, 55)]
+    [TestCase(-1, 55)]
+    public void ExpiredPayoutKeepsQualityAndDropsOnlySpeed(double remaining, int expected) =>
         Assert.That(BuyerPatienceRules.TotalPayout(50, remaining, 1, 5), Is.EqualTo(expected));
 }

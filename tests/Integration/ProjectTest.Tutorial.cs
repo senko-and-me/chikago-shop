@@ -441,7 +441,7 @@ public partial class ProjectTest
             Check(game.DayRemainingSeconds == 180 && !game.DayClosed && !game.DayTransitionOpen,
                 "Expired training time must refill to180 without closing the day or showing upgrade cards");
             game._Process(180);
-            game.TickCraftDay(180);
+            game.TickCraftClocks(180);
             Step(FirstTradeTutorial.Step.Select);
             Check(game.DayRemainingSeconds == 180 && !game.DayClosed && game.CurrentDay == trainingDay &&
                 game.EnergyRemaining == trainingEnergy && game.Score == trainingCash && game.StoredItems.SequenceEqual(trainingStock),

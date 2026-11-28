@@ -403,7 +403,7 @@ public partial class ProjectTest
             Check(miniGame.IsOpen && PolishingSurface.InstrumentKinds.Contains(surface.InstrumentKind), "Opening polishing must select one of the five instruments");
             int cashBefore = game.Score, energyBefore = game.EnergyRemaining;
             miniGame.Activate();
-            Check(game.Score == cashBefore - WorkshopItemCatalog.CraftCost("music") && game.EnergyRemaining == energyBefore,
+            Check(game.Score == cashBefore && game.EnergyRemaining == energyBefore,
                 "The new item presentation must retain the existing craft payment");
             await ToSignal(this, SignalName.ProcessFrame);
             await ToSignal(this, SignalName.ProcessFrame);

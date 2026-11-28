@@ -137,11 +137,11 @@ public partial class ProjectTest
             "The game must load the versioned provisional economy config");
         Check(config.Workshops.Count == 2 && config.Rarities.Count == 5 && config.OfferRanges.Count == 3,
             "The game and domain tests must share the complete economy v1 source");
-        Check(config.StartingMoney == 220 && config.Workshops[0].SpinCost == 25 &&
-              config.Workshops[1].SpinCost == 50 && config.Workshops[1].UnlockCost == 1000 &&
+        Check(config.StartingMoney == 220 && config.Items.All(item => item.BasePrice == 50) &&
+              config.BuyerWaitMinSeconds == 15 && config.BuyerWaitMaxSeconds == 20 &&
 		      config.Quotas[0].Amount == 750 &&
               config.Quotas[1].Amount == 1500,
-            "The runtime must load the provisional paid-spin and raised-quota balance");
+            "The runtime must load the uniform prices, patience and quotas");
     }
 
     private async Task TestLiveEconomyBalance()
@@ -165,38 +165,28 @@ public partial class ProjectTest
                 foreach (string workshop in new[] { "atelier", "music" })
                 {
                     string room = workshop == "atelier" ? "Atelier" : "MusicWorkshop";
-                    int cost = WorkshopItemCatalog.CraftCost(workshop);
                     if (workshop == "music")
                     {
                         game.NewGame(); game.Score = 1000; game.TryUnlockMusicWorkshop();
                         Check(game.DayRemainingSeconds == 90, "Unlocking music must not change the ninety-second baseline");
                     }
-                    Check(!game.HasNode($"World/{room}/HintLabel") &&
-                          game.GetNode<Label>($"World/{room}/GetItemButton/PriceHint/Label").Text.Contains(cost.ToString()),
-                        "RU/EN crafting labels must show the configured single-item cost");
-                    game.Score = cost - 1; game.RefreshItemButtons();
                     var button = game.GetNode<Button>($"World/{room}/GetItemButton");
-                    Check(button.Text == string.Empty,
-                        "Illustrated craft buttons must not duplicate their image lettering after RU/EN changes");
-                    Check(!button.Disabled, "The catalog must remain available to explain unaffordable items");
-                    if (workshop == "atelier") game.GetItemFromAtelier(); else game.GetItemFromMusicWorkshop();
-                    var mini = game.GetNode<EmbroideryGame>(workshop == "atelier" ? "EmbroideryGame" : "PolishingGame");
-                    Check(!mini.IsOpen, "The minigame must use the new affordability threshold too");
+                    Check(!game.HasNode($"World/{room}/HintLabel") && button.Text == string.Empty &&
+                        button.GetNode<Label>("PriceHint/Label").Text == GameLocalization.Text("Выбор предмета"),
+                        "Both languages must present the illustrated craft button and a price-free hint");
+                    game.Score = 0;
+                    game.RefreshItemButtons();
+                    Check(!button.Disabled, "Zero cash must not disable crafting");
                     string kind = workshop == "atelier" ? "hat" : "guitar";
-                    Check(game.Crafting.IsCatalogOpen && !game.Crafting.Select(kind), "Catalog must reject unaffordable selection");
-                    game.Crafting.Catalog.Close();
-                    game.Score = cost; game.RefreshItemButtons();
-                    Check(!button.Disabled, "Exact funds must enable single-item crafting");
                     button.EmitSignal(Button.SignalName.Pressed);
-                    Check(game.Crafting.Select(kind), "Exact funds must allow selecting the cheapest room item");
-                    Check(mini.IsOpen, "The real craft button must open the minigame at the configured cost");
-                    int items = game.StoredItems.Length, energy = game.EnergyRemaining;
-                    mini.Activate(); mini.Activate();
-                    Check(game.Score == 0 && game.StoredItems.Length == items + 1 && game.EnergyRemaining == energy - 1,
-                        "Starting a craft must charge once for exactly one item and one energy");
-                    mini._Process(10); mini.Activate();
-                    Check(!Paused && !mini.IsOpen && game.DayRemainingSeconds == 80,
-                        "Crafting must consume its actual ten seconds within the ninety-second day");
+                    Check(game.Crafting.Select(kind), "Zero cash must allow catalogue selection");
+                    var mini = game.GetNode<EmbroideryGame>(workshop == "atelier" ? "EmbroideryGame" : "PolishingGame");
+                    mini.Activate();
+                    mini._Process(mini.ActiveSession.RemainingSeconds);
+                    mini.Activate();
+                    Check(!Paused && !mini.IsOpen && game.Score == 0 &&
+                        game.ShowcaseItems.Count(item => item == WorkshopItemCatalog.IndexOf(kind)) == 1,
+                        "Free creation must place exactly one item on a showcase");
                 }
             }
             game.NewGame(); game.CurrentDay = 4; game.Score = 250;

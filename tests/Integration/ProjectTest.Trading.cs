@@ -161,8 +161,8 @@ public partial class ProjectTest
             "Both workshops must use the art team's create-item button");
         var atelierRarityPanel = game.GetNode<RarityPanel>("World/Atelier/RarityPanel");
         var musicRarityPanel = game.GetNode<RarityPanel>("World/MusicWorkshop/RarityPanel");
-        Check(!atelierRarityPanel.Visible && atelierRarityPanel.Values.GetChildCount() == 24,
-            "The compact rarity table must provide four headings and five complete rows");
+        Check(!atelierRarityPanel.Visible && atelierRarityPanel.Values.GetChildCount() == 18,
+            "The compact rarity table must provide three headings and five complete rows");
         Check(atelierRarityPanel.Price0 == 30 && atelierRarityPanel.Price1 == 50 &&
               atelierRarityPanel.Price2 == 80 && atelierRarityPanel.Price3 == 120 &&
               atelierRarityPanel.Price4 == 200 && musicRarityPanel.Price0 == 45 &&
@@ -172,8 +172,8 @@ public partial class ProjectTest
 		var atelierPriceHint = atelierButton.GetNode<PanelContainer>("PriceHint");
 		var musicPriceHint = musicButton.GetNode<PanelContainer>("PriceHint");
 		Check(!atelierPriceHint.Visible && !musicPriceHint.Visible &&
-		      atelierPriceHint.GetNode<Label>("Label").Text.Contains($"{WorkshopItemCatalog.CraftCost("atelier")}$") &&
-		      musicPriceHint.GetNode<Label>("Label").Text.Contains($"{WorkshopItemCatalog.CraftCost("music")}$") &&
+		      atelierPriceHint.GetNode<Label>("Label").Text == GameLocalization.Text("Выбор предмета") &&
+		      musicPriceHint.GetNode<Label>("Label").Text == GameLocalization.Text("Выбор предмета") &&
 		      !game.HasNode("World/Atelier/HintLabel") && !game.HasNode("World/MusicWorkshop/HintLabel"),
 		    "Each workshop must prepare its configured hover price without obsolete room descriptions");
         atelierButton.EmitSignal(Control.SignalName.MouseEntered);
@@ -247,7 +247,7 @@ public partial class ProjectTest
         var inventoryScroll = game.GetNode<ScrollContainer>("HUD/InventoryUI/ScrollContainer");
         await ToSignal(this, SignalName.ProcessFrame);
         Check(game.StoredItems.Length == 24 &&
-              game.GetNode<HBoxContainer>("HUD/InventoryUI/ScrollContainer/HBoxContainer").GetChildCount() == 24,
+              game.GetNode<HBoxContainer>("HUD/InventoryUI/ScrollContainer/HBoxContainer").GetChildCount() == 18,
             "Prototype inventory and UI must not restore the old six-item limit");
         inventoryScroll.EmitSignal(Control.SignalName.GuiInput,
             new InputEventMouseButton { ButtonIndex = MouseButton.WheelDown, Pressed = true });

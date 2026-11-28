@@ -14,6 +14,7 @@ public sealed class PolishingSession : ICraftSession
 {
     public const int CellSize = 7;
     public const double BrushRadius = 34;
+    private const int RankAQuality = 78;
     private const double ReferenceArea = 42000;
     private const double Step = 7;
     private const double MaximumSweep = 34;
@@ -25,6 +26,7 @@ public sealed class PolishingSession : ICraftSession
     private readonly PolishingCell[] _cells;
     private readonly int _insideCount;
     private bool _drag, _farOutside, _hasPoint, _hasDirection;
+    private bool _finishedEarly;
     private double _lastX, _lastY, _dirX, _dirY, _elapsed, _lastPenalty = -1;
     private double _distanceSinceWipe, _wipeX, _wipeY, _timeSinceWipe, _reversalReach;
     public IReadOnlyList<PolishingCell> Cells { get; }
@@ -38,8 +40,8 @@ public sealed class PolishingSession : ICraftSession
     public double DirtProgress { get; private set; }
     public bool Complete => Progress >= 0.85;
     public int Quality => Math.Clamp((int)Math.Round(Math.Min(100, Progress / .85 * 96)
-        + RemainingSeconds / Duration * 4 - Misses * 4.5), 0, 100);
-    public string Rank => Quality >= 92 ? "S" : Quality >= 78 ? "A" : Quality >= 63 ? "B" : Quality >= 42 ? "C" : "D";
+        + RemainingSeconds / Duration * 4 - Misses * 4.5), 0, _finishedEarly ? RankAQuality - 1 : 100);
+    public string Rank => Quality >= 92 ? "S" : Quality >= RankAQuality ? "A" : Quality >= 63 ? "B" : Quality >= 42 ? "C" : "D";
 
     public PolishingSession(byte[] alphaMask, int width = 600, int height = 480, double duration = 10,
         double radiusCorrection = 1, double strengthCorrection = 1)
@@ -76,6 +78,13 @@ public sealed class PolishingSession : ICraftSession
     }
 
     public void Start() { if (State == EmbroideryState.Ready) State = EmbroideryState.Playing; }
+    public void FinishEarly()
+    {
+        if (State != EmbroideryState.Playing) return;
+        _finishedEarly = true;
+        Tick(RemainingSeconds);
+    }
+
     public void FinishForTesting(bool successful)
     {
         if (State != EmbroideryState.Playing) return;

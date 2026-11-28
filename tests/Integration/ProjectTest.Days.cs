@@ -310,7 +310,7 @@ public partial class ProjectTest
                     game.EndDay();
                     await WaitForDayCardAnimation(game);
                     game._Process(60);
-                    game.TickCraftDay(60);
+                    game.TickCraftClocks(60);
                     game.GetNode<PauseMenu>("PauseMenu").Open();
                     game.GetItemFromAtelier();
                     Check(game.DayRemainingSeconds == remaining && game.Score == cash && game.CurrentDay == day + 1 &&

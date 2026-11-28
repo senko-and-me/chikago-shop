@@ -40,8 +40,10 @@ public partial class ProjectTest
             items[music ? 3 : 0] = music ? 2 : 0;
             return new ProgressData
             {
-                SaveVersion = ProgressJson.CurrentVersion, Day = 1, DayStarted = true, DayRemainingSeconds = 59,
+                SaveVersion = ProgressJson.CurrentVersion, Day = 8, QuotaStage = 1,
+                QuotaVisit = QuotaVisitStage.Rewarded, DayStarted = true, DayRemainingSeconds = 59,
                 Score = 2000, EnergyRemaining = 6, CheckpointEnergy = 6, MusicWorkshopUnlocked = true,
+                CheckpointDay = 8, CheckpointQuotaVisit = QuotaVisitStage.Rewarded,
                 CheckpointMusicWorkshopUnlocked = true, CheckpointScore = 2000, ShowcaseItems = items,
                 CheckpointShowcaseItems = items, WaitingBuyerPresent = true, WaitingBuyerMusic = music,
                 CustomerIndex = 0, BuyerWaitInitial = music ? 24 : 12, BuyerWaitRemaining = music ? 21 : 11
@@ -72,8 +74,7 @@ public partial class ProjectTest
                 Check(saved.WaitingBuyerPresent && saved.BuyerWaitRemaining == saved.BuyerWaitInitial,
                     "Every new buyer must save the initially rolled duration");
                 double time = game.BuyerWaitInitial;
-                Check(saved.WaitingBuyerMusic ? time is >= 15 and <= 25 : time is >= 10 and <= 20,
-                    "The sampled time must belong to the category's inclusive range");
+                Check(time is >= 15 and <= 20, "New buyers in both categories must use the same inclusive range");
                 (saved.WaitingBuyerMusic ? musicTimes : atelierTimes).Add(time);
             }
             Check(atelierTimes.Count > 1 && musicTimes.Count > 1, "Both request categories must have varying initial wait times");
@@ -84,6 +85,7 @@ public partial class ProjectTest
                 var data = Stock(music);
                 await Reload(data);
                 game._Process(0);
+                game.OnShowcasePressed(music ? 3 : 0);
                 string slot = music ? "World/Showroom/Showcases/Slot4" : "World/ShowroomLeft/Showcases/Slot1";
                 Rect2 ShadowGeometry()
                 {
@@ -120,42 +122,47 @@ public partial class ProjectTest
                 await PressEscapeForTest();
                 Check(Paused, "Escape must open the true pause");
                 game._Process(2);
-                game.TickCraftDay(0);
+                game.TickCraftClocks(0);
                 Check(game.BuyerWaitRemaining == time, "Actual pause must stop the buyer clock");
                 pause.Close();
 
                 var craft = game.GetNode<EmbroideryGame>(music ? "PolishingGame" : "EmbroideryGame");
                 craft.SetProcess(false);
+                game.Crafting.Catalog.SetProcess(false);
                 craft.Open();
                 Check(game.Crafting.Select(music ? "guitar" : "hat"), "Select a concrete item before preparing craft");
                 Check(craft.IsOpen && Paused, "The pre-start crafting menu must be open");
                 double dayTime = game.DayRemainingSeconds;
-                craft._Process(1);
-                game._Process(1);
-                double elapsed = bar.Value;
-                Check(game.BuyerWaitRemaining == time && game.DayRemainingSeconds == dayTime,
-                    "Preparation must freeze both day and buyer clocks");
+                void Tick(double delta)
+                {
+                    game.Crafting.Catalog._Process(delta);
+                    craft._Process(delta);
+                    game._Process(delta);
+                }
+                Tick(1);
+                Check(game.BuyerWaitRemaining == time - 1 && game.DayRemainingSeconds == dayTime - 1,
+                    "Preparation must tick both shop clocks");
                 craft.Activate();
                 double craftTime = craft.ActiveSession.RemainingSeconds;
                 await PressEscapeForTest();
                 Check(pause.IsOpen, "Escape during craft must open the pause menu");
-                craft._Process(2);
-                game._Process(2);
-                Check(game.DayRemainingSeconds == dayTime && craft.ActiveSession.RemainingSeconds == craftTime &&
-                    game.BuyerWaitRemaining == time && bar.Value == elapsed, "Esc pause must freeze all three timers");
+                Tick(2);
+                Check(game.DayRemainingSeconds == dayTime - 1 && craft.ActiveSession.RemainingSeconds == craftTime &&
+                    game.BuyerWaitRemaining == time - 1, "Esc pause must freeze all three timers");
                 pause.Close();
-                craft._Process(2);
-                game._Process(2);
-                Check(game.BuyerWaitRemaining == time && game.DayRemainingSeconds == dayTime - 2 &&
-                    craft.ActiveSession.RemainingSeconds == craftTime - 2 && bar.Value == elapsed,
-                    "Playing either minigame must tick only the day and craft clocks");
+                Tick(2);
+                Check(game.BuyerWaitRemaining == time - 3 && game.DayRemainingSeconds == dayTime - 3 &&
+                    craft.ActiveSession.RemainingSeconds == craftTime - 2,
+                    "Playing either minigame must tick all three clocks");
                 craft.FinishForTesting(true);
-                craft._Process(1);
-                Check(game.DayRemainingSeconds == dayTime - 2 && game.BuyerWaitRemaining == time && bar.Value == elapsed,
-                    "The result screen must also keep the buyer clock frozen");
+                Tick(1);
+                Check(game.DayRemainingSeconds == dayTime - 4 && game.BuyerWaitRemaining == time - 4 &&
+                    bar.Value == game.BuyerWaitInitial - game.BuyerWaitRemaining,
+                    "The result screen must tick both shop clocks and update the patience bar");
                 craft.Activate();
+                time -= 4;
                 Check(!craft.IsOpen && !Paused && game.BuyerWaitRemaining == time,
-                    "Opening, playing and closing craft must not change the waiting duration");
+                    "Closing the craft must preserve the current waiting duration");
 
                 game.RerollsRemaining = 3;
                 game.RerollCustomer();
@@ -166,7 +173,7 @@ public partial class ProjectTest
                 await Reload();
                 Check(game.BuyerWaitInitial == data.BuyerWaitInitial && game.BuyerWaitRemaining == time &&
                     ShadowGeometry() == geometry, "Active sale, both timer values and originating shadow must restore exactly");
-                Check(game.ShowcaseItems[ music ? 3 : 0 ] == -1 && game.StoredItems.Length == 1,
+                Check(game.ShowcaseItems.Count(item => item == (music ? 2 : 0)) == 2 && game.StoredItems.Length == 0,
                     "Loading a reserved trade must not duplicate the sold item");
                 game._Process(time);
                 Check(game.TradeActive && game.BuyerWaitRemaining == 0 &&
@@ -180,6 +187,7 @@ public partial class ProjectTest
 
                 await Reload(data);
                 game._Process(0);
+                game.OnShowcasePressed(music ? 3 : 0);
                 ShadowGeometry();
                 game.ReturnToCheckpoint();
                 Check(!game.GetNode<TextureRect>(slot + "/TradeShadow").Visible &&
@@ -207,7 +215,7 @@ public partial class ProjectTest
                 pause.Close();
 
                 var card = game.GetNode<DayTransitionCard>("DayTransitionCard");
-                card.Open(1, 2, new[] { DayUpgrade.Cash, DayUpgrade.AtelierPrice, DayUpgrade.Atelier }, 2000);
+                card.Open(1, 2, new[] { DayUpgrade.Cash, DayUpgrade.AtelierPrice, DayUpgrade.MusicPrice }, 2000);
                 await WaitForDayCardAnimation(card);
                 foreach (var purchase in card.FindChildren("Choose", "Button", true, false).OfType<Button>())
                 {

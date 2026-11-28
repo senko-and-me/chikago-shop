@@ -16,5 +16,5 @@ public static class BuyerPatienceRules
         !IsExpired(remaining) && TradeOfferRules.CanReroll(active, dayClosed, attempts);
 
     public static int TotalPayout(int offeredPrice, double remaining, int speedBonus, int qualityBonus) =>
-        IsExpired(remaining) ? offeredPrice : offeredPrice + speedBonus + qualityBonus;
+        offeredPrice + qualityBonus + (IsExpired(remaining) ? 0 : speedBonus);
 }
