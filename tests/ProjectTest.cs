@@ -16,6 +16,27 @@ public partial class ProjectTest : SceneTree
         TranslationServer.SetLocale("ru");
         try
         {
+            if (OS.GetCmdlineUserArgs().Contains("--notebook-buffs-checks"))
+            {
+                await TestNotebookBuffs();
+                GD.Print("NOTEBOOK_BUFFS_PASS: nine cards RU/EN, actual amounts, cash receipt, real purchase, reset and no duplicate reward");
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--card-flight-audio-checks"))
+            {
+                await TestCardFlightAudio();
+                GD.Print("CARD_FLIGHT_AUDIO_PASS: supplied whoosh, staggered launch sync, SFX mute, bounded polyphony, resize, cancel and reopen");
+                Quit();
+                return;
+            }
+            if (OS.GetCmdlineUserArgs().Contains("--dialogue-typing-audio-checks"))
+            {
+                await TestDialogueTypingAudio();
+                GD.Print("DIALOGUE_TYPING_AUDIO_PASS: four random supplied sounds, letters only, bounded voices, SFX mute, reveal/skip/pause/locale and both dialogue UIs");
+                Quit();
+                return;
+            }
             if (OS.GetCmdlineUserArgs().Contains("--room-focus-and-bubble-checks"))
             {
                 await TestMergedTutorial();
