@@ -128,8 +128,6 @@ public partial class TradeScene : Node2D
 	public static int GetItemRerollLimit(int index) =>
 		Items[index].Rerolls;
 
-	public static int GetRerollsForRarity(string rarityId) =>
-		WorkshopItemCatalog.RerollsFor(rarityId);
 
 	public int ItemIndex { get; set; } = -1;
 	public int CustomerIndex { get; set; } = -1;
@@ -401,6 +399,7 @@ public partial class TradeScene : Node2D
 		RefreshScore();
 		RefreshProgress();
 		RefreshCraftLabels();
+		RefreshCraftPriceLabels();
 		RefreshShowcases();
 
 		if (TradeActive)
@@ -456,9 +455,6 @@ public partial class TradeScene : Node2D
 			Node.AutoTranslateModeEnum.Disabled;
 		_musicGetItemButton.AutoTranslateMode =
 			Node.AutoTranslateModeEnum.Disabled;
-
-		_atelierGetItemButton.GetNode<Label>("Price").Text = GameLocalization.Format("{0}$", WorkshopItemCatalog.CraftCost("atelier"));
-		_musicGetItemButton.GetNode<Label>("Price").Text = GameLocalization.Format("{0}$", WorkshopItemCatalog.CraftCost("music"));
 
 		CraftButtonPresentation.Apply(_atelierGetItemButton, english);
 		CraftButtonPresentation.Apply(_musicGetItemButton, english);
@@ -597,8 +593,16 @@ public partial class TradeScene : Node2D
 		RefreshProgress();
 	}
 
+	private void RefreshCraftPriceLabels()
+	{
+		string craftPrice = GameLocalization.Format("{0}$", CurrentCraftCost);
+		_atelierGetItemButton.GetNode<Label>("Price").Text = craftPrice;
+		_musicGetItemButton.GetNode<Label>("Price").Text = craftPrice;
+	}
+
 	public void RefreshItemButtons()
 	{
+		RefreshCraftPriceLabels();
 		_atelierGetItemButton.Disabled =
 			Failed ||
 			Completed;
@@ -754,7 +758,8 @@ public partial class TradeScene : Node2D
 	private void RefreshOffer()
 	{
 		SynchronizeBuyerPatienceWithDay();
-		Percentage = BuyerPatienceRules.OfferPercent(Percentage, _buyerWaitRemaining);
+		if (BuyerPatienceRules.IsExpired(_buyerWaitRemaining))
+            Percentage = DayUpgrades.ExpiredOffer(Percentage);
 		int basePrice = GetItemPrice(ItemIndex);
 
 		OfferedPrice = PriceForPercent(
@@ -803,11 +808,18 @@ public partial class TradeScene : Node2D
 		if (!CanRerollCurrentBuyer || !trainingReroll && _tutorial.BlocksSaleActions)
 			return;
 
+        bool guaranteed = DayUpgrades.GuaranteesReroll(RerollsRemaining);
 		RerollsRemaining--;
 		int basePrice = GetItemPrice(ItemIndex);
 		int previousOffer = OfferedPrice;
 		int[] pool = TradeOfferRules.RerollOptions(basePrice, previousOffer,
 			trainingReroll || _rng.Randf() < TradeOfferRules.HigherRerollChance);
+		if (guaranteed)
+        {
+            int minimum = DayUpgrades.MinimumFinalOffer(Percentage);
+            pool = Array.FindAll(pool, percent => percent >= minimum);
+            if (pool.Length == 0) pool = [minimum];
+        }
 		if (pool.Length == 0)
 			return;
 
@@ -973,6 +985,7 @@ public partial class TradeScene : Node2D
 			return;
 
 		FinishTrade();
+		HideWaitingBuyer();
 
 		int deadline = QuotaStage == 0
 			? FirstDeadline
@@ -1052,6 +1065,8 @@ public partial class TradeScene : Node2D
 	public void ReturnToCheckpoint()
 	{
 		Crafting.ResetForRun();
+		_previousBuyerItem = -1;
+		_preferDifferentFirstRequest = false;
 		ResetQuotaVisitPresentation();
 		_quotaVisit = _checkpointQuotaVisit;
 		_dayCycle.Reset();
@@ -1124,6 +1139,8 @@ public partial class TradeScene : Node2D
 	public void NewGame()
 	{
 		Crafting.ResetForRun();
+		_previousBuyerItem = -1;
+		_preferDifferentFirstRequest = false;
 		ResetQuotaVisitPresentation();
 		_checkpointQuotaVisit = _quotaVisit = ChikagoShop.Domain.Persistence.QuotaVisitStage.Unavailable;
 		LoadedSavedGame = false;

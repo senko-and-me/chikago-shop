@@ -1,46 +1,46 @@
 namespace ChikagoShop.Domain.Days;
 
+public sealed record CardTerms(int Cost, int Amount);
+
 public sealed class DayUpgradeRules
 {
-    // Keep retired Energy and Time enum values for old saves, but never offer those cards.
-    private static readonly DayUpgrade[] Available =
-    [
-        DayUpgrade.Cash, DayUpgrade.AtelierPrice, DayUpgrade.MusicPrice
-    ];
+    public static IReadOnlyList<DayUpgrade> Available { get; } = Array.AsReadOnly(new[]
+    {
+        DayUpgrade.Cash, DayUpgrade.Materials, DayUpgrade.AtelierPrice, DayUpgrade.MusicPrice,
+        DayUpgrade.Patient, DayUpgrade.Bargaining, DayUpgrade.QualityMark, DayUpgrade.Loyal, DayUpgrade.QuickService
+    });
 
-    public IReadOnlyDictionary<DayUpgrade, int> Costs { get; init; } = new Dictionary<DayUpgrade, int>();
-    public IReadOnlyDictionary<DayUpgrade, int> Weights { get; init; } = new Dictionary<DayUpgrade, int>();
-    public bool WeightedSelection { get; init; }
+    public static Dictionary<DayUpgrade, CardTerms> DefaultTerms() => new()
+    {
+        [DayUpgrade.Cash] = new(6, 15),
+        [DayUpgrade.Materials] = new(5, 5),
+        [DayUpgrade.AtelierPrice] = new(6, 6),
+        [DayUpgrade.MusicPrice] = new(6, 6),
+        [DayUpgrade.Patient] = new(9, 2),
+        [DayUpgrade.Bargaining] = new(4, 30),
+        [DayUpgrade.QualityMark] = new(6, 6),
+        [DayUpgrade.Loyal] = new(5, 30),
+        [DayUpgrade.QuickService] = new(4, 5),
+    };
+
+    public IReadOnlyDictionary<DayUpgrade, CardTerms> Terms { get; init; } = DefaultTerms();
     public int Seed { get; init; } = 1;
-    public int Cost(DayUpgrade upgrade) => upgrade == DayUpgrade.Cash ? 0
-        : Costs.TryGetValue(upgrade, out int cost) ? cost : DayUpgradeSession.Cost(upgrade);
+    public CardTerms For(DayUpgrade upgrade) => Available.Contains(upgrade)
+        ? Terms[upgrade] : throw new ArgumentOutOfRangeException(nameof(upgrade));
+    public int Cost(DayUpgrade upgrade) => For(upgrade).Cost;
 
-    // Fixed day/seed retains a pending hand on Continue; locked-room cards cannot appear.
     public IReadOnlyList<DayUpgrade> Options(int day, bool musicUnlocked = false, bool training = false)
     {
-        var eligible = Available.Where(card => (!training || card != DayUpgrade.Cash) &&
-            (musicUnlocked || card is not (DayUpgrade.Music or DayUpgrade.MusicPrice))).ToArray();
-        var pool = eligible.Where(card => Weight(card) > 0).ToList();
-        if (!WeightedSelection || training && pool.Count == 0)
-            return Enumerable.Range(0, Math.Min(3, eligible.Length))
-                .Select(offset => eligible[((Math.Max(2, day) - 2) % eligible.Length + offset) % eligible.Length]).ToArray();
-
+        var pool = Available.Where(card => (!training || card != DayUpgrade.Cash) &&
+            (musicUnlocked || card != DayUpgrade.MusicPrice)).ToList();
         var random = new Random(unchecked(Seed * 397 ^ day));
         var result = new List<DayUpgrade>();
-        while (result.Count < 3 && pool.Count > 0)
+        while (result.Count < 3)
         {
-            int ticket = random.Next(pool.Sum(Weight));
-            var chosen = pool[0];
-            foreach (var candidate in pool)
-            {
-                ticket -= Weight(candidate);
-                if (ticket < 0) { chosen = candidate; break; }
-            }
-            result.Add(chosen);
-            pool.Remove(chosen);
+            int index = random.Next(pool.Count);
+            result.Add(pool[index]);
+            pool.RemoveAt(index);
         }
         return result;
     }
-
-    private int Weight(DayUpgrade upgrade) => Weights.GetValueOrDefault(upgrade, 1);
 }

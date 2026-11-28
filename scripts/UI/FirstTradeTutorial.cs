@@ -665,7 +665,7 @@ public partial class FirstTradeTutorial : CanvasLayer
                 _displayInspected ? SelectForSale : DisplayInstructions,
                 _game.DisplayControl(slot));
         else SetStep(Step.Craft,
-            "Нажмите „Создать предметы“, чтобы выбрать предмет в каталоге.",
+            GameLocalization.Format("Нажмите „Создать предметы“. При начале мини-игры спишется {0}$.", _game.CurrentCraftCost),
             _game.GetNode<Control>("World/Atelier/GetItemButton"));
         Layout();
     }
@@ -676,7 +676,7 @@ public partial class FirstTradeTutorial : CanvasLayer
         var (message, target) = _offerPage switch
         {
             0 => ("Это первое предложение покупателя.", "PercentLabel"),
-            _ => ("Чем выше качество товара, тем больше надбавка к его стоимости.", "OfferLabel")
+            _ => ("Качество B не меняет цену. S и A дают надбавку, C и D снижают выплату.", "OfferLabel")
         };
         SetStep(Step.Offer, message, _game.GetNode<Control>(content + target));
     }

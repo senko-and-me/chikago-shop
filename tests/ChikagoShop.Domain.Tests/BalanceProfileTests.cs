@@ -50,33 +50,30 @@ public sealed class BalanceProfileTests
     }
 
     [Test]
-    public void WeightedCardsAreStableWithoutDuplicatesAndPurchaseUsesEditedCost()
+    public void UniformCardsAreStableWithoutDuplicatesAndPurchaseUsesEditedCost()
     {
-        var weights = Enum.GetValues<DayUpgrade>().Where(card => card != DayUpgrade.None)
-            .ToDictionary(card => card, card => card == DayUpgrade.AtelierPrice ? 1 : 0);
-        var rules = new DayUpgradeRules { WeightedSelection = true, Weights = weights,
-            Costs = new Dictionary<DayUpgrade, int> { [DayUpgrade.AtelierPrice] = 17 } };
+        var terms = DayUpgradeRules.DefaultTerms();
+        terms[DayUpgrade.AtelierPrice] = terms[DayUpgrade.AtelierPrice] with { Cost = 17 };
+        var rules = new DayUpgradeRules { Terms = terms };
         var session = new DayUpgradeSession { Rules = rules };
-        session.Offer(2);
-        Assert.AreEqual(new[] { DayUpgrade.AtelierPrice }, session.Options);
+        session.Offer(Enumerable.Range(2, 100).First(day => rules.Options(day).Contains(DayUpgrade.AtelierPrice)));
+        Assert.That(session.Options, Has.Count.EqualTo(3));
         Assert.IsFalse(session.TryPurchase(DayUpgrade.AtelierPrice, 16, out _));
         Assert.IsTrue(session.TryPurchase(DayUpgrade.AtelierPrice, 100, out int cash));
         Assert.AreEqual(83, cash);
-        var many = new DayUpgradeRules { WeightedSelection = true, Seed = 71 };
-        Assert.AreEqual(many.Options(3), new DayUpgradeRules { WeightedSelection = true, Seed = 71 }.Options(3));
-        Assert.AreEqual(2, many.Options(3).Distinct().Count());
+        var many = new DayUpgradeRules { Seed = 71 };
+        Assert.AreEqual(many.Options(3), new DayUpgradeRules { Seed = 71 }.Options(3));
+        Assert.AreEqual(3, many.Options(3).Distinct().Count());
         CollectionAssert.DoesNotContain(many.Options(3), DayUpgrade.Energy);
     }
 
     [Test]
-    public void CardWeightsChangeActualSelectionAcrossSeeds()
+    public void EveryAvailableCardHasSimilarFrequencyAcrossSeeds()
     {
-        int Count(int weight) => Enumerable.Range(0, 400).Count(seed => new DayUpgradeRules
-        {
-            WeightedSelection = true, Seed = seed,
-            Weights = new Dictionary<DayUpgrade, int> { [DayUpgrade.Cash] = weight }
-        }.Options(2, musicUnlocked: true)[0] == DayUpgrade.Cash);
-        Assert.IsTrue(Count(100) > Count(1) * 2);
+        var counts = Enumerable.Range(0, 1800).SelectMany(seed => new DayUpgradeRules { Seed = seed }
+            .Options(2, musicUnlocked: true)).GroupBy(card => card).Select(cards => cards.Count()).ToArray();
+        Assert.That(counts, Has.Length.EqualTo(9));
+        Assert.That(counts, Is.All.InRange(520, 680));
     }
 
     [Test]

@@ -13,9 +13,10 @@ public partial class CraftCatalog : CanvasLayer
     private bool _ownsPause;
     private PanelContainer _panel;
     private ScrollContainer _scroll;
+    private Label _buyerTime;
     private Vector2 _authoredPanelMinimum;
     private float _authoredScrollHeight;
-    public Button ItemButton(string kind) => _cards.GetNode<Button>(kind + "/Content/Choose");
+    public Button ItemButton(string kind) => _cards.GetNode<Button>(kind);
 
     public override void _Ready()
     {
@@ -24,6 +25,7 @@ public partial class CraftCatalog : CanvasLayer
         _cards = GetNode<GridContainer>("Root/Center/Panel/Margin/Content/Scroll/Cards");
         _panel = GetNode<PanelContainer>("Root/Center/Panel");
         _scroll = _cards.GetParent<ScrollContainer>();
+        _buyerTime = GetNode<Label>("Root/Center/Panel/Margin/Content/BuyerTime");
         _authoredPanelMinimum = _panel.CustomMinimumSize;
         _authoredScrollHeight = _scroll.CustomMinimumSize.Y;
         GetNode<Button>("Root/Center/Panel/Margin/Content/Back").Pressed += Close;
@@ -40,15 +42,13 @@ public partial class CraftCatalog : CanvasLayer
         foreach (var entry in WorkshopItemCatalog.Items.Select((item, index) => (item, index))
             .Where(entry => entry.item.WorkshopId == workshop))
         {
-            var card = scene.Instantiate<PanelContainer>();
+            var card = scene.Instantiate<Button>();
             card.Name = entry.item.Kind;
             card.GetNode<TextureRect>("Content/Art").Texture = GD.Load<Texture2D>(entry.item.ArtPath);
             card.GetNode<Label>("Content/Name").Text = GameLocalization.Text(entry.item.Name);
             RefreshAvailability(card, entry.index);
-            var button = card.GetNode<Button>("Content/Choose");
-            button.Text = GameLocalization.Text("Выбрать");
             string kind = entry.item.Kind;
-            button.Pressed += () => Coordinator.Select(kind);
+            card.Pressed += () => Coordinator.Select(kind);
             _cards.AddChild(card);
         }
         GetNode<Label>("Root/Center/Panel/Margin/Content/Title").Text = GameLocalization.Text(
@@ -56,9 +56,10 @@ public partial class CraftCatalog : CanvasLayer
         _ownsPause = true;
         GetTree().Paused = true;
         _root.Show();
+        RefreshBuyerTime();
         Reflow();
         _scroll.ScrollVertical = 0;
-        var first = _cards.GetChildren().Select(node => node.GetNode<Button>("Content/Choose"))
+        var first = _cards.GetChildren().OfType<Button>()
             .FirstOrDefault(button => !button.Disabled);
         first?.GrabFocus();
     }
@@ -77,30 +78,35 @@ public partial class CraftCatalog : CanvasLayer
     {
         bool wasClosed = _game.DayClosed;
         _game.TickCraftClocks(delta);
-        if (IsOpen && !wasClosed && _game.DayClosed)
-            foreach (Node card in _cards.GetChildren())
+        if (!IsOpen) return;
+        RefreshBuyerTime();
+        if (!wasClosed && _game.DayClosed)
+            foreach (Button card in _cards.GetChildren())
                 RefreshAvailability(card, WorkshopItemCatalog.IndexOf(card.Name));
     }
 
-    private void RefreshAvailability(Node card, int index)
+    private void RefreshBuyerTime() =>
+        _buyerTime.Text = GameLocalization.Format("Клиент: {0}", _game.BuyerClockText);
+
+    private void RefreshAvailability(Button card, int index)
     {
         string reason = Coordinator.UnavailableReason(index);
         var label = card.GetNode<Label>("Content/Reason");
         label.Text = GameLocalization.Text(reason);
         label.Visible = reason.Length != 0;
-        card.GetNode<Button>("Content/Choose").Disabled = label.Visible;
+        card.Disabled = label.Visible;
     }
 
     public override void _Notification(int what)
     {
         if (what != NotificationTranslationChanged || !IsOpen || Coordinator == null) return;
-        foreach (Node card in _cards.GetChildren())
+        RefreshBuyerTime();
+        foreach (Button card in _cards.GetChildren())
         {
             int index = WorkshopItemCatalog.IndexOf(card.Name);
             var item = WorkshopItemCatalog.Items[index];
             card.GetNode<Label>("Content/Name").Text = GameLocalization.Text(item.Name);
             RefreshAvailability(card, index);
-            card.GetNode<Button>("Content/Choose").Text = GameLocalization.Text("Выбрать");
         }
         GetNode<Label>("Root/Center/Panel/Margin/Content/Title").Text = GameLocalization.Text(
             Workshop == "music" ? "Выберите инструмент" : "Выберите предмет ателье");

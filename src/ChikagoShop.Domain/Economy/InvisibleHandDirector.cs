@@ -54,11 +54,11 @@ public sealed class InvisibleHandDirector
         double targetCash = checkpointCash + Math.Max(0, quota - checkpointCash) * progress;
         // Unsold items count as assets, albeit discounted for uncertain buyer offers.
         double assets = cash + Math.Max(0, unsoldStockValue) * 0.8;
-        double tolerance = Math.Max(75, quota * 0.25);
+        double tolerance = Math.Max(100, quota * 0.30);
         double desired = Math.Clamp((targetCash - assets) / tolerance, -1, 1);
         // Avoid punishing a run immediately for beginning with its starting cash.
         if (progress < 0.1) desired *= progress / 0.1;
-        Pressure += Math.Clamp(desired - Pressure, -0.12, 0.12);
+        Pressure += Math.Clamp(desired - Pressure, -0.08, 0.08);
     }
 
     public int RarityShift(int totalWeight, double maximumPercentagePoints) =>

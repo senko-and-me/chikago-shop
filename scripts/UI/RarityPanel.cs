@@ -47,13 +47,12 @@ public partial class RarityPanel : Control
 		string[] headings = ["Редкость", "Ср. цена", "Рероллы"];
 		for (int i = 0; i < headings.Length; i++) AddCell($"Heading{i}", headings[i], true, i == 0);
 		string[] names = ["Ширпотреб", "Заурядная", "Первоклассная", "Эксклюзивная", "Неповторимая"];
-		int[] rerolls = [3, 2, 2, 1, 1];
 		int[] prices = [Price0, Price1, Price2, Price3, Price4];
 		for (int i = 0; i < prices.Length; i++)
 		{
 			AddCell($"Rarity{i}", names[i], false, true);
 			AddCell($"Price{i}", $"{prices[i]}$");
-			AddCell($"Rerolls{i}", rerolls[i].ToString());
+			AddCell($"Rerolls{i}", WorkshopItemCatalog.RerollsPerItem.ToString());
 		}
 		VisibilityChanged += SyncVisibility;
 		SyncVisibility();
@@ -102,7 +101,7 @@ public partial class RarityPanel : Control
 			var priceLabel = Values.GetNode<Label>($"Price{i}");
 			priceLabel.Text = $"{price}$";
 			SetChangeColor(priceLabel, price.CompareTo(average));
-			Values.GetNode<Label>($"Rerolls{i}").Text = WorkshopItemCatalog.RerollsFor(rarities[i]).ToString();
+			Values.GetNode<Label>($"Rerolls{i}").Text = WorkshopItemCatalog.RerollsPerItem.ToString();
 		}
 	}
 

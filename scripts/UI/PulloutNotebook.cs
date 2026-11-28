@@ -196,7 +196,7 @@ public partial class PulloutNotebook : Control
         int quota = _game.QuotaStage == 0 ? _game.FirstQuota : _game.SecondQuota;
         DayUpgrade selected = _game.DayUpgrades.Selected;
         bool english = GameLocalization.Language == "en";
-        string signature = $"{english}|{quota}|{deadline}|{_game.Completed}|{_game.Failed}|{selected}";
+        string signature = $"{english}|{quota}|{deadline}|{_game.Completed}|{_game.Failed}|{selected}|{DebugBalanceSettings.Revision}";
         if (signature == _lastSignature)
             return;
         _lastSignature = signature;
@@ -214,13 +214,12 @@ public partial class PulloutNotebook : Control
                 : $"Выплатить мафии: {quota}$\nДо конца {deadline}-го дня";
 
         _buffsTitle.Text = english ? "DAY BUFFS" : "БАФФЫ ДНЯ";
-        string activeBuff = selected switch
+        string activeBuff = english ? "None" : "Нет";
+        if (selected is not (DayUpgrade.None or DayUpgrade.Cash))
         {
-            DayUpgrade.AtelierPrice => english ? "+20% clothing prices" : "+20% к цене одежды",
-            DayUpgrade.MusicPrice => english ? "+20% instrument prices" : "+20% к цене инструментов",
-            // Cash is received immediately, not a lasting day buff.
-            _ => english ? "None" : "Нет"
-        };
+            activeBuff = GameLocalization.Text(DebugBalanceSettings.CardName(selected)) + "\n" +
+                DayTransitionCard.Describe(selected, _game.DayUpgrades.Rules.For(selected));
+        }
         _buffDetails.Text = activeBuff;
 
         // There are no negative day cards in the current rules.

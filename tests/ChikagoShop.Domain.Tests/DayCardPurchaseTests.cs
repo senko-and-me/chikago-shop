@@ -5,15 +5,22 @@ namespace ChikagoShop.Domain.Tests;
 
 public sealed class DayCardPurchaseTests
 {
-    [TestCase(DayUpgrade.Cash, 2, false, 0)]
-    [TestCase(DayUpgrade.Atelier, 3, false, 15)]
-    [TestCase(DayUpgrade.Music, 4, true, 25)]
-    [TestCase(DayUpgrade.AtelierPrice, 4, false, 10)]
-    [TestCase(DayUpgrade.MusicPrice, 5, true, 20)]
-    public void PurchaseRequiresFundsAndChargesOnlyOnce(DayUpgrade choice, int day, bool musicUnlocked, int cost)
+    [TestCase(DayUpgrade.Cash)]
+    [TestCase(DayUpgrade.AtelierPrice)]
+    [TestCase(DayUpgrade.MusicPrice)]
+    [TestCase(DayUpgrade.Materials)]
+    [TestCase(DayUpgrade.Patient)]
+    [TestCase(DayUpgrade.Bargaining)]
+    [TestCase(DayUpgrade.QualityMark)]
+    [TestCase(DayUpgrade.Loyal)]
+    [TestCase(DayUpgrade.QuickService)]
+    public void PurchaseRequiresFundsAndChargesOnlyOnce(DayUpgrade choice)
     {
         var session = new DayUpgradeSession();
-        session.Offer(day, musicUnlocked);
+        int day = Enumerable.Range(2, 100).First(day => session.Rules.Options(day, musicUnlocked: true).Contains(choice));
+        session.Offer(day, musicUnlocked: true);
+        int cost = session.Rules.For(choice).Cost;
+        Assert.That(cost, Is.GreaterThan(0));
         Assert.That(DayUpgradeSession.Cost(choice), Is.EqualTo(cost));
         if (!session.Options.Contains(choice))
         {
@@ -33,6 +40,8 @@ public sealed class DayCardPurchaseTests
 
     [TestCase(DayUpgrade.Energy)]
     [TestCase(DayUpgrade.Time)]
+    [TestCase(DayUpgrade.Atelier)]
+    [TestCase(DayUpgrade.Music)]
     public void RetiredCardsCannotBePurchasedOrOffered(DayUpgrade retired)
     {
         var session = new DayUpgradeSession();

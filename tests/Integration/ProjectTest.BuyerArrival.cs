@@ -93,6 +93,30 @@ public partial class ProjectTest
             Check(requested >= 0 && WorkshopItemCatalog.Items[requested].WorkshopId == "atelier" &&
                 WorkshopItemCatalog.ItemCraftCost(requested) <= game.Score && RequestArt() == TradeScene.GetItemArtPath(requested),
                 "With empty showcases a new request must be craftable with the available workshop and budget");
+
+            foreach (bool music in new[] { false, true })
+            {
+                string oldRequest = music ? "guitar" : "lorgnette";
+                int index = WorkshopItemCatalog.IndexOf(oldRequest);
+                await Reload(fixture with
+                {
+                    Day = music ? 9 : 2, QuotaStage = music ? 1 : 0,
+                    QuotaVisit = music ? QuotaVisitStage.Rewarded : QuotaVisitStage.Unavailable,
+                    MusicWorkshopUnlocked = music, DayStarted = false,
+                    WaitingBuyerPresent = true, WaitingBuyerItemKind = oldRequest,
+                    PreviousBuyerItemKind = oldRequest,
+                    ShowcaseItems = music ? [-1, -1, -1, index, -1, -1] : [index, -1, -1]
+                });
+                Check(!Saved().WaitingBuyerPresent, "A new day awaiting Start must not load yesterday's buyer");
+                game.EndDay();
+                var fresh = Saved();
+                Check(fresh.WaitingBuyerPresent && fresh.WaitingBuyerItemKind != oldRequest &&
+                    game.BuyerWaitInitial is >= 15 and <= 20,
+                    "Starting after reload must generate a fresh request instead of repeating the old stocked item");
+                await Reload();
+                Check(Saved().WaitingBuyerItemKind == fresh.WaitingBuyerItemKind,
+                    "Reloading an active day must keep its fresh request");
+            }
         }
         finally
         {

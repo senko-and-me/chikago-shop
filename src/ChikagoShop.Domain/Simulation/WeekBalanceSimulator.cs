@@ -38,7 +38,7 @@ public static class WeekBalanceSimulator
         for (int run = 0; run < runs; run++)
         {
             var rng = new Random(unchecked(seed + run * 8191));
-            var upgrades = new DayUpgradeSession();
+            var upgrades = new DayUpgradeSession { Rules = new DayUpgradeRules { Terms = config.Cards } };
             int cash = config.StartingMoney;
             int checkpointCash = cash;
             var hand = new InvisibleHandDirector();
@@ -58,7 +58,7 @@ public static class WeekBalanceSimulator
                             unlocked ? DayUpgrade.MusicPrice : DayUpgrade.AtelierPrice,
                             unlocked ? DayUpgrade.MusicPrice : DayUpgrade.AtelierPrice };
                         choice = priorities.FirstOrDefault(option => upgrades.Options.Contains(option) &&
-                            cash - DayUpgradeSession.Cost(option) >= (unlocked && profile.UnlockMusic ? music.SpinCost : atelier.SpinCost) * 2 &&
+                            cash - upgrades.CostFor(option) >= config.CraftCost * 2 &&
                             (option == DayUpgrade.Cash || day < config.Days.TotalDays));
                     }
                     if (choice != DayUpgrade.None && upgrades.TryPurchase(choice, cash, out int balance))
@@ -68,7 +68,7 @@ public static class WeekBalanceSimulator
                     }
                     else upgrades.TrySkip();
                 }
-                double remaining = config.Days.DurationSeconds + (unlocked ? 30 : 0);
+                double remaining = config.Days.DurationFor(day, firstDeadline);
                 double duration = remaining;
                 void Observe(double stock = 0)
                 {
@@ -80,37 +80,44 @@ public static class WeekBalanceSimulator
                 Observe();
                 while (profile.Produce && remaining > 0)
                 {
-                    var workshop = unlocked && profile.UnlockMusic && cash >= music.SpinCost ? music : atelier;
-                    if (cash < workshop.SpinCost) break;
+                    var workshop = unlocked && profile.UnlockMusic && rng.Next(2) == 0 ? music : atelier;
+                    int cost = upgrades.CraftPrice(config.CraftCost);
+                    if (cash < cost) break;
                     double cycle = profile.CycleSeconds;
                     if (!double.IsFinite(cycle) || cycle <= 0 || remaining < cycle) break;
                     Observe();
-                    var selected = config.Items.Where(item => item.Workshop == workshop.Id)
-                        .OrderByDescending(item => item.BasePrice).FirstOrDefault();
-                    if (selected == null) break;
+                    if (!config.Items.Any(item => item.Workshop == workshop.Id)) break;
                     remaining -= cycle;
-                    cash -= workshop.SpinCost;
+                    cash -= cost;
                     items++;
-                    int basePrice = upgrades.Price(workshop.Id, selected.BasePrice);
+                    int basePrice = upgrades.Price(workshop.Id, config.BasePrice);
                     Observe(basePrice);
                     int percent = hand.AdjustInitialOffer(TradeOfferRules.InitialPercent(rng.Next(61)), 3);
-                    double waitDuration = rng.Next(config.BuyerWaitMinSeconds, config.BuyerWaitMaxSeconds + 1);
+                    double waitDuration = rng.Next(config.BuyerWaitMinSeconds, config.BuyerWaitMaxSeconds + 1) + upgrades.WaitExtension;
                     double buyerRemaining = Math.Max(0, waitDuration - cycle);
-                    int rerolls = selected.Rerolls;
+                    int rerolls = config.RerollsPerItem;
                     while (profile.Reroll && percent < 5 &&
                         BuyerPatienceRules.CanReroll(true, false, rerolls, buyerRemaining))
                     {
+                        bool guaranteed = upgrades.GuaranteesReroll(rerolls);
                         rerolls--;
                         var options = TradeOfferRules.RerollOptions(basePrice, TradeOfferRules.Price(basePrice, percent),
                             rng.NextDouble() < TradeOfferRules.HigherRerollChance);
+                        if (guaranteed)
+                        {
+                            int minimum = upgrades.MinimumFinalOffer(percent);
+                            options = options.Where(option => option >= minimum).DefaultIfEmpty(minimum).ToArray();
+                        }
+                        if (options.Length == 0) break;
                         percent = options[rng.Next(options.Length)];
                         remaining -= 0.8; // The final active trade can finish after closing.
                         buyerRemaining -= 0.8;
                     }
                     buyerRemaining = BuyerPatienceRules.RemainingAfterDayClosure(buyerRemaining, remaining <= 0);
-                    percent = BuyerPatienceRules.OfferPercent(percent, buyerRemaining);
+                    if (buyerRemaining <= 0) percent = upgrades.ExpiredOffer(percent);
                     cash += BuyerPatienceRules.TotalPayout(TradeOfferRules.Price(basePrice, percent), buyerRemaining,
-                        RunRewardRules.SpeedBonus(buyerRemaining, waitDuration), RunRewardRules.QualityBonus(profile.QualityRank));
+                        RunRewardRules.SpeedBonus(buyerRemaining, waitDuration), RunRewardRules.QualityBonus(profile.QualityRank) +
+                        upgrades.SaleBonus(workshop.Id, profile.QualityRank, buyerRemaining));
                     Observe();
                 }
                 if (day == config.Days.TotalDays) cashAtFinal[run] = cash;

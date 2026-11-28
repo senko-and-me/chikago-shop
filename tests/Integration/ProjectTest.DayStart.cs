@@ -164,14 +164,15 @@ public partial class ProjectTest
             using (var file = FileAccess.Open(save, FileAccess.ModeFlags.Write))
                 file.StoreString("{\"save_version\":13,\"day\":1,\"score\":220,\"energy_remaining\":3,\"day_remaining_seconds\":42}");
             await Reload();
-            Check(game.DayStarted && game.DayRemainingSeconds == 42, "Saves without the new field must continue their running day");
+            Check(game.DayStarted && System.Math.Abs(game.DayRemainingSeconds - 42.0 * duration / 60) < 0.001,
+                "Saves without the start flag must keep the running day and its elapsed proportion");
             using (var file = FileAccess.Open(save, FileAccess.ModeFlags.Write))
                 file.StoreString($$"""{"save_version":13,"day":1,"score":220,"energy_remaining":3,"day_remaining_seconds":{{duration}},"day_started":false,"showcase_items":[0,-1,-1,-1,-1,-1]}""");
             await Reload();
             game._Process(5);
             Check(!game.TradeActive && game.DayRemainingSeconds == duration, "Displayed goods must not attract buyers before Start");
             game.EndDay();
-            Check(game.TradeActive && game.BuyerWaitRemaining == game.BuyerWaitInitial && game.BuyerWaitInitial is >= 10 and <= 20,
+            Check(ProgressSaveStore.Load(save, 3).WaitingBuyerPresent && game.BuyerWaitRemaining == game.BuyerWaitInitial && game.BuyerWaitInitial is >= 15 and <= 20,
                 "Start must immediately bring the first buyer with the full wait timer");
         }
         finally

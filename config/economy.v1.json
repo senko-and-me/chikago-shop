@@ -1,36 +1,24 @@
 {
   "schema_version": 1,
   "is_provisional": true,
-  "starting_money": 220,
+  "starting_money": 100,
+  "rerolls_per_item": 3,
   "buyer_wait_min_seconds": 15,
   "buyer_wait_max_seconds": 20,
-  "craft_costs": {
-    "hat": 50,
-    "vest": 50,
-    "gloves": 50,
-    "matteo_hat": 50,
-    "lorgnette": 50,
-    "guitar": 50,
-    "drum": 50,
-    "banjo": 50,
-    "violin": 50,
-    "tuba": 50
-  },
   "days": {
     "total_days": 14,
     "tutorial_day": 1,
-    "duration_seconds": 60,
+    "duration_seconds": 45,
+    "second_week_duration_seconds": 60,
     "items_per_craft": 1
   },
   "workshops": [
     {
       "id": "atelier",
-      "spin_cost": 50,
       "unlock_cost": 0
     },
     {
       "id": "music",
-      "spin_cost": 50,
       "unlock_cost": 0
     }
   ],
@@ -39,7 +27,6 @@
       "id": "common",
       "name": "Ширпотреб",
       "weight": 60,
-      "rerolls": 3,
       "base_prices": {
         "atelier": 50,
         "music": 50
@@ -49,7 +36,6 @@
       "id": "ordinary",
       "name": "Заурядная",
       "weight": 25,
-      "rerolls": 2,
       "base_prices": {
         "atelier": 50,
         "music": 50
@@ -59,7 +45,6 @@
       "id": "first_class",
       "name": "Первоклассная",
       "weight": 10,
-      "rerolls": 2,
       "base_prices": {
         "atelier": 50,
         "music": 50
@@ -69,7 +54,6 @@
       "id": "exclusive",
       "name": "Эксклюзивная",
       "weight": 4,
-      "rerolls": 1,
       "base_prices": {
         "atelier": 50,
         "music": 50
@@ -79,7 +63,6 @@
       "id": "unique",
       "name": "Неповторимая",
       "weight": 1,
-      "rerolls": 1,
       "base_prices": {
         "atelier": 50,
         "music": 50
@@ -107,74 +90,94 @@
     {
       "id": "first",
       "deadline_day": 7,
-      "amount": 750
+      "amount": 800
     },
     {
       "id": "final",
       "deadline_day": 14,
-      "amount": 1500
+      "amount": 1350
     }
   ],
   "items": [
     {
       "id": "hat",
-      "workshop": "atelier",
-      "base_price": 50,
-      "rerolls": 3
+      "workshop": "atelier"
     },
     {
       "id": "vest",
-      "workshop": "atelier",
-      "base_price": 50,
-      "rerolls": 2
+      "workshop": "atelier"
     },
     {
       "id": "gloves",
-      "workshop": "atelier",
-      "base_price": 50,
-      "rerolls": 2
+      "workshop": "atelier"
     },
     {
       "id": "matteo_hat",
-      "workshop": "atelier",
-      "base_price": 50,
-      "rerolls": 1
+      "workshop": "atelier"
     },
     {
       "id": "lorgnette",
-      "workshop": "atelier",
-      "base_price": 50,
-      "rerolls": 1
+      "workshop": "atelier"
     },
     {
       "id": "guitar",
-      "workshop": "music",
-      "base_price": 50,
-      "rerolls": 3
+      "workshop": "music"
     },
     {
       "id": "drum",
-      "workshop": "music",
-      "base_price": 50,
-      "rerolls": 2
+      "workshop": "music"
     },
     {
       "id": "banjo",
-      "workshop": "music",
-      "base_price": 50,
-      "rerolls": 2
+      "workshop": "music"
     },
     {
       "id": "violin",
-      "workshop": "music",
-      "base_price": 50,
-      "rerolls": 1
+      "workshop": "music"
     },
     {
       "id": "tuba",
-      "workshop": "music",
-      "base_price": 50,
-      "rerolls": 1
+      "workshop": "music"
     }
-  ]
+  ],
+  "craft_cost": 20,
+  "cards": {
+    "Cash": {
+      "cost": 6,
+      "amount": 15
+    },
+    "Materials": {
+      "cost": 5,
+      "amount": 5
+    },
+    "AtelierPrice": {
+      "cost": 6,
+      "amount": 6
+    },
+    "MusicPrice": {
+      "cost": 6,
+      "amount": 6
+    },
+    "Patient": {
+      "cost": 9,
+      "amount": 2
+    },
+    "Bargaining": {
+      "cost": 4,
+      "amount": 30
+    },
+    "QualityMark": {
+      "cost": 6,
+      "amount": 6
+    },
+    "Loyal": {
+      "cost": 5,
+      "amount": 30
+    },
+    "QuickService": {
+      "cost": 4,
+      "amount": 5
+    }
+  },
+  "base_price": 50
 }

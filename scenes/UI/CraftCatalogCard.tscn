@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Texture2D" path="res://art/items/hat.png" id="Art"]
 
@@ -14,33 +14,41 @@ content_margin_right = 16.0
 content_margin_top = 18.0
 content_margin_bottom = 18.0
 
-[sub_resource type="StyleBoxFlat" id="Button"]
-bg_color = Color(0.07, 0.07, 0.07, 1)
-content_margin_left = 16.0
-content_margin_right = 16.0
-content_margin_top = 8.0
-content_margin_bottom = 8.0
-
 [sub_resource type="StyleBoxFlat" id="Hover"]
-bg_color = Color(0.23, 0.23, 0.23, 1)
+bg_color = Color(0.97, 0.97, 0.97, 1)
+border_width_left = 1
+border_width_right = 1
+border_width_top = 1
+border_width_bottom = 1
+border_color = Color(0.42, 0.42, 0.42, 1)
 content_margin_left = 16.0
 content_margin_right = 16.0
-content_margin_top = 8.0
-content_margin_bottom = 8.0
+content_margin_top = 18.0
+content_margin_bottom = 18.0
 
 [sub_resource type="StyleBoxFlat" id="Pressed"]
-bg_color = Color(0.0, 0.0, 0.0, 1)
+bg_color = Color(0.93, 0.93, 0.93, 1)
+border_width_left = 1
+border_width_right = 1
+border_width_top = 1
+border_width_bottom = 1
+border_color = Color(0.30, 0.30, 0.30, 1)
 content_margin_left = 16.0
 content_margin_right = 16.0
-content_margin_top = 8.0
-content_margin_bottom = 8.0
+content_margin_top = 18.0
+content_margin_bottom = 18.0
 
 [sub_resource type="StyleBoxFlat" id="Disabled"]
-bg_color = Color(0.90, 0.90, 0.90, 1)
+bg_color = Color(0.96, 0.96, 0.96, 1)
+border_width_left = 1
+border_width_right = 1
+border_width_top = 1
+border_width_bottom = 1
+border_color = Color(0.78, 0.78, 0.78, 1)
 content_margin_left = 16.0
 content_margin_right = 16.0
-content_margin_top = 8.0
-content_margin_bottom = 8.0
+content_margin_top = 18.0
+content_margin_bottom = 18.0
 
 [sub_resource type="StyleBoxFlat" id="Focus"]
 draw_center = false
@@ -54,19 +62,31 @@ expand_margin_right = 3.0
 expand_margin_top = 3.0
 expand_margin_bottom = 3.0
 
-[node name="Card" type="PanelContainer"]
-custom_minimum_size = Vector2(190, 354)
+[node name="Card" type="Button"]
+custom_minimum_size = Vector2(190, 290)
 size_flags_horizontal = 3
-mouse_filter = 2
-theme_override_styles/panel = SubResource("Card")
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("Card")
+theme_override_styles/hover = SubResource("Hover")
+theme_override_styles/pressed = SubResource("Pressed")
+theme_override_styles/disabled = SubResource("Disabled")
+theme_override_styles/focus = SubResource("Focus")
 
 [node name="Content" type="VBoxContainer" parent="."]
-layout_mode = 2
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = 18.0
+offset_right = -16.0
+offset_bottom = -18.0
 mouse_filter = 2
+alignment = 1
 theme_override_constants/separation = 8
 
 [node name="Art" type="TextureRect" parent="Content"]
-custom_minimum_size = Vector2(0, 144)
+custom_minimum_size = Vector2(0, 132)
 layout_mode = 2
 mouse_filter = 2
 texture = ExtResource("Art")
@@ -74,7 +94,7 @@ expand_mode = 1
 stretch_mode = 5
 
 [node name="Name" type="Label" parent="Content"]
-custom_minimum_size = Vector2(0, 48)
+custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.05, 0.05, 0.05, 1)
@@ -111,25 +131,3 @@ horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3
 
-[node name="Spacer" type="Control" parent="Content"]
-layout_mode = 2
-size_flags_vertical = 3
-mouse_filter = 2
-
-[node name="Choose" type="Button" parent="Content"]
-custom_minimum_size = Vector2(0, 42)
-layout_mode = 2
-mouse_default_cursor_shape = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
-theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
-theme_override_colors/font_focus_color = Color(1, 1, 1, 1)
-theme_override_colors/font_disabled_color = Color(0.43, 0.43, 0.43, 1)
-theme_override_constants/outline_size = 0
-theme_override_font_sizes/font_size = 20
-theme_override_styles/normal = SubResource("Button")
-theme_override_styles/hover = SubResource("Hover")
-theme_override_styles/pressed = SubResource("Pressed")
-theme_override_styles/disabled = SubResource("Disabled")
-theme_override_styles/focus = SubResource("Focus")
-text = "Выбрать"

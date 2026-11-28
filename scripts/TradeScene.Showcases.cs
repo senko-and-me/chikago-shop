@@ -55,14 +55,14 @@ public partial class TradeScene
 
     internal bool CanBeginCraft(string workshop) =>
         !Failed && !Completed && !DayClosed && !QuotaVisitPending && !DayTransitionOpen &&
-        Score >= WorkshopItemCatalog.CraftCost(workshop) &&
+        Score >= CurrentCraftCost &&
         FreeDisplay(workshop, _showcaseItems, MusicWorkshopUnlocked) >= 0;
 
     private void RefreshCraftPriceHint(int index, string workshop)
     {
         var hint = _priceHints[index];
         string reason = !HasFreeDisplay(workshop) ? "Нет свободных витрин" :
-            Score < WorkshopItemCatalog.CraftCost(workshop) ? "Недостаточно денег" : "";
+            Score < CurrentCraftCost ? "Недостаточно денег" : "";
         hint.GetNode<Label>("Label").Text = GameLocalization.Text(reason);
         hint.Visible = reason.Length > 0 && !_rarityPanels[index].Visible;
     }
@@ -93,8 +93,8 @@ public partial class TradeScene
         int item = _showcaseItems[slot];
         if (item < 0 || slot == _pendingCraftSlot) return null;
         string grade = NormalizeRank(_showcaseGrades[slot]);
-        string info = GameLocalization.Format("{0}\nКачество: {1}\nНадбавка за качество: +{2}$\nСтоимость: {3}$",
-            GetItemName(item), grade, QualityBonus(grade), GetItemPrice(item));
+        string info = GameLocalization.Format("{0}\nКачество: {1}\nПоправка за качество: {2}\nСтоимость: {3}$",
+            GetItemName(item), grade, ColoredAmount(QualityBonus(grade)), GetItemPrice(item));
         return slot == _activeShowcaseIndex && TradeActive
             ? info + "\n" + GameLocalization.Text("Нажмите, чтобы вернуть товар на витрину") : info;
     }

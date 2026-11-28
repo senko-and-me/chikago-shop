@@ -167,7 +167,6 @@ public partial class DebugBalancePanel : CanvasLayer
 	}
 	private static bool TryNumber(string text, out double value) => double.TryParse(text.Replace(',', '.'),
 		System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out value) && double.IsFinite(value);
-	private double Number(string key) => TryNumber(_numbers[key].Text, out double value) ? value : 0;
 	private void Apply(bool newGame)
 	{
 		if (_game?.CraftMiniGameOpen == true || _game?.DayTransitionOpen == true ||
@@ -191,12 +190,7 @@ public partial class DebugBalancePanel : CanvasLayer
 		if (_preview == null || _numbers.Count != DebugBalanceSettings.Fields.Count) return;
 		string tab = GetNode<TabContainer>(Content + "/Tabs").GetCurrentTabControl().Name;
 		if (tab == "Карты")
-		{
-			double sum = DebugBalanceSettings.Cards.Sum(card => Number($"card.{card}.weight"));
-			_preview.Text = GameLocalization.Format("В режиме 1 выбираются до трёх разных карт без повторов. Шанс первого выбора: {0}. Один seed повторяет выбор при загрузке.",
-				string.Join(" · ", DebugBalanceSettings.Cards.Select(card =>
-					$"{GameLocalization.Text(DebugBalanceSettings.CardName(card))} {(sum > 0 ? Number($"card.{card}.weight") / sum * 100 : 0):0.#}%")));
-		}
+			_preview.Text = GameLocalization.Text("Три разные доступные карты с равными шансами. Seed сохраняет выбор при загрузке.");
 		else _preview.Text = "«Применить сейчас» меняет будущий крафт, цены и длительность дня с сохранением уже прошедшего времени. «Начать заново» сбрасывает партию. Новое время мини-игры применяется при её следующем открытии.";
 	}
 	public override void _ExitTree() { if (IsOpen) Close(); }

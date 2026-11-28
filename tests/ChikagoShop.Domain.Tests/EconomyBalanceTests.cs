@@ -12,12 +12,12 @@ public sealed class EconomyBalanceTests
     public void SingleItemCraftingAndBaseSaleUseTheWorkshopPrice()
     {
         var config = Config();
-        Assert.That(config.Days.DurationSeconds, Is.EqualTo(60));
+        Assert.That(config.Days.DurationSeconds, Is.EqualTo(45));
         Assert.That(config.Days.ItemsPerCraft, Is.EqualTo(1));
         foreach (var item in config.Items)
         {
-            Assert.That(config.CraftCosts[item.Id], Is.EqualTo(50));
-            Assert.That(item.BasePrice, Is.EqualTo(50));
+            Assert.That(config.CraftCosts[item.Id], Is.EqualTo(20));
+            Assert.That(config.BasePrice, Is.EqualTo(50));
         }
         Assert.That(config.Quotas.Single(quota => quota.Id == "first").DeadlineDay, Is.EqualTo(7));
     }

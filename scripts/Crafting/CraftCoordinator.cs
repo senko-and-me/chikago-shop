@@ -10,9 +10,6 @@ public sealed class CraftCoordinator
     public string Workshop { get; private set; }
     public int SelectedIndex { get; private set; } = -1;
     private int _reservedPosition = -1;
-    private int _reservedPrice;
-    // Saves resume without a preparation screen, so only started crafts are committed.
-    internal int RefundablePrice => _reservedPrice;
     private bool _started;
     private bool _finished;
 
@@ -33,7 +30,7 @@ public sealed class CraftCoordinator
         var item = WorkshopItemCatalog.Items[index];
         if (_game.Failed || _game.Completed || _game.DayClosed || !_game.DayStarted) return "Магазин закрыт";
         if (item.WorkshopId == "music" && !_game.MusicWorkshopUnlocked) return "Мастерская закрыта";
-        if (_reservedPrice == 0 && _game.Score < WorkshopItemCatalog.CraftCost(item.WorkshopId)) return "Недостаточно денег";
+        if (_game.Score < _game.CurrentCraftCost) return "Недостаточно денег";
         if (!_game.HasFreeDisplay(item.WorkshopId)) return "Нет свободных витрин";
         return "";
     }
@@ -50,8 +47,6 @@ public sealed class CraftCoordinator
             (workshop == "music" && !_game.MusicWorkshopUnlocked) || !_game.CanBeginCraft(workshop)) return;
         Workshop = workshop;
         SelectedIndex = -1;
-        _reservedPrice = WorkshopItemCatalog.CraftCost(workshop);
-        _game.AdjustCraftFunds(-_reservedPrice);
         Catalog.Open(workshop);
     }
 
@@ -71,15 +66,11 @@ public sealed class CraftCoordinator
 
     public bool TryStart(int index)
     {
-        if (_started || _finished || Covered || _reservedPrice == 0 || SelectedIndex != index || index < 0 ||
+        if (_started || _finished || Covered || SelectedIndex != index || index < 0 ||
             UnavailableReason(index) != "" || !Host(Workshop).IsReadyToStart) return false;
-        // Starting commits the already-paid attempt and its showcase slot together.
-        int price = _reservedPrice;
         _started = true;
-        _reservedPrice = 0;
         _reservedPosition = _game.BeginSelectedCraft(index);
         if (_reservedPosition >= 0) return true;
-        _reservedPrice = price;
         _started = false;
         return false;
     }
@@ -119,16 +110,12 @@ public sealed class CraftCoordinator
 
     public void CancelPreparation()
     {
-        int refund = _reservedPrice;
-        _reservedPrice = 0;
         ResetSelection();
-        if (refund > 0) _game.AdjustCraftFunds(refund);
     }
 
     internal void ResetForRun()
     {
         Catalog.CloseForReset();
-        _reservedPrice = 0;
         ResetSelection();
     }
 

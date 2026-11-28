@@ -205,8 +205,8 @@ public partial class ProjectTest
         var startupScene = GD.Load<PackedScene>("res://scenes/trade_scene.tscn").Instantiate<TradeScene>();
         try
         {
-            Check(startupScene.SavePath == "user://trade_progress.json" && startupScene.StartingMoney == 220 &&
-                startupScene.FirstQuota == 750 && startupScene.SecondQuota == 1500,
+            Check(startupScene.SavePath == "user://trade_progress.json" && startupScene.StartingMoney == 100 &&
+                startupScene.FirstQuota == 800 && startupScene.SecondQuota == 1350,
                 "The packed gameplay scene must retain valid startup money, quotas and save path before Ready; editor null overrides break New Game");
             Check(startupScene.GetNode<FirstTradeTutorial>("FirstTradeTutorial").CameraTravelSeconds > 0 &&
                 startupScene.GetNode<PulloutNotebook>("HUD/Root/PulloutNotebook").SlideSeconds > 0 &&

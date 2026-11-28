@@ -16,11 +16,11 @@ public sealed class RunRewardRulesTests
     public void SpeedRewardUsesFiveBoundedBands(double seconds, int expected) =>
         Assert.That(RunRewardRules.SpeedBonus(seconds), Is.EqualTo(expected));
 
-    [TestCase("S", 5)]
-    [TestCase("A", 4)]
-    [TestCase("B", 3)]
-    [TestCase("C", 2)]
-    [TestCase("D", 0)]
+    [TestCase("S", 20)]
+    [TestCase("A", 10)]
+    [TestCase("B", 0)]
+    [TestCase("C", -10)]
+    [TestCase("D", -20)]
     [TestCase("unknown", 0)]
     public void QualityRewardFollowsTheCraftedCopy(string rank, int expected) =>
         Assert.That(RunRewardRules.QualityBonus(rank), Is.EqualTo(expected));

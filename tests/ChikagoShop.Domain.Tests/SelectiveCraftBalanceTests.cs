@@ -12,11 +12,11 @@ public sealed class SelectiveCraftBalanceTests
 {
     private static readonly (string Kind, string Room, string Rarity, int Cost)[] Items =
     [
-        ("hat", "atelier", "common", 50), ("vest", "atelier", "ordinary", 50),
-        ("gloves", "atelier", "first_class", 50), ("matteo_hat", "atelier", "exclusive", 50),
-        ("lorgnette", "atelier", "unique", 50), ("guitar", "music", "common", 50),
-        ("drum", "music", "ordinary", 50), ("banjo", "music", "first_class", 50),
-        ("violin", "music", "exclusive", 50), ("tuba", "music", "unique", 50)
+        ("hat", "atelier", "common", 20), ("vest", "atelier", "ordinary", 20),
+        ("gloves", "atelier", "first_class", 20), ("matteo_hat", "atelier", "exclusive", 20),
+        ("lorgnette", "atelier", "unique", 20), ("guitar", "music", "common", 20),
+        ("drum", "music", "ordinary", 20), ("banjo", "music", "first_class", 20),
+        ("violin", "music", "exclusive", 20), ("tuba", "music", "unique", 20)
     ];
 
     private static string ConfigJson() => File.ReadAllText(Path.Combine(
@@ -26,15 +26,15 @@ public sealed class SelectiveCraftBalanceTests
         config.Rarities.Single(value => value.Id == rarity).BasePrices[room];
 
     [Test]
-    public void AllTenItemsUseTheWorkshopRateForCraftingAndBaseSales()
+    public void AllTenItemsShareCraftCostAndBaseSalePrice()
     {
         var config = Config();
         Assert.That(config.Items.Select(item => item.Id), Is.EquivalentTo(Items.Select(item => item.Kind)));
         foreach (var item in Items)
         {
-            Assert.That(config.Items.Single(entry => entry.Id == item.Kind).BasePrice, Is.EqualTo(item.Cost), item.Kind);
-            Assert.That(config.CraftCosts[item.Kind], Is.EqualTo(item.Cost), item.Kind);
-            Assert.That(SalePrice(config, item.Room, item.Rarity), Is.EqualTo(item.Cost), item.Kind);
+            Assert.That(config.BasePrice, Is.EqualTo(50), item.Kind);
+            Assert.That(config.CraftCost, Is.EqualTo(item.Cost), item.Kind);
+            Assert.That(SalePrice(config, item.Room, item.Rarity), Is.EqualTo(50), item.Kind);
         }
     }
 
@@ -43,10 +43,10 @@ public sealed class SelectiveCraftBalanceTests
     public void FastBonusedSalesCanFundBothQuotasWithOptionalMusicCrafting(bool openMusic)
     {
         var config = Config();
-        Assert.That(config.StartingMoney, Is.EqualTo(220));
+        Assert.That(config.StartingMoney, Is.EqualTo(100));
         Assert.That(config.Days.TotalDays, Is.EqualTo(14));
         Assert.That(config.Quotas.Select(q => (q.DeadlineDay, q.Amount)),
-            Is.EquivalentTo(new[] { (7, 750), (14, 1500) }));
+            Is.EquivalentTo(new[] { (7, 800), (14, 1350) }));
 
         int money = config.StartingMoney;
         bool musicUnlocked = false;
@@ -66,13 +66,13 @@ public sealed class SelectiveCraftBalanceTests
 
             // Check a feasible high-offer route with ten seconds of craft and one second to sell.
             const int secondsPerCraftAndSale = 11;
-            int duration = config.Days.DurationSeconds + (firstQuotaPaid ? 30 : 0);
+            int duration = config.Days.DurationFor(day, 7);
             int attempts = duration / secondsPerCraftAndSale;
             int secondsUsed = 0;
             for (int i = 0; i < attempts; i++)
             {
                 var affordable = Items.Where(item => (item.Room == "atelier" || musicUnlocked)
-                        && config.CraftCosts[item.Kind] <= money)
+                        && config.CraftCost <= money)
                     .OrderByDescending(item => SalePrice(config, item.Room, item.Rarity))
                     .ToArray();
                 Assert.That(affordable, Is.Not.Empty, $"Day {day}: must afford an actual item before sale.");
@@ -114,11 +114,22 @@ public sealed class SelectiveCraftBalanceTests
     }
 
     [TestCase(0)]
-    [TestCase(20)]
-    public void IncompleteCraftCostTableIsRejected(int oldCost)
+    [TestCase(-1)]
+    public void InvalidCommonCraftCostIsRejected(int cost)
     {
         var json = JsonNode.Parse(ConfigJson())!.AsObject();
-        json["craft_costs"] = new JsonObject { ["hat"] = oldCost };
+        json["craft_cost"] = cost;
         Assert.Throws<EconomyConfigException>(() => EconomyConfigLoader.Load(json.ToJsonString()));
+    }
+
+    [Test]
+    public void LegacyItemPricesCannotOverrideTheSharedSalePrice()
+    {
+        var json = JsonNode.Parse(ConfigJson())!.AsObject();
+        json["items"]![0]!["base_price"] = 900;
+        json["items"]![1]!["base_price"] = 5;
+        var config = EconomyConfigLoader.Load(json.ToJsonString());
+        Assert.That(config.BasePrice, Is.EqualTo(50));
+        Assert.That(config.Items, Has.Count.EqualTo(10));
     }
 }

@@ -17,6 +17,6 @@ public static class RunRewardRules
 
     public static int QualityBonus(string rank) => rank switch
     {
-        "S" => 5, "A" => 4, "B" => 3, "C" => 2, _ => 0
+        "S" => 20, "A" => 10, "C" => -10, "D" => -20, _ => 0
     };
 }

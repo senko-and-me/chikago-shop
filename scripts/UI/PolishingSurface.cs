@@ -118,7 +118,7 @@ void fragment() {
 
 		Session = new PolishingSession(alpha, duration: duration,
 			radiusCorrection: DebugBalanceSettings.Number($"polish.{kind}.radius"),
-			strengthCorrection: DebugBalanceSettings.Number($"polish.{kind}.strength"));
+			strengthCorrection: DebugBalanceSettings.Number($"polish.{kind}.strength") / PolishingSession.CleaningEfficiencyScale);
 		_coatingImage = Image.CreateEmpty(
 			Session.Columns, Session.Rows,
 			false, Image.Format.Rgba8);

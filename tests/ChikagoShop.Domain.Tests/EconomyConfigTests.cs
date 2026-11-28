@@ -6,12 +6,30 @@ namespace ChikagoShop.Domain.Tests;
 
 public sealed class EconomyConfigTests
 {
+    [Test]
+    public void ShippedCardsMatchTheActiveDefaultPool()
+    {
+        var config = EconomyConfigLoader.Load(ReadConfig().ToJsonString());
+        var expected = ChikagoShop.Domain.Days.DayUpgradeRules.DefaultTerms();
+        Assert.That(config.Cards.Keys, Is.EquivalentTo(ChikagoShop.Domain.Days.DayUpgradeRules.Available));
+        foreach (var (card, terms) in config.Cards)
+            Assert.That(terms, Is.EqualTo(expected[card]), card.ToString());
+    }
+
     [TestCase("base_price", 0)]
-    [TestCase("rerolls", -1)]
-    public void InvalidExplicitItemTermsAreRejected(string key, int value)
+    public void InvalidSharedBasePriceIsRejected(string key, int value)
     {
         JsonObject json = ReadConfig();
-        json["items"]![0]![key] = value;
+        json[key] = value;
+        Assert.Throws<EconomyConfigException>(() => EconomyConfigLoader.Load(json.ToJsonString()));
+    }
+
+    [TestCase(-1)]
+    [TestCase(4)]
+    public void InvalidCommonRerollLimitsAreRejected(int value)
+    {
+        JsonObject json = ReadConfig();
+        json["rerolls_per_item"] = value;
         Assert.Throws<EconomyConfigException>(() => EconomyConfigLoader.Load(json.ToJsonString()));
     }
 
@@ -26,6 +44,7 @@ public sealed class EconomyConfigTests
         Assert.Throws<EconomyConfigException>(() => EconomyConfigLoader.Load(json.ToJsonString()));
     }
     [TestCase("duration_seconds", 0)]
+    [TestCase("second_week_duration_seconds", 0)]
     [TestCase("items_per_craft", 3)]
     public void InvalidLiveDayRulesAreRejected(string property, int value)
     {
@@ -55,12 +74,12 @@ public sealed class EconomyConfigTests
             Assert.That(config.SchemaVersion, Is.EqualTo(1));
             Assert.That(config.IsProvisional, Is.True);
             Assert.That(config.Days.TotalDays, Is.EqualTo(14));
-            Assert.That(config.StartingMoney, Is.EqualTo(220));
+            Assert.That(config.StartingMoney, Is.EqualTo(100));
             Assert.That(config.Workshops.Select(value => value.Id), Is.EqualTo(new[] { "atelier", "music" }));
             Assert.That((config.BuyerWaitMinSeconds, config.BuyerWaitMaxSeconds), Is.EqualTo((15, 20)));
-            Assert.That(config.Workshops.Select(value => value.SpinCost), Is.EqualTo(new[] { 50, 50 }));
+            Assert.That(config.RerollsPerItem, Is.EqualTo(3));
             Assert.That(config.Workshops.Select(value => value.UnlockCost), Is.EqualTo(new[] { 0, 0 }));
-            Assert.That(config.Quotas.Select(value => value.Amount), Is.EqualTo(new[] { 750, 1500 }));
+            Assert.That(config.Quotas.Select(value => value.Amount), Is.EqualTo(new[] { 800, 1350 }));
             Assert.That(config.Rarities.Select(value => value.Weight), Is.EqualTo(new[] { 60, 25, 10, 4, 1 }));
             Assert.That(config.OfferRanges.Sum(value => value.ChancePercent), Is.EqualTo(100));
         });

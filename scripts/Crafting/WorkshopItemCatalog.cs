@@ -34,12 +34,11 @@ public static class WorkshopItemCatalog
         {
             int revision = DebugBalanceSettings.Revision;
             if (_items != null && _revision == revision) return _items;
-            var economy = Config;
-            var itemsByKind = economy.Items.ToDictionary(item => item.Id);
-            var workshopPrices = economy.Workshops.ToDictionary(workshop => workshop.Id, workshop => workshop.SpinCost);
+            var economy = DebugBalanceSettings.Economy;
             _items = System.Array.AsReadOnly(BaselineItems.Select(item => item with
             {
-                BasePrice = workshopPrices[item.WorkshopId], Rerolls = itemsByKind[item.Kind].Rerolls
+                BasePrice = economy.BasePrice,
+                Rerolls = economy.RerollsPerItem
             }).ToArray());
             _revision = revision;
             return _items;
@@ -77,9 +76,10 @@ public static class WorkshopItemCatalog
         for (int i = 0; i < Items.Count; i++) if (Items[i].Kind == kind) return i;
         return -1;
     }
-    public static int ItemCraftCost(int index) => Items[index].BasePrice;
-    public static int CraftCost(string workshop) => Config.Workshops.Single(entry => entry.Id == workshop).SpinCost;
+    public static int ItemCraftCost(int index) => Config.CraftCost;
+    public static int CraftCost(string workshop) => Config.CraftCost;
     public static int DayDurationSeconds => Config.Days.DurationSeconds;
+    public static int DayDurationFor(int day) => Config.Days.DurationFor(day, Config.Quotas.Single(quota => quota.Id == "first").DeadlineDay);
     public static int Roll(string workshop, int ticket, DayUpgradeSession upgrades = null, int hiddenShift = 0) =>
         Table(workshop, upgrades, hiddenShift).Select(ticket);
     public static (int ItemIndex, string InstrumentKind) PreparePolishing(int ticket, DayUpgradeSession upgrades = null, int hiddenShift = 0)
@@ -91,13 +91,13 @@ public static class WorkshopItemCatalog
     public static int BaselineWeight(string rarityId) => Config.Rarities.Single(rarity => rarity.Id == rarityId).Weight;
     public static int RarityWeight(string workshop, string rarityId, DayUpgradeSession upgrades = null) =>
         upgrades?.Weight(workshop, rarityId, BaselineWeight(rarityId), BaselineWeight("common")) ?? BaselineWeight(rarityId);
-    public static int RerollsFor(string rarityId) => Config.Rarities.Single(rarity => rarity.Id == rarityId).Rerolls;
+    public static int RerollsPerItem => Config.RerollsPerItem;
 
     private static CraftItem Item(string workshop, string rarityId, string kind, string name)
     {
         var rarity = EconomyConfigProvider.Baseline.Rarities.Single(entry => entry.Id == rarityId);
         var item = EconomyConfigProvider.Baseline.Items.Single(entry => entry.Id == kind);
-        return new CraftItem(item.BasePrice, rarityId, rarity.Name, kind, name,
-            $"res://art/items/{kind}.png", item.Workshop, item.Rerolls);
+        return new CraftItem(EconomyConfigProvider.Baseline.BasePrice, rarityId, rarity.Name, kind, name,
+            $"res://art/items/{kind}.png", item.Workshop, EconomyConfigProvider.Baseline.RerollsPerItem);
     }
 }

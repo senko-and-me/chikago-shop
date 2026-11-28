@@ -53,18 +53,48 @@ public partial class ProjectTest
                 Check(game.Crafting.Select(kind) && craft.IsOpen, $"The real catalogue must prepare the {kind} pattern.");
                 await ToSignal(this, SignalName.ProcessFrame);
                 var surface = craft.GetNode<EmbroiderySurface>("Surface");
+                var needle = surface.GetNode<Sprite2D>("NeedleCursor");
+                var ordinaryCursor = Input.MouseMode;
+                Check(!needle.Visible, "Preparation must keep the ordinary cursor");
                 sounds.Clear();
                 PushEmbroideryClick(surface.ScreenPoint(0));
                 Check(sounds.Count == 0 && craft.Session.Stitches == 0,
                     "Ready embroidery must not sound a stitch before starting");
                 craft.Activate();
                 craft.SetProcess(false); // Freeze the timer while sampling actual GPU frames.
+                Vector2 firstTarget = surface.ScreenPoint(0);
+                MoveButtonPointer(firstTarget);
+                Vector2 actualTip = needle.GetGlobalTransformWithCanvas() *
+                    (needle.Offset + new Vector2(80.5f, 1616.5f));
+                Check(needle.Visible && Input.MouseMode == Input.MouseModeEnum.Hidden &&
+                    actualTip.IsEqualApprox(firstTarget) && Mathf.IsEqualApprox(needle.Scale.X, needle.Scale.Y) &&
+                    Mathf.IsEqualApprox(needle.Scale.Y * 1616.5f, 64f),
+                    "One mouse event must align the needle's actual tip, hide the system cursor and use twice the original length");
+                if (size == new Vector2I(1280, 720) && kind == "hat")
+                {
+                    using var needleArt = needle.Texture.GetImage();
+                    Check(needleArt.GetPixel(0, 0).A == 0 && needleArt.GetPixel(1000, 240).A == 0 &&
+                        needleArt.GetPixel(80, 1616).A >= 0.5f, "The imported needle needs a clear background and eye, and a visible tip");
+                    using (await CapturePresentation("v148-embroidery-needle")) { }
+                    var pause = game.GetNode<PauseMenu>("PauseMenu");
+                    await PressEscapeForTest();
+                    Check(pause.IsOpen && !needle.Visible && Input.MouseMode == ordinaryCursor,
+                        "ESC must immediately restore the ordinary cursor");
+                    pause.Close();
+                    MoveButtonPointer(firstTarget);
+                    Check(needle.Visible && Input.MouseMode == Input.MouseModeEnum.Hidden,
+                        "Resuming embroidery must restore the needle over the fabric");
+                }
+                MoveButtonPointer(Vector2.One);
+                Check(!needle.Visible && Input.MouseMode == ordinaryCursor,
+                    "Moving outside the fabric must immediately restore the ordinary cursor");
                 sounds.Clear();
                 PushEmbroideryClick(surface.GlobalPosition + surface.FabricRect.Position + new Vector2(4, 4));
                 Check(sounds.Count == 0 && craft.Session.Misses == 1,
                     "Missing the black target must not play a stitch or generic click");
                 for (int stitch = 0; stitch < craft.Session.Points.Count; stitch++)
                 {
+                    MoveButtonPointer(Vector2.One); // Sample the target art with the pointer outside.
                     using var image = await CapturePresentation();
                     Vector2 target = surface.ScreenPoint(stitch);
                     Vector2 scale = new Vector2(image.GetWidth(), image.GetHeight()) / Root.GetVisibleRect().Size;
@@ -99,10 +129,31 @@ public partial class ProjectTest
                         "Real clicks must advance exactly one target without a miss");
                 }
                 Check(craft.Session.Complete, "The target must remain usable through the whole pattern");
+                Check(!needle.Visible && Input.MouseMode == ordinaryCursor,
+                    "The final stitch must restore the previous cursor before leaving the result screen");
                 sounds.Clear();
                 PushEmbroideryClick(surface.ScreenPoint(0));
                 Check(sounds.Count == 0, "Finished embroidery must not sound another stitch");
                 craft.Activate();
+            }
+            foreach (bool timeout in new[] { false, true })
+            {
+                game.NewGame();
+                game.EndDay();
+                var craft = game.GetNode<EmbroideryGame>("EmbroideryGame");
+                game.GetItemFromAtelier();
+                Check(game.Crafting.Select("hat"), "A fresh embroidery session must open");
+                var surface = craft.GetNode<EmbroiderySurface>("Surface");
+                var needle = surface.GetNode<Sprite2D>("NeedleCursor");
+                var ordinaryCursor = Input.MouseMode;
+                craft.Activate();
+                MoveButtonPointer(surface.ScreenPoint(0));
+                Check(needle.Visible, "The needle must be visible before ending the active session");
+                if (timeout) craft._Process(craft.Session.RemainingSeconds);
+                else craft.Activate();
+                Check(!needle.Visible && Input.MouseMode == ordinaryCursor && craft.IsOpen == timeout,
+                    "Timeout or early collection must restore the ordinary cursor");
+                if (timeout) craft.Activate();
             }
             Check(variants.Count > 1, "Repeated stitches must randomly vary their sound");
             GD.Print($"STITCH_AUDIO_CHECKS_PASS: mouse/touch, one cue per stitch, {variants.Count} random variants, silent miss/ready/finished, paused SFX bus");

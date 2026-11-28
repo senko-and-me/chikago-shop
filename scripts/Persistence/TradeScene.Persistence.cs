@@ -20,10 +20,11 @@ public partial class TradeScene
             CheckpointShowcaseRerolls = (int[])_checkpointShowcaseRerolls.Clone(),
             ReturnedOfferPercent = _returnedOfferPercent,
 			Day = CurrentDay,
-			Score = Score + (Crafting?.RefundablePrice ?? 0),
+			Score = Score,
 			EnergyRemaining = EnergyRemaining,
 			UpgradePending = _dayCycle.Upgrades.Pending,
 			SelectedUpgrade = (int)_dayCycle.Upgrades.Selected,
+            TrainingUpgradeOffer = _dayCycle.Upgrades.TrainingOffer,
 			AtelierUpgradeLevel = _dayCycle.Upgrades.AtelierLevel,
 			MusicUpgradeLevel = _dayCycle.Upgrades.MusicLevel,
 			CheckpointAtelierUpgradeLevel =
@@ -39,6 +40,7 @@ public partial class TradeScene
 			CheckpointMusicPriceLevel =
 				_dayCycle.CheckpointMusicPriceLevel,
 			DayRemainingSeconds = DayRemainingSeconds,
+            PreviousBuyerItemKind = _previousBuyerItem >= 0 ? Items[_previousBuyerItem].Kind : "",
 			DayClosed = DayClosed,
 			DayStarted = _dayCycle.Started,
 			Accepted = Accepted,
@@ -116,7 +118,8 @@ public partial class TradeScene
 			data.MusicPriceLevel,
 			data.CheckpointAtelierPriceLevel,
 			data.CheckpointMusicPriceLevel,
-			data.DayStarted);
+			data.DayStarted, data.TrainingUpgradeOffer,
+            data.SaveVersion <= 20 ? (data.SaveVersion < 13 ? 90 : MusicWorkshopUnlocked ? 90 : 60) : null);
 
 		_storedItems.Clear();
 		_storedGrades.Clear();
@@ -181,7 +184,7 @@ public partial class TradeScene
 		TradeActive = data.TradeActive;
 		_activeTradeGrade = NormalizeRank(data.ActiveTradeGrade);
 		// Existing buyers carry their original patience across balance changes.
-		_buyerWaitInitial = data.BuyerWaitInitial is double initial && double.IsFinite(initial) && initial is >= 1 and <= 600
+		_buyerWaitInitial = data.BuyerWaitInitial is double initial && double.IsFinite(initial) && initial is >= 1 and <= 1200
 			? initial : BuyerWaitDuration;
 		_buyerWaitRemaining = data.SaveVersion >= 15 && data.BuyerWaitRemaining is double remaining && double.IsFinite(remaining)
 			? Math.Clamp(remaining, 0, _buyerWaitInitial) : _buyerWaitInitial;
@@ -212,7 +215,11 @@ public partial class TradeScene
             _checkpointShowcaseItems, _checkpointShowcaseGrades, _checkpointShowcaseRerolls, _checkpointStock,
             CheckpointMusicWorkshopUnlocked, restoreActive: false);
 
-		_waitingBuyerItem = _waitingBuyer ? RestoreWaitingBuyerRequest(data.WaitingBuyerItemKind, data.WaitingBuyerMusic) : -1;
+        _previousBuyerItem = WorkshopItemCatalog.IndexOf(data.PreviousBuyerItemKind);
+        _waitingBuyerItem = _waitingBuyer ? RestoreWaitingBuyerRequest(data.WaitingBuyerItemKind, data.WaitingBuyerMusic) : -1;
+        if (_waitingBuyer) _previousBuyerItem = _waitingBuyerItem;
+        else if (TradeActive) _previousBuyerItem = ItemIndex;
+        else if (_previousBuyerItem < 0) _previousBuyerItem = WorkshopItemCatalog.IndexOf(data.WaitingBuyerItemKind);
 
 		if (_inventoryUI != null)
 			_inventoryUI.UpdateUI(_storedItems);

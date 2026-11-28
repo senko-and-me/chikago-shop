@@ -16,27 +16,19 @@ public sealed class DayUpgradeSessionTests
         upgrades.Restore(false, choice, 3, musicUnlocked: unlocked);
         Assert.That(upgrades.Selected, Is.EqualTo(choice));
         Assert.That(upgrades.EnergyCapacity, Is.EqualTo(energy));
-        Assert.That(upgrades.CashReward, Is.EqualTo(50));
+        Assert.That(upgrades.CashReward, Is.EqualTo(15));
         upgrades.Reset(preserveCategories: true);
         Assert.That(upgrades.Selected, Is.EqualTo(DayUpgrade.None));
         Assert.That(upgrades.EnergyCapacity, Is.EqualTo(2));
     }
 
     [Test]
-    public void WeightedDealsRespectZeroWeightsAndLockedRooms()
+    public void RotationRespectsLockedRooms()
     {
-        var rules = new DayUpgradeRules
-        {
-            WeightedSelection = true,
-            Seed = 81,
-            Weights = new Dictionary<DayUpgrade, int> { [DayUpgrade.Cash] = 10,
-                [DayUpgrade.Atelier] = 0, [DayUpgrade.Energy] = 0,
-                [DayUpgrade.Music] = 100, [DayUpgrade.MusicPrice] = 100,
-                [DayUpgrade.AtelierPrice] = 0 }
-        };
+        var rules = new DayUpgradeRules { Seed = 81 };
         var beforeMusic = rules.Options(4, musicUnlocked: false);
-        Assert.That(beforeMusic, Has.Count.EqualTo(1));
-        Assert.That(beforeMusic, Does.Contain(DayUpgrade.Cash));
+        Assert.That(beforeMusic, Has.Count.EqualTo(3));
+        Assert.That(beforeMusic, Is.EqualTo(new DayUpgradeRules { Seed = 81 }.Options(4)));
         Assert.That(beforeMusic, Does.Not.Contain(DayUpgrade.Music));
         Assert.That(beforeMusic, Does.Not.Contain(DayUpgrade.MusicPrice));
         Assert.That(rules.Options(4, musicUnlocked: false), Is.EqualTo(beforeMusic));
@@ -124,8 +116,8 @@ public sealed class DayUpgradeSessionTests
         {
             session.Offer(day, unlocked);
             var options = session.Options;
-            Assert.That(options.Count, Is.EqualTo(unlocked ? 3 : 2));
-            Assert.That(options.Distinct().Count(), Is.EqualTo(unlocked ? 3 : 2));
+            Assert.That(options.Count, Is.EqualTo(3));
+            Assert.That(options.Distinct().Count(), Is.EqualTo(3));
             Assert.That(options, Does.Not.Contain(DayUpgrade.Time));
             Assert.That(options, Does.Not.Contain(DayUpgrade.Energy));
             if (!unlocked)
@@ -139,24 +131,15 @@ public sealed class DayUpgradeSessionTests
         }
     }
 
-    [TestCase(false, false, 2)]
-    [TestCase(false, true, 1)]
+    [TestCase(false, false, 3)]
+    [TestCase(false, true, 3)]
     [TestCase(true, false, 3)]
-    [TestCase(true, true, 2)]
+    [TestCase(true, true, 3)]
     public void EveryDayOffersUniqueEligibleCardsIncludingTraining(bool music, bool training, int count)
     {
-        foreach (bool weighted in new[] { false, true })
         for (int day = 1; day <= 30; day++)
         {
-            var rules = new DayUpgradeRules
-            {
-                WeightedSelection = weighted,
-                Weights = new Dictionary<DayUpgrade, int>
-                {
-                    [DayUpgrade.Energy] = int.MaxValue,
-                    [DayUpgrade.Time] = int.MaxValue
-                }
-            };
+            var rules = new DayUpgradeRules();
             var options = rules.Options(day, music, training);
             Assert.That(options.Count, Is.EqualTo(count));
             Assert.That(options.Distinct().Count(), Is.EqualTo(count));
@@ -173,36 +156,36 @@ public sealed class DayUpgradeSessionTests
     }
 
     [Test]
-    public void TrainingWithZeroWeightsFallsBackToTheRemainingAtelierPriceCard()
+    public void TrainingWithoutMusicOrCashStillDealsThreeCards()
     {
-        var rules = new DayUpgradeRules
-        {
-            WeightedSelection = true,
-            Weights = new Dictionary<DayUpgrade, int>
-            {
-                [DayUpgrade.Atelier] = 0,
-                [DayUpgrade.AtelierPrice] = 0,
-                [DayUpgrade.Energy] = int.MaxValue
-            }
-        };
+        var rules = new DayUpgradeRules();
         for (int day = 2; day <= 14; day++)
-            Assert.That(rules.Options(day, musicUnlocked: false, training: true),
-                Is.EquivalentTo(new[] { DayUpgrade.AtelierPrice }));
+        {
+            var options = rules.Options(day, musicUnlocked: false, training: true);
+            Assert.That(options.Count, Is.EqualTo(3));
+            Assert.That(options, Does.Not.Contain(DayUpgrade.Cash));
+            Assert.That(options, Does.Not.Contain(DayUpgrade.MusicPrice));
+        }
     }
 
     [TestCase(DayUpgrade.AtelierPrice, "atelier", "music")]
     [TestCase(DayUpgrade.MusicPrice, "music", "atelier")]
-    public void TwentyPercentPriceBoostExpiresAfterTheNextDay(DayUpgrade card, string workshop, string other)
+    public void WorkshopBonusAppliesToEveryEligibleSaleAndExpires(DayUpgrade card, string workshop, string other)
     {
         var session = new DayUpgradeSession();
         session.Restore(false, card, musicUnlocked: true);
         foreach (int baseline in new[] { 30, 45, 50, 75, 80, 120, 200, 300 })
         {
-            int expected = (int)decimal.Round(baseline * 1.2m, 0, MidpointRounding.AwayFromZero);
-            Assert.That(session.Price(workshop, baseline), Is.EqualTo(expected));
+            Assert.That(session.Price(workshop, baseline), Is.EqualTo(baseline));
             Assert.That(session.Price(other, baseline), Is.EqualTo(baseline));
         }
+        for (int i = 0; i < 8; i++)
+        {
+            Assert.That(session.SaleBonus(workshop, "D", 0), Is.EqualTo(session.Rules.For(card).Amount));
+            Assert.That(session.SaleBonus(other, "S", 10), Is.Zero);
+        }
         session.Reset(preserveCategories: true);
+        Assert.That(session.SaleBonus(workshop, "S", 10), Is.Zero);
         Assert.That(session.Price(workshop, 100), Is.EqualTo(100));
         Assert.Throws<ArgumentOutOfRangeException>(() => session.Price("atelier", -1));
     }
@@ -213,8 +196,43 @@ public sealed class DayUpgradeSessionTests
         var session = new DayUpgradeSession();
         session.Restore(false, DayUpgrade.AtelierPrice, atelierLevel: 6, musicLevel: 6,
             atelierPriceLevel: 6, musicPriceLevel: 6);
-        Assert.That(session.Price("atelier", 100), Is.EqualTo(120));
+        Assert.That(session.Price("atelier", 100), Is.EqualTo(100));
         Assert.That(session.Price("music", 100), Is.EqualTo(100));
         Assert.That(session.AtelierLevel + session.MusicLevel + session.AtelierPriceLevel + session.MusicPriceLevel, Is.Zero);
+    }
+
+    [Test]
+    public void AllDayRulesRespectEligibilityAndRestore()
+    {
+        var session = new DayUpgradeSession();
+        session.Offer(3, training: true);
+        var options = session.Options.ToArray();
+        session.Restore(true, DayUpgrade.None, 3, training: true);
+        Assert.That(session.Options, Is.EqualTo(options));
+        session.Restore(false, DayUpgrade.Materials);
+        for (int i = 0; i < 10; i++)
+            Assert.That(session.CraftPrice(20), Is.EqualTo(20 - session.Rules.For(DayUpgrade.Materials).Amount));
+        session.Restore(false, DayUpgrade.QualityMark);
+        foreach (var rank in new[] { "B", "A", "S" })
+            Assert.That(session.SaleBonus("atelier", rank, 0), Is.EqualTo(session.Rules.For(DayUpgrade.QualityMark).Amount));
+        Assert.That(session.SaleBonus("music", "C", 10), Is.Zero);
+        session.Restore(false, DayUpgrade.QuickService);
+        Assert.That(session.SaleBonus("music", "D", 0), Is.Zero);
+        Assert.That(session.SaleBonus("music", "D", 1), Is.EqualTo(session.Rules.For(DayUpgrade.QuickService).Amount));
+        session.Restore(false, DayUpgrade.Patient);
+        Assert.That(session.WaitExtension, Is.EqualTo(session.Rules.For(DayUpgrade.Patient).Amount));
+        session.Restore(false, DayUpgrade.Bargaining);
+        Assert.That(session.GuaranteesReroll(3), Is.False);
+        Assert.That(session.GuaranteesReroll(1), Is.True);
+        Assert.That(session.MinimumFinalOffer(-30), Is.EqualTo(session.Rules.For(DayUpgrade.Bargaining).Amount));
+        Assert.That(session.MinimumFinalOffer(30), Is.EqualTo(30));
+        session.Restore(false, DayUpgrade.Loyal);
+        for (int offer = -30; offer <= 30; offer++)
+            Assert.That(session.ExpiredOffer(offer), Is.EqualTo(Math.Min(offer, -session.Rules.For(DayUpgrade.Loyal).Amount)));
+        session.Offer(4);
+        Assert.That(session.ExpiredOffer(30), Is.EqualTo(-50));
+        Assert.That(session.WaitExtension, Is.Zero);
+        Assert.That(session.GuaranteesReroll(1), Is.False);
+        Assert.That(session.CraftPrice(20), Is.EqualTo(20));
     }
 }

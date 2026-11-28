@@ -201,13 +201,9 @@ public partial class ProjectTest
         Check(TradeScene.GetItemArtPath(0).EndsWith("hat.png") &&
               TradeScene.GetItemArtPath(1).EndsWith("vest.png"),
             "Atelier items must use the transparent-background PNG artwork");
-        Check(TradeScene.GetItemRarity(0) == "Ширпотреб" && TradeScene.GetItemRerollLimit(0) == 3 &&
-              TradeScene.GetItemRarity(1) == "Заурядная" && TradeScene.GetItemRerollLimit(1) == 2 &&
-              TradeScene.GetItemRerollLimit(2) == 3 && TradeScene.GetItemRerollLimit(3) == 2 &&
-              TradeScene.GetRerollsForRarity("first_class") == 2 &&
-              TradeScene.GetRerollsForRarity("exclusive") == 1 &&
-              TradeScene.GetRerollsForRarity("unique") == 1,
-            "Every prototype item must derive its reroll limit from its configured rarity");
+        Check(TradeScene.GetItemRarity(0) == "Ширпотреб" && TradeScene.GetItemRarity(1) == "Заурядная" &&
+              Enumerable.Range(0, WorkshopItemCatalog.Items.Count).All(index => TradeScene.GetItemRerollLimit(index) == 3),
+            "Every item must have three rerolls regardless of rarity");
 		var musicOverlay = game.GetNode<ColorRect>("World/MusicWorkshop/LockedOverlay");
 		var musicUnlockButton = musicOverlay.GetParent().GetNode<MusicWorkshopUnlockPanel>("UnlockPanel").UnlockButton;
         Check(!atelierButton.Disabled && musicButton.Disabled && musicOverlay.Visible &&

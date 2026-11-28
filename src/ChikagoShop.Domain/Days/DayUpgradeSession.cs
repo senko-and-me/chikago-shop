@@ -1,7 +1,7 @@
 namespace ChikagoShop.Domain.Days;
 
 // Serialized enum values must remain stable; Energy and Time are retired, not renumbered.
-public enum DayUpgrade { None, Cash, Energy, Time, Atelier, Music, AtelierPrice, MusicPrice }
+public enum DayUpgrade { None, Cash, Energy, Time, Atelier, Music, AtelierPrice, MusicPrice, Materials, Patient, Bargaining, QualityMark, Loyal, QuickService }
 
 // Every purchased upgrade is effective only during the upcoming day.
 // Legacy level fields remain readable for save compatibility but no longer affect gameplay.
@@ -23,7 +23,32 @@ public sealed class DayUpgradeSession
     // Legacy callers and saves retain this API, but energy upgrades no longer have an effect.
     public int EnergyCapacityFor(int baseline) => baseline;
     public double Duration => DaySession.DurationSeconds;
-    public int CashReward => 50;
+    public int CashReward => Rules.For(DayUpgrade.Cash).Amount;
+    public bool TrainingOffer => _training;
+    public int CraftPrice(int baseline) => Selected == DayUpgrade.Materials
+        ? Math.Max(0, baseline - Rules.For(Selected).Amount) : baseline;
+
+    public int WaitExtension => Selected == DayUpgrade.Patient ? Rules.For(Selected).Amount : 0;
+    public int MinimumFinalOffer(int percentage) => Math.Max(percentage, Rules.For(DayUpgrade.Bargaining).Amount);
+    public bool GuaranteesReroll(int remaining) => Selected == DayUpgrade.Bargaining && remaining == 1;
+    public int ExpiredOffer(int percentage) => Selected == DayUpgrade.Loyal
+        ? Math.Min(percentage, -Rules.For(Selected).Amount) : -50;
+
+    public int SaleBonus(string workshop, string grade, double patience)
+    {
+        bool eligible = Selected switch
+        {
+            DayUpgrade.AtelierPrice => workshop == "atelier",
+            DayUpgrade.MusicPrice => workshop == "music",
+            DayUpgrade.QualityMark => grade is "B" or "A" or "S",
+            DayUpgrade.QuickService => patience > 0,
+            _ => false
+        };
+        if (!eligible) return 0;
+        return Rules.For(Selected).Amount;
+    }
+
+    public void RefreshWorkshopAvailability(bool musicUnlocked) => MusicUnlocked = musicUnlocked;
 
     public void Offer(int day = 2, bool musicUnlocked = false, bool training = false)
     {
@@ -42,15 +67,7 @@ public sealed class DayUpgradeSession
         // preserveCategories is intentionally ignored: category bonuses no longer stack.
     }
 
-    public static int Cost(DayUpgrade upgrade) => upgrade switch
-    {
-        DayUpgrade.Cash => 0,
-        DayUpgrade.Atelier => 15,
-        DayUpgrade.Music => 25,
-        DayUpgrade.AtelierPrice => 10,
-        DayUpgrade.MusicPrice => 20,
-        _ => throw new ArgumentOutOfRangeException(nameof(upgrade))
-    };
+    public static int Cost(DayUpgrade upgrade) => new DayUpgradeRules().Cost(upgrade);
 
     public bool TryPurchase(DayUpgrade upgrade, int balance, out int remainingBalance)
     {
@@ -73,25 +90,21 @@ public sealed class DayUpgradeSession
     }
 
     public void Restore(bool pending, DayUpgrade selected, int day = 2, int atelierLevel = 0, int musicLevel = 0,
-        int atelierPriceLevel = 0, int musicPriceLevel = 0, bool musicUnlocked = false)
+        int atelierPriceLevel = 0, int musicPriceLevel = 0, bool musicUnlocked = false, bool training = false)
     {
         Day = Math.Max(2, day);
         MusicUnlocked = musicUnlocked;
-        _training = false;
+        _training = training;
         // Permanent bonuses in legacy saves do not carry over to the new day-only system.
-        Selected = selected is DayUpgrade.Cash or DayUpgrade.AtelierPrice or DayUpgrade.MusicPrice ? selected : DayUpgrade.None;
-        if (!MusicUnlocked && (Selected is DayUpgrade.Music or DayUpgrade.MusicPrice)) Selected = DayUpgrade.None;
+        Selected = DayUpgradeRules.Available.Contains(selected) ? selected : DayUpgrade.None;
+        if (!MusicUnlocked && Selected == DayUpgrade.MusicPrice) Selected = DayUpgrade.None;
         Pending = pending && Selected == DayUpgrade.None;
     }
 
     public int Price(string workshop, int baseline)
     {
         if (baseline < 0) throw new ArgumentOutOfRangeException(nameof(baseline));
-        bool boosted = (workshop == "atelier" && Selected == DayUpgrade.AtelierPrice) ||
-                       (workshop == "music" && Selected == DayUpgrade.MusicPrice);
-        return boosted
-            ? checked((int)decimal.Round((decimal)baseline * 120 / 100, 0, MidpointRounding.AwayFromZero))
-            : baseline;
+        return baseline;
     }
 
     public double CraftDuration(string workshop, double baseline)

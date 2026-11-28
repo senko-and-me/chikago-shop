@@ -136,7 +136,7 @@ public sealed class ProgressMigrationTests
             CheckpointShowcaseItems = [-1, 7], TradeActive = true, ItemIndex = 8,
             CustomerIndex = 3, RerollsRemaining = 1, ActiveShowcaseIndex = 2, BuyerWaitRemaining = 12.5,
             WaitingBuyerItemKind = "violin",
-            DayRemainingSeconds = 35.5, UpgradePending = true, SelectedUpgrade = (int)DayUpgrade.Energy,
+            DayRemainingSeconds = 35.5, TrainingUpgradeOffer = true, UpgradePending = true, SelectedUpgrade = (int)DayUpgrade.Energy,
             AtelierUpgradeLevel = 2, MusicUpgradeLevel = 3, AtelierPriceLevel = 4, MusicPriceLevel = 5,
             CheckpointAtelierUpgradeLevel = 1, CheckpointMusicUpgradeLevel = 2,
             CheckpointAtelierPriceLevel = 3, CheckpointMusicPriceLevel = 4
@@ -150,7 +150,7 @@ public sealed class ProgressMigrationTests
         Assert.That(doc.RootElement.GetProperty("day_remaining_seconds").GetDouble(), Is.EqualTo(35.5));
         string[] fields = [
             "deferred_display_items", "checkpoint_deferred_display_items", "showcase_rerolls", "checkpoint_showcase_rerolls", "returned_offer_percent",
-            "save_version", "upgrade_pending", "selected_upgrade", "atelier_price_level", "music_price_level",
+            "save_version", "previous_buyer_item_kind", "training_upgrade_offer", "upgrade_pending", "selected_upgrade", "atelier_price_level", "music_price_level",
             "checkpoint_atelier_price_level", "checkpoint_music_price_level", "atelier_upgrade_level",
             "music_upgrade_level", "checkpoint_atelier_upgrade_level", "checkpoint_music_upgrade_level",
             "day_remaining_seconds", "day_closed", "day_started", "day", "score", "energy_remaining", "accepted", "declined",

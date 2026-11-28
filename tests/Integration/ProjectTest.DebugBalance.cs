@@ -111,7 +111,7 @@ public partial class ProjectTest
             Root.AddChild(board);
             var originalPolish = board.Begin("guitar");
             panel.Editor("polish.guitar.radius").Text = "1.11";
-            panel.Editor("polish.guitar.strength").Text = "0.83";
+            panel.Editor("polish.guitar.strength").Text = "1.0375";
             await ClickControl(panel, content + "/Actions/Apply");
             Check(DebugBalanceSettings.Reload(out _), "Polishing coefficients must reload from the profile");
             var revisedPolish = board.Begin("guitar");

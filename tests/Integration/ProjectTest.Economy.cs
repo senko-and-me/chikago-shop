@@ -39,7 +39,7 @@ public partial class ProjectTest
                     Check(entries.Sum(entry => counts[entry.index]) == rarity.Weight * multiplier &&
                         entries.All(entry => counts[entry.index] == rarity.Weight * multiplier / entries.Length &&
                             TradeScene.GetItemBasePrice(entry.index) == rarity.BasePrices[workshop] &&
-                            TradeScene.GetItemRerollLimit(entry.index) == rarity.Rerolls),
+                            TradeScene.GetItemRerollLimit(entry.index) == config.RerollsPerItem),
                         "Rarity odds must stay configured and split equally between its items, with matching prices and rerolls");
                 }
                 for (int level = 1; level <= 6; level++)
@@ -138,10 +138,10 @@ public partial class ProjectTest
             "The game must load the versioned provisional economy config");
         Check(config.Workshops.Count == 2 && config.Rarities.Count == 5 && config.OfferRanges.Count == 3,
             "The game and domain tests must share the complete economy v1 source");
-        Check(config.StartingMoney == 220 && config.Items.All(item => item.BasePrice == 50) &&
+        Check(config.StartingMoney == 100 && config.BasePrice == 50 &&
               config.BuyerWaitMinSeconds == 15 && config.BuyerWaitMaxSeconds == 20 &&
-		      config.Quotas[0].Amount == 750 &&
-              config.Quotas[1].Amount == 1500,
+		      config.Quotas[0].Amount == 800 &&
+              config.Quotas[1].Amount == 1350,
             "The runtime must load the uniform prices, patience and quotas");
     }
 

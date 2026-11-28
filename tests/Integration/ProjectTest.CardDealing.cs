@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using ChikagoShop.Domain.Days;
 using Godot;
@@ -28,8 +29,16 @@ public partial class ProjectTest
             await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
             Root.GetTexture().GetImage().SavePng(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "chikago-hf90-" + name + ".png"));
         }
+        string previousDebugPath = DebugBalanceSettings.StoragePath;
+        const string debugPath = "user://card_dealing_balance.json";
         try
         {
+            DebugBalanceSettings.StoragePath = debugPath;
+            var profile = new ChikagoShop.Domain.Configuration.BalanceProfile();
+            int seed = Enumerable.Range(1, 100).First(value => new DayUpgradeRules { Seed = value }.Options(2)[0] == DayUpgrade.Cash);
+            profile.Numbers["cards.seed"] = seed;
+            profile.Numbers["start.cash"] = 220;
+            Check(DebugBalanceSettings.TrySave(profile, out string error), error);
             if (FileAccess.FileExists(save)) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(save));
             game = Create();
             foreach (var size in new[] { new Vector2I(960, 540), new Vector2I(1280, 720) })
@@ -75,7 +84,7 @@ public partial class ProjectTest
                     deck.Position.Y > Root.GetVisibleRect().Size.Y - deck.Size.Y - 28,
                     "All gameplay UI must be hidden before the deck rises from below, while background curtains remain visible");
                 await ToSignal(CreateTimer(0.55, true), SceneTreeTimer.SignalName.Timeout);
-                var first = card.GetNode<PanelContainer>("Root/Center/Card/Content/Choices/Cash");
+                var first = card.GetNode<PanelContainer>("Root/Center/Card/Content/Choices/" + card.Options[0]);
                 Check(card.IsAnimating && first.GetNode<Control>("Back").Visible && first.Scale.X < 1 &&
                     card.GetNode<Control>("Root/Deck").IsVisibleInTree(),
                     "Cards must fly from the visible deck with backs showing before they flip");
@@ -85,7 +94,7 @@ public partial class ProjectTest
                         "The deck and flying backs must load the original textured, transparent card art");
                 if (language == "ru" && size.X == 1280) await Capture("dealing");
                 await WaitForDayCardAnimation(card);
-                Check(Root.GuiGetFocusOwner() == null && game.DayRemainingSeconds == 60,
+                Check(Root.GuiGetFocusOwner() == null && game.DayRemainingSeconds == 45,
                     "Finishing the deal must not preselect a purchase or consume day time");
                 foreach (var upgrade in card.Options)
                 {
@@ -154,9 +163,9 @@ public partial class ProjectTest
                 card.Choose(DayUpgrade.Energy); card.Skip();
                 await WaitForDayCardAnimation(card);
                 Check(!card.IsOpen && !Paused && !game.DayUpgrades.Pending && game.CurrentDay == 2 &&
-                    game.Score == (buy ? 270 : 220) && game.DayUpgrades.Selected == (buy ? DayUpgrade.Cash : DayUpgrade.None),
+                    game.Score == (buy ? 229 : 220) && game.DayUpgrades.Selected == (buy ? DayUpgrade.Cash : DayUpgrade.None),
                     "Exactly one purchase or free skip must apply after exit and resume the new day");
-                Check(hud.Visible && clock.Visible && clock.Modulate == Colors.White && hud.Modulate == Colors.White && game.GetNode<Control>("HUD/InventoryUI").Visible &&
+                Check(hud.Visible && clock.Visible && clock.Modulate == Colors.White && hud.Modulate == Colors.White && !game.GetNode<Control>("HUD/InventoryUI").Visible &&
                     game.GetNode<Control>("World/Atelier/GetItemButton").Visible,
                     "Leaving the cards must restore gameplay UI and its full opacity");
             }
@@ -199,15 +208,24 @@ public partial class ProjectTest
             active = game.GetNode<DayTransitionCard>("DayTransitionCard");
             await WaitForDayCardAnimation(active);
             var free = active.GetNode<Button>("Root/Center/Card/Content/Choices/Cash/Content/Choose");
-            Check(!free.Disabled && free.Text == GameLocalization.Text("Получить 50$"), "Cash must be available at zero balance");
+            Check(free.Disabled && free.Text == GameLocalization.Format("Купить за {0}$", 6), "The cash card must cost money");
             active.Choose(DayUpgrade.Cash);
-            active.Choose(DayUpgrade.Cash);
-            await WaitForDayCardAnimation(active);
-            Check(game.Score == 50, "The free card must award the entire amount once");
+            Check(game.Score == 0 && game.DayUpgrades.Pending, "A player with zero balance must not get a paid card");
+            game.Score = 6;
+            game.PersistProgress();
             game.QueueFree();
             await ToSignal(this, SignalName.ProcessFrame);
             game = Create();
-            Check(game.Score == 50 && !game.DayUpgrades.Pending, "Reloading must preserve the committed reward once");
+            active = game.GetNode<DayTransitionCard>("DayTransitionCard");
+            await WaitForDayCardAnimation(active);
+            active.Choose(DayUpgrade.Cash);
+            active.Choose(DayUpgrade.Cash);
+            await WaitForDayCardAnimation(active);
+            Check(game.Score == 15, "The paid cash card must award the amount once");
+            game.QueueFree();
+            await ToSignal(this, SignalName.ProcessFrame);
+            game = Create();
+            Check(game.Score == 15 && !game.DayUpgrades.Pending, "Reloading must preserve the committed reward once");
             game.NewGame();
             game.EndDay(); game.EndDay(); game.EndDay();
             game.QueueFree(); // Cancel deferred layout and entrance callbacks too.
@@ -222,6 +240,9 @@ public partial class ProjectTest
             if (game != null && GodotObject.IsInstanceValid(game)) game.QueueFree();
             Root.Size = originalSize;
             TranslationServer.SetLocale(originalLocale);
+            DebugBalanceSettings.StoragePath = previousDebugPath;
+            DebugBalanceSettings.Reload(out _);
+            if (FileAccess.FileExists(debugPath)) DirAccess.RemoveAbsolute(debugPath);
             if (FileAccess.FileExists(save)) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(save));
         }
         await ToSignal(this, SignalName.ProcessFrame);

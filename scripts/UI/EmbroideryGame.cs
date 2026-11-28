@@ -15,6 +15,12 @@ public partial class EmbroideryGame : CanvasLayer
 	private const float PolishingCursorSize = 112f; // Longest edge in viewport pixels.
 	private Input.MouseModeEnum _previousCursorMode = Input.MouseModeEnum.Visible;
 	private bool _polishingCursorHidden;
+	private const float NeedleLength = 64f;
+	private static readonly Vector2 NeedleTip = new(80.5f, 1616.5f);
+	private Sprite2D _needleCursor;
+	private Window _needleWindow;
+	private bool _pointerInWindow = true;
+	private Input.MouseModeEnum? _mouseModeBeforeNeedle;
 	public bool IsOpen => _surface != null && _surface.Visible;
 	internal bool IsReadyToStart => IsOpen && ActiveSession.State == EmbroideryState.Ready;
 	internal Button StartButton => _action;
@@ -66,6 +72,23 @@ public partial class EmbroideryGame : CanvasLayer
 		_polishingCursor = _surface.GetNode<Sprite2D>("PolishingCursor");
 		Texture2D cloth = _polishingCursor.Texture;
 		_polishingCursor.Scale = Vector2.One * PolishingCursorSize / Mathf.Max(cloth.GetWidth(), cloth.GetHeight());
+		if (!IsPolishing)
+		{
+			_needleCursor = new Sprite2D
+			{
+				Name = "NeedleCursor",
+				Texture = GD.Load<Texture2D>("res://art/minigames/embroidery_needle.png"),
+				Centered = false,
+				Offset = -NeedleTip,
+				Scale = Vector2.One * (NeedleLength / NeedleTip.Y),
+				ZIndex = 100,
+				Visible = false
+			};
+			_surface.AddChild(_needleCursor);
+			_needleWindow = GetWindow();
+			_needleWindow.MouseEntered += OnNeedleWindowEntered;
+			_needleWindow.MouseExited += OnNeedleWindowExited;
+		}
 	}
 
 	public void Open() => _game.Crafting.OpenCatalog(IsPolishing ? "music" : "atelier");
@@ -179,10 +202,49 @@ public partial class EmbroideryGame : CanvasLayer
 
 	private void RestoreMouseCursor()
 	{
+		RestoreNeedleCursor();
 		if (!_polishingCursorHidden) return;
 		_polishingCursorHidden = false;
 		if (GodotObject.IsInstanceValid(_polishingCursor)) _polishingCursor.Hide();
 		Input.MouseMode = _previousCursorMode;
+	}
+
+	internal void RestoreNeedleCursor()
+	{
+		if (_mouseModeBeforeNeedle is not { } previousMode) return;
+		_mouseModeBeforeNeedle = null;
+		_needleCursor.Hide();
+		Input.MouseMode = previousMode;
+	}
+
+	private void OnNeedleWindowEntered() => _pointerInWindow = true;
+
+	private void OnNeedleWindowExited()
+	{
+		_pointerInWindow = false;
+		RestoreNeedleCursor();
+	}
+
+	public override void _Input(InputEvent input)
+	{
+		if (_needleCursor != null && IsOpen && input is InputEventMouse mouse)
+			RefreshNeedleCursor(_surface.GetGlobalTransformWithCanvas().AffineInverse() * mouse.Position);
+	}
+
+	private void RefreshNeedleCursor(Vector2 pointer)
+	{
+		if (!_pointerInWindow || Covered || Session.State != EmbroideryState.Playing ||
+		    !_surface.FabricRect.HasPoint(pointer))
+		{
+			RestoreNeedleCursor();
+			return;
+		}
+
+		_needleCursor.Position = pointer;
+		if (_mouseModeBeforeNeedle.HasValue) return;
+		_mouseModeBeforeNeedle = Input.MouseMode;
+		Input.MouseMode = Input.MouseModeEnum.Hidden;
+		_needleCursor.Show();
 	}
 
 	private void RefreshPolishingCursor()
@@ -198,6 +260,11 @@ public partial class EmbroideryGame : CanvasLayer
 	public override void _ExitTree()
 	{
 		RestoreMouseCursor();
+		if (GodotObject.IsInstanceValid(_needleWindow))
+		{
+			_needleWindow.MouseEntered -= OnNeedleWindowEntered;
+			_needleWindow.MouseExited -= OnNeedleWindowExited;
+		}
 		if (GodotObject.IsInstanceValid(_game))
 			_game.NewGameStarted -= ResetPreparedItem;
 		if (_ownsPause)
@@ -232,7 +299,11 @@ public partial class EmbroideryGame : CanvasLayer
 		if (!IsOpen)
 			return;
 
-		if (Covered) return;
+		if (Covered)
+		{
+			RestoreNeedleCursor();
+			return;
+		}
 
 		if (_game.DayClosed && ActiveSession.State == EmbroideryState.Ready)
 		{
@@ -265,15 +336,14 @@ public partial class EmbroideryGame : CanvasLayer
 		if ((ready || playing) && PreparedItemIndex.HasValue)
 			_title.Text += ": " + TradeScene.GetItemName(PreparedItemIndex.Value);
 
-		_statValues[0].Text =
-			FormattableString.Invariant($"{ActiveSession.RemainingSeconds:0.0}");
+		_statValues[0].Text = _game.BuyerClockText;
 
 		_statValues[1].Text = IsPolishing
 			? $"{Math.Round(Polishing.Progress * 100)}%"
 			: $"{Session.Stitches} / {Session.Points.Count}";
 
 		_statValues[2].Text = ActiveSession.Misses.ToString();
-		_statHeadings[0].Text = GameLocalization.Text("ВРЕМЯ");
+		_statHeadings[0].Text = GameLocalization.Text("КЛИЕНТ");
 		_statHeadings[1].Text =
 			GameLocalization.Text(IsPolishing ? "ОЧИЩЕНО" : "СТЕЖКИ");
 		_statHeadings[2].Text = GameLocalization.Text("ПРОМАХИ");
@@ -281,7 +351,12 @@ public partial class EmbroideryGame : CanvasLayer
 		string instruction = IsPolishing && (ready || playing) ? "Зажми и протирай туда-сюда" :
 			!IsPolishing && _tutorial.IsActive && playing ? "Нажимайте на подсвечивающиеся точки по очереди." :
 			!IsPolishing && playing ? "Нажимай на светящиеся точки" : "";
-		_hint.Text = GameLocalization.Text(instruction);
+        int modifier = ActiveSession.State == EmbroideryState.Finished ? TradeScene.QualityBonus(ActiveSession.Rank) : 0;
+        _hint.Text = ActiveSession.State == EmbroideryState.Finished
+            ? GameLocalization.Format("Поправка за качество: {0}", modifier == 0 ? GameLocalization.Format("{0}$", 0) : TradeScene.SignedAmount(modifier))
+            : GameLocalization.Text(instruction);
+        if (modifier == 0) _hint.RemoveThemeColorOverride("font_color");
+        else _hint.AddThemeColorOverride("font_color", new Color(modifier > 0 ? "268d48" : "c32938"));
 
 		_quality.Text = $"{ActiveSession.Quality}%";
 		_action.Text = GameLocalization.Text(ready ? "Начать" : "Забрать");
@@ -299,6 +374,7 @@ public partial class EmbroideryGame : CanvasLayer
 			_polishingSurface.RefreshArtwork();
 			RefreshPolishingCursor();
 		}
+		else RefreshNeedleCursor(_surface.GetLocalMousePosition());
 
 		_surface.QueueRedraw();
 	}

@@ -112,7 +112,10 @@ public partial class EmbroiderySurface : Control
             if (Game.Session.State == EmbroideryState.Playing)
             {
                 if (Game.Session.Hit(logical.X, logical.Y))
+                {
                     SoundEffects.Instance?.PlayStitch();
+                    if (Game.Session.Complete) Game.RestoreNeedleCursor();
+                }
                 else
                 {
                     _missPoint = point.Value;

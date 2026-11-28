@@ -36,8 +36,8 @@ public sealed class DayCycleController
 	private readonly DayNightBackground _dayNight;
 	private readonly DayAnnouncementOverlay _announcements;
 	private readonly DayStartGate _actionGate;
-	private double ExpectedDuration => TutorialActive ? TutorialDuration : WorkshopItemCatalog.DayDurationSeconds
-		+ (_game.MusicWorkshopUnlocked ? 30 : 0);
+	private double ExpectedDuration => DurationFor(_game.CurrentDay);
+	private double DurationFor(int day) => TutorialActive ? TutorialDuration : WorkshopItemCatalog.DayDurationFor(day);
 	public bool TransitionOpen => _card.IsOpen || _mafia.IsOpen;
 
 	public DayCycleController(TradeScene game)
@@ -149,6 +149,7 @@ public sealed class DayCycleController
 	{
 		if (Started || Session.IsClosed || Upgrades.Pending || _game.QuotaVisitPending || _game.GetTree().Paused || _game.Failed || _game.Completed) return;
 		Started = true;
+		_game.PrepareNewDayBuyer();
 		_actionGate.Dismiss();
 		_game.RecalculateInvisibleHand();
 		RefreshTimer();
@@ -219,10 +220,11 @@ public sealed class DayCycleController
 				{
 					Upgrades.Reset();
 					Session.Close();
-					RefreshTimer();
-					UpdateDayNightBackground();
-					_game.SynchronizeDayState();
 				}
+				else Session.Reset(ExpectedDuration);
+				RefreshTimer();
+				UpdateDayNightBackground();
+				_game.SynchronizeDayState();
 				ResumeUpgradeChoice();
 				break;
 		}
@@ -247,16 +249,19 @@ public sealed class DayCycleController
 	public void Restore(double? remaining, bool closed, bool pending = false, DayUpgrade selected = DayUpgrade.None,
 		int day = 2, int atelierLevel = 0, int musicLevel = 0, int checkpointAtelierLevel = 0, int checkpointMusicLevel = 0,
 		int atelierPriceLevel = 0, int musicPriceLevel = 0, int checkpointAtelierPriceLevel = 0, int checkpointMusicPriceLevel = 0,
-		bool started = true)
+		bool started = true, bool trainingOffer = false, double? legacyDuration = null)
 	{
 		Upgrades.Restore(pending, selected, day, atelierLevel, musicLevel, atelierPriceLevel, musicPriceLevel,
-			_game.MusicWorkshopUnlocked);
+			_game.MusicWorkshopUnlocked, trainingOffer);
 		CheckpointAtelierLevel = Math.Clamp(checkpointAtelierLevel, 0, 6);
 		CheckpointMusicLevel = Math.Clamp(checkpointMusicLevel, 0, 6);
 		CheckpointAtelierPriceLevel = Math.Clamp(checkpointAtelierPriceLevel, 0, 6);
 		CheckpointMusicPriceLevel = Math.Clamp(checkpointMusicPriceLevel, 0, 6);
 		_restoredTutorialRemaining = remaining;
-		Session.Restore(remaining, closed, ExpectedDuration);
+		double duration = DurationFor(day);
+		if (!TutorialActive && remaining is double saved && legacyDuration is double old && old > 0)
+			remaining = saved / old * duration;
+		Session.Restore(started ? remaining : null, closed, duration);
 		// Recover saves made in the closed-day state, including before this fix.
 		_advanceWhenClosed = Session.IsClosed;
 		Started = started || Session.IsClosed;
@@ -286,6 +291,7 @@ public sealed class DayCycleController
 			_game.ResumeQuotaVisit();
 			return;
 		}
+		if (Upgrades.Pending) Upgrades.RefreshWorkshopAvailability(_game.MusicWorkshopUnlocked);
 		if (Upgrades.Pending && !Session.IsClosed && _game.CurrentDay >= 2 && _game.CurrentDay <= TotalDays &&
 			!_game.GetNode<FirstTradeTutorial>("FirstTradeTutorial").HasPendingUpgradeLesson())
 			_card.Open(_game.CurrentDay - 1, _game.CurrentDay, Upgrades.Options, _game.Score);

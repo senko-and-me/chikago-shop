@@ -14,11 +14,14 @@ public partial class TradeScene
 		int stageLastDay = QuotaStage == 0 ? FirstDeadline : FinalDay;
 		int quota = QuotaStage == 0 ? FirstQuota : SecondQuota;
 		double unsold = 0;
-		foreach (int item in _storedItems) unsold += GetItemPrice(item);
-        foreach (var stock in _deferredStock) unsold += GetItemPrice(stock.Item);
-		foreach (int item in _showcaseItems) if (item >= 0) unsold += GetItemPrice(item);
+		for (int slot = 0; slot < _showcaseItems.Length; slot++)
+		{
+			int item = _showcaseItems[slot];
+			if (item >= 0 && slot != _pendingCraftSlot)
+				unsold += GetItemPrice(item) + QualityBonus(_showcaseGrades[slot]);
+		}
 		if (ItemIndex >= 0 && TradeActive && _activeShowcaseIndex < 0)
-			unsold += GetItemPrice(ItemIndex);
+			unsold += GetItemPrice(ItemIndex) + QualityBonus(_activeTradeGrade);
 		double elapsed = _dayCycle.Session.Duration <= 0 ? 0 :
 			1 - _dayCycle.Session.RemainingSeconds / _dayCycle.Session.Duration;
 		director.Observe(Score, unsold, CheckpointScore,

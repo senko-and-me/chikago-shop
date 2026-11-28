@@ -15,6 +15,7 @@ public sealed class BalanceProfile
     // Distinguish legacy shipped second-quota/workshop costs from explicit new edits in F10.
     public int EconomyBaselineRevision { get; set; }
     public int ItemCatalogueRevision { get; set; }
+    public int PolishingStrengthRevision { get; set; }
     public Dictionary<string, double> Numbers { get; set; } = new();
     public Dictionary<string, string> ItemRarities { get; set; } = new();
     public double Number(string key, double fallback) => Numbers.GetValueOrDefault(key, fallback);
@@ -23,6 +24,7 @@ public sealed class BalanceProfile
         SchemaVersion = SchemaVersion, FirstQuotaBaselineRevision = FirstQuotaBaselineRevision,
         EconomyBaselineRevision = EconomyBaselineRevision,
         ItemCatalogueRevision = ItemCatalogueRevision,
+        PolishingStrengthRevision = PolishingStrengthRevision,
         Numbers = new(Numbers), ItemRarities = new(ItemRarities)
     };
     public string ToJson() => JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });

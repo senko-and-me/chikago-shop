@@ -151,15 +151,25 @@ public partial class ProjectTest
 
             cards = GD.Load<PackedScene>("res://scenes/UI/DayTransitionCard.tscn").Instantiate<DayTransitionCard>();
             game.AddChild(cards);
-            foreach (var size in new[] { new Vector2I(1280, 720), new Vector2I(960, 540) })
+            int handIndex = 0;
+            foreach (var hand in DayUpgradeRules.Available.Chunk(3))
             {
+                var size = handIndex++ % 2 == 0 ? new Vector2I(1280, 720) : new Vector2I(960, 540);
                 Root.Size = size;
                 TranslationServer.SetLocale("ru");
-                cards.Open(1, 2, new[] { DayUpgrade.Cash, DayUpgrade.AtelierPrice, DayUpgrade.MusicPrice }, 1000);
-                Check(cards.IsOpen && cards.Options.Count == 3, "All three day cards must be open");
+                cards.Open(1, 2, new[] { DayUpgrade.Energy, hand[0] }.Concat(hand).ToArray(), 1000);
+                Check(cards.IsOpen && cards.Options.SequenceEqual(hand),
+                    "Even a stale hand must show only the three distinct active cards in order");
+                foreach (var upgrade in hand)
+                {
+                    var face = cards.GetNode<Control>("Root/Center/Card/Content/Choices/" + upgrade + "/Content");
+                    Check(face.GetNode<Label>("Description").Text.Length > 0 &&
+                        face.GetNode<Button>("Choose").Text == GameLocalization.Format("Купить за {0}$", game.DayUpgrades.CostFor(upgrade)),
+                        "Each card must display its configured effect and price");
+                }
                 TranslationServer.SetLocale("en");
                 await WaitForDayCardAnimation(cards);
-                await CapturePresentation("localization-cards-" + size.X);
+                await CapturePresentation("localization-cards-" + handIndex);
                 CheckEnglishUi(cards);
                 Check(cards.GetNode<Label>("Root/Center/Card/Content/Route").Text.Contains("Funds"), "Day route must refresh live");
                 cards.Close();

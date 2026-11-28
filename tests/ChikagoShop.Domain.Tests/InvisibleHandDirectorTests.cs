@@ -10,12 +10,12 @@ public sealed class InvisibleHandDirectorTests
     {
         var hand = new InvisibleHandDirector();
         for (int i = 0; i < 20; i++)
-            hand.Observe(100, 0, 220, 6, 1, 7, 0.5, 400, true);
+            hand.Observe(10, 0, 100, 6, 1, 7, 0.5, 800, true);
         Assert.That(hand.Pressure, Is.EqualTo(1).Within(0.001));
         Assert.That(hand.RarityShift(100, 5), Is.EqualTo(5));
         Assert.That(hand.AdjustInitialOffer(10, 3), Is.EqualTo(13));
-        for (int i = 0; i < 20; i++)
-            hand.Observe(3000, 0, 220, 6, 1, 7, 0.5, 400, true);
+        for (int i = 0; i < 30; i++)
+            hand.Observe(3000, 0, 100, 6, 1, 7, 0.5, 800, true);
         Assert.That(hand.Pressure, Is.EqualTo(-1).Within(0.001));
         Assert.That(hand.RarityShift(100, 5), Is.EqualTo(-5));
         Assert.That(hand.AdjustInitialOffer(-30, 3), Is.EqualTo(-30));

@@ -15,6 +15,8 @@ public sealed record ProgressData
 	public int SaveVersion { get; set; } = 1;
 	public bool UpgradePending { get; set; }
 	public int SelectedUpgrade { get; set; }
+    public bool TrainingUpgradeOffer { get; set; }
+    public string PreviousBuyerItemKind { get; set; } = "";
 	public int AtelierPriceLevel { get; set; }
 	public int MusicPriceLevel { get; set; }
 	public int CheckpointAtelierPriceLevel { get; set; }

@@ -12,7 +12,7 @@ public sealed class EmbroiderySessionTests
     {
         var session = new EmbroiderySession(kind);
         Assert.That(session.Points, Is.EqualTo(new EmbroiderySession(kind).Points));
-        Assert.That(session.Points.Count, Is.InRange(13, 15));
+        Assert.That(session.Points.Count, Is.EqualTo(kind == "lorgnette" ? 15 : 14));
         Assert.That(session.Points.All(p => p.X >= 25 && p.X <= 815 && p.Y >= 25 && p.Y <= 455), Is.True);
         Assert.That(session.Points.Max(p => p.X) - session.Points.Min(p => p.X), Is.GreaterThan(200));
         Assert.That(session.Points.Max(p => p.Y) - session.Points.Min(p => p.Y), Is.GreaterThan(100));
@@ -39,6 +39,19 @@ public sealed class EmbroiderySessionTests
             return segments.Sum();
         }).ToArray();
         Assert.That(lengths.Max() / lengths.Min(), Is.LessThanOrEqualTo(1.12));
+    }
+
+    [Test]
+    public void GloveTargetsAreMirroredAcrossTheFabricCenter()
+    {
+        var points = new EmbroiderySession("gloves").Points;
+        for (int i = 0; i < points.Count / 2; i++)
+        {
+            var left = points[i];
+            var right = points[points.Count - 1 - i];
+            Assert.That(left.X + right.X, Is.EqualTo(840));
+            Assert.That(left.Y, Is.EqualTo(right.Y));
+        }
     }
 
     [Test]

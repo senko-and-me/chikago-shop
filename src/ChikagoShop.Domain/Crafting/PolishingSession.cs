@@ -20,6 +20,7 @@ public sealed class PolishingSession : ICraftSession
     private const double MaximumSweep = 34;
     public int MaskArea { get; }
     public double Radius { get; }
+    public const double CleaningEfficiencyScale = 1.25;
     public double CleaningStrength { get; }
     private readonly byte[] _mask;
     private readonly int _width, _height;
@@ -61,7 +62,7 @@ public sealed class PolishingSession : ICraftSession
         // removal rate absorb part of the area difference.
         double relativeArea = MaskArea / ReferenceArea;
         Radius = BrushRadius * Math.Clamp(Math.Pow(relativeArea, .22) * radiusCorrection, .8, 1.2);
-        CleaningStrength = Math.Clamp(Math.Pow(relativeArea, .45) * strengthCorrection, .5, 2.5);
+        CleaningStrength = Math.Clamp(Math.Pow(relativeArea, .45) * strengthCorrection, .5, 2.5) * 1.15 * CleaningEfficiencyScale;
         Columns = (width + CellSize - 1) / CellSize;
         Rows = (height + CellSize - 1) / CellSize;
         _cells = new PolishingCell[Columns * Rows];

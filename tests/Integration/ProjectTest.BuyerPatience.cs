@@ -1,4 +1,6 @@
+using System;
 using System.Threading.Tasks;
+using ChikagoShop.Domain.Days;
 using Godot;
 
 public partial class ProjectTest
@@ -26,7 +28,7 @@ public partial class ProjectTest
             var content = game.GetNode("World/TradingRoom/Item/TradePanel/Content");
             int quality = TradeScene.QualityBonus(game.ActiveTradeQualityRank);
             string expected = GameLocalization.Format("Получим: {0}$", half);
-            if (quality > 0) expected += " " + GameLocalization.Format("+{0}$", quality);
+            if (quality != 0) expected += " " + TradeScene.SignedAmount(quality);
             Check(content.GetNode<RichTextLabel>("OfferLabel").GetParsedText() == expected &&
                 content.GetNode<RichTextLabel>("OfferLabel").TooltipText.Contains(GameLocalization.Format("Скорость: +{0}$", 0)),
                 "Expired payout must retain quality and omit the speed bonus");
@@ -74,6 +76,35 @@ public partial class ProjectTest
             game._Process(0);
             CheckExpiredOffer();
             game.PersistProgress(); await Reload(); CheckExpiredOffer();
+            int loyal = (int)DayUpgrade.Loyal;
+            await Reload($$"""{"save_version":20,"day_started":true,"score":500,"trade_active":true,"item_index":0,"customer_index":0,"percentage":-27,"rerolls_remaining":3,"buyer_wait_remaining":0.5,"buyer_wait_initial":20,"active_trade_grade":"D","selected_upgrade":{{loyal}}}""");
+            int expired = Math.Min(-27, -game.DayUpgrades.Rules.For(DayUpgrade.Loyal).Amount);
+            game._Process(0.6);
+            Check(game.Percentage == expired && game.GetNode<Button>(buttons + "DeclineButton").Disabled,
+                "Even with the loyal card, expiry must never raise the existing offer or allow rerolls");
+            int latePayout = game.OfferedPrice - 20;
+            Check(game.GetNode<RichTextLabel>("World/TradingRoom/Item/TradePanel/Content/OfferLabel").Text.Contains("[color=#c32938]"),
+                "A loss from D quality must be displayed in red after expiration");
+            game.PersistProgress();
+            await Reload();
+            Check(game.DayUpgrades.Selected == DayUpgrade.Loyal && game.Percentage == expired, "Loyal expiry must be stable across reload");
+            int balance = game.Score;
+            game.AcceptTrade();
+            Check(game.Score == balance + latePayout, "Loyal expiry must retain the D deduction in the real payout");
+
+            int bargain = (int)DayUpgrade.Bargaining;
+            await Reload($$"""{"save_version":20,"day_started":true,"score":500,"trade_active":true,"item_index":0,"customer_index":0,"percentage":24,"rerolls_remaining":1,"buyer_wait_remaining":17,"buyer_wait_initial":20,"selected_upgrade":{{bargain}}}""");
+            int floor = game.DayUpgrades.Rules.For(DayUpgrade.Bargaining).Amount;
+            game.RerollCustomer();
+            Check(game.RerollsRemaining == 0 && game.Percentage >= System.Math.Max(24, floor) && game.BuyerWaitRemaining == 17,
+                "A guaranteed last reroll must preserve patience and any offer above its floor");
+
+            int patient = (int)DayUpgrade.Patient;
+            await Reload($$"""{"save_version":20,"day_started":true,"score":500,"selected_upgrade":{{patient}}}""");
+            game._Process(0);
+            int extension = game.DayUpgrades.WaitExtension;
+            Check(game.BuyerWaitInitial >= 15 + extension && game.BuyerWaitInitial <= 20 + extension,
+                "Patient customers must receive the full extension on new arrivals");
             GD.Print("BUYER_PATIENCE_CHECKS_PASS: exact expiry, -50%, no reroll via UI/key/API, exact payout, reload and late stock");
         }
         finally

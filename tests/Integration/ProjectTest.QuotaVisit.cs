@@ -86,7 +86,9 @@ public partial class ProjectTest
                     Score = 4000, EnergyRemaining = 3
                 });
                 await Reload();
-                CheckCigarettes(i + 1, remaining[i], units[remaining[i]], stage == 0 ? 750 : 1500);
+                CheckCigarettes(i + 1, remaining[i], units[remaining[i]], stage == 0 ? 800 : 1350);
+                Check(game.DayRemainingSeconds == config.Days.DurationFor(i + 1, deadline),
+                    "The configured week duration must apply to every day, even before the music room opens");
             }
             SetLastDay(4000);
             await Reload();
@@ -151,7 +153,7 @@ public partial class ProjectTest
             Check(game.QuotaStage == 1 && game.MafiaNoticePending && !game.GetNode<TextureButton>(visitorPath).Visible,
                 "The visitor must wait until the existing successful quota scene ends");
             int cashAfterQuota = game.Score;
-            CheckCigarettes(8, 7, "дней", 1500);
+            CheckCigarettes(8, 7, "дней", 1350);
             var mafia = game.GetNode<MafiaQuotaNotice>("MafiaQuotaNotice");
             Check(SceneTransition.IsActive(this) && Paused && !mafia.IsOpen,
                 "The world must fade first, with the clock paused, before Castello appears");
@@ -268,7 +270,7 @@ public partial class ProjectTest
                 "Reload must retain the balance and the completed event");
             game.ReturnToCheckpoint();
             Check(!game.QuotaVisitPending && game.Score == cashAfterQuota, "Checkpoint must restore completed access and the original cash");
-            CheckCigarettes(8, 7, "дней", 1500);
+            CheckCigarettes(8, 7, "дней", 1350);
             var unlockPanel = game.GetNode<MusicWorkshopUnlockPanel>("World/MusicWorkshop/UnlockPanel");
             Rect2 upperCover = game.GetNode<Control>("World/MusicWorkshop/LockedOverlay").GetGlobalRect();
             Rect2 lowerCover = game.GetNode<Control>("World/Showroom/LockedOverlay").GetGlobalRect();
@@ -280,7 +282,38 @@ public partial class ProjectTest
             Check(game.MusicWorkshopAvailable && unlockPanel.IsVisibleInTree() && !unlockPanel.UnlockButton.Disabled &&
                 GameLocalization.Text(unlockPanel.UnlockButton.Text) == "Open workshop",
                 "The localized button must appear after the restored completed visit");
-            unlockPanel.UnlockButton.EmitSignal(BaseButton.SignalName.Pressed);
+            if (DisplayServer.GetName() == "headless")
+                unlockPanel.UnlockButton.EmitSignal(BaseButton.SignalName.Pressed);
+            else
+            {
+                var unlock = unlockPanel.UnlockButton;
+                var camera = game.GetNode<WorldCamera>("Camera2D");
+                var previousSize = Root.Size;
+                Vector2 previousPosition = camera.Position, previousZoom = camera.Zoom;
+                Vector2 edge = Vector2.Zero;
+                foreach (var size in new[] { new Vector2I(1280, 720), new Vector2I(1920, 1080) })
+                foreach (float zoom in new[] { 0.42f, 0.8f })
+                {
+                    Root.Size = size;
+                    camera.Position = unlock.GetGlobalRect().GetCenter();
+                    camera.Zoom = Vector2.One * zoom;
+                    camera.ForceUpdateScroll();
+                    await ToSignal(this, SignalName.ProcessFrame);
+                    foreach (var point in new[] { new Vector2(.04f, .06f), new Vector2(.96f, .06f),
+                        Vector2.One * .5f, new Vector2(.04f, .94f), new Vector2(.96f, .94f) })
+                    {
+                        edge = unlock.GetGlobalTransformWithCanvas() * (unlock.Size * point);
+                        MoveButtonPointer(edge);
+                        Check(unlock.IsHovered(), $"The entire visible unlock button must receive input at {size}, zoom {zoom}, point {point}.");
+                    }
+                }
+                PressButtonPointer(edge, true);
+                PressButtonPointer(edge, false);
+                Root.Size = previousSize;
+                camera.Position = previousPosition;
+                camera.Zoom = previousZoom;
+                camera.ForceUpdateScroll();
+            }
             Check(game.MusicWorkshopUnlocked && game.Score == cashAfterQuota &&
                 !game.DayStarted && !game.GetNode<ModularCustomer>("World/TradingRoom/Customer").Visible,
                 "Repeated legacy unlock actions must neither charge cash nor start the day");
@@ -291,7 +324,7 @@ public partial class ProjectTest
             game.EndDay();
             Check(game.GetNode<ModularCustomer>("World/TradingRoom/Customer").Visible, "Start must resume ordinary arrivals");
             game.NewGame();
-            CheckCigarettes(1, 7, "дней", 750);
+            CheckCigarettes(1, 7, "дней", 800);
             Check(ProgressSaveStore.Load(save, 3).QuotaVisit == QuotaVisitStage.Unavailable, "A new run must reset the visitor state");
 
             // A previously claimed gift could leave the old paid workshop locked.

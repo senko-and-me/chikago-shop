@@ -45,10 +45,43 @@ public partial class DayTransitionCard : CanvasLayer
     {
         if (what != NotificationTranslationChanged || !IsNodeReady() || !IsOpen) return;
         _route.Text = $"{_previousDay:00}  →  {_nextDay:00}  ·  " + GameLocalization.Format("Средства: {0}$", _balance);
-        for (int i = 0; i < _cards.Count; i++)
-            _cards[i].GetNode<Button>("Content/Choose").Text = Options[i] == DayUpgrade.Cash
-                ? GameLocalization.Text("Получить 50$") : GameLocalization.Format("Купить за {0}$", Cost(Options[i]));
+        for (int i = 0; i < _cards.Count; i++) PopulateChoice(_cards[i], Options[i]);
     }
+
+    private DayUpgradeRules Rules => (GetParent() as TradeScene)?.DayUpgrades.Rules ?? DebugBalanceSettings.CardRules;
+
+    private void PopulateChoice(PanelContainer panel, DayUpgrade upgrade)
+    {
+        var terms = Rules.For(upgrade);
+        string amount = upgrade switch
+        {
+            DayUpgrade.Materials => GameLocalization.Format("−{0}$ / товар", terms.Amount),
+            DayUpgrade.Patient => GameLocalization.Format("+{0} сек.", terms.Amount),
+            DayUpgrade.Bargaining => $"≥ +{terms.Amount}%",
+            DayUpgrade.Loyal => $"−{terms.Amount}%",
+            _ => GameLocalization.Format("+{0}$", terms.Amount)
+        };
+        panel.GetNode<Label>("Content/Amount").Text = amount;
+        panel.GetNode<Label>("Content/Title").Text = GameLocalization.Text(DebugBalanceSettings.CardName(upgrade));
+        panel.GetNode<Label>("Content/Description").Text = Describe(upgrade, terms);
+        panel.GetNode<Label>("Content/Duration").Text = GameLocalization.Text(upgrade == DayUpgrade.Cash ? "СРАЗУ" : "НА ОДИН ДЕНЬ");
+        panel.GetNode<Button>("Content/Choose").Text = GameLocalization.Format("Купить за {0}$", Cost(upgrade));
+    }
+
+    internal static string Describe(DayUpgrade upgrade, CardTerms terms) => upgrade switch
+    {
+        DayUpgrade.Cash => GameLocalization.Format("Сразу получите {0}$ после покупки.", terms.Amount),
+        DayUpgrade.Materials => GameLocalization.Format("−{0}$ к стоимости каждого создания.", terms.Amount),
+        DayUpgrade.AtelierPrice => GameLocalization.Format("+{0}$ за каждую продажу одежды.", terms.Amount),
+        DayUpgrade.MusicPrice => GameLocalization.Format("+{0}$ за каждую продажу инструмента.", terms.Amount),
+        DayUpgrade.Patient => GameLocalization.Format("Новые покупатели ждут на {0} сек. дольше.", terms.Amount),
+        DayUpgrade.Bargaining => GameLocalization.Format("Последняя смена покупателя даёт не меньше +{0}%, пока есть время.", terms.Amount),
+        DayUpgrade.QualityMark => GameLocalization.Format("+{0}$ за каждый товар качества B, A или S.", terms.Amount),
+        DayUpgrade.Loyal => GameLocalization.Format("После таймера: −{0}% или прежнее предложение, если оно ниже.", terms.Amount),
+        DayUpgrade.QuickService => GameLocalization.Format("+{0}$ за каждую продажу вовремя.", terms.Amount),
+        _ => ""
+    };
+
     private int Cost(DayUpgrade upgrade) => (GetParent() as TradeScene)?.DayUpgrades.CostFor(upgrade)
         ?? DebugBalanceSettings.CardRules.Cost(upgrade);
 
@@ -69,20 +102,15 @@ public partial class DayTransitionCard : CanvasLayer
         Layout();
     }
 
-    private Button AddChoice(Node parent, DayUpgrade upgrade, string title, string amount, string description, string duration)
+    private Button AddChoice(Node parent, DayUpgrade upgrade)
     {
         var panel = GD.Load<PackedScene>("res://scenes/UI/DayUpgradeCard.tscn").Instantiate<PanelContainer>();
         panel.Name = upgrade.ToString();
         parent.AddChild(panel);
         _cards.Add(panel);
-        panel.GetNode<Label>("Content/Amount").Text = amount;
-        panel.GetNode<Label>("Content/Title").Text = title;
-        panel.GetNode<Label>("Content/Description").Text = description;
-        panel.GetNode<Label>("Content/Duration").Text = duration;
+        PopulateChoice(panel, upgrade);
         int cost = Cost(upgrade);
         var button = panel.GetNode<Button>("Content/Choose");
-        button.Text = upgrade == DayUpgrade.Cash ? GameLocalization.Text("Получить 50$")
-            : GameLocalization.Format("Купить за {0}$", cost);
         button.Disabled = _balance < cost;
         button.Pressed += () => Choose(upgrade);
         return button;
@@ -189,7 +217,7 @@ public partial class DayTransitionCard : CanvasLayer
     public void Open(int previousDay, int nextDay, IReadOnlyList<DayUpgrade> options, int balance)
     {
         if (IsOpen || previousDay < 1 || nextDay != previousDay + 1 || GetTree().Paused) return;
-        Options = options.ToArray();
+        Options = options.Where(DayUpgradeRules.Available.Contains).Distinct().Take(3).ToArray();
         _previousDay = previousDay;
         _nextDay = nextDay;
         _balance = balance;
@@ -198,13 +226,7 @@ public partial class DayTransitionCard : CanvasLayer
         foreach (Node child in _choices.GetChildren()) child.Free();
         foreach (var upgrade in Options)
         {
-            var button = upgrade switch
-            {
-                DayUpgrade.Cash => AddChoice(_choices, upgrade, "Оборотные средства", "+50$", "Получить 50$ перед новым днём", "СРАЗУ"),
-                DayUpgrade.AtelierPrice => AddChoice(_choices, upgrade, "Имя на этикетке", "+20%", "+20% к базовой цене одежды на следующий день.", "ОДЕЖДА · НА ОДИН ДЕНЬ"),
-                DayUpgrade.MusicPrice => AddChoice(_choices, upgrade, "Коллекционный звук", "+20%", "+20% к базовой цене инструментов на следующий день.", "ИНСТРУМЕНТЫ · НА ОДИН ДЕНЬ"),
-                _ => throw new ArgumentOutOfRangeException(nameof(options))
-            };
+            var button = AddChoice(_choices, upgrade);
             _navigationButtons.Add(button);
         }
         _navigationButtons.Add(_skip);

@@ -48,10 +48,10 @@ public partial class ProjectTest
             string room = WorkshopItemCatalog.Items[index].WorkshopId;
             int funds = game.Score;
             game.Crafting.OpenCatalog(room);
-            Check(game.Crafting.IsCatalogOpen && Paused && game.Score == funds - WorkshopItemCatalog.CraftCost(room),
-                "Entering the catalogue must charge the workshop price exactly once");
+            Check(game.Crafting.IsCatalogOpen && Paused && game.Score == funds,
+                "Opening the catalogue must not charge the shared craft cost");
             var button = game.Crafting.Catalog.ItemButton(kind);
-            Check(!button.GetParent().HasNode("Cost"), "The catalogue must not show a per-item price");
+            Check(!button.HasNode("Content/Choose"), "The item card itself must replace the lower Choose button");
             var scroll = game.Crafting.Catalog.GetNode<ScrollContainer>("Root/Center/Panel/Margin/Content/Scroll");
             scroll.EnsureControlVisible(button);
             await Frame();
@@ -77,19 +77,41 @@ public partial class ProjectTest
             await Reload();
             Fresh();
             Check(!game.GetNode<InventoryUI>("HUD/InventoryUI").IsVisibleInTree(), "The old inventory must not appear");
-            Check(DebugBalanceSettings.Cards.SequenceEqual(new[] { DayUpgrade.Cash, DayUpgrade.AtelierPrice, DayUpgrade.MusicPrice }),
-                "Only cash and sale-price cards remain active");
+            Check(DebugBalanceSettings.Cards.SequenceEqual(DayUpgradeRules.Available) && DebugBalanceSettings.Cards.Length == 9,
+                "F10 must expose all nine active cards");
             game.Crafting.OpenCatalog("music");
             Check(!game.Crafting.IsCatalogOpen, "A locked room must still reject its catalogue");
             var debug = Root.GetNode<DebugBalancePanel>("DebugBalance");
-            debug.Open();
+            Root.PushInput(new InputEventKey { Keycode = Key.F10, Pressed = true }, true);
+            Root.PushInput(new InputEventKey { Keycode = Key.F10, Pressed = false }, true);
+            await Frame();
+            Check(debug.IsOpen, "F10 must open the balance panel");
             var tabs = debug.GetNode<TabContainer>("Root/Inset/Panel/Content/Tabs");
             Check(!tabs.HasNode("Редкости"), "The retired rarity settings must not remain as an empty tab");
             for (int tab = 0; tab < tabs.GetTabCount(); tab++) { tabs.CurrentTab = tab; await Frame(); }
-            Check(debug.Editor("craft.atelier.cost") != null && debug.Editor("craft.music.cost") != null,
-                "Each workshop must have one editable creation and base sale price");
+            Check(!DebugBalanceSettings.Fields.Any(field => field.Key is "craft.atelier.cost" or "craft.music.cost") &&
+                debug.Editor(DebugBalanceSettings.CraftCostKey).Text == "20",
+                "Both workshops must share one editable craft cost");
+            Check(debug.Editor(DebugBalanceSettings.FirstWeekDurationKey).Text == "45" &&
+                debug.Editor(DebugBalanceSettings.SecondWeekDurationKey).Text == "60",
+                "F10 must expose both week durations independently");
             Check(debug.Editor("buyer.wait.min").Text == "15" && debug.Editor("buyer.wait.max").Text == "20",
                 "F10 must expose the shipped shared buyer range");
+            Check(WorkshopItemCatalog.Items.Count == 10 && WorkshopItemCatalog.Items.All(item => item.BasePrice == 50) &&
+                debug.Editor(DebugBalanceSettings.BasePriceKey).Text == "50" &&
+                !DebugBalanceSettings.Fields.Any(field => field.Key.StartsWith("item.") && field.Key.EndsWith(".price")),
+                "All ten catalogue and F10 base prices must be 50");
+            Check(!DebugBalanceSettings.Fields.Any(field => field.Key == "items.rerolls") &&
+                WorkshopItemCatalog.Items.All(item => item.Rerolls == 3) &&
+                !DebugBalanceSettings.Fields.Any(field => field.Key.StartsWith("item.") && field.Key.EndsWith(".rerolls")),
+                "All ten items must use exactly three rerolls");
+            foreach (var upgrade in DayUpgradeRules.Available)
+            {
+                Check(debug.Editor($"card.{upgrade}.amount") != null &&
+                    DebugBalanceSettings.Fields.Any(field => field.Key == $"card.{upgrade}.cost") &&
+                    !DebugBalanceSettings.Fields.Any(field => field.Key == $"card.{upgrade}.limit"),
+                    $"F10 must expose the effect and applicable price for {upgrade}");
+            }
             debug.Close();
             string previousProfilePath = DebugBalanceSettings.StoragePath;
             const string profilePath = "user://merged_wait_profile.json";
@@ -106,31 +128,42 @@ public partial class ProjectTest
                 profile.Numbers["buyer.min"] = 9;
                 profile.Numbers["buyer.music.max"] = 40;
                 profile.Numbers["item.hat.rerolls"] = 1;
+                profile.Numbers["rarity.unique.rerolls"] = 1;
                 profile.Numbers["craft.atelier.seconds"] = 12;
                 profile.Numbers["craft.hat.cost"] = 75;
+                profile.Numbers["polish.violin.strength"] = 0.8;
+                profile.Numbers["polish.violin.radius"] = 0.91;
+                profile.Numbers["card.Music.weight"] = 200;
+                profile.Numbers["card.Atelier.cost"] = 25;
                 using (var file = FileAccess.Open(profilePath, FileAccess.ModeFlags.Write))
                     file.StoreString(profile.ToJson());
                 Check(DebugBalanceSettings.Reload(out string error), $"Legacy F10 profile must reload: {error}");
                 var migrated = ChikagoShop.Domain.Configuration.BalanceProfile.FromJson(FileAccess.GetFileAsString(profilePath));
-                Check(migrated.Numbers.Count == 2 && migrated.Numbers["item.hat.rerolls"] == 1 &&
+                Check(migrated.Numbers.Count == 3 && migrated.PolishingStrengthRevision == 1 &&
+                    migrated.Numbers["polish.violin.strength"] == 1.0 &&
+                    migrated.Numbers["polish.violin.radius"] == 0.91 &&
+                    DebugBalanceSettings.Reload(out _) && DebugBalanceSettings.Number("polish.violin.strength") == 1.0 &&
                     migrated.Numbers["craft.atelier.seconds"] == 12 &&
-                    WorkshopItemCatalog.Items.All(item => item.BasePrice == WorkshopItemCatalog.CraftCost(item.WorkshopId)) &&
+                    WorkshopItemCatalog.Items.All(item => item.BasePrice == 50 && item.Rerolls == 3) &&
                     DebugBalanceSettings.Economy.BuyerWaitMinSeconds == 15 &&
                     DebugBalanceSettings.Economy.BuyerWaitMaxSeconds == 20,
                     "Migration must remove old prices and ranges on disk while preserving other valid overrides");
                 profile = DebugBalanceSettings.Profile;
-                profile.Numbers["craft.atelier.cost"] = 62;
+                profile.Numbers[DebugBalanceSettings.BasePriceKey] = 62;
+                profile.Numbers["items.rerolls"] = 2;
+                profile.Numbers[DebugBalanceSettings.FirstWeekDurationKey] = 40;
+                profile.Numbers[DebugBalanceSettings.SecondWeekDurationKey] = 65;
                 profile.Numbers["buyer.wait.min"] = 24;
                 profile.Numbers["buyer.wait.max"] = 24;
                 Check(DebugBalanceSettings.TrySave(profile, out error), $"Valid F10 range must save: {error}");
-                Check(WorkshopItemCatalog.Items.All(item => item.BasePrice == (item.WorkshopId == "atelier" ? 62 : 50)) &&
-                    WorkshopItemCatalog.Items[0].Rerolls == 1,
-                    "Changing a workshop price must update only its items without touching rerolls");
+                Check(WorkshopItemCatalog.Items.All(item => item.BasePrice == 62 && item.Rerolls == 3),
+                    "F10 must apply shared values to all ten items");
                 Check(!DebugBalanceSettings.Profile.Numbers.ContainsKey("craft.hat.cost"),
                     "An old F10 price for crafting must be discarded");
                 Fresh();
                 game._Process(0);
-                Check(game.BuyerWaitInitial == 24, "New customers must use the F10 range");
+                Check(game.BuyerWaitInitial == 24 && game.DayRemainingSeconds == 40,
+                    "New customers and the first week must use their F10 settings");
                 game.PersistProgress();
                 profile.Numbers["buyer.wait.min"] = 28;
                 profile.Numbers["buyer.wait.max"] = 26;
@@ -143,6 +176,10 @@ public partial class ProjectTest
                 Fresh();
                 game._Process(0);
                 Check(game.BuyerWaitInitial == 28, "Only new customers acquire the changed F10 duration");
+                await Reload(new ProgressData { SaveVersion = ProgressJson.CurrentVersion, Day = 9,
+                    QuotaStage = 1, QuotaVisit = QuotaVisitStage.Rewarded, DayStarted = false, Score = 100 });
+                Check(game.DayRemainingSeconds == 65,
+                    "A second-week save must use that week's independent F10 duration, including while music is locked");
             }
             finally
             {
@@ -164,7 +201,7 @@ public partial class ProjectTest
                     string room = music ? "MusicWorkshop" : "Atelier";
                     var button = game.GetNode<Button>($"World/{room}/GetItemButton");
                     var price = button.GetNode<Label>("Price");
-                    Check(price.Text == (music ? "$50" : "50$") && new Rect2(Vector2.Zero, button.Size).Encloses(price.GetRect()),
+                    Check(price.Text == (music ? "$20" : "20$") && new Rect2(Vector2.Zero, button.Size).Encloses(price.GetRect()),
                         "The fixed price must be visible inside the localized workshop button");
                     var camera = game.GetNode<WorldCamera>("Camera2D");
                     camera.FocusOn(button.GetGlobalRect().GetCenter(), new Vector2(1500, 844), 0);
@@ -181,7 +218,7 @@ public partial class ProjectTest
                     using (await CapturePresentation("craft-button-price-" + item.Kind)) { }
                 }
                 await Select(item.Kind);
-                Check(!game.Crafting.Catalog.ItemButton(item.Kind).GetParent().GetNode<Label>("Rarity").Visible,
+                Check(!game.Crafting.Catalog.ItemButton(item.Kind).GetNode<Label>("Content/Rarity").Visible,
                     "The catalogue must not show retired rarity metadata");
                 var mini = Mini(item.WorkshopId);
                 int funds = game.Score;
@@ -189,17 +226,18 @@ public partial class ProjectTest
                 Check(game.Crafting.IsCatalogOpen && game.Score == funds && game.ShowcaseItems.All(value => value < 0),
                     "Preparation cancellation must not pay or reserve a showcase");
                 game.Crafting.Catalog.Close();
-                Check(game.Score == funds + WorkshopItemCatalog.CraftCost(item.WorkshopId),
-                    "Leaving the catalogue must refund the uncommitted price");
+                Check(game.Score == funds,
+                    "Leaving the catalogue must leave the balance unchanged");
                 await Select(item.Kind);
-                Check(ProgressSaveStore.Load(path, 3).Score == funds + WorkshopItemCatalog.CraftCost(item.WorkshopId),
-                    "Reload must refund abandoned preparation");
+                Check(ProgressSaveStore.Load(path, 3).Score == funds,
+                    "Reload must preserve the balance from before preparation");
                 mini.Activate();
-                Check(game.Score == funds && TradeScene.GetItemBasePrice(index) == WorkshopItemCatalog.CraftCost(item.WorkshopId) &&
+                Check(game.Score == funds - 20 && TradeScene.GetItemBasePrice(index) == 50 &&
                     game.ShowcaseItems[slot] == index &&
                     game.StoredItems.Length == 0 && game.GetShowcaseQualityRank(slot) == "D", "Paid start must reserve the exact item with D directly on its room showcase");
                 var saved = ProgressSaveStore.Load(path, 3);
-                Check(saved.ShowcaseItems[slot] == index && saved.ShowcaseGrades[slot] == "D" && saved.StoredItems.Length == 0,
+                Check(saved.ShowcaseItems[slot] == index && saved.ShowcaseGrades[slot] == "D" &&
+                    saved.ShowcaseRerolls[slot] == 3 && saved.StoredItems.Length == 0,
                     "The reserved item must exist on disk before playing completes");
                 Check(!game.Crafting.TryStart(index), "Duplicate start must be rejected");
                 game.Crafting.Complete("S");
@@ -286,9 +324,25 @@ public partial class ProjectTest
 
                 Tick(1);
                 ExpectClocks(1);
+                var buyerBadge = catalog.GetNode<Label>("Root/Center/Panel/Margin/Content/BuyerTime");
+                Check(buyerBadge.Text == GameLocalization.Format("Клиент: {0}", game.BuyerClockText),
+                    "The catalogue must show the same running buyer timer");
+                foreach (string language in new[] { "ru", "en" })
+                {
+                    TranslationServer.SetLocale(language);
+                    foreach (var item in WorkshopItemCatalog.Items.Where(item => item.WorkshopId == (music ? "music" : "atelier")))
+                    {
+                        var card = catalog.ItemButton(item.Kind);
+                        Check(!card.HasNode("Content/Price") && !card.HasNode("Content/Choose") &&
+                            card.Text.Length == 0 && card.GetNode<Label>("Content/Name").Text == GameLocalization.Text(item.Name),
+                            "Every localized catalogue card must consist of its illustration and title without a price");
+                    }
+                }
                 Check(game.Crafting.Select(kind), "Live craft must select an item");
                 Tick(1);
                 ExpectClocks(2);
+                var buyerLabel = mini.GetNode<Label>("Surface/Panel/StatTime/Value");
+                Check(buyerLabel.Text == game.BuyerClockText, "Preparation must show buyer patience");
                 mini.Activate();
                 double miniStart = mini.ActiveSession.RemainingSeconds;
                 await PressEscapeForTest();
@@ -300,6 +354,8 @@ public partial class ProjectTest
                 pause.Close();
                 Tick(1);
                 ExpectClocks(3);
+                Check(buyerLabel.Text == game.BuyerClockText && buyerLabel.Text != miniStart.ToString(),
+                    "Playing must show the live buyer timer while the internal clock remains separate");
                 Check(mini.ActiveSession.RemainingSeconds == miniStart - 1, "The mini-game clock must tick once");
                 if (!music)
                 {
@@ -376,7 +432,11 @@ public partial class ProjectTest
             Check(!game.TradeActive, "Displaying items must wait for the player's manual selection");
             game.OnShowcasePressed(1);
             Check(game.TradeActive && game.ItemIndex == WorkshopItemCatalog.IndexOf("vest"), "The clicked display must determine the offered item");
+            double patienceBeforeReroll = game.BuyerWaitRemaining;
+            Check(game.RerollsRemaining == 3, "A newly crafted vest must open its first sale with three rerolls");
             game.RerollCustomer();
+            Check(game.RerollsRemaining == 2 && game.BuyerWaitRemaining == patienceBeforeReroll,
+                "A reroll consumes one attempt and leaves the patience timer unchanged");
             int percent = game.Percentage, rerolls = game.RerollsRemaining;
             await ClickControl(game, "World/ShowroomLeft/Showcases/Slot2");
             Check(!game.TradeActive && game.ShowcaseItems[1] == WorkshopItemCatalog.IndexOf("vest"), "Returning must preserve the occupied slot");
@@ -384,6 +444,16 @@ public partial class ProjectTest
             game.OnShowcasePressed(1);
             Check(game.TradeActive && game.Percentage == percent && game.RerollsRemaining == rerolls,
                 "Returning, saving and selecting again must preserve the offer and remaining rerolls");
+            game.RerollCustomer();
+            Check(game.RerollsRemaining == 1, "The second reroll must consume precisely one attempt");
+            game.RerollCustomer();
+            int lastOffer = game.OfferedPrice;
+            game.RerollCustomer();
+            Check(game.RerollsRemaining == 0 && game.OfferedPrice == lastOffer &&
+                game.BuyerWaitRemaining == patienceBeforeReroll, "An exhausted item must reject another reroll without resetting patience");
+            game.PersistProgress(); await Reload();
+            Check(game.TradeActive && game.RerollsRemaining == 0 && game.BuyerWaitRemaining == patienceBeforeReroll,
+                "A saved exhausted item must stay exhausted across reload");
             int payout = ChikagoShop.Domain.Trading.BuyerPatienceRules.TotalPayout(game.OfferedPrice, game.BuyerWaitRemaining,
                 TradeScene.SpeedBonus(game.BuyerWaitRemaining, ProgressSaveStore.Load(path, 3).BuyerWaitInitial ?? TradeScene.BuyerWaitDuration),
                 TradeScene.QualityBonus(game.ActiveTradeQualityRank)), cash = game.Score;
@@ -450,13 +520,16 @@ public partial class ProjectTest
                 profile.Numbers["item.guitar.price"] = 40;
                 profile.Numbers["craft.atelier.cost"] = 68;
                 profile.Numbers["craft.music.cost"] = 112;
+                profile.Numbers[DebugBalanceSettings.BasePriceKey] = 62;
+                profile.Numbers[DebugBalanceSettings.CraftCostKey] = 27;
+                profile.Numbers["card.Materials.amount"] = 8;
                 using (var file = FileAccess.Open(priceProfile, FileAccess.ModeFlags.Write))
                     file.StoreString(profile.ToJson());
                 Check(DebugBalanceSettings.Reload(out _), "The old profile with per-item prices must still load");
                 foreach (var (kind, workshop, price, upgrade) in new[]
                 {
-                    ("hat", "atelier", 68, DayUpgrade.AtelierPrice),
-                    ("guitar", "music", 112, DayUpgrade.MusicPrice)
+                    ("hat", "atelier", 62, DayUpgrade.AtelierPrice),
+                    ("guitar", "music", 62, DayUpgrade.MusicPrice)
                 })
                 {
                     int index = WorkshopItemCatalog.IndexOf(kind);
@@ -468,13 +541,31 @@ public partial class ProjectTest
                         BuyerWaitInitial = 20, BuyerWaitRemaining = 15, SelectedUpgrade = (int)upgrade
                     });
                     var baseLabel = game.GetNode<Label>("World/TradingRoom/Item/TradePanel/Content/BasePriceLabel");
-                    Check(WorkshopItemCatalog.CraftCost(workshop) == price && TradeScene.GetItemBasePrice(index) == price &&
+                    Check(WorkshopItemCatalog.CraftCost(workshop) == 27 && TradeScene.GetItemBasePrice(index) == price &&
                         baseLabel.Text == GameLocalization.Format("Обычно: {0}$", price),
-                        "The workshop cost must set the base price even with a legacy override and active card");
-                    Check(game.GetItemPrice(index) > price &&
-                        game.OfferedPrice == TradeScene.PriceForPercent(game.GetItemPrice(index), 30),
-                        "An active card and the buyer markup must still apply to the sale");
+                        "Shared price and cost must stay separate even with legacy overrides and an active card");
+                    Check(game.GetItemPrice(index) == price &&
+                        game.OfferedPrice == TradeScene.PriceForPercent(price, 30),
+                        "An active card must leave the percentage-adjusted part unchanged");
+                    int money = game.Score;
+                    int expected = game.OfferedPrice + TradeScene.SpeedBonus(15, 20)
+                        + TradeScene.QualityBonus(game.ActiveTradeQualityRank) + game.DayUpgrades.Rules.For(upgrade).Amount;
+                    game.AcceptTrade();
+                    Check(game.Score == money + expected, "The workshop card must enter the actual sale payout");
                 }
+                await Reload(new ProgressData {
+                    SaveVersion = ProgressJson.CurrentVersion, Day = 2, DayStarted = true, DayRemainingSeconds = 35, Score = 18,
+                    SelectedUpgrade = (int)DayUpgrade.Materials });
+                game.Crafting.OpenCatalog("atelier");
+                Check(!game.Crafting.IsCatalogOpen && game.Score == 18, "Insufficient funds must prevent crafting");
+                game.Score = 19;
+                game.Crafting.OpenCatalog("atelier");
+                Check(game.Crafting.Select("hat") && game.Score == 19, "Preparation with a restored discount is free");
+                Mini("atelier").Activate();
+                Check(game.Score == 0, "The saved discount and F10 amount must affect the single Start debit");
+                Mini("atelier").FinishForTesting(false);
+                Mini("atelier").Activate();
+                Check(game.Score == 0, "Collection must neither refund nor debit crafting");
             }
             finally
             {

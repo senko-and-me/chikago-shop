@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using ChikagoShop.Domain.Days;
 using ChikagoShop.Domain.Persistence;
@@ -204,14 +205,14 @@ public partial class ProjectTest
                 bool en = language == "en";
                 string percent = game.Percentage >= 0 ? $"+{game.Percentage}%" : $"{game.Percentage}%";
                 string offered = en ? $"You get: ${game.OfferedPrice}" : $"Получим: {game.OfferedPrice}$";
-                string tip = en ? $"+${bonus}" : $"+{bonus}$";
+                string tip = TradeScene.SignedAmount(bonus);
                 Check(baseLabel.Text == (en ? $"Base price: ${basePrice}" : $"Обычно: {basePrice}$") &&
                     bonusLabel.Text == (en ? $"Price change: {percent}" : $"К цене: {percent}") &&
-                    totalLabel.GetParsedText() == $"{offered} {tip}" &&
-                    totalLabel.Text == $"{offered} [color=#268d48]{tip}[/color]",
+                    totalLabel.GetParsedText() == (bonus == 0 ? offered : $"{offered} {tip}") &&
+                    totalLabel.Text == (bonus == 0 ? offered : $"{offered} [color={(bonus > 0 ? "#268d48" : "#c32938")}]{tip}[/color]"),
                     "Only the separate localized speed and quality bonus must be green");
                 Check(bonusLabel.TooltipText.Contains(en ? $"Speed: +${speed}" : $"Скорость: +{speed}$") &&
-                    bonusLabel.TooltipText.Contains(en ? $"Quality: +${quality}" : $"Качество: +{quality}$"),
+                    bonusLabel.TooltipText.Contains((en ? "Quality: " : "Качество: ") + TradeScene.SignedAmount(quality)),
                     "The bonus details must show its speed and quality sources");
                 using (await CapturePresentation("v144-sale-" + language)) { }
             }
@@ -241,8 +242,8 @@ public partial class ProjectTest
             Check(game.BuyerWaitRemaining == 1 && TradeScene.SpeedBonus(game.BuyerWaitRemaining, fullWait) > 0,
                 "The first training sale must preserve a nonzero speed bonus");
             var lateBonusLine = game.GetNode<RichTextLabel>(salePath + "OfferLabel");
-            Check(lateBonusLine.GetParsedText() == $"Получим: {game.OfferedPrice}$ +{quality + 1}$",
-                "The green combined bonus must drop as the speed bonus changes");
+            Check(lateBonusLine.GetParsedText() == $"Получим: {game.OfferedPrice}$ {TradeScene.SignedAmount(quality + 1)}",
+                "The combined adjustment must update as the speed bonus changes");
             int balanceBeforeSale = game.Score;
             int expectedPayout = game.OfferedPrice + quality + 1;
             await ClickControl(game, salePath + "Buttons/AcceptButton"); await Frame();
@@ -256,10 +257,10 @@ public partial class ProjectTest
             game._Process(2.1);
             Check(game.TradeActive && game.BuyerWaitRemaining == 0, "The second lesson must allow selling after the bonus expires");
             int lateQuality = TradeScene.QualityBonus(game.ActiveTradeQualityRank);
-            Check(lateQuality > 0 && game.GetNode<Label>(salePath + "PercentLabel").Text == "К цене: -50%" &&
+            Check(game.GetNode<Label>(salePath + "PercentLabel").Text == "К цене: -50%" &&
                 game.GetNode<RichTextLabel>(salePath + "OfferLabel").Text ==
-                $"Получим: {game.OfferedPrice}$ [color=#268d48]+{lateQuality}$[/color]",
-                "Expired offers keep quality in the green bonus and remove only the speed bonus");
+                (lateQuality == 0 ? $"Получим: {game.OfferedPrice}$" : $"Получим: {game.OfferedPrice}$ {TradeScene.ColoredAmount(lateQuality)}"),
+                "Expired offers keep the signed quality adjustment and remove the speed bonus");
             int expectedLateScore = game.Score + game.OfferedPrice + lateQuality;
             await ClickControl(game, salePath + "Buttons/AcceptButton"); await Frame();
             Check(game.Accepted == 2 && game.Score == expectedLateScore && tutorial.CurrentStep == FirstTradeTutorial.Step.Summary,
@@ -303,13 +304,13 @@ public partial class ProjectTest
             next.EmitSignal(Button.SignalName.Pressed); await Frame();
             next.EmitSignal(Button.SignalName.Pressed); await Frame();
             var card = game.GetNode<DayTransitionCard>("DayTransitionCard");
-            Check(card.Options.Count == 1 && card.Options[0] == DayUpgrade.AtelierPrice,
-                "Training must offer only the remaining applicable price card");
-            card.Choose(DayUpgrade.AtelierPrice);
+            Check(card.Options.Count == 3 && !card.Options.Contains(DayUpgrade.Cash) && !card.Options.Contains(DayUpgrade.MusicPrice),
+                "Training must offer three distinct eligible cards without cash or music");
+            card.Choose(card.Options[0]);
             await WaitForDayCardAnimation(game);
             await Frame();
             CheckTrainingDisplays();
-            Check(game.DayUpgrades.Selected == DayUpgrade.AtelierPrice && tutorial.CurrentStep == FirstTradeTutorial.Step.Notebook,
+            Check(game.DayUpgrades.Selected == card.Options[0] && tutorial.CurrentStep == FirstTradeTutorial.Step.Notebook,
                 "The real purchase must continue to the notebook lesson");
             var notebook = game.GetNode<PulloutNotebook>("HUD/Root/PulloutNotebook");
             Rect2 tab = notebook.GetGlobalTransformWithCanvas() * notebook.HoverBounds;
@@ -320,7 +321,7 @@ public partial class ProjectTest
             next.EmitSignal(Button.SignalName.Pressed); await Frame();
             Check(tutorial.CurrentStep == FirstTradeTutorial.Step.Summary, "Notebook must continue to pause/save information");
             next.EmitSignal(Button.SignalName.Pressed); await Frame();
-            Check(!tutorial.IsActive && game.CurrentDay == 1 && !game.DayStarted && game.Score == 220 &&
+            Check(!tutorial.IsActive && game.CurrentDay == 1 && !game.DayStarted && game.Score == 100 &&
                 Array.TrueForAll(game.ShowcaseItems, item => item < 0), "Completing practice must reset the new showcase state for the real game");
             var stored = new ConfigFile(); stored.Load(profile);
             Check(stored.GetValue("tutorial", "finished", false).AsBool(), "Completion must persist");

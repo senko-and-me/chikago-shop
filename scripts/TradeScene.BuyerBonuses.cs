@@ -22,10 +22,22 @@ public partial class TradeScene
     private double _buyerWaitAutosave;
     private bool _waitingBuyer;
     private int _waitingBuyerItem = -1;
+    private int _previousBuyerItem = -1;
+    private bool _preferDifferentFirstRequest;
     private BuyerWaitWidget _buyerWaitWidget = null!;
 
     public double BuyerWaitInitial => _buyerWaitInitial;
     public double BuyerWaitRemaining => _buyerWaitRemaining;
+    internal string BuyerClockText => TradeActive || _waitingBuyer
+        ? _buyerWaitRemaining.ToString("0.0", System.Globalization.CultureInfo.GetCultureInfo(GameLocalization.Language))
+        : "—";
+
+    internal void PrepareNewDayBuyer()
+    {
+        if (TradeActive) return;
+        HideWaitingBuyer();
+        _preferDifferentFirstRequest = true;
+    }
     public string ActiveTradeQualityRank => _activeTradeGrade;
 
     public string GetStoredItemQualityRank(int inventoryPosition) =>
@@ -66,7 +78,7 @@ public partial class TradeScene
     private void ResetBuyerWait()
     {
         var economy = DebugBalanceSettings.Economy;
-        _buyerWaitInitial = _rng.RandiRange(economy.BuyerWaitMinSeconds, economy.BuyerWaitMaxSeconds);
+        _buyerWaitInitial = _rng.RandiRange(economy.BuyerWaitMinSeconds, economy.BuyerWaitMaxSeconds) + DayUpgrades.WaitExtension;
         _buyerWaitRemaining = _buyerWaitInitial;
         _buyerWaitAutosave = 0;
         _lastShownSpeedBonus = -1;
@@ -158,6 +170,8 @@ public partial class TradeScene
 
         _returnedOfferPercent = null;
         _waitingBuyerItem = ChooseBuyerRequest();
+        _previousBuyerItem = _waitingBuyerItem;
+        _preferDifferentFirstRequest = false;
         CustomerIndex = _rng.RandiRange(0, _customer.GetAppearanceCount() - 1);
         _waitingBuyer = true;
         ResetBuyerWait();
@@ -168,19 +182,20 @@ public partial class TradeScene
 
     private int ChooseBuyerRequest()
     {
-        if (_tutorial.IsActive)
-            return _showcaseItems[FirstDisplayedItem("atelier")];
+        if (_tutorial.IsActive && FirstDisplayedItem("atelier") is int slot && slot >= 0)
+            return _showcaseItems[slot];
 
         // Prefer goods the player can sell immediately. At an empty counter, ask for
         // a catalogue item the player can afford to craft in an open workshop.
-        int[] candidates = DisplayedRequestItems().Distinct().ToArray();
-        if (candidates.Length == 0)
-        {
-            var unlocked = Enumerable.Range(0, Items.Count).Where(IsAvailableBuyerRequest);
-            candidates = unlocked.Where(item => Score >= WorkshopItemCatalog.ItemCraftCost(item)).ToArray();
-            if (candidates.Length == 0)
-                return unlocked.OrderBy(WorkshopItemCatalog.ItemCraftCost).First();
-        }
+        int[] stocked = DisplayedRequestItems().Distinct().ToArray();
+        int[] unlocked = Enumerable.Range(0, Items.Count).Where(IsAvailableBuyerRequest).ToArray();
+        int[] craftable = Score >= CurrentCraftCost
+            ? unlocked.Where(item => HasFreeDisplay(Items[item].WorkshopId)).ToArray() : [];
+        int[] candidates = stocked.Length > 0 ? stocked : craftable.Length > 0 ? craftable : unlocked;
+        int[] alternatives = candidates.Where(item => item != _previousBuyerItem).ToArray();
+        if (alternatives.Length == 0 && _preferDifferentFirstRequest)
+            alternatives = craftable.Where(item => item != _previousBuyerItem).ToArray();
+        if (alternatives.Length > 0) candidates = alternatives;
 
         string workshop = MusicWorkshopUnlocked && _rng.Randf() < 0.5f ? "music" : "atelier";
         int[] preferred = candidates.Where(item => Items[item].WorkshopId == workshop).ToArray();
@@ -201,7 +216,7 @@ public partial class TradeScene
 
         string workshop = music && MusicWorkshopUnlocked ? "music" : "atelier";
         int slot = FirstDisplayedItem(workshop);
-        return slot >= 0 ? _showcaseItems[slot] : (workshop == "music" ? WorkshopItemCatalog.IndexOf("guitar") : WorkshopItemCatalog.IndexOf("hat"));
+        return slot >= 0 ? _showcaseItems[slot] : ChooseBuyerRequest();
     }
 
     private void ReplaceUnavailableExpiredBuyer()
@@ -211,7 +226,7 @@ public partial class TradeScene
 
         int item = _waitingBuyerItem;
         if (Array.IndexOf(_showcaseItems, item) >= 0 ||
-            (HasFreeDisplay(Items[item].WorkshopId) && Score >= WorkshopItemCatalog.ItemCraftCost(item)) ||
+            (HasFreeDisplay(Items[item].WorkshopId) && Score >= CurrentCraftCost) ||
             !DisplayedRequestItems().Any()) return;
 
         // A full workshop or an unaffordable request must not trap all the remaining stock.
@@ -274,8 +289,10 @@ public partial class TradeScene
     private bool CanRerollCurrentBuyer => BuyerPatienceRules.CanReroll(
         TradeActive, DayClosed, RerollsRemaining, _buyerWaitRemaining);
 
+    private int CardSaleBonus => DayUpgrades.SaleBonus(Items[ItemIndex].WorkshopId, _activeTradeGrade, _buyerWaitRemaining);
+
     private int CurrentBuyerPayout => BuyerPatienceRules.TotalPayout(
-        OfferedPrice, _buyerWaitRemaining, SpeedBonus(_buyerWaitRemaining, _buyerWaitInitial), QualityBonus(_activeTradeGrade));
+        OfferedPrice, _buyerWaitRemaining, SpeedBonus(_buyerWaitRemaining, _buyerWaitInitial), QualityBonus(_activeTradeGrade) + CardSaleBonus);
 
     private void RefreshTotalOfferDisplay()
     {
@@ -286,14 +303,19 @@ public partial class TradeScene
         int basePrice = GetItemPrice(ItemIndex);
         int bonus = CurrentBuyerPayout - OfferedPrice;
         string offer = GameLocalization.Format("Получим: {0}$", OfferedPrice);
-        _offerLabel.Text = bonus > 0 ? $"{offer} [color=#268d48]{SignedAmount(bonus)}[/color]" : offer;
+        _offerLabel.Text = bonus != 0 ? $"{offer} {ColoredAmount(bonus)}" : offer;
 
         string breakdown = GameLocalization.Format("Предложение: {0}\nСкорость: {1}\nКачество: {2}",
             SignedAmount(OfferedPrice - basePrice), SignedAmount(speed), SignedAmount(grade));
+        if (CardSaleBonus != 0) breakdown += "\n" + GameLocalization.Format("Карточка: {0}", SignedAmount(CardSaleBonus));
+        breakdown += "\n" + GameLocalization.Format("Итого: {0}$", CurrentBuyerPayout);
         _percentLabel.TooltipText = _offerLabel.TooltipText = breakdown;
     }
 
-    private static string SignedAmount(int value) =>
+    internal static string ColoredAmount(int value) => value == 0 ? GameLocalization.Format("{0}$", 0) :
+        $"[color={(value > 0 ? "#268d48" : "#c32938")}]{SignedAmount(value)}[/color]";
+
+    internal static string SignedAmount(int value) =>
         GameLocalization.Format(value < 0 ? "−{0}$" : "+{0}$", Math.Abs(value));
 
     #nullable enable annotations

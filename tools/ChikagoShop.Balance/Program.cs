@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Linq;
 using System.Text;
 using ChikagoShop.Domain.Configuration;
 using ChikagoShop.Domain.Simulation;
@@ -8,12 +9,13 @@ string Value(string name, string fallback) => Array.IndexOf(args, name) is int i
 int runs = int.Parse(Value("--runs", "10000"));
 int seed = int.Parse(Value("--seed", "20261107"));
 var config = EconomyConfigLoader.Load(File.ReadAllText(Value("--config", "config/economy.v1.json")));
+if (args.Contains("--card-study")) { CardStudy.Run(config, runs, seed); return; }
 var report = new StringBuilder("# Economy calibration — 2026-11-22\n\n");
-report.AppendLine($"Runs per profile: **{runs}**. Seed: **{seed}**. Starting cash: **${config.StartingMoney}**. Days: **{config.Days.TotalDays}**. Day: **{config.Days.DurationSeconds}s**, +30s after music unlock. One item per craft.\n");
+report.AppendLine($"Runs per profile: **{runs}**. Seed: **{seed}**. Starting cash: **${config.StartingMoney}**. Days: **{config.Days.TotalDays}**. Day: **{config.Days.DurationSeconds}s** in week one and **{config.Days.SecondWeekDurationSeconds}s** in week two. One item per craft.\n");
 foreach (var workshop in config.Workshops)
 {
     foreach (var item in config.Items.Where(item => item.Workshop == workshop.Id))
-        report.AppendLine($"- {item.Id}: craft **${config.CraftCosts[item.Id]}**, base sale **${item.BasePrice}**, margin before buyer variance/rerolls **${item.BasePrice - config.CraftCosts[item.Id]}**.");
+        report.AppendLine($"- {item.Id}: craft **${config.CraftCosts[item.Id]}**, base sale **${config.BasePrice}**, margin before buyer variance/rerolls **${config.BasePrice - config.CraftCosts[item.Id]}**.");
 }
 report.AppendLine($"\nQuotas: {string.Join(", ", config.Quotas.Select(quota => $"day {quota.DeadlineDay}: ${quota.Amount}"))}.\n");
 report.AppendLine("| Strategy | First quota | Both quotas | Cash before final quota P10 / median / P90 | Mean items |\n|---|---:|---:|---:|---:|");
@@ -22,8 +24,7 @@ foreach (var profile in WeekBalanceSimulator.Profiles)
     var result = WeekBalanceSimulator.Run(config, profile, runs, seed);
     report.AppendLine($"| {result.Profile} | {result.FirstQuotaPassRate:P1} | {result.WinRate:P1} | {result.CashBeforeFinalP10} / {result.CashBeforeFinalMedian} / {result.CashBeforeFinalP90} | {result.MeanItems:F1} |");
 }
-report.AppendLine("\nAssumptions: a full craft takes 10s; normal interaction adds 5s, slow interaction 13s. Customers arrive immediately; their 20s bonus clock pauses during the craft and loses interaction/reroll time. Quality is assumed B (+$3). Speed bands, quality reward, $1000 gift after the first quota, selected-item prices and offer correction use shared domain rules. Each profile chooses the highest-margin affordable item in its room; no rarity roll is used. Hidden offer correction is enabled with its default 3 point cap. Crafts are limited by money and day time, with no energy cap. The music workshop opens free after the first quota story, from day 8. Clothing-only profiles can leave it unused. Each reroll costs 0.8s; careful profiles reroll below +5%. Expired patience or day closure forces a half-price offer with no speed/quality tips, through the same BuyerPatienceRules as runtime.");
-report.AppendLine("\nThe investment profile buys cash cards or matching category cards when at least two crafts remain affordable. Other profiles skip all cards. Existing card prices/effects are unchanged. First-quota failures contribute zero to final-cash percentiles.\n");
+report.AppendLine("\nThe customer clock continues throughout crafting. Quality terms, rerolls, crafting charges, day cards and percentage offers use the domain economy. The music workshop opens free after the first quota. Use --card-study for paired card comparisons across skill levels.");
 report.AppendLine("This is a money/time model, not a human playtest: it assumes one item is crafted and sold per cycle, a matching customer is available, no abandoned inventory, no reload retries, no macro-input or early craft completion. Real camera travel, player mistakes and deliberate hoarding can alter results. Probabilities are calibration evidence, not promised win rates.\n");
 report.AppendLine("Reproduce from repository root: `dotnet run --project tools/ChikagoShop.Balance -- --runs 10000 --seed 20261107 --output docs/BALANCE_REPORT.md`");
 Console.Write(report);

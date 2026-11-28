@@ -2,12 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using ChikagoShop.Domain.Configuration;
+using ChikagoShop.Domain.Crafting;
 using ChikagoShop.Domain.Days;
 using Godot;
 
 // Debug-only configuration; disk publication succeeds before the active profile is replaced.
 public static class DebugBalanceSettings
 {
+    internal const string FirstWeekDurationKey = "day.first.seconds";
+    internal const string SecondWeekDurationKey = "day.second.seconds";
     internal const string BasePriceKey = "items.base_price";
     public const string DefaultPath = "user://debug_balance.json";
     public static string StoragePath { get; set; } = DefaultPath;
@@ -29,17 +32,22 @@ public static class DebugBalanceSettings
     }
     public static DayUpgradeRules CardRules => new()
     {
-        Costs = Cards.Where(card => card != DayUpgrade.Cash).ToDictionary(card => card, card => (int)Number($"card.{card}.cost")),
-        Weights = Cards.ToDictionary(card => card, card => (int)Number($"card.{card}.weight")),
-        WeightedSelection = Number("cards.weighted") == 1,
-        Seed = (int)Number("cards.seed")
+        Terms = Economy.Cards, Seed = (int)Number("cards.seed")
     };
-    public static DayUpgrade[] Cards => new[] { DayUpgrade.Cash, DayUpgrade.AtelierPrice, DayUpgrade.MusicPrice };
+    public static DayUpgrade[] Cards => DayUpgradeRules.Available.ToArray();
+    internal const string CraftCostKey = "items.craft_cost";
     public static string CardName(DayUpgrade card) => card switch
     {
-        DayUpgrade.Cash => "Оборотные средства", DayUpgrade.Energy => "Второе дыхание",
-        DayUpgrade.Atelier => "Мастерство портного", DayUpgrade.Music => "Мастерство мастера",
-        DayUpgrade.AtelierPrice => "Имя на этикетке", _ => "Коллекционный звук"
+        DayUpgrade.Cash => "Оборотные средства",
+        DayUpgrade.Materials => "Дешёвые материалы",
+        DayUpgrade.AtelierPrice => "Мастерство портного",
+        DayUpgrade.MusicPrice => "Мастерство музыканта",
+        DayUpgrade.Patient => "Терпеливые клиенты",
+        DayUpgrade.Bargaining => "Искусство торга",
+        DayUpgrade.QualityMark => "Знак качества",
+        DayUpgrade.Loyal => "Лояльные покупатели",
+        DayUpgrade.QuickService => "Быстрое обслуживание",
+        _ => card.ToString()
     };
     private static void EnsureLoaded() { if (!_loaded) Reload(out _); }
     public static bool Reload(out string error)
@@ -52,7 +60,7 @@ public static class DebugBalanceSettings
             bool retired = RemoveRetiredOverrides(profile);
             // One-time migration of the old shipped first-quota defaults in existing F10 profiles.
             // Later explicit changes (even back to 250 or 500) remain fully editable.
-            bool migrated = retired | MigrateFirstQuotaBaseline(profile) | MigrateEconomyBaseline(profile);
+            bool migrated = retired | MigrateFirstQuotaBaseline(profile) | MigrateEconomyBaseline(profile) | MigratePolishingStrength(profile);
             Validate(profile);
             if (migrated && OS.IsDebugBuild() && Godot.FileAccess.FileExists(StoragePath))
             {
@@ -89,8 +97,9 @@ public static class DebugBalanceSettings
             RemoveRetiredOverrides(profile);
             // This is an explicit edit, so do not migrate this first-quota choice later.
             profile.FirstQuotaBaselineRevision = 1;
-            profile.EconomyBaselineRevision = 1;
+            profile.EconomyBaselineRevision = 2;
             profile.ItemCatalogueRevision = 1;
+            profile.PolishingStrengthRevision = 1;
             Validate(profile);
             string path = ProjectSettings.GlobalizePath(StoragePath);
             temporary = path + ".tmp";
@@ -117,16 +126,53 @@ public static class DebugBalanceSettings
     {
         // Older F10 profiles can pin the old defaults even after the game's config changes.
         // Replace only known shipped values; preserve different deliberate user settings.
-        if (profile.EconomyBaselineRevision >= 1) return false;
+        if (profile.EconomyBaselineRevision >= 2) return false;
         if (profile.Numbers != null)
         {
-            if (profile.Numbers.TryGetValue("quota.final", out double finalQuota) && finalQuota == 450)
-                profile.Numbers.Remove("quota.final");
+            var numbers = profile.Numbers;
+            if (numbers.Remove("day.seconds", out double oldDuration) && oldDuration != 60)
+            {
+                numbers.TryAdd(FirstWeekDurationKey, oldDuration);
+                numbers.TryAdd(SecondWeekDurationKey, Math.Min(oldDuration + 30, 3600));
+            }
+            if (numbers.GetValueOrDefault("start.cash") == 220) numbers.Remove("start.cash");
+            if (numbers.GetValueOrDefault("quota.first") == 750) numbers.Remove("quota.first");
+            if (numbers.GetValueOrDefault("quota.final") is 450 or 1500) numbers.Remove("quota.final");
+            var previousCards = new Dictionary<DayUpgrade, CardTerms>
+            {
+                [DayUpgrade.Cash] = new(0, 15), [DayUpgrade.Materials] = new(13, 7),
+                [DayUpgrade.AtelierPrice] = new(20, 10), [DayUpgrade.MusicPrice] = new(20, 10),
+                [DayUpgrade.Patient] = new(11, 3), [DayUpgrade.Bargaining] = new(2, 30),
+                [DayUpgrade.QualityMark] = new(8, 8), [DayUpgrade.Loyal] = new(12, 20),
+                [DayUpgrade.QuickService] = new(5, 7)
+            };
+            foreach (var (card, terms) in previousCards)
+            {
+                string cost = $"card.{card}.cost", amount = $"card.{card}.amount";
+                if (numbers.TryGetValue(cost, out double price) && price == terms.Cost) numbers.Remove(cost);
+                if (numbers.TryGetValue(amount, out double effect) && effect == terms.Amount) numbers.Remove(amount);
+            }
             if (profile.Numbers.TryGetValue("workshop.music.unlock", out double unlockCost) &&
                 (unlockCost == 100 || unlockCost == 500))
                 profile.Numbers.Remove("workshop.music.unlock");
         }
-        profile.EconomyBaselineRevision = 1;
+        profile.EconomyBaselineRevision = 2;
+        return true;
+    }
+
+    internal static bool MigratePolishingStrength(BalanceProfile profile)
+    {
+        if (profile.PolishingStrengthRevision >= 1) return false;
+        if (profile.Numbers != null)
+        {
+            foreach (var item in WorkshopItemCatalog.BaselineItems.Where(item => item.WorkshopId == "music"))
+            {
+                string key = $"polish.{item.Kind}.strength";
+                if (profile.Numbers.TryGetValue(key, out double value))
+                    profile.Numbers[key] = Math.Round(value * PolishingSession.CleaningEfficiencyScale, 4);
+            }
+        }
+        profile.PolishingStrengthRevision = 1;
         return true;
     }
 
@@ -136,7 +182,8 @@ public static class DebugBalanceSettings
         bool removedLegacy = false;
         profile.ItemRarities?.Clear();
         profile.Numbers?.Remove("card.Time.cost");
-        profile.Numbers?.Remove("card.Cash.cost");
+        if (profile.Numbers?.GetValueOrDefault("card.Cash.cost") == 0) profile.Numbers.Remove("card.Cash.cost");
+        profile.Numbers?.Remove("items.rerolls");
         profile.Numbers?.Remove("card.Time.weight");
         profile.Numbers?.Remove("card.Energy.cost");
         profile.Numbers?.Remove("card.Energy.weight");
@@ -151,12 +198,12 @@ public static class DebugBalanceSettings
         profile.Numbers?.Remove("hand.rarity");
         foreach (var key in profile.Numbers?.Keys.ToArray() ?? [])
         {
-            bool oldCost = key.StartsWith("craft.", StringComparison.Ordinal) && key.EndsWith(".cost", StringComparison.Ordinal) &&
-                key is not ("craft.atelier.cost" or "craft.music.cost");
-            bool oldPrice = key == BasePriceKey ||
-                key.StartsWith("item.", StringComparison.Ordinal) && key.EndsWith(".price", StringComparison.Ordinal);
+            bool oldCard = key == "cards.weighted" || key.StartsWith("card.", StringComparison.Ordinal) && (key.EndsWith(".weight", StringComparison.Ordinal) || key.EndsWith(".limit", StringComparison.Ordinal));
+            bool oldCost = key.StartsWith("craft.", StringComparison.Ordinal) && key.EndsWith(".cost", StringComparison.Ordinal);
+            bool oldPrice = key.StartsWith("item.", StringComparison.Ordinal) && key.EndsWith(".price", StringComparison.Ordinal);
             bool oldWait = key.StartsWith("buyer.", StringComparison.Ordinal) && key is not ("buyer.wait.min" or "buyer.wait.max");
-            if (oldCost || oldPrice || oldWait) removedLegacy |= profile.Numbers.Remove(key);
+            bool oldRerolls = key.StartsWith("item.", StringComparison.Ordinal) && key.EndsWith(".rerolls", StringComparison.Ordinal);
+            if (oldCost || oldPrice || oldWait || oldRerolls || oldCard) removedLegacy |= profile.Numbers.Remove(key);
         }
         foreach (var workshop in EconomyConfigProvider.Baseline.Workshops)
             profile.Numbers?.Remove($"workshop.{workshop.Id}.cost");
@@ -165,9 +212,6 @@ public static class DebugBalanceSettings
             profile.Numbers?.Remove($"rarity.{rarity.Id}.weight");
             profile.Numbers?.Remove($"rarity.{rarity.Id}.rerolls");
         }
-        // A legacy profile may have disabled every other card and relied on Time.
-        if (profile.Numbers != null && Cards.All(card => profile.Numbers.GetValueOrDefault($"card.{card}.weight", 1) == 0))
-            profile.Numbers["card.Cash.weight"] = 1;
         return removedLegacy || oldCount != (profile.Numbers?.Count ?? 0) + (profile.ItemRarities?.Count ?? 0);
     }
     private static void Publish(BalanceProfile profile)
@@ -182,45 +226,44 @@ public static class DebugBalanceSettings
         profile.Validate(Fields, WorkshopItemCatalog.BaselineItems.Select(item => item.Kind).ToHashSet(),
             baseline.Rarities.Select(rarity => rarity.Id).ToHashSet());
         double Get(string key) => profile.Number(key, Fields.Single(field => field.Key == key).Default);
+        if (Get("card.Cash.amount") <= Get("card.Cash.cost"))
+            throw new ArgumentException(GameLocalization.Text("Денежная карточка должна давать больше, чем стоит."));
         if (Get("buyer.wait.min") > Get("buyer.wait.max"))
             throw new ArgumentException(GameLocalization.Text("Минимум ожидания покупателя должен быть не больше максимума."));
-        if (Cards.Sum(card => Get($"card.{card}.weight")) <= 0) throw new ArgumentException("Хотя бы одна карта должна иметь положительный вес.");
     }
     private static EconomyConfig BuildEconomy(BalanceProfile profile)
     {
         var source = EconomyConfigProvider.Baseline;
         int Get(string key, int fallback) => (int)profile.Number(key, fallback);
-        var workshopPrices = source.Workshops.ToDictionary(workshop => workshop.Id,
-            workshop => Get($"craft.{workshop.Id}.cost", workshop.SpinCost));
         return new EconomyConfig
         {
             SchemaVersion = source.SchemaVersion, IsProvisional = source.IsProvisional,
             StartingMoney = Get("start.cash", source.StartingMoney),
-            Items = source.Items.Select(item => new ItemConfig
-            {
-                Id = item.Id, Workshop = item.Workshop, BasePrice = workshopPrices[item.Workshop],
-                Rerolls = Get($"item.{item.Id}.rerolls", item.Rerolls)
-            }).ToList(),
-            CraftCosts = source.Items.ToDictionary(item => item.Id, item => workshopPrices[item.Workshop]),
+            Items = source.Items,
+            BasePrice = Get(BasePriceKey, source.BasePrice),
+            CraftCost = Get(CraftCostKey, source.CraftCost),
+            Cards = source.Cards.ToDictionary(pair => pair.Key, pair => new CardTerms(
+                Get($"card.{pair.Key}.cost", pair.Value.Cost), Get($"card.{pair.Key}.amount", pair.Value.Amount))),
             BuyerWaitMinSeconds = Get("buyer.wait.min", source.BuyerWaitMinSeconds),
             BuyerWaitMaxSeconds = Get("buyer.wait.max", source.BuyerWaitMaxSeconds),
             Days = new DayConfig
             {
                 TotalDays = source.Days.TotalDays, TutorialDay = source.Days.TutorialDay,
-                DurationSeconds = Get("day.seconds", source.Days.DurationSeconds),
+                DurationSeconds = Get(FirstWeekDurationKey, source.Days.DurationSeconds),
+                SecondWeekDurationSeconds = Get(SecondWeekDurationKey, source.Days.SecondWeekDurationSeconds),
                 EnergyBeforeMusicUnlock = source.Days.EnergyBeforeMusicUnlock,
                 EnergyAfterMusicUnlock = source.Days.EnergyAfterMusicUnlock,
                 ItemsPerCraft = 1
             },
             Workshops = source.Workshops.Select(workshop => new WorkshopConfig
             {
-                Id = workshop.Id, SpinCost = workshopPrices[workshop.Id],
+                Id = workshop.Id,
                 UnlockCost = workshop.UnlockCost
             }).ToList(),
             Rarities = source.Rarities.Select(rarity => new RarityConfig
             {
                 Id = rarity.Id, Name = rarity.Name, Weight = rarity.Weight,
-                Rerolls = Get($"rarity.{rarity.Id}.rerolls", rarity.Rerolls), BasePrices = new(workshopPrices)
+                BasePrices = new(rarity.BasePrices)
             }).ToList(),
             OfferRanges = source.OfferRanges,
             Quotas = source.Quotas.Select(quota => new QuotaConfig
@@ -233,14 +276,14 @@ public static class DebugBalanceSettings
         var fields = new List<BalanceField>
         {
             new("start.cash", "Партия", "Стартовые деньги ($) · новая игра", config.StartingMoney, 0, 1000000),
-            new("day.seconds", "Партия", "День до музыки (сек.; после +30)", config.Days.DurationSeconds, 5, 3600),
+            new(FirstWeekDurationKey, "Партия", "Длительность дня первой недели (сек.)", config.Days.DurationSeconds, 5, 3600),
+            new(SecondWeekDurationKey, "Партия", "Длительность дня второй недели (сек.)", config.Days.SecondWeekDurationSeconds, 5, 3600),
             new("hand.enabled", "Партия", "Невидимая рука: 0 — выкл., 1 — вкл.", 1, 0, 1),
             new("hand.offer", "Партия", "Невидимая рука: предел предложения (п.п.)", 3, 0, 3),
             new("buyer.wait.min", "Партия", "Минимум ожидания покупателя (сек.)", config.BuyerWaitMinSeconds, 1, 600),
             new("buyer.wait.max", "Партия", "Максимум ожидания покупателя (сек.)", config.BuyerWaitMaxSeconds, 1, 600),
             new("craft.atelier.seconds", "Создание", "Время вышивки (сек.)", 10, 1, 600),
             new("craft.music.seconds", "Создание", "Время полировки (сек.)", 10, 1, 600),
-            new("cards.weighted", "Карты", "Выбор карт: 0 — расписание, 1 — по весам", 0, 0, 1),
             new("cards.seed", "Карты", "Seed выбора карт (повторяемый результат)", 1, 0, 1000000)
         };
         foreach (var quota in config.Quotas)
@@ -250,13 +293,13 @@ public static class DebugBalanceSettings
             string name = workshop.Id == "atelier" ? "Ателье" : "Музыка";
             if (workshop.UnlockCost > 0) fields.Add(new($"workshop.{workshop.Id}.unlock", "Создание", name + ": цена открытия ($)", workshop.UnlockCost));
         }
-        foreach (var workshop in config.Workshops)
-            fields.Add(new($"craft.{workshop.Id}.cost", "Создание",
-                (workshop.Id == "atelier" ? "Ателье" : "Музыка") + ": создание и базовая цена продажи ($)", workshop.SpinCost, 1, 1000000));
+        fields.Add(new(CraftCostKey, "Создание", "Себестоимость любого товара ($)", config.CraftCost, 1, 1000000));
         foreach (var card in Cards)
         {
-            if (card != DayUpgrade.Cash) fields.Add(new($"card.{card}.cost", "Карты", CardName(card) + ": цена ($)", DayUpgradeSession.Cost(card)));
-            fields.Add(new($"card.{card}.weight", "Карты", CardName(card) + ": вес выбора", 1, 0, 1000));
+            var terms = config.Cards[card];
+            fields.Add(new($"card.{card}.cost", "Карты", CardName(card) + ": цена ($)", terms.Cost, 1, 1000000));
+            fields.Add(new($"card.{card}.amount", "Карты", CardName(card) + ": величина эффекта", terms.Amount, 0,
+                    card == DayUpgrade.Patient ? 600 : card == DayUpgrade.Loyal ? 50 : card == DayUpgrade.Bargaining ? 30 : 1000000));
         }
         foreach (var item in WorkshopItemCatalog.BaselineItems.Where(item => item.WorkshopId == "music"))
         {
@@ -270,10 +313,9 @@ public static class DebugBalanceSettings
                 "drum" => 1.16,
                 _ => 1
             };
-            fields.Add(new($"polish.{item.Kind}.strength", "Создание", item.Name + ": поправка силы полировки", strength, .4, 2.5, .01));
+            fields.Add(new($"polish.{item.Kind}.strength", "Создание", item.Name + ": поправка силы полировки", Math.Round(strength * PolishingSession.CleaningEfficiencyScale, 4), .5, 3.125, .0025));
         }
-        foreach (var item in WorkshopItemCatalog.BaselineItems)
-            fields.Add(new($"item.{item.Kind}.rerolls", "Предметы", item.Name + ": смен покупателя", item.Rerolls, 0, 3));
+        fields.Add(new(BasePriceKey, "Предметы", "Базовая цена всех товаров ($)", config.BasePrice, 1, 100000));
         return fields;
     }
 }

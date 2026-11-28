@@ -3,13 +3,13 @@ using Godot;
 // Owns item tooltip presentation and lifetime; the display owns its stock.
 public partial class ItemInfoPopup : PanelContainer
 {
-    private Label _label = null!;
+    private RichTextLabel _label = null!;
     private Control _slot;
     private System.Func<string> _describe;
     internal FirstTradeTutorial Tutorial { get; set; }
     private CanvasLayer _layer;
     private int _normalLayer;
-    public string ItemText => _label.Text;
+    public string ItemText => _label.GetParsedText();
 
     public override void _Ready()
     {
@@ -23,9 +23,10 @@ public partial class ItemInfoPopup : PanelContainer
             ContentMarginTop = 8, ContentMarginBottom = 8
         };
         AddThemeStyleboxOverride("panel", style);
-        _label = new Label { MouseFilter = MouseFilterEnum.Ignore };
-        _label.AddThemeFontSizeOverride("font_size", 18);
-        _label.AddThemeColorOverride("font_color", Colors.White);
+        _label = new RichTextLabel { MouseFilter = MouseFilterEnum.Ignore, BbcodeEnabled = true, FitContent = true,
+            ScrollActive = false, AutowrapMode = TextServer.AutowrapMode.Off };
+        _label.AddThemeFontSizeOverride("normal_font_size", 18);
+        _label.AddThemeColorOverride("default_color", Colors.White);
         AddChild(_label);
         HideInfo();
     }
@@ -74,7 +75,15 @@ public partial class ItemInfoPopup : PanelContainer
         _layer.Layer = Tutorial?.ContextTooltipLayer(_normalLayer, this) ?? _normalLayer;
         string text = _describe?.Invoke();
         if (text == null) { HideInfo(); return; }
-        if (_label.Text != text) _label.Text = text;
+        if (_label.Text != text)
+        {
+            _label.Text = text;
+            var font = _label.GetThemeFont("normal_font");
+            float width = 0;
+            foreach (string line in _label.GetParsedText().Split('\n'))
+                width = Mathf.Max(width, font.GetStringSize(line, fontSize: 18).X);
+            _label.CustomMinimumSize = new Vector2(Mathf.Ceil(width) + 2, 0);
+        }
         Vector2 minimum = GetCombinedMinimumSize();
         if (Size != minimum) Size = minimum;
         Rect2 anchor = _slot.GetGlobalTransformWithCanvas() * new Rect2(Vector2.Zero, _slot.Size);

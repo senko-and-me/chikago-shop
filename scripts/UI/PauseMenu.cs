@@ -260,6 +260,7 @@ public partial class PauseMenu : CanvasLayer
         Layer = game.CraftMiniGameOpen ? 115 : 100;
         _previousFocus = GetViewport().GuiGetFocusOwner();
         game.GetNode<EmbroideryGame>("PolishingGame").SuspendPolishingInput();
+        game.GetNode<EmbroideryGame>("EmbroideryGame").RestoreNeedleCursor();
         game.PersistProgress();
 		_ownsPause = true;
 		GetTree().Paused = true;
