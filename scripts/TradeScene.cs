@@ -553,11 +553,11 @@ public partial class TradeScene : Node2D
 
 
 
-	private void RefreshBuyers()
+	private void RefreshBuyers(int collectedSlot = -1)
 	{
 		if (DeferTutorialBuyerArrival()) return;
 		if (!_dayCycle.CanReceiveBuyers || GetTree().Paused || DayTransitionOpen || TradeActive) return;
-		if (!_waitingBuyer) StartWaitingBuyer();
+		if (!_waitingBuyer) StartWaitingBuyer(collectedSlot);
 
 	}
 

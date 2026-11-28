@@ -164,7 +164,7 @@ public partial class TradeScene
         }
     }
 
-    private void StartWaitingBuyer()
+    private void StartWaitingBuyer(int collectedSlot = -1)
     {
         if (_waitingBuyer || TradeActive || !_dayCycle.CanReceiveBuyers || !CanSupplyWaitingBuyer()) return;
 
@@ -177,6 +177,22 @@ public partial class TradeScene
         ResetBuyerWait();
         ShowWaitingBuyer();
         BuyerArrived?.Invoke();
+        if (!_waitingBuyer || TradeActive) return;
+
+        if (collectedSlot >= 0 && _showcaseItems[collectedSlot] == _waitingBuyerItem)
+        {
+            OfferCollectedDisplay(collectedSlot, _waitingBuyerItem);
+            return;
+        }
+
+        if (!_tutorial.IsActive)
+            for (int slot = 0; slot < _showcaseItems.Length; slot++)
+            {
+                if (slot == _pendingCraftSlot || _showcaseItems[slot] != _waitingBuyerItem) continue;
+                OfferDisplay(slot);
+                return;
+            }
+
         SaveProgress();
     }
 

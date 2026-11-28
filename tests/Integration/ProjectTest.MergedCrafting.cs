@@ -57,6 +57,25 @@ public partial class ProjectTest
             await Frame();
             if (kind == "hat" || kind == "guitar")
             {
+                var panel = game.Crafting.Catalog.GetNode<Control>("Root/Center/Panel");
+                var content = panel.GetNode<Control>("Margin/Content");
+                Rect2 paper = ScreenBounds(panel), inner = ScreenBounds(content), viewport = Root.GetVisibleRect();
+                Check(viewport.Encloses(paper) && inner.Position.X - paper.Position.X >= 47 &&
+                    paper.End.X - inner.End.X >= 47,
+                    "The catalogue must fit the viewport with larger equal paper margins");
+                var focus = (StyleBoxFlat)button.GetThemeStylebox("focus");
+                var normal = (StyleBoxFlat)button.GetThemeStylebox("normal");
+                var hover = (StyleBoxFlat)button.GetThemeStylebox("hover");
+                var pressed = (StyleBoxFlat)button.GetThemeStylebox("pressed");
+                Check(button.HasFocus() && !button.HasFocus(ignoreHiddenFocus: true) && normal.BgColor == Colors.White &&
+                    focus.BorderWidthLeft == 0 && focus.BorderWidthRight == 0 &&
+                    focus.BorderWidthTop == 0 && focus.BorderWidthBottom == 0 &&
+                    focus.ExpandMarginLeft < -normal.BorderWidthLeft &&
+                    focus.ExpandMarginRight < -normal.BorderWidthRight &&
+                    focus.ExpandMarginTop < -normal.BorderWidthTop &&
+                    focus.ExpandMarginBottom < -normal.BorderWidthBottom &&
+                    normal.BorderColor == hover.BorderColor && normal.BorderColor == pressed.BorderColor,
+                    "The first card must open with hidden focus, a white fill and the same thin border");
                 using var capture = await CapturePresentation("m223-catalog-" + kind);
             }
             await ClickControl(game, button.GetPath().ToString().Replace(game.GetPath() + "/", ""));
@@ -325,8 +344,10 @@ public partial class ProjectTest
                 Tick(1);
                 ExpectClocks(1);
                 var buyerBadge = catalog.GetNode<Label>("Root/Center/Panel/Margin/Content/BuyerTime");
-                Check(buyerBadge.Text == GameLocalization.Format("Клиент: {0}", game.BuyerClockText),
-                    "The catalogue must show the same running buyer timer");
+                Color badgeInk = buyerBadge.GetThemeColor("font_color");
+                Check(buyerBadge.Text == GameLocalization.Format("Клиент: {0}", game.BuyerClockText) &&
+                    badgeInk.R > badgeInk.G + 0.4f && buyerBadge.GetThemeFontSize("font_size") >= 24,
+                    "The catalogue must highlight the running buyer timer in red");
                 foreach (string language in new[] { "ru", "en" })
                 {
                     TranslationServer.SetLocale(language);
@@ -342,7 +363,16 @@ public partial class ProjectTest
                 Tick(1);
                 ExpectClocks(2);
                 var buyerLabel = mini.GetNode<Label>("Surface/Panel/StatTime/Value");
-                Check(buyerLabel.Text == game.BuyerClockText, "Preparation must show buyer patience");
+                Color clockInk = buyerLabel.GetThemeColor("font_color");
+                Check(buyerLabel.Text == game.BuyerClockText && clockInk.R > clockInk.G + 0.4f &&
+                    buyerLabel.GetThemeFontSize("font_size") >= 28,
+                    "Preparation must show a prominent red buyer clock");
+                var surface = mini.GetNode<EmbroiderySurface>("Surface");
+                float left = surface.FabricRect.Position.X - surface.PanelRect.Position.X - 7;
+                float right = surface.PanelRect.End.X - surface.QualityTrackRect.End.X;
+                Check(left >= 38 && Mathf.IsEqualApprox(left, right) &&
+                    Mathf.IsEqualApprox(surface.PanelRect.Position.X, surface.Size.X - surface.PanelRect.End.X),
+                    "Crafting must have equal, generous left and right margins around the paper and its content");
                 mini.Activate();
                 double miniStart = mini.ActiveSession.RemainingSeconds;
                 await PressEscapeForTest();

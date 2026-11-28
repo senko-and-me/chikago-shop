@@ -132,9 +132,13 @@ public partial class TradeScene
     {
         if (TradeActive || GetTree().Paused || DayTransitionOpen || !_dayCycle.CanReceiveBuyers ||
             _showcaseItems[slot] != item) return;
-        RefreshBuyers();
+        RefreshBuyers(slot);
         if (!_waitingBuyer || item != _waitingBuyerItem) return;
+        OfferCollectedDisplay(slot, item);
+    }
 
+    private void OfferCollectedDisplay(int slot, int item)
+    {
         string workshop = Items[item].WorkshopId;
         Vector2 counter = GetNode<Node2D>("World/TradingRoom/Item").GlobalPosition;
         int nearest = slot;

@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/UI/CraftCatalog.cs" id="1"]
 [ext_resource type="Theme" path="res://themes/game_theme.tres" id="2"]
@@ -6,6 +6,21 @@
 
 [sub_resource type="StyleBoxTexture" id="Paper"]
 texture = ExtResource("3")
+
+[sub_resource type="StyleBoxFlat" id="BuyerBadge"]
+bg_color = Color(0.99, 0.93, 0.93, 1)
+border_width_left = 3
+border_color = Color(0.66, 0.11, 0.15, 1)
+content_margin_left = 16.0
+content_margin_right = 16.0
+content_margin_top = 4.0
+content_margin_bottom = 4.0
+
+[sub_resource type="StyleBoxEmpty" id="ScrollPadding"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
 
 [sub_resource type="StyleBoxFlat" id="Back"]
 bg_color = Color(1, 1, 1, 1)
@@ -64,10 +79,10 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 24
-theme_override_constants/margin_right = 24
-theme_override_constants/margin_top = 24
-theme_override_constants/margin_bottom = 24
+theme_override_constants/margin_left = 36
+theme_override_constants/margin_right = 36
+theme_override_constants/margin_top = 30
+theme_override_constants/margin_bottom = 30
 mouse_filter = 2
 
 [node name="Panel" type="PanelContainer" parent="Root/Center"]
@@ -79,14 +94,14 @@ theme_override_styles/panel = SubResource("Paper")
 
 [node name="Margin" type="MarginContainer" parent="Root/Center/Panel"]
 layout_mode = 2
-theme_override_constants/margin_left = 32
-theme_override_constants/margin_right = 32
-theme_override_constants/margin_top = 28
-theme_override_constants/margin_bottom = 28
+theme_override_constants/margin_left = 48
+theme_override_constants/margin_right = 48
+theme_override_constants/margin_top = 38
+theme_override_constants/margin_bottom = 38
 
 [node name="Content" type="VBoxContainer" parent="Root/Center/Panel/Margin"]
 layout_mode = 2
-theme_override_constants/separation = 18
+theme_override_constants/separation = 22
 
 [node name="Title" type="Label" parent="Root/Center/Panel/Margin/Content"]
 layout_mode = 2
@@ -97,11 +112,16 @@ text = "Выберите предмет ателье"
 horizontal_alignment = 1
 
 [node name="BuyerTime" type="Label" parent="Root/Center/Panel/Margin/Content"]
+custom_minimum_size = Vector2(172, 34)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.23, 0.23, 0.23, 1)
+size_flags_horizontal = 4
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.66, 0.11, 0.15, 1)
 theme_override_constants/outline_size = 0
-theme_override_font_sizes/font_size = 19
+theme_override_font_sizes/font_size = 24
+theme_override_styles/normal = SubResource("BuyerBadge")
 horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="Divider" type="ColorRect" parent="Root/Center/Panel/Margin/Content"]
 custom_minimum_size = Vector2(0, 1)
@@ -112,14 +132,15 @@ color = Color(0.7, 0.7, 0.7, 1)
 [node name="Scroll" type="ScrollContainer" parent="Root/Center/Panel/Margin/Content"]
 custom_minimum_size = Vector2(0, 420)
 layout_mode = 2
+theme_override_styles/panel = SubResource("ScrollPadding")
 horizontal_scroll_mode = 0
 
 [node name="Cards" type="GridContainer" parent="Root/Center/Panel/Margin/Content/Scroll"]
 layout_mode = 2
 size_flags_horizontal = 3
 columns = 5
-theme_override_constants/h_separation = 14
-theme_override_constants/v_separation = 14
+theme_override_constants/h_separation = 18
+theme_override_constants/v_separation = 20
 
 [node name="Back" type="Button" parent="Root/Center/Panel/Margin/Content"]
 custom_minimum_size = Vector2(160, 42)

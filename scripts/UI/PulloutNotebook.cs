@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using ChikagoShop.Domain.Days;
 using Godot;
@@ -214,17 +215,20 @@ public partial class PulloutNotebook : Control
                 : $"Выплатить мафии: {quota}$\nДо конца {deadline}-го дня";
 
         _buffsTitle.Text = english ? "DAY BUFFS" : "БАФФЫ ДНЯ";
-        string activeBuff = english ? "None" : "Нет";
-        if (selected is not (DayUpgrade.None or DayUpgrade.Cash))
-        {
-            activeBuff = GameLocalization.Text(DebugBalanceSettings.CardName(selected)) + "\n" +
-                DayTransitionCard.Describe(selected, _game.DayUpgrades.Rules.For(selected));
-        }
-        _buffDetails.Text = activeBuff;
+        string[] effects = selected is DayUpgrade.None or DayUpgrade.Cash
+            ? []
+            : [DayTransitionCard.Describe(selected, _game.DayUpgrades.Rules.For(selected))];
+        _buffDetails.Text = FormatBuffDetails(effects, english ? "None" : "Нет");
 
         // There are no negative day cards in the current rules.
         _debuffsTitle.Hide();
         _debuffDetails.Hide();
+    }
+
+    internal static string FormatBuffDetails(IEnumerable<string> effects, string emptyText)
+    {
+        string details = string.Join("\n\n", effects.Select(effect => "• " + effect));
+        return details.Length > 0 ? details : emptyText;
     }
 
     public override void _ExitTree()

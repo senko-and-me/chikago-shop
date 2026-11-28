@@ -318,6 +318,10 @@ public partial class ProjectTest
             MoveButtonPointer(Root.Size / 2);
             await Wait(() => tutorial.CurrentStep == FirstTradeTutorial.Step.NotebookContents, "A brief right-edge hover must reveal the notebook during training");
             Check(notebook.Expanded, "The notebook must stay open for the lesson after the cursor leaves");
+            string effect = DayTransitionCard.Describe(game.DayUpgrades.Selected, game.DayUpgrades.Rules.For(game.DayUpgrades.Selected));
+            Check(notebook.GetNode<Label>("Page/Notes/BuffDetails").Text == "• " + effect &&
+                PulloutNotebook.FormatBuffDetails(["First effect", "Second effect"], "") == "• First effect\n\n• Second effect",
+                "The notebook must show only effect descriptions, with a bullet and space for each entry");
             next.EmitSignal(Button.SignalName.Pressed); await Frame();
             Check(tutorial.CurrentStep == FirstTradeTutorial.Step.Summary, "Notebook must continue to pause/save information");
             next.EmitSignal(Button.SignalName.Pressed); await Frame();

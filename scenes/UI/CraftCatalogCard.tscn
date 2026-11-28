@@ -20,7 +20,7 @@ border_width_left = 1
 border_width_right = 1
 border_width_top = 1
 border_width_bottom = 1
-border_color = Color(0.42, 0.42, 0.42, 1)
+border_color = Color(0.72, 0.72, 0.72, 1)
 content_margin_left = 16.0
 content_margin_right = 16.0
 content_margin_top = 18.0
@@ -32,7 +32,7 @@ border_width_left = 1
 border_width_right = 1
 border_width_top = 1
 border_width_bottom = 1
-border_color = Color(0.30, 0.30, 0.30, 1)
+border_color = Color(0.72, 0.72, 0.72, 1)
 content_margin_left = 16.0
 content_margin_right = 16.0
 content_margin_top = 18.0
@@ -51,16 +51,11 @@ content_margin_top = 18.0
 content_margin_bottom = 18.0
 
 [sub_resource type="StyleBoxFlat" id="Focus"]
-draw_center = false
-border_width_left = 2
-border_width_right = 2
-border_width_top = 2
-border_width_bottom = 2
-border_color = Color(0.35, 0.35, 0.35, 1)
-expand_margin_left = 3.0
-expand_margin_right = 3.0
-expand_margin_top = 3.0
-expand_margin_bottom = 3.0
+bg_color = Color(0, 0, 0, 0.065)
+expand_margin_left = -2.0
+expand_margin_top = -2.0
+expand_margin_right = -2.0
+expand_margin_bottom = -2.0
 
 [node name="Card" type="Button"]
 custom_minimum_size = Vector2(190, 290)

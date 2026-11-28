@@ -8,6 +8,7 @@ public partial class CraftCatalog : CanvasLayer
     public bool IsOpen => _root?.Visible == true;
     public string Workshop { get; private set; }
     private Control _root;
+    private MarginContainer _center;
     private TradeScene _game;
     private GridContainer _cards;
     private bool _ownsPause;
@@ -22,6 +23,7 @@ public partial class CraftCatalog : CanvasLayer
     {
         _game = GetParent<TradeScene>();
         _root = GetNode<Control>("Root");
+        _center = _root.GetNode<MarginContainer>("Center");
         _cards = GetNode<GridContainer>("Root/Center/Panel/Margin/Content/Scroll/Cards");
         _panel = GetNode<PanelContainer>("Root/Center/Panel");
         _scroll = _cards.GetParent<ScrollContainer>();
@@ -61,17 +63,21 @@ public partial class CraftCatalog : CanvasLayer
         _scroll.ScrollVertical = 0;
         var first = _cards.GetChildren().OfType<Button>()
             .FirstOrDefault(button => !button.Disabled);
-        first?.GrabFocus();
+        first?.GrabFocus(hideFocus: true);
     }
 
     private void Reflow()
     {
         Vector2 viewport = GetViewport().GetVisibleRect().Size;
-        _cards.Columns = viewport.X < 1100 ? 3 : 5;
-        _panel.CustomMinimumSize = new Vector2(Mathf.Min(_authoredPanelMinimum.X, viewport.X - 48), _authoredPanelMinimum.Y);
-        float contentHeight = _cards.GetCombinedMinimumSize().Y + 8;
-        _scroll.CustomMinimumSize = new Vector2(0, Mathf.Min(contentHeight,
-            Mathf.Min(_authoredScrollHeight, Mathf.Max(120, viewport.Y - 210))));
+        int outerWidth = _center.GetThemeConstant("margin_left") + _center.GetThemeConstant("margin_right");
+        int outerHeight = _center.GetThemeConstant("margin_top") + _center.GetThemeConstant("margin_bottom");
+        float availableWidth = viewport.X - outerWidth;
+        _cards.Columns = availableWidth < _authoredPanelMinimum.X ? 3 : 5;
+        _panel.CustomMinimumSize = new Vector2(Mathf.Min(_authoredPanelMinimum.X, availableWidth), _authoredPanelMinimum.Y);
+        float fixedHeight = _panel.GetCombinedMinimumSize().Y - _scroll.GetCombinedMinimumSize().Y;
+        float availableHeight = Mathf.Max(1, viewport.Y - outerHeight - fixedHeight);
+        float contentHeight = _cards.GetCombinedMinimumSize().Y + _scroll.GetThemeStylebox("panel").GetMinimumSize().Y;
+        _scroll.CustomMinimumSize = new Vector2(0, Mathf.Min(contentHeight, Mathf.Min(_authoredScrollHeight, availableHeight)));
     }
 
     public override void _Process(double delta)

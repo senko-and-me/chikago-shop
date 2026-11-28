@@ -66,6 +66,30 @@ public partial class ProjectTest
             Check(game.Accepted == 1 && game.ShowcaseItems[4] == -1 && game.ShowcaseItems[3] == 2,
                 "Accepting the sale must consume only the requested item");
 
+            await Reload(fixture with
+            {
+                DayStarted = false, WaitingBuyerPresent = false,
+                WaitingBuyerItemKind = null, PreviousBuyerItemKind = null,
+                ShowcaseItems = [-1, -1, -1, -1, 3, -1],
+                ShowcaseGrades = ["D", "D", "D", "D", "A", "D"]
+            });
+            int arrivals = 0;
+            game.BuyerArrived += () => arrivals++;
+            game.EndDay();
+            game._Process(0);
+            Check(arrivals == 1 && game.TradeActive && game.ItemIndex == 3 && game.ActiveTradeQualityRank == "A" &&
+                game.BuyerWaitRemaining == game.BuyerWaitInitial && game.Score == fixture.Score &&
+                Saved().ActiveShowcaseIndex == 4 &&
+                game.GetNode<TextureRect>("World/Showroom/Showcases/Slot5/TradeShadow").Visible,
+                "A fresh buyer must bring the matching stocked item straight to the counter with its original slot and grade");
+            await Reload();
+            Check(game.TradeActive && Saved().ActiveShowcaseIndex == 4 && game.ActiveTradeQualityRank == "A",
+                "An automatic offer must survive reload with the same reserved display");
+            game.ReturnItemToShowcase();
+            game._Process(0);
+            Check(!game.TradeActive && game.ShowcaseItems[4] == 3 && Saved().WaitingBuyerItemKind == "drum",
+                "Manually returning stock must not automatically reopen the same offer");
+
             await Reload(fixture with { SaveVersion = 20, WaitingBuyerItemKind = null });
             Check(RequestArt() == TradeScene.GetItemArtPath(2) && game.BuyerWaitRemaining == 13.5,
                 "A legacy workshop request must resolve to a stocked item without resetting the clock");
@@ -78,10 +102,9 @@ public partial class ProjectTest
             Check(!game.TradeActive && RequestArt() == TradeScene.GetItemArtPath(8),
                 "A full workshop must never make a wrong item match");
             game._Process(0.2);
-            Check(!game.TradeActive && Saved().WaitingBuyerItemKind == "guitar" && game.BuyerWaitRemaining == game.BuyerWaitInitial,
-                "When a full workshop cannot make the expired request, the next buyer must ask for available stock");
-            game.OnShowcasePressed(3);
-            Check(game.TradeActive && game.ItemIndex == 2, "The replacement request must be playable");
+            Check(game.TradeActive && game.ItemIndex == 2 && Saved().ActiveShowcaseIndex == 3 &&
+                game.BuyerWaitRemaining == game.BuyerWaitInitial,
+                "The replacement buyer must open an offer for available stock without a click");
 
             await Reload(fixture with
             {

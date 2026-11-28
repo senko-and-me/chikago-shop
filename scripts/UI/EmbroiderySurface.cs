@@ -13,6 +13,9 @@ public partial class EmbroiderySurface : Control
     private const float StitchLength = 9;
     private const float StitchSpacing = 12;
     private const float PointSize = 6;
+    private const float SidePadding = 40;
+    private const float QualityTrackWidth = 72;
+    private const float FabricFramePadding = 7;
     private Texture2D _panel;
     private StyleBoxTexture _fabricFrame;
     private Vector2 _authoredPanelSize;
@@ -63,20 +66,21 @@ public partial class EmbroiderySurface : Control
     {
         get
         {
-            Vector2 fitted = _authoredPanelSize.Min((Size - Vector2.One * 32).Max(Vector2.One));
-            Vector2 position = ((Size - fitted) / 2 + _authoredPanelOffset)
-                .Clamp(Vector2.One * 16, (Size - fitted - Vector2.One * 16).Max(Vector2.One * 16));
+            Vector2 margin = new(36, 16);
+            Vector2 fitted = _authoredPanelSize.Min((Size - 2 * margin).Max(Vector2.One));
+            Vector2 position = ((Size - fitted) / 2 + new Vector2(0, _authoredPanelOffset.Y))
+                .Clamp(margin, (Size - fitted - margin).Max(margin));
             return new Rect2(position, fitted);
         }
     }
 
     public Rect2 FabricRect => new(
-        PanelRect.Position + new Vector2(24, 112),
-        PanelRect.Size - new Vector2(144, 202));
+        PanelRect.Position + new Vector2(SidePadding + FabricFramePadding, 112),
+        PanelRect.Size - new Vector2(2 * SidePadding + QualityTrackWidth + 24 + 2 * FabricFramePadding, 202));
 
     public Rect2 QualityTrackRect => new(
-        new Vector2(PanelRect.End.X - 96, FabricRect.Position.Y + 28),
-        new Vector2(72, FabricRect.Size.Y - 66));
+        new Vector2(PanelRect.End.X - SidePadding - QualityTrackWidth, FabricRect.Position.Y + 28),
+        new Vector2(QualityTrackWidth, FabricRect.Size.Y - 66));
 
     public Vector2 ScreenPoint(int index)
     {
@@ -138,7 +142,7 @@ public partial class EmbroiderySurface : Control
 
         Rect2 fabric = FabricRect;
         DrawRect(fabric, new Color("c0c0c0"));
-        DrawStyleBox(_fabricFrame, fabric.Grow(7));
+        DrawStyleBox(_fabricFrame, fabric.Grow(FabricFramePadding));
 
         for (float x = fabric.Position.X; x < fabric.End.X; x += 6)
         {
